@@ -7,6 +7,15 @@ on:
       - 'v*'
   pull_request:
   workflow_dispatch:
+    inputs:
+      ios_action:
+        description: iOS action
+        required: true
+        default: build
+        type: choice
+        options:
+          - build
+          - testflight
 
 permissions:
   contents: read
@@ -102,7 +111,9 @@ jobs:
   build-ios:
     name: Build Signed iOS App
     needs: verify
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
 
     env:
@@ -248,6 +259,40 @@ jobs:
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
           echo "Generated IPA: $ipa_path"
 
+      - name: Upload signed IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-starter-ios-signed
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+  upload-ios-testflight:
+    name: Upload iOS App to TestFlight
+    needs: build-ios
+    if: >-
+      needs.build-ios.result == 'success' &&
+      (
+        (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.ios_action == 'testflight')
+      )
+    runs-on: macos-latest
+
+    steps:
+      - name: Download signed IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: flutter-starter-ios-signed
+          path: build/ios/ipa
+
+      - name: Resolve downloaded IPA path
+        run: |
+          ipa_path=$(find build/ios/ipa -maxdepth 1 -type f -name '*.ipa' -print -quit)
+          if [[ -z "$ipa_path" ]]; then
+            echo 'No IPA artifact was downloaded.'
+            exit 1
+          fi
+          echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
+
       - name: Upload build to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
@@ -255,10 +300,3 @@ jobs:
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
-
-      - name: Upload signed IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-starter-ios-signed
-          path: build/ios/ipa/*.ipa
-          if-no-files-found: error
