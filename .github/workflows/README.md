@@ -59,7 +59,6 @@ Workflow 会临时生成 `android/key.properties` 和 `android/upload-keystore.j
 
 iOS Job 构建的是签名 IPA，目标平台是 iPhone/iPad，不是 macOS。需要在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中配置：
 
-这些 iOS Secrets 配置在 GitHub Environment `ios` 下，Workflow 的 `build-ios` Job 已声明 `environment: ios`，因此可以读取这些值。
 
 - `IOS_CERTIFICATE_BASE64`：Apple Distribution `.p12` 文件转 Base64
 - `IOS_CERTIFICATE_PASSWORD`：`.p12` 文件密码

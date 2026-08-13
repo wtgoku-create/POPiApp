@@ -104,7 +104,6 @@ jobs:
     needs: verify
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: macos-latest
-    environment: ios
 
     env:
       IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
