@@ -238,10 +238,20 @@ jobs:
       - name: Build signed iOS IPA
         run: flutter build ipa --release --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
 
+      - name: Resolve generated IPA path
+        run: |
+          ipa_path=$(find build/ios/ipa -maxdepth 1 -type f -name '*.ipa' -print -quit)
+          if [[ -z "$ipa_path" ]]; then
+            echo 'No IPA file was generated.'
+            exit 1
+          fi
+          echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
+          echo "Generated IPA: $ipa_path"
+
       - name: Upload build to TestFlight
         uses: apple-actions/upload-testflight-build@v1
         with:
-          app-path: build/ios/ipa/*.ipa
+          app-path: ${{ env.IOS_IPA_PATH }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
           api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
