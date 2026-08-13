@@ -152,6 +152,7 @@ jobs:
       - name: Install provisioning profile
         env:
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
         run: |
           profile_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$profile_dir"
@@ -159,7 +160,58 @@ jobs:
           echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$profile_path"
           security cms -D -i "$profile_path" -o "$RUNNER_TEMP/profile.plist"
           profile_uuid=$(/usr/libexec/PlistBuddy -c 'Print:UUID' "$RUNNER_TEMP/profile.plist")
+          profile_name=$(/usr/libexec/PlistBuddy -c 'Print:Name' "$RUNNER_TEMP/profile.plist")
+          profile_team_id=$(/usr/libexec/PlistBuddy -c 'Print:TeamIdentifier:0' "$RUNNER_TEMP/profile.plist")
+          profile_app_id=$(/usr/libexec/PlistBuddy -c 'Print:Entitlements:application-identifier' "$RUNNER_TEMP/profile.plist")
+          profile_bundle_id="${profile_app_id#*.}"
+          if [[ "$profile_bundle_id" != "$IOS_BUNDLE_ID" ]]; then
+            echo "Provisioning profile Bundle ID ($profile_bundle_id) does not match IOS_BUNDLE_ID ($IOS_BUNDLE_ID)."
+            exit 1
+          fi
+          if [[ "$profile_team_id" != "$IOS_TEAM_ID" ]]; then
+            echo "Provisioning profile Team ID does not match IOS_TEAM_ID."
+            exit 1
+          fi
           cp "$profile_path" "$profile_dir/$profile_uuid.mobileprovision"
+          printf 'IOS_RESOLVED_PROFILE_NAME=%s\n' "$profile_name" >> "$GITHUB_ENV"
+
+      - name: Configure manual distribution signing
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          project = Path('ios/Runner.xcodeproj/project.pbxproj')
+          content = project.read_text()
+          bundle_id = os.environ['IOS_BUNDLE_ID']
+          team_id = os.environ['IOS_TEAM_ID']
+          profile_name = os.environ['IOS_RESOLVED_PROFILE_NAME']
+
+          # The Runner target has three configurations. Apply distribution
+          # signing to each one while leaving the test target untouched.
+          marker = f'PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};'
+          replacement = (
+              f'{marker}\n'
+              '                CODE_SIGN_STYLE = Manual;\n'
+              '                CODE_SIGN_IDENTITY = "Apple Distribution";\n'
+              f'                DEVELOPMENT_TEAM = {team_id};\n'
+              f'                PROVISIONING_PROFILE_SPECIFIER = "{profile_name}";'
+          )
+          if content.count(marker) < 1:
+              raise SystemExit('Runner bundle identifier setting was not found.')
+          content = content.replace(marker, replacement)
+          project.write_text(content)
+          PY
+
+      - name: Verify Apple distribution signing identity
+        run: |
+          security find-identity -v -p codesigning | grep -F 'Apple Distribution' || {
+            echo 'Apple Distribution certificate was not imported.'
+            exit 1
+          }
 
       - name: Create export options
         run: |
@@ -177,7 +229,7 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>${IOS_BUNDLE_ID}</key>
-              <string>${IOS_PROFILE_NAME}</string>
+              <string>${IOS_RESOLVED_PROFILE_NAME}</string>
             </dict>
           </dict>
           </plist>
