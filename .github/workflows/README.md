@@ -19,20 +19,21 @@ flutter test
 
 任一步骤失败，提交会被阻止。格式检查失败时先执行 `dart format lib test`，再重新提交。
 
-`flutter.yml` 提供三类任务：
+`flutter.yml` 提供校验、构建和上传任务：
 
 - `verify`：Push 和 Pull Request 都会执行格式检查、`flutter analyze` 和 `flutter test`。
-- `build-android`：仅在推送 `v` 开头的 Tag（例如 `v1.0.0`）时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
+- `build-android`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动勾选时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
 - `build-ios`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动运行时，使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，并上传 IPA Artifact。
-- `upload-ios-testflight`：独立的 TestFlight 上传节点。Tag 发布会自动执行；手动运行时只有选择 `iOS action: testflight` 才会执行。
+- `upload-ios-testflight`：独立的 TestFlight 上传节点。Tag 发布会自动执行；手动运行时只有同时勾选 `Build iOS IPA` 和 `Upload iOS IPA to TestFlight` 才会执行。
 
 ## 手动打包
 
 1. 打开 GitHub 仓库的 **Actions** 页面。
 2. 选择 **Flutter CI and Android Build**。
 3. 点击 **Run workflow**。
-4. 手动运行时将 `iOS action` 选择为 `build`，即可只打包，不上传 TestFlight。
-5. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`。
+4. 使用复选框选择 `Build Android APK`、`Build iOS IPA`，可以单独打包 APK、IPA，也可以同时勾选。
+5. 只有需要上传 TestFlight 时，才勾选 `Upload iOS IPA to TestFlight`。
+6. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`。
 
 ## 签名发布
 
@@ -84,4 +85,4 @@ base64 -i distribution.p12 | pbcopy
 base64 -i Runner.mobileprovision | pbcopy
 ```
 
-当前 iOS Workflow 使用 `app-store` 导出方式。构建节点负责生成 IPA 并上传 GitHub Artifact；TestFlight 上传是独立节点。手动运行选择 `build` 时不会上传 TestFlight。不要把证书、Profile、密码或 API 私钥提交到仓库。
+当前 iOS Workflow 使用 `app-store` 导出方式。构建节点负责生成 IPA 并上传 GitHub Artifact；TestFlight 上传是独立节点。手动运行不勾选 `Upload iOS IPA to TestFlight` 时不会上传 TestFlight。不要把证书、Profile、密码或 API 私钥提交到仓库。
