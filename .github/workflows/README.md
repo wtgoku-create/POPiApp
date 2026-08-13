@@ -22,7 +22,7 @@ flutter test
 `flutter.yml` 提供三类任务：
 
 - `verify`：Push 和 Pull Request 都会执行格式检查、`flutter analyze` 和 `flutter test`。
-- `build-android`：仅在推送 `v` 开头的 Tag（例如 `v1.0.0`）时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact。
+- `build-android`：仅在推送 `v` 开头的 Tag（例如 `v1.0.0`）时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
 - `build-ios`：仅在推送 `v` 开头的 Tag（例如 `v1.0.0`）时使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，自动上传到 TestFlight，并保留 IPA Artifact。
 
 ## 手动打包
@@ -30,16 +30,30 @@ flutter test
 1. 打开 GitHub 仓库的 **Actions** 页面。
 2. 选择 **Flutter CI and Android Build**。
 3. 点击 **Run workflow**。
-4. 完成后在任务的 **Artifacts** 区域下载 `flutter-starter-apk-signed` 或 `flutter-starter-ios-signed`。
+4. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`。
 
 ## 签名发布
 
-Android Job 需要在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中配置：
+Android Job 需要在 GitHub 仓库的 **Settings → Secrets and variables → Actions → Secrets** 中配置：
 
 - `ANDROID_KEYSTORE_BASE64`：Android Keystore/JKS 文件转 Base64
 - `ANDROID_KEYSTORE_PASSWORD`：Keystore 密码
 - `ANDROID_KEY_ALIAS`：Key alias
 - `ANDROID_KEY_PASSWORD`：Key 密码
+
+当前 Android 包名为：
+
+```text
+com.popiai.app
+```
+
+Android 发布构建产物为：
+
+```text
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+你不上架 Google Play 时，可以直接分发签名 APK。`upload-keystore.jks` 是 Android 签名密钥，后续更新必须继续使用同一把密钥，务必妥善备份，不能提交到仓库。
 
 Workflow 会临时生成 `android/key.properties` 和 `android/upload-keystore.jks`，构建完成后随 runner 销毁。不要把 Keystore、密码或 `key.properties` 提交到仓库。
 
