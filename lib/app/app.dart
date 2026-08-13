@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../shared/providers/settings_provider.dart';
+import '../shared/widgets/app_splash.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -24,6 +25,9 @@ class StarterApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) => AppSplash(
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }
