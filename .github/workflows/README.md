@@ -19,9 +19,10 @@ flutter test
 
 任一步骤失败，提交会被阻止。格式检查失败时先执行 `dart format lib test`，再重新提交。
 
-`flutter.yml` 提供校验、构建和上传任务：
+`flutter-ci.yml` 和 `flutter.yml` 分别负责代码校验和打包发布：
 
-- `verify`：Push 和 Pull Request 都会执行格式检查、`flutter analyze` 和 `flutter test`。
+- `flutter-ci.yml`：每次分支 Push 和 Pull Request 都执行格式检查、`flutter analyze` 和 `flutter test`，不执行打包任务。
+- `flutter.yml` 中的 `verify`：打 Tag 或手动运行打包工作流时执行格式检查、`flutter analyze` 和 `flutter test`，通过后才进入打包节点。
 - `build-android`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动勾选时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
 - `build-ios`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动运行时，使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，并上传 IPA Artifact。
 - `upload-ios-testflight`：独立的 TestFlight 上传节点。Tag 发布会自动执行；手动运行时只有同时勾选 `Build iOS IPA` 和 `Upload iOS IPA to TestFlight` 才会执行。
@@ -30,7 +31,7 @@ flutter test
 
 1. 打开 GitHub 仓库的 **Actions** 页面。
 2. 选择 **Flutter CI and Android Build**。
-3. 点击 **Run workflow**。
+3. 点击 **Run workflow**，手动运行打包工作流。
 4. 使用复选框选择 `Build Android APK`、`Build iOS IPA`，可以单独打包 APK、IPA，也可以同时勾选。
 5. 只有需要上传 TestFlight 时，才勾选 `Upload iOS IPA to TestFlight`。
 6. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`。
