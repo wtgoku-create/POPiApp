@@ -208,8 +208,8 @@ jobs:
 
       - name: Verify Apple distribution signing identity
         run: |
-          security find-identity -v -p codesigning | grep -F 'Apple Distribution' || {
-            echo 'Apple Distribution certificate was not imported.'
+          security find-identity -v -p codesigning | grep -E 'Distribution|iPhone Distribution' || {
+            echo 'Apple distribution certificate was not imported.'
             exit 1
           }
 
