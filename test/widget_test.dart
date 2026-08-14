@@ -18,6 +18,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Flutter 模板'), findsOneWidget);
+    expect(find.text('POPi'), findsOneWidget);
   });
 }

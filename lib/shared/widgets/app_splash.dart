@@ -96,7 +96,7 @@ class _SplashOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 22),
               Text(
-                'Flutter Starter',
+                'POPi',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: foreground,
                       fontWeight: FontWeight.w700,

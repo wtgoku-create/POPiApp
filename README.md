@@ -1,4 +1,4 @@
-# Flutter Starter
+# POPi
 
 一个可扩展的 Flutter 空项目模板，内置：
 
