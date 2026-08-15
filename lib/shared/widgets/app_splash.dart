@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AppSplash extends StatefulWidget {
   const AppSplash({required this.child, super.key});
@@ -92,7 +91,7 @@ class _SplashOverlay extends StatelessWidget {
                   color: Colors.white.withValues(alpha: isDark ? .12 : .72),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: SvgPicture.asset('assets/icons/agent.svg'),
+                child: Image.asset('assets/icons/popi_icon.png'),
               ),
               const SizedBox(height: 22),
               Text(
