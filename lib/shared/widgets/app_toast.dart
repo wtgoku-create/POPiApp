@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
+import '../../app/theme.dart';
+
 class AppToast {
   const AppToast._();
 
@@ -45,7 +47,7 @@ class AppToast {
       alignment: Alignment.topCenter,
       icon: Icon(icon),
       description: Text(message),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppRadii.card),
       boxShadow: highModeShadow,
       closeButton: const ToastCloseButton(showType: CloseButtonShowType.always),
     );

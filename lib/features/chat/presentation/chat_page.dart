@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 
+import '../../../app/theme.dart';
 import '../../../shared/widgets/markdown_message.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 
@@ -83,7 +84,7 @@ class _ChatPageState extends State<ChatPage> {
           color: isSentByMe
               ? colorScheme.primaryContainer
               : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadii.card),
         ),
         child: MarkdownMessage(data: message.text),
       ),
