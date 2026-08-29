@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../shared/providers/safe_area_provider.dart';
@@ -189,7 +188,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _openConversation(String value) {
     if (value.trim().isEmpty) return;
-    context.push('/chat');
+    AppToast.info(context, '对话功能待接入');
   }
 
   void _showAttachmentSheet() {

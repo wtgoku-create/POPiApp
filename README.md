@@ -12,10 +12,7 @@
 - 中文/英文国际化
 - 系统、浅色、深色主题切换
 - 可持久化的用户状态管理
-- Markdown 消息渲染
-- flutter_chat_ui Agent 聊天界面
 - SVG 图标组件与本地资源目录
-- Bottom Sheet 示例
 - Toast 提示封装
 
 ## 使用
@@ -37,7 +34,6 @@ lib/
 ├── app/                 # App 入口、路由、主题
 ├── core/                # 网络层、存储层、基础能力
 ├── features/            # 按业务拆分的功能模块
-│   ├── chat/             # Agent 聊天页面
 │   └── auth/            # 用户模型与数据源
 │       ├── data/        # 用户本地数据源
 │       └── domain/      # 用户模型
@@ -66,36 +62,6 @@ lib/
 真实后端接入后，在 `lib/shared/providers/user_provider.dart` 调用
 `signIn`，再根据项目的登录页增加路由守卫。
 
-## Markdown 消息
-
-使用 `lib/shared/widgets/markdown_message.dart` 渲染 Agent 返回的 Markdown：
-
-```dart
-MarkdownMessage(data: message.content)
-```
-
-后端通过 SSE 或 WebSocket 增量返回内容时，只需要更新消息状态并重新构建
-`MarkdownMessage`，不需要修改渲染组件。
-
-## Bottom Sheet
-
-Sheet 示例页面位于 `lib/features/sheet/presentation/sheet_demo_page.dart`，支持：
-
-- 普通 `showModalBottomSheet`
-- 可拖拽的 `DraggableScrollableSheet`
-
-访问路由 `/sheet-demo`，首页也提供了入口。
-
-Sheet 统一通过 `lib/shared/widgets/app_sheet.dart` 调用：
-
-```dart
-AppSheet.show(context: context, builder: (_) => const YourContent());
-AppSheet.showDraggable(
-  context: context,
-  builder: (_, controller) => ListView(controller: controller),
-);
-```
-
 ## Toast
 
 项目使用 `toastification`，业务页面通过 `AppToast` 调用：
@@ -118,8 +84,3 @@ AppSvgIcon.network(imageUrl, size: 24)
 ```
 
 组件位于 `lib/shared/widgets/app_svg_icon.dart`。
-
-当前聊天页中的 Agent 回复是本地占位逻辑，位于
-`lib/features/chat/presentation/chat_page.dart` 的 `_handleMessageSend`。
-接入真实后端时，将这段逻辑替换为 Chat Repository，并使用
-`InMemoryChatController.updateMessage` 更新流式消息内容。

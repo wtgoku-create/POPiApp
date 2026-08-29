@@ -176,7 +176,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         iconHeight: 18.8766,
                         flipIconVertically: true,
                         label: '灵感库',
-                        onTap: () => _openRoute(context, '/chat'),
+                        onTap: () => _showPending(context, '灵感库功能待接入'),
                       ),
                       _NavigationItem(
                         iconAsset: 'popi_nav_skill',
