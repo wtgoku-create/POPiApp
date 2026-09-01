@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../shared/providers/safe_area_provider.dart';
@@ -13,7 +14,9 @@ import 'widgets/popi_message_composer.dart';
 import 'widgets/popi_navigation_drawer.dart';
 
 class HomePage extends ConsumerStatefulWidget {
-  const HomePage({super.key});
+  const HomePage({this.pickImages, super.key});
+
+  final Future<List<XFile>> Function()? pickImages;
 
   @override
   ConsumerState<HomePage> createState() => _HomePageState();
@@ -27,6 +30,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   double _composerHeight = 0;
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
+  final List<PopiComposerImage> _selectedImages = [];
+
+  static const _maxImageCount = 5;
+  static const _maxImageBytes = 6 * 1024 * 1024;
 
   static const _prompts = [
     ('做一个新IP', Color(0xFFF3EFFF)),
@@ -77,44 +84,49 @@ class _HomePageState extends ConsumerState<HomePage> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      resizeToAvoidBottomInset: false,
-      drawer: const PopiNavigationDrawer(),
-      drawerScrimColor: const Color(0x33333333),
-      onDrawerChanged: (isOpened) {
-        if (_drawerOpen != isOpened) {
-          setState(() => _drawerOpen = isOpened);
-        }
-      },
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(safeArea.top + 56),
-        child: Padding(
-          padding: EdgeInsets.only(top: safeArea.top),
-          child: SizedBox(
-            key: const Key('popi-home-app-bar'),
-            height: 56,
-            child: _blurBehindDrawer(
-              AppBar(
-                primary: false,
-                toolbarHeight: 56,
-                leadingWidth: 80,
-                leading: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 20),
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        tooltip: '打开导航',
-                        padding: const EdgeInsets.all(5),
-                        onPressed: () =>
-                            _scaffoldKey.currentState?.openDrawer(),
-                        icon: AppSvgIcon.asset(
-                          'common_navigation_menu',
-                          size: 30,
-                          color: colorScheme.onSurface,
-                          semanticsLabel: '打开导航',
+    return GestureDetector(
+      key: const Key('popi-home-dismiss-keyboard'),
+      behavior: HitTestBehavior.translucent,
+      onTap: _messageController.dismissKeyboard,
+      child: Scaffold(
+        key: _scaffoldKey,
+        resizeToAvoidBottomInset: false,
+        drawer: const PopiNavigationDrawer(),
+        drawerScrimColor: const Color(0x33333333),
+        onDrawerChanged: (isOpened) {
+          if (_drawerOpen != isOpened) {
+            setState(() => _drawerOpen = isOpened);
+          }
+        },
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(safeArea.top + 56),
+          child: Padding(
+            padding: EdgeInsets.only(top: safeArea.top),
+            child: SizedBox(
+              key: const Key('popi-home-app-bar'),
+              height: 56,
+              child: _blurBehindDrawer(
+                AppBar(
+                  primary: false,
+                  toolbarHeight: 56,
+                  leadingWidth: 80,
+                  leading: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: SizedBox.square(
+                        dimension: 40,
+                        child: IconButton(
+                          tooltip: '打开导航',
+                          padding: const EdgeInsets.all(5),
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
+                          icon: AppSvgIcon.asset(
+                            'common_navigation_menu',
+                            size: 30,
+                            color: colorScheme.onSurface,
+                            semanticsLabel: '打开导航',
+                          ),
                         ),
                       ),
                     ),
@@ -124,72 +136,73 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
         ),
-      ),
-      body: _blurBehindDrawer(
-        Stack(
-          fit: StackFit.expand,
-          children: [
-            SingleChildScrollView(
-              key: const Key('popi-home-scroll'),
-              controller: _bodyScrollController,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(20, 10, 20, contentBottomPadding),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  child: Column(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/icons/home_welcome_logo.svg',
-                        key: const Key('popi-wordmark'),
-                        width: 80,
-                        height: 53,
-                        semanticsLabel: 'POPi',
-                      ),
-                      const SizedBox(height: 32),
-                      _WelcomeCards(
-                        prompts: _prompts,
-                        onPromptSelected: (prompt) {
-                          _messageController.setText(prompt);
-                        },
-                      ),
-                    ],
+        body: _blurBehindDrawer(
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              SingleChildScrollView(
+                key: const Key('popi-home-scroll'),
+                controller: _bodyScrollController,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(20, 10, 20, contentBottomPadding),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      children: [
+                        SvgPicture.asset(
+                          'assets/icons/home_welcome_logo.svg',
+                          key: const Key('popi-wordmark'),
+                          width: 80,
+                          height: 53,
+                          semanticsLabel: 'POPi',
+                        ),
+                        const SizedBox(height: 32),
+                        _WelcomeCards(
+                          prompts: _prompts,
+                          onPromptSelected: (prompt) {
+                            _messageController.setText(prompt);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: composerInset - 1,
-              height: 32,
-              child: IgnorePointer(
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.white],
-                  ).createShader(bounds),
-                  blendMode: BlendMode.dstIn,
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      key: const Key('popi-composer-region-feather'),
-                      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              colorScheme.surface.withValues(
-                                alpha: isDark ? .05 : .02,
-                              ),
-                              colorScheme.surface.withValues(
-                                alpha: isDark ? .14 : .06,
-                              ),
-                            ],
-                            stops: const [0, .55, 1],
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: composerInset - 1,
+                height: 32,
+                child: IgnorePointer(
+                  child: ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.white],
+                    ).createShader(bounds),
+                    blendMode: BlendMode.dstIn,
+                    child: ClipRect(
+                      child: BackdropFilter(
+                        key: const Key('popi-composer-region-feather'),
+                        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                colorScheme.surface.withValues(
+                                  alpha: isDark ? .05 : .02,
+                                ),
+                                colorScheme.surface.withValues(
+                                  alpha: isDark ? .14 : .06,
+                                ),
+                              ],
+                              stops: const [0, .55, 1],
+                            ),
                           ),
                         ),
                       ),
@@ -197,34 +210,36 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: ClipRect(
-                child: BackdropFilter(
-                  key: const Key('popi-composer-region-blur'),
-                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                  child: ColoredBox(
-                    key: const Key('popi-composer-region-surface'),
-                    color: colorScheme.surface.withValues(
-                      alpha: isDark ? .14 : .06,
-                    ),
-                    child: Center(
-                      heightFactor: 1,
-                      child: PopiMessageComposer(
-                        controller: _messageController,
-                        onAttachment: _showAttachmentSheet,
-                        onHeightChanged: _handleComposerHeightChanged,
-                        onSubmitted: _openConversation,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    key: const Key('popi-composer-region-blur'),
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                    child: ColoredBox(
+                      key: const Key('popi-composer-region-surface'),
+                      color: colorScheme.surface.withValues(
+                        alpha: isDark ? .14 : .06,
+                      ),
+                      child: Center(
+                        heightFactor: 1,
+                        child: PopiMessageComposer(
+                          controller: _messageController,
+                          selectedImages: _selectedImages,
+                          onAttachment: _showAttachmentSheet,
+                          onRemoveImage: _removeSelectedImage,
+                          onHeightChanged: _handleComposerHeightChanged,
+                          onSubmitted: _openConversation,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -248,6 +263,52 @@ class _HomePageState extends ConsumerState<HomePage> {
     setState(() => _composerHeight = height);
   }
 
+  Future<void> _pickImageFromGallery() async {
+    final remaining = _maxImageCount - _selectedImages.length;
+    if (remaining <= 0) {
+      AppToast.info(context, '最多上传5张图片');
+      return;
+    }
+
+    try {
+      final images = await (widget.pickImages?.call() ??
+          ImagePicker().pickMultiImage(
+            imageQuality: 85,
+            maxWidth: 1920,
+            limit: remaining,
+          ));
+      if (images.isEmpty) return;
+
+      final selected = <PopiComposerImage>[];
+      var hasOversizedImage = false;
+      for (final image in images.take(remaining)) {
+        final bytes = await image.readAsBytes();
+        if (bytes.lengthInBytes > _maxImageBytes) {
+          hasOversizedImage = true;
+          continue;
+        }
+        selected.add(PopiComposerImage(name: image.name, bytes: bytes));
+      }
+      if (!mounted) return;
+      if (selected.isNotEmpty) {
+        setState(() => _selectedImages.addAll(selected));
+      }
+      if (hasOversizedImage) {
+        AppToast.error(context, '单张图片不能超过6MB');
+      }
+      if (images.length > remaining) {
+        AppToast.info(context, '最多上传5张图片');
+      }
+    } catch (_) {
+      if (mounted) AppToast.info(context, '无法读取图片，请稍后重试');
+    }
+  }
+
+  void _removeSelectedImage(int index) {
+    if (index < 0 || index >= _selectedImages.length) return;
+    setState(() => _selectedImages.removeAt(index));
+  }
+
   void _showAttachmentSheet() {
     AppSheet.show<void>(
       context: context,
@@ -260,7 +321,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: FilledButton.icon(
                   onPressed: () {
                     Navigator.pop(sheetContext);
-                    AppToast.info(context, '相册');
+                    _pickImageFromGallery();
                   },
                   icon: const Icon(Icons.photo_outlined),
                   label: const Text('相册'),

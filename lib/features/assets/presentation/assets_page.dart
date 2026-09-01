@@ -8,9 +8,7 @@ import '../../../shared/widgets/app_svg_icon.dart';
 import '../../home/presentation/widgets/popi_navigation_drawer.dart';
 
 class AssetsPage extends StatefulWidget {
-  const AssetsPage({this.showWorks = true, super.key});
-
-  final bool showWorks;
+  const AssetsPage({super.key});
 
   @override
   State<AssetsPage> createState() => _AssetsPageState();
@@ -18,93 +16,70 @@ class AssetsPage extends StatefulWidget {
 
 class _AssetsPageState extends State<AssetsPage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  late bool _showWorks = widget.showWorks;
-  int _selectedTab = 0;
-
-  static const _works = [
-    'assets_works_thumbnail-01.png',
-    'assets_works_thumbnail-02.png',
-    'assets_works_thumbnail-03.png',
-    'assets_works_thumbnail-04.png',
-    'assets_works_thumbnail-05.png',
-    'assets_works_thumbnail-06.png',
-    'assets_works_thumbnail-07.png',
-    'assets_works_thumbnail-08.png',
-    'assets_works_thumbnail-09.png',
-    'assets_works_thumbnail-09.png',
-    'assets_works_thumbnail-10.png',
-    'assets_works_thumbnail-11.png',
-    'assets_works_thumbnail-12.png',
-    'assets_works_thumbnail-13.png',
-    'assets_works_thumbnail-14.png',
-  ];
+  int _selectedFilter = 0;
 
   @override
   Widget build(BuildContext context) {
-    final top = math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final statusBarHeight =
+        math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+
     return Scaffold(
       key: _scaffoldKey,
       drawer: const PopiNavigationDrawer(),
+      backgroundColor: AppColors.surface,
       body: Column(
         children: [
-          SizedBox(
-            height: top + 56,
-            child: Padding(
-              padding: EdgeInsets.only(top: top),
-              child: Row(
-                children: [
-                  const SizedBox(width: 20),
-                  SizedBox.square(
-                    dimension: 40,
-                    child: IconButton(
-                      tooltip: '打开导航',
-                      padding: const EdgeInsets.all(5),
-                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                      icon: const AppSvgIcon.asset(
-                        'common_navigation_menu',
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  SizedBox.square(
-                    dimension: 40,
-                    child: IconButton(
-                      tooltip: '个人设置',
-                      padding: const EdgeInsets.all(5),
-                      onPressed: () => context.push('/profile'),
-                      icon: const Icon(Icons.settings_outlined, size: 30),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                ],
-              ),
-            ),
+          SizedBox(height: statusBarHeight),
+          _LibraryNavigation(
+            onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
           ),
-          Expanded(
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
-              ),
-              child: Column(
-                children: [
-                  _AssetTabs(
-                    selected: _selectedTab,
-                    onSelected: (index) {
-                      setState(() {
-                        _selectedTab = index;
-                        if (index != 0) _showWorks = false;
-                      });
-                    },
-                  ),
-                  Expanded(
-                    child: _showWorks && _selectedTab == 0
-                        ? _WorksGrid(works: _works)
-                        : const _EmptyWorks(),
-                  ),
-                ],
+          const SizedBox(height: 10),
+          _HistoryFilters(
+            selected: _selectedFilter,
+            onSelected: (index) => setState(() => _selectedFilter = index),
+          ),
+          const Expanded(child: _EmptyHistory()),
+        ],
+      ),
+    );
+  }
+}
+
+class _LibraryNavigation extends StatelessWidget {
+  const _LibraryNavigation({required this.onMenuPressed});
+
+  final VoidCallback onMenuPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _LibraryTab(label: '角色库'),
+              SizedBox(width: 20),
+              _LibraryTab(label: '资产库'),
+              SizedBox(width: 20),
+              _LibraryTab(label: '创作历史', selected: true),
+            ],
+          ),
+          Positioned(
+            right: 8,
+            child: SizedBox.square(
+              dimension: 40,
+              child: IconButton(
+                key: const Key('assets-navigation-menu'),
+                tooltip: '打开导航',
+                padding: EdgeInsets.zero,
+                onPressed: onMenuPressed,
+                icon: const AppSvgIcon.asset(
+                  'assets_history_chevron',
+                  size: 40,
+                ),
               ),
             ),
           ),
@@ -114,83 +89,82 @@ class _AssetsPageState extends State<AssetsPage> {
   }
 }
 
-class _AssetTabs extends StatelessWidget {
-  const _AssetTabs({required this.selected, required this.onSelected});
+class _LibraryTab extends StatelessWidget {
+  const _LibraryTab({required this.label, this.selected = false});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: selected ? AppColors.textPrimary : AppColors.textTertiary,
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _HistoryFilters extends StatelessWidget {
+  const _HistoryFilters({required this.selected, required this.onSelected});
 
   final int selected;
   final ValueChanged<int> onSelected;
 
+  static const _labels = ['全部', 'Agent账号模式', 'Vlog', '短剧'];
+
   @override
   Widget build(BuildContext context) {
-    const labels = ['作品', '脚本', '收藏'];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(labels.length, (index) {
+    return SizedBox(
+      key: const Key('assets-history-filters'),
+      height: 36,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: _labels.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 5),
+        itemBuilder: (context, index) {
           final active = selected == index;
           return InkWell(
+            key: Key('assets-history-filter-$index'),
             borderRadius: BorderRadius.circular(AppRadii.pill),
             onTap: () => onSelected(index),
-            child: Container(
-              width: 113,
-              height: 40,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: active ? AppColors.surfaceTint : AppColors.surface,
+                color: active ? AppColors.surfaceTint : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppRadii.pill),
               ),
               child: Text(
-                labels[index],
+                _labels[index],
                 style: TextStyle(
-                  color: active ? AppColors.brand : AppColors.textPrimary,
-                  fontSize: 18,
+                  color: active ? AppColors.brand : AppColors.textTertiary,
+                  fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           );
-        }),
+        },
       ),
     );
   }
 }
 
-class _WorksGrid extends StatelessWidget {
-  const _WorksGrid({required this.works});
-
-  final List<String> works;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      key: const Key('assets-works-grid'),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 76),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemCount: works.length,
-      itemBuilder: (context, index) => ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Image.asset(
-          'assets/images/${works[index]}',
-          fit: BoxFit.cover,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyWorks extends StatelessWidget {
-  const _EmptyWorks();
+class _EmptyHistory extends StatelessWidget {
+  const _EmptyHistory();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Transform.translate(
-        offset: const Offset(0, -20),
+        offset: const Offset(0, -3),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -201,19 +175,21 @@ class _EmptyWorks extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              '暂无作品',
+              '暂无历史',
               style: TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 25,
                 fontWeight: FontWeight.w700,
               ),
             ),
+            const SizedBox(height: 10),
             const Text(
-              '你创造的图片、视频、音频在这里',
+              '开启Agent对话\n创建属于你的短视频账号',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 16,
-                height: 30 / 16,
+                height: 20 / 16,
               ),
             ),
             const SizedBox(height: 10),
@@ -221,6 +197,7 @@ class _EmptyWorks extends StatelessWidget {
               width: 110,
               height: 50,
               child: FilledButton(
+                key: const Key('assets-go-generate'),
                 onPressed: () => context.go('/'),
                 child: const Text(
                   '去生成',

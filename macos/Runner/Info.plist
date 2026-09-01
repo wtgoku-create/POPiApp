@@ -28,6 +28,8 @@
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>用于从相册选择图片并添加到对话中</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>

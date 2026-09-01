@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+
+class PopiComposerImage {
+  const PopiComposerImage({required this.name, required this.bytes});
+
+  final String name;
+  final Uint8List bytes;
+}
 
 class PopiMessageComposerController {
   PopiMessageComposerController({String initialText = ''})
@@ -18,6 +26,12 @@ class PopiMessageComposerController {
   final EditorState editorState;
 
   String get markdown => documentToMarkdown(editorState.document).trim();
+
+  void dismissKeyboard() {
+    editorState.selection = null;
+    editorState.service.keyboardService?.closeKeyboard();
+    editorState.service.keyboardService?.disable();
+  }
 
   Future<void> setText(String value) async {
     final transaction = editorState.transaction;
@@ -38,14 +52,18 @@ class PopiMessageComposerController {
 class PopiMessageComposer extends ConsumerStatefulWidget {
   const PopiMessageComposer({
     required this.controller,
+    required this.selectedImages,
     required this.onAttachment,
+    required this.onRemoveImage,
     required this.onHeightChanged,
     required this.onSubmitted,
     super.key,
   });
 
   final PopiMessageComposerController controller;
+  final List<PopiComposerImage> selectedImages;
   final VoidCallback onAttachment;
+  final ValueChanged<int> onRemoveImage;
   final ValueChanged<double> onHeightChanged;
   final ValueChanged<String> onSubmitted;
 
@@ -58,7 +76,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
   late final FocusNode _focusNode;
   late final EditorScrollController _editorScrollController;
   final _sizeKey = GlobalKey();
-  bool _isExpanded = false;
+  bool _hasFocus = false;
+  int _focusRevision = 0;
 
   @override
   void initState() {
@@ -81,7 +100,29 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
   }
 
   void _handleFocusChanged() {
-    if (mounted) setState(() => _isExpanded = _focusNode.hasFocus);
+    final revision = ++_focusRevision;
+    if (_focusNode.hasFocus) {
+      if (mounted && !_hasFocus) setState(() => _hasFocus = true);
+      return;
+    }
+
+    // AppFlowy removes its caret and selection overlays during the next frame.
+    // Keep the editor constraints stable until that cleanup layout is complete.
+    widget.controller.editorState.selection = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _focusNode.hasFocus ||
+          revision != _focusRevision ||
+          !_hasFocus) {
+        return;
+      }
+      setState(() => _hasFocus = false);
+    });
+  }
+
+  void _dismissEditor() {
+    widget.controller.dismissKeyboard();
+    _focusNode.unfocus();
   }
 
   void _reportHeight() {
@@ -101,16 +142,15 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
         : math.max(safeArea.bottom, 20).toDouble();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasImages = widget.selectedImages.isNotEmpty;
     return NotificationListener<SizeChangedLayoutNotification>(
       onNotification: (_) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
         return false;
       },
       child: SizeChangedLayoutNotifier(
-        child: AnimatedPadding(
+        child: Padding(
           key: _sizeKey,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
           padding: EdgeInsets.fromLTRB(
             math.max(safeArea.left, 20),
             8,
@@ -125,15 +165,15 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
+                  Container(
                     key: const Key('popi-message-composer'),
                     width: double.infinity,
                     // The focused design has a 94px content area, plus 10px
                     // padding and a 2px border on both vertical sides.
-                    height: _isExpanded ? 118 : 60,
-                    padding: _isExpanded
+                    height: hasImages
+                        ? (_hasFocus ? 180 : 60)
+                        : (_hasFocus ? 118 : 60),
+                    padding: _hasFocus
                         ? const EdgeInsets.all(10)
                         : const EdgeInsets.symmetric(horizontal: 10),
                     decoration: BoxDecoration(
@@ -156,7 +196,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
                             )
                           : Border.all(color: AppColors.surface, width: 2),
                       borderRadius: BorderRadius.circular(
-                        _isExpanded ? AppRadii.card : AppRadii.pill,
+                        _hasFocus ? AppRadii.card : AppRadii.pill,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -168,13 +208,15 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
                       ],
                     ),
                     child: _ComposerContent(
-                      isExpanded: _isExpanded,
+                      isExpanded: _hasFocus,
+                      images: widget.selectedImages,
                       input: _buildInput(
                         colorScheme,
-                        placeholderFontSize: _isExpanded ? 14 : 16,
+                        placeholderFontSize: _hasFocus ? 14 : 16,
                       ),
                       colorScheme: colorScheme,
                       onAttachment: widget.onAttachment,
+                      onRemoveImage: widget.onRemoveImage,
                       onKeepFocus: _focusNode.requestFocus,
                     ),
                   ),
@@ -216,7 +258,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
     };
 
     return TapRegion(
-      onTapOutside: (_) => _focusNode.unfocus(),
+      onTapOutside: (_) => _dismissEditor(),
       child: AppFlowyEditor(
         key: const Key('popi-message-input'),
         editorState: widget.controller.editorState,
@@ -244,41 +286,158 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
   }
 }
 
+class _SelectedImagePreview extends StatelessWidget {
+  const _SelectedImagePreview({
+    required this.image,
+    required this.index,
+    required this.size,
+    required this.onRemove,
+  });
+
+  final PopiComposerImage image;
+  final int index;
+  final double size;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isCompact = size <= 28;
+    final buttonSize = isCompact ? 18.0 : 24.0;
+    final buttonInset = isCompact ? 2.0 : 3.0;
+    final iconSize = isCompact ? 13.0 : 17.0;
+    return Semantics(
+      label: '已选择图片：${image.name}',
+      child: SizedBox.square(
+        dimension: size,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadii.small),
+                child: Image.memory(
+                  image.bytes,
+                  key: Key('popi-selected-image-$index'),
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                ),
+              ),
+            ),
+            if (!isCompact)
+              Positioned(
+                top: buttonInset,
+                right: buttonInset,
+                child: Material(
+                  color: Colors.transparent,
+                  shape: const CircleBorder(),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colorScheme.scrim.withValues(alpha: .82),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .9),
+                        width: .8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: .28),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      key: Key('popi-remove-selected-image-$index'),
+                      tooltip: '移除图片',
+                      constraints: BoxConstraints.tightFor(
+                        width: buttonSize,
+                        height: buttonSize,
+                      ),
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        minimumSize: Size.square(buttonSize),
+                        maximumSize: Size.square(buttonSize),
+                      ),
+                      padding: EdgeInsets.zero,
+                      onPressed: onRemove,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: iconSize,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ComposerContent extends StatelessWidget {
   const _ComposerContent({
     required this.isExpanded,
+    required this.images,
     required this.input,
     required this.colorScheme,
     required this.onAttachment,
+    required this.onRemoveImage,
     required this.onKeepFocus,
   });
 
   final bool isExpanded;
+  final List<PopiComposerImage> images;
   final Widget input;
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
+  final ValueChanged<int> onRemoveImage;
   final VoidCallback onKeepFocus;
 
   @override
   Widget build(BuildContext context) {
     const duration = Duration(milliseconds: 220);
     const curve = Curves.easeOutCubic;
+    final hasImages = images.isNotEmpty;
+    final compactImageStripWidth =
+        images.isEmpty ? 0.0 : images.length * 28.0 + (images.length - 1) * 6.0;
     return Stack(
       children: [
+        if (hasImages)
+          Positioned(
+            top: isExpanded ? 0 : 16,
+            left: isExpanded ? 0 : 50,
+            right: isExpanded ? 0 : null,
+            width: isExpanded ? null : compactImageStripWidth,
+            height: isExpanded ? 58 : 28,
+            child: ListView.separated(
+              key: const Key('popi-selected-images'),
+              scrollDirection: Axis.horizontal,
+              itemCount: images.length,
+              separatorBuilder: (_, __) => SizedBox(
+                width: isExpanded ? 8 : 6,
+              ),
+              itemBuilder: (context, index) => _SelectedImagePreview(
+                image: images[index],
+                index: index,
+                size: isExpanded ? 58 : 28,
+                onRemove: () => onRemoveImage(index),
+              ),
+            ),
+          ),
         Positioned.fill(
-          child: AnimatedPadding(
-            duration: duration,
-            curve: curve,
-            padding: isExpanded
-                ? const EdgeInsets.only(bottom: 50)
-                : const EdgeInsets.only(left: 50),
-            child: AnimatedAlign(
-              duration: duration,
-              curve: curve,
+          child: Padding(
+            padding: hasImages
+                ? isExpanded
+                    ? const EdgeInsets.only(top: 66, bottom: 50)
+                    : EdgeInsets.only(left: 58 + compactImageStripWidth)
+                : isExpanded
+                    ? const EdgeInsets.only(bottom: 50)
+                    : const EdgeInsets.only(left: 50),
+            child: Align(
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
-              child: AnimatedContainer(
-                duration: duration,
-                curve: curve,
+              child: SizedBox(
                 width: double.infinity,
                 height: isExpanded ? 44 : 24,
                 child: input,
@@ -286,10 +445,10 @@ class _ComposerContent extends StatelessWidget {
             ),
           ),
         ),
-        AnimatedAlign(
-          duration: duration,
-          curve: curve,
-          alignment: isExpanded ? Alignment.bottomLeft : Alignment.centerLeft,
+        Positioned(
+          left: 0,
+          top: isExpanded ? null : 10,
+          bottom: isExpanded ? 0 : null,
           child: _AttachmentButton(
             color: colorScheme.primary,
             onPressed: onAttachment,

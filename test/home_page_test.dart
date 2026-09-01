@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
@@ -21,6 +25,19 @@ void main() {
     await controller.setText('做一个新IP');
 
     expect(controller.markdown, '做一个新IP');
+  });
+
+  test('message composer controller clears the editor selection on dismiss',
+      () {
+    final controller = PopiMessageComposerController(initialText: '输入内容');
+    addTearDown(controller.dispose);
+    controller.editorState.selection = Selection.collapsed(
+      Position(path: const [0], offset: 2),
+    );
+
+    controller.dismissKeyboard();
+
+    expect(controller.editorState.selection, isNull);
   });
 
   testWidgets('renders the mobile welcome layout and drawer', (tester) async {
@@ -200,6 +217,147 @@ void main() {
     );
   });
 
+  testWidgets('collapsing the focused editor does not read dirty text layout',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(theme: AppTheme.light, home: const HomePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('popi-message-input')));
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(10, 300));
+    for (var frame = 0; frame < 20; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(tester.takeException(), isNull);
+    }
+
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      60,
+    );
+  });
+
+  testWidgets('picks at most five images inside the composer and removes one',
+      (tester) async {
+    final imageBytes = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    final images = List.generate(
+      6,
+      (index) => XFile.fromData(
+        imageBytes,
+        name: 'picked-$index.png',
+        mimeType: 'image/png',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: HomePage(pickImages: () async => images),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('添加附件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('相册'));
+    await tester.pumpAndSettle();
+
+    final imageStrip = find.byKey(const Key('popi-selected-images'));
+    expect(imageStrip, findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('popi-message-composer')),
+        matching: imageStrip,
+      ),
+      findsOneWidget,
+    );
+    for (var index = 0; index < 5; index++) {
+      expect(find.byKey(Key('popi-selected-image-$index')), findsOneWidget);
+    }
+    expect(find.byKey(const Key('popi-selected-image-5')), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      60,
+    );
+
+    final firstImage = find.byKey(const Key('popi-selected-image-0'));
+    final firstRemoveButton =
+        find.byKey(const Key('popi-remove-selected-image-0'));
+    expect(tester.getSize(firstImage), const Size.square(28));
+    expect(firstRemoveButton, findsNothing);
+
+    await tester.tap(find.byKey(const Key('popi-message-input')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      180,
+    );
+    final expandedImageRect = tester.getRect(firstImage);
+    final expandedRemoveButtonRect = tester.getRect(firstRemoveButton);
+    expect(
+      expandedImageRect.contains(expandedRemoveButtonRect.center),
+      isTrue,
+    );
+    expect(expandedRemoveButtonRect.top, expandedImageRect.top + 3);
+    expect(expandedRemoveButtonRect.right, expandedImageRect.right - 3);
+
+    await tester.tapAt(const Offset(10, 300));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      60,
+    );
+    expect(firstRemoveButton, findsNothing);
+
+    await tester.tap(find.byKey(const Key('popi-message-input')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-remove-selected-image-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('popi-selected-image-4')), findsNothing);
+    expect(find.byKey(const Key('popi-selected-image-3')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('rejects a gallery image larger than 6MB', (tester) async {
+    final oversizedImage = XFile.fromData(
+      Uint8List(6 * 1024 * 1024 + 1),
+      name: 'oversized.png',
+      mimeType: 'image/png',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: HomePage(pickImages: () async => [oversizedImage]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('添加附件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('相册'));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('popi-selected-images')), findsNothing);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
   testWidgets('uses dark theme colors on the home page and drawer',
       (tester) async {
     final container = ProviderContainer();
@@ -224,7 +382,7 @@ void main() {
       AppTheme.dark.colorScheme.surfaceContainerLow,
     );
 
-    final composer = tester.widget<AnimatedContainer>(
+    final composer = tester.widget<Container>(
       find.byKey(const Key('popi-message-composer')),
     );
     expect(

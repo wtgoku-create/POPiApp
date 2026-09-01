@@ -57,25 +57,31 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
-  testWidgets('renders populated assets design', (tester) async {
+  testWidgets('renders creation history assets design', (tester) async {
     await pumpPage(tester, const AssetsPage());
 
-    expect(find.byKey(const Key('assets-works-grid')), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('assets-works-grid')),
-        matching: find.byType(Image),
-      ),
-      findsWidgets,
-    );
-    expect(find.text('作品'), findsOneWidget);
+    expect(find.text('角色库'), findsOneWidget);
+    expect(find.text('资产库'), findsOneWidget);
+    expect(find.text('创作历史'), findsOneWidget);
+    expect(find.byKey(const Key('assets-history-filters')), findsOneWidget);
+    expect(find.text('暂无历史'), findsOneWidget);
+    expect(find.byKey(const Key('assets-go-generate')), findsOneWidget);
   });
 
-  testWidgets('renders empty assets design', (tester) async {
-    await pumpPage(tester, const AssetsPage(showWorks: false));
+  testWidgets('switches creation history filter', (tester) async {
+    await pumpPage(tester, const AssetsPage());
 
-    expect(find.text('暂无作品'), findsOneWidget);
-    expect(find.text('去生成'), findsOneWidget);
+    await tester.tap(find.text('Vlog'));
+    await tester.pumpAndSettle();
+
+    final filter = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byKey(const Key('assets-history-filter-2')),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    final decoration = filter.decoration! as BoxDecoration;
+    expect(decoration.color, AppColors.surfaceTint);
   });
 
   testWidgets('renders profile design', (tester) async {
