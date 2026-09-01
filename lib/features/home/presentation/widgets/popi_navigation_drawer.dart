@@ -22,18 +22,18 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
   final _searchController = TextEditingController();
 
   static const _tasks = [
-    ('生活剧情Vlog', 'popi_task_red'),
-    ('抖音AI漫剧博主', 'popi_task_blue'),
-    ('角色介绍撰写', 'popi_task_gold'),
-    ('AI与插画师打造卡通IP角色功能', 'popi_task_neutral'),
-    ('人类渲染图生成需求', 'popi_task_neutral'),
-    ('搞笑视频相关话题', 'popi_task_neutral'),
-    ('IP商业化模式', 'popi_task_neutral'),
-    ('简约商务PPT模板', 'popi_task_neutral'),
-    ('生成上海东方明珠繁华背景图', 'popi_task_neutral'),
-    ('推荐短视频博主', 'popi_task_neutral'),
-    ('当前微博话题热度排行榜', 'popi_task_neutral'),
-    ('搞笑剧情Vlog', 'popi_task_neutral'),
+    ('生活剧情Vlog', 'home_drawer_task-red'),
+    ('抖音AI漫剧博主', 'home_drawer_task-blue'),
+    ('角色介绍撰写', 'home_drawer_task-gold'),
+    ('AI与插画师打造卡通IP角色功能', 'home_drawer_task-neutral'),
+    ('人类渲染图生成需求', 'home_drawer_task-neutral'),
+    ('搞笑视频相关话题', 'home_drawer_task-neutral'),
+    ('IP商业化模式', 'home_drawer_task-neutral'),
+    ('简约商务PPT模板', 'home_drawer_task-neutral'),
+    ('生成上海东方明珠繁华背景图', 'home_drawer_task-neutral'),
+    ('推荐短视频博主', 'home_drawer_task-neutral'),
+    ('当前微博话题热度排行榜', 'home_drawer_task-neutral'),
+    ('搞笑剧情Vlog', 'home_drawer_task-neutral'),
   ];
 
   @override
@@ -137,7 +137,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                 left: 10,
                                 child: IgnorePointer(
                                   child: AppSvgIcon.asset(
-                                    'popi_search',
+                                    'home_drawer_search',
                                     size: 30,
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -153,12 +153,12 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                   Column(
                     children: [
                       _NavigationItem(
-                        iconAsset: 'popi_nav_conversation',
+                        iconAsset: 'home_drawer_nav-conversation',
                         label: 'POPi对话',
                         onTap: () => _openRoute(context, '/'),
                       ),
                       _NavigationItem(
-                        iconAsset: 'popi_nav_role',
+                        iconAsset: 'home_drawer_nav-role',
                         iconWidth: 18.4994,
                         iconHeight: 20.716,
                         flipIconVertically: true,
@@ -166,12 +166,12 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         onTap: () => _openRoute(context, '/profile'),
                       ),
                       _NavigationItem(
-                        iconAsset: 'popi_nav_asset',
+                        iconAsset: 'home_drawer_nav-asset',
                         label: '资产',
                         onTap: () => _openRoute(context, '/assets'),
                       ),
                       _NavigationItem(
-                        iconAsset: 'popi_nav_inspiration',
+                        iconAsset: 'home_drawer_nav-inspiration',
                         iconWidth: 20.1321,
                         iconHeight: 18.8766,
                         flipIconVertically: true,
@@ -179,7 +179,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         onTap: () => _showPending(context, '灵感库功能待接入'),
                       ),
                       _NavigationItem(
-                        iconAsset: 'popi_nav_skill',
+                        iconAsset: 'home_drawer_nav-skill',
                         label: 'Skill',
                         onTap: () => _openRoute(context, '/profile'),
                       ),
@@ -215,7 +215,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                   ),
                                 ),
                                 AppSvgIcon.asset(
-                                  'popi_more',
+                                  'home_drawer_more',
                                   size: 30,
                                   color: colorScheme.onSurfaceVariant,
                                 ),
@@ -366,7 +366,7 @@ class _TaskItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isNeutralIcon = iconAsset == 'popi_task_neutral';
+    final isNeutralIcon = iconAsset == 'home_drawer_task-neutral';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
       color: colorScheme.surface,
@@ -520,7 +520,7 @@ class _DrawerFooter extends ConsumerWidget {
                       const SizedBox(width: 2),
                       Image(
                         image: AssetImage(
-                          'assets/icons/popi_user_badge.png',
+                          'assets/icons/common_user_badge.png',
                         ),
                         width: 15,
                         height: 15,
@@ -538,7 +538,7 @@ class _DrawerFooter extends ConsumerWidget {
               padding: const EdgeInsets.all(5),
               onPressed: onNotification,
               icon: AppSvgIcon.asset(
-                'popi_notification',
+                'home_drawer_notification',
                 size: 30,
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -551,7 +551,7 @@ class _DrawerFooter extends ConsumerWidget {
               padding: const EdgeInsets.all(5),
               onPressed: onSettings,
               icon: AppSvgIcon.asset(
-                'popi_user_chevron',
+                'home_drawer_profile',
                 size: 30,
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -563,7 +563,7 @@ class _DrawerFooter extends ConsumerWidget {
   }
 
   Widget _defaultAvatar() => Image.asset(
-        'assets/icons/popi_user_avatar.png',
+        'assets/icons/common_user_avatar.png',
         width: 47,
         height: 47,
         fit: BoxFit.cover,

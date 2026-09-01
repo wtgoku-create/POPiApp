@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_toast.dart';
 import 'widgets/profile_chrome.dart';
@@ -29,6 +31,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final displayId =
+        user?.code.isNotEmpty == true ? user!.code : user?.id ?? '--';
+    final l10n = AppLocalizations.of(context)!;
     if (user != null && _hydratedUserId != user.id) {
       _nameController.text = user.name;
       _hydratedUserId = user.id;
@@ -103,9 +108,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       ),
                       const SizedBox(height: 10),
                       TextFormField(
-                        initialValue: user?.code.isNotEmpty == true
-                            ? user!.code
-                            : user?.id ?? '--',
+                        initialValue: displayId,
                         readOnly: true,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
@@ -114,10 +117,24 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: colorScheme.surfaceContainerHighest,
-                          suffixIcon: Icon(
-                            Icons.copy_outlined,
-                            size: 18,
-                            color: colorScheme.onSurfaceVariant,
+                          suffixIcon: IconButton(
+                            key: const Key('edit-profile-uid-copy'),
+                            tooltip: l10n.copyAction,
+                            onPressed: displayId == '--'
+                                ? null
+                                : () async {
+                                    await Clipboard.setData(
+                                      ClipboardData(text: displayId),
+                                    );
+                                    if (context.mounted) {
+                                      AppToast.success(context, l10n.uidCopied);
+                                    }
+                                  },
+                            icon: Icon(
+                              Icons.copy_outlined,
+                              size: 18,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
                           ),
                           border: _border,
                           enabledBorder: _border,

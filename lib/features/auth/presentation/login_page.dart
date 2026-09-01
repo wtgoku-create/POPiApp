@@ -75,7 +75,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           children: [
                             Center(
                               child: Image.asset(
-                                'assets/icons/popi_icon.png',
+                                'assets/icons/common_brand_icon.png',
                                 width: 72,
                                 height: 72,
                               ),

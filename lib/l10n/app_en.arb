@@ -8,6 +8,7 @@
   "modalSheet": "Modal Bottom Sheet",
   "draggableSheet": "Draggable Sheet",
   "copyAction": "Copy",
+  "uidCopied": "UID copied",
   "shareAction": "Share",
   "item": "Item",
   "welcome": "Your new project starts here.",

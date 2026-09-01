@@ -8,6 +8,7 @@
   "modalSheet": "普通底部 Sheet",
   "draggableSheet": "可拖拽 Sheet",
   "copyAction": "复制",
+  "uidCopied": "UID 已复制",
   "shareAction": "分享",
   "item": "项目",
   "welcome": "你的新项目从这里开始。",

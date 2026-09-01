@@ -33,6 +33,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyAction => '复制';
 
   @override
+  String get uidCopied => 'UID 已复制';
+
+  @override
   String get shareAction => '分享';
 
   @override

@@ -146,6 +146,12 @@ abstract class AppLocalizations {
   /// **'Copy'**
   String get copyAction;
 
+  /// No description provided for @uidCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'UID copied'**
+  String get uidCopied;
+
   /// No description provided for @shareAction.
   ///
   /// In en, this message translates to:

@@ -55,7 +55,7 @@ class ProfileAvatar extends StatelessWidget {
         ClipOval(
           child: imageUrl == null || imageUrl!.isEmpty
               ? Image.asset(
-                  'assets/icons/popi_user_avatar.png',
+                  'assets/icons/common_user_avatar.png',
                   width: size,
                   height: size,
                   fit: BoxFit.cover,
@@ -66,7 +66,7 @@ class ProfileAvatar extends StatelessWidget {
                   height: size,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/icons/popi_user_avatar.png',
+                    'assets/icons/common_user_avatar.png',
                     width: size,
                     height: size,
                     fit: BoxFit.cover,

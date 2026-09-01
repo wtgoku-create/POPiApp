@@ -22,21 +22,21 @@ class _AssetsPageState extends State<AssetsPage> {
   int _selectedTab = 0;
 
   static const _works = [
-    'work_01.png',
-    'work_02.png',
-    'work_03.png',
-    'work_04.png',
-    'work_05.png',
-    'work_06.png',
-    'work_07.png',
-    'work_08.png',
-    'work_09.png',
-    'work_09.png',
-    'work_10.png',
-    'work_11.png',
-    'work_12.png',
-    'work_13.png',
-    'work_14.png',
+    'assets_works_thumbnail-01.png',
+    'assets_works_thumbnail-02.png',
+    'assets_works_thumbnail-03.png',
+    'assets_works_thumbnail-04.png',
+    'assets_works_thumbnail-05.png',
+    'assets_works_thumbnail-06.png',
+    'assets_works_thumbnail-07.png',
+    'assets_works_thumbnail-08.png',
+    'assets_works_thumbnail-09.png',
+    'assets_works_thumbnail-09.png',
+    'assets_works_thumbnail-10.png',
+    'assets_works_thumbnail-11.png',
+    'assets_works_thumbnail-12.png',
+    'assets_works_thumbnail-13.png',
+    'assets_works_thumbnail-14.png',
   ];
 
   @override
@@ -60,7 +60,10 @@ class _AssetsPageState extends State<AssetsPage> {
                       tooltip: '打开导航',
                       padding: const EdgeInsets.all(5),
                       onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                      icon: const AppSvgIcon.asset('popi_menu', size: 30),
+                      icon: const AppSvgIcon.asset(
+                        'common_navigation_menu',
+                        size: 30,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -194,7 +197,7 @@ class _EmptyWorks extends StatelessWidget {
             const SizedBox(
               width: 55,
               height: 62,
-              child: AppSvgIcon.asset('popi_empty_work'),
+              child: AppSvgIcon.asset('assets_works_empty'),
             ),
             const SizedBox(height: 10),
             const Text(

@@ -7,6 +7,10 @@ environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
+  appflowy_editor:
+    git:
+      url: https://github.com/AppFlowy-IO/appflowy-editor.git
+      ref: 01eccc6ee36bd07698bd80915289fe7070478cd2
   dio: ^5.8.0+1
   flutter:
     sdk: flutter

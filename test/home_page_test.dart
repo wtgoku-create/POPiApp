@@ -1,3 +1,4 @@
+import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,11 +6,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/home/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 void main() {
+  test('message composer controller exports markdown', () async {
+    final controller = PopiMessageComposerController(initialText: '初始内容');
+    addTearDown(controller.dispose);
+
+    expect(controller.markdown, '初始内容');
+
+    await controller.setText('做一个新IP');
+
+    expect(controller.markdown, '做一个新IP');
+  });
+
   testWidgets('renders the mobile welcome layout and drawer', (tester) async {
     tester.view.physicalSize = const Size(440, 956);
     tester.view.devicePixelRatio = 1;
@@ -37,11 +50,29 @@ void main() {
         child: MaterialApp(theme: AppTheme.light, home: const HomePage()),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('你现在最想做什么？'), findsOneWidget);
     expect(find.text('做一个新IP'), findsOneWidget);
     expect(find.byKey(const Key('popi-message-input')), findsOneWidget);
+    expect(find.byType(AppFlowyEditor), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
+      24,
+    );
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+    final collapsedComposerHeight = tester
+        .getSize(
+          find.byType(PopiMessageComposer),
+        )
+        .height;
+    final collapsedScrollView = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('popi-home-scroll')),
+    );
+    expect(
+      (collapsedScrollView.padding! as EdgeInsets).bottom,
+      closeTo(collapsedComposerHeight + 20, .5),
+    );
     expect(scaffold.resizeToAvoidBottomInset, isFalse);
     expect(scaffold.bottomNavigationBar, isNull);
     expect(scaffold.body, isA<Stack>());
@@ -54,30 +85,52 @@ void main() {
       24,
     );
     expect(
-      tester.getBottomRight(find.byKey(const Key('popi-message-composer'))).dy,
+      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
       956 - 34,
     );
     final wordmarkTop =
         tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy;
 
     await tester.tap(find.byKey(const Key('popi-message-input')));
-    await tester.pump();
-    final editableText = tester.widget<EditableText>(find.byType(EditableText));
-    expect(editableText.focusNode.hasFocus, isTrue);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      118,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
+      44,
+    );
+    final expandedComposerHeight = tester
+        .getSize(
+          find.byType(PopiMessageComposer),
+        )
+        .height;
+    final expandedScrollView = tester.widget<SingleChildScrollView>(
+      find.byKey(const Key('popi-home-scroll')),
+    );
+    expect(expandedComposerHeight, greaterThan(collapsedComposerHeight));
+    expect(
+      (expandedScrollView.padding! as EdgeInsets).bottom,
+      closeTo(expandedComposerHeight + 20, .5),
+    );
+    expect(find.text('SDXL1.0'), findsNothing);
+    expect(find.byTooltip('语音输入'), findsOneWidget);
+    expect(find.text('AI生成结果可能有误，仅供参考'), findsOneWidget);
     await tester.tapAt(const Offset(10, 800));
-    await tester.pump();
-    expect(editableText.focusNode.hasFocus, isFalse);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      60,
+    );
 
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pumpAndSettle();
     expect(
-      tester.getBottomRight(find.byKey(const Key('popi-message-composer'))).dy,
+      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
       956 - 300 - 20,
     );
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(0, -30),
-    );
+    await tester.dragFrom(const Offset(220, 300), const Offset(0, -30));
     await tester.pump();
     expect(
       tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy,
@@ -92,10 +145,7 @@ void main() {
 
     await tester.tap(find.text('做一个新IP'));
     await tester.pump();
-    final input = tester.widget<TextField>(
-      find.byKey(const Key('popi-message-input')),
-    );
-    expect(input.controller?.text, '做一个新IP');
+    expect(find.text('做一个新IP'), findsWidgets);
 
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
@@ -174,7 +224,7 @@ void main() {
       AppTheme.dark.colorScheme.surfaceContainerLow,
     );
 
-    final composer = tester.widget<Container>(
+    final composer = tester.widget<AnimatedContainer>(
       find.byKey(const Key('popi-message-composer')),
     );
     expect(
@@ -187,7 +237,7 @@ void main() {
     );
     expect(
       (mascot.image as AssetImage).assetName,
-      'assets/icons/home_welcome.png',
+      'assets/icons/home_welcome_banner.png',
     );
 
     await tester.tap(find.byTooltip('打开导航'));
@@ -198,7 +248,7 @@ void main() {
           find.byType(AppSvgIcon),
         )
         .firstWhere(
-          (icon) => icon.assetName == 'popi_task_red',
+          (icon) => icon.assetName == 'home_drawer_task-red',
         );
     expect(firstTaskIcon.color, isNull);
 
@@ -210,7 +260,7 @@ void main() {
           find.byType(AppSvgIcon),
         )
         .firstWhere(
-          (icon) => icon.assetName == 'popi_task_neutral',
+          (icon) => icon.assetName == 'home_drawer_task-neutral',
         );
     expect(neutralTaskIcon.colorMapper, isNotNull);
 

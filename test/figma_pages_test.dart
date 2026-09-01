@@ -83,6 +83,7 @@ void main() {
 
     expect(find.text('--'), findsWidgets);
     expect(find.text('UID:--'), findsOneWidget);
+    expect(find.byKey(const Key('profile-uid-copy')), findsOneWidget);
     expect(find.text('编辑资料'), findsOneWidget);
     expect(find.text('语言'), findsOneWidget);
     expect(find.text('主题'), findsOneWidget);
@@ -156,6 +157,7 @@ void main() {
     await pumpPage(tester, const EditProfilePage());
 
     expect(find.byKey(const Key('profile-name')), findsOneWidget);
+    expect(find.byKey(const Key('edit-profile-uid-copy')), findsOneWidget);
     expect(find.text('昵称*'), findsOneWidget);
     expect(find.text('确认'), findsOneWidget);
   });

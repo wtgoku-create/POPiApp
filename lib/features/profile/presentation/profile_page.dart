@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -63,11 +64,31 @@ class ProfilePage extends ConsumerWidget {
                         fontSize: 16,
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.copy_outlined,
-                      size: 17,
-                      color: colorScheme.onSurfaceVariant,
+                    const SizedBox(width: 4),
+                    IconButton(
+                      key: const Key('profile-uid-copy'),
+                      tooltip: l10n.copyAction,
+                      onPressed: displayId == '--'
+                          ? null
+                          : () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: displayId),
+                              );
+                              if (context.mounted) {
+                                AppToast.success(context, l10n.uidCopied);
+                              }
+                            },
+                      padding: EdgeInsets.zero,
+                      alignment: Alignment.centerLeft,
+                      constraints: const BoxConstraints.tightFor(
+                        width: 40,
+                        height: 40,
+                      ),
+                      icon: Icon(
+                        Icons.copy_outlined,
+                        size: 17,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -99,7 +120,7 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     SettingsRow(
                       iconWidget: AppSvgIcon.asset(
-                        'popi_profile_account',
+                        'profile_settings_account',
                         size: 20,
                       ),
                       label: '账号管理',
@@ -111,7 +132,7 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     SettingsRow(
                       iconWidget: AppSvgIcon.asset(
-                        'popi_profile_phone',
+                        'profile_settings_phone',
                         size: 20,
                       ),
                       label: '手机号',
@@ -119,7 +140,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                     SettingsRow(
                       iconWidget: AppSvgIcon.asset(
-                        'popi_profile_wechat',
+                        'profile_settings_wechat',
                         size: 21,
                       ),
                       label: '微信号',
@@ -127,7 +148,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                     SettingsRow(
                       iconWidget: AppSvgIcon.asset(
-                        'popi_profile_douyin',
+                        'profile_settings_douyin',
                         size: 20,
                       ),
                       label: '抖音',
@@ -394,7 +415,7 @@ class MembershipCard extends ConsumerWidget {
             child: Row(
               children: [
                 const AppSvgIcon.asset(
-                  'popi_icon',
+                  'common_brand_icon-vector',
                   key: Key('profile-points-icon'),
                   size: 12,
                 ),
@@ -526,7 +547,7 @@ class SettingsRow extends StatelessWidget {
                 const SizedBox(width: 7),
                 if (trailing == null)
                   AppSvgIcon.asset(
-                    'popi_profile_chevron',
+                    'profile_settings_chevron',
                     size: 13,
                     color: colorScheme.onSurfaceVariant,
                   )

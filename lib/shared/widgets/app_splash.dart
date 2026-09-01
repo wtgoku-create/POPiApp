@@ -91,7 +91,7 @@ class _SplashOverlay extends StatelessWidget {
                   color: Colors.white.withValues(alpha: isDark ? .12 : .72),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Image.asset('assets/icons/popi_icon.png'),
+                child: Image.asset('assets/icons/common_brand_icon.png'),
               ),
               const SizedBox(height: 22),
               Text(

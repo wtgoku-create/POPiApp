@@ -33,6 +33,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get copyAction => 'Copy';
 
   @override
+  String get uidCopied => 'UID copied';
+
+  @override
   String get shareAction => 'Share';
 
   @override

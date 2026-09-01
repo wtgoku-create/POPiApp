@@ -21,9 +21,10 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  final _messageController = TextEditingController();
+  final _messageController = PopiMessageComposerController();
   final _bodyScrollController = ScrollController();
   bool _drawerOpen = false;
+  double _composerHeight = 0;
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
 
@@ -68,8 +69,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final composerBottomPadding = keyboardHeight > 0
         ? keyboardHeight + 20
-        : (safeArea.bottom > 20 ? safeArea.bottom : 20);
-    final composerClearance = 60.0 + 8 + composerBottomPadding + 20;
+        : (safeArea.bottom > 20 ? safeArea.bottom : 20).toDouble();
+    final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
+    final composerClearance =
+        (_composerHeight > 0 ? _composerHeight : fallbackComposerHeight) + 20;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -106,7 +109,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         onPressed: () =>
                             _scaffoldKey.currentState?.openDrawer(),
                         icon: AppSvgIcon.asset(
-                          'popi_menu',
+                          'common_navigation_menu',
                           size: 30,
                           color: colorScheme.onSurface,
                           semanticsLabel: '打开导航',
@@ -125,6 +128,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           fit: StackFit.expand,
           children: [
             SingleChildScrollView(
+              key: const Key('popi-home-scroll'),
               controller: _bodyScrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(20, 10, 20, composerClearance),
@@ -134,7 +138,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: Column(
                     children: [
                       SvgPicture.asset(
-                        'assets/icons/home_popi.svg',
+                        'assets/icons/home_welcome_logo.svg',
                         key: const Key('popi-wordmark'),
                         width: 80,
                         height: 53,
@@ -144,11 +148,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       _WelcomeCards(
                         prompts: _prompts,
                         onPromptSelected: (prompt) {
-                          _messageController.text = prompt;
-                          _messageController.selection =
-                              TextSelection.collapsed(
-                            offset: _messageController.text.length,
-                          );
+                          _messageController.setText(prompt);
                         },
                       ),
                     ],
@@ -165,6 +165,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: PopiMessageComposer(
                   controller: _messageController,
                   onAttachment: _showAttachmentSheet,
+                  onHeightChanged: _handleComposerHeightChanged,
                   onSubmitted: _openConversation,
                 ),
               ),
@@ -186,6 +187,11 @@ class _HomePageState extends ConsumerState<HomePage> {
   void _openConversation(String value) {
     if (value.trim().isEmpty) return;
     AppToast.info(context, '对话功能待接入');
+  }
+
+  void _handleComposerHeightChanged(double height) {
+    if ((height - _composerHeight).abs() < .5 || !mounted) return;
+    setState(() => _composerHeight = height);
   }
 
   void _showAttachmentSheet() {
@@ -285,7 +291,7 @@ class _WelcomeCards extends StatelessWidget {
                   left: 196.5,
                   top: 30,
                   child: Image.asset(
-                    'assets/icons/home_welcome.png',
+                    'assets/icons/home_welcome_banner.png',
                     key: const Key('popi-welcome-mascot'),
                     width: 173,
                     height: 211,
@@ -429,7 +435,7 @@ class _PromptTile extends StatelessWidget {
                   ),
                   child: Center(
                     child: AppSvgIcon.asset(
-                      'popi_chevron_right',
+                      'home_welcome_chevron',
                       color: colorScheme.onSurfaceVariant,
                       semanticsLabel: '选择',
                     ),
