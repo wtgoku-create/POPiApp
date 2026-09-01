@@ -6,6 +6,7 @@ class AppSvgIcon extends StatelessWidget {
     String name, {
     this.size,
     this.color,
+    this.colorMapper,
     this.semanticsLabel,
     super.key,
   })  : assetName = name,
@@ -15,6 +16,7 @@ class AppSvgIcon extends StatelessWidget {
     String imageUrl, {
     this.size,
     this.color,
+    this.colorMapper,
     this.semanticsLabel,
     super.key,
   })  : assetName = null,
@@ -24,6 +26,7 @@ class AppSvgIcon extends StatelessWidget {
   final String? url;
   final double? size;
   final Color? color;
+  final ColorMapper? colorMapper;
   final String? semanticsLabel;
 
   @override
@@ -37,6 +40,7 @@ class AppSvgIcon extends StatelessWidget {
         width: size,
         height: size,
         colorFilter: colorFilter,
+        colorMapper: colorMapper,
         semanticsLabel: semanticsLabel,
       );
     }
@@ -46,6 +50,7 @@ class AppSvgIcon extends StatelessWidget {
       width: size,
       height: size,
       colorFilter: colorFilter,
+      colorMapper: colorMapper,
       semanticsLabel: semanticsLabel,
     );
   }

@@ -3,15 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme.dart';
-
 class ProfileTopBar extends StatelessWidget {
-  const ProfileTopBar({
-    this.showSettings = true,
-    super.key,
-  });
-
-  final bool showSettings;
+  const ProfileTopBar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,16 +27,6 @@ class ProfileTopBar extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            if (showSettings)
-              SizedBox.square(
-                dimension: 40,
-                child: IconButton(
-                  tooltip: '设置',
-                  padding: const EdgeInsets.all(5),
-                  onPressed: () => context.push('/settings'),
-                  icon: const Icon(Icons.settings_outlined, size: 30),
-                ),
-              ),
             const SizedBox(width: 20),
           ],
         ),
@@ -53,10 +36,16 @@ class ProfileTopBar extends StatelessWidget {
 }
 
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({this.size = 120, this.editable = false, super.key});
+  const ProfileAvatar({
+    this.size = 120,
+    this.editable = false,
+    this.imageUrl,
+    super.key,
+  });
 
   final double size;
   final bool editable;
+  final String? imageUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -64,26 +53,44 @@ class ProfileAvatar extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         ClipOval(
-          child: Image.asset(
-            'assets/icons/popi_user_avatar.png',
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-          ),
+          child: imageUrl == null || imageUrl!.isEmpty
+              ? Image.asset(
+                  'assets/icons/popi_user_avatar.png',
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                )
+              : Image.network(
+                  imageUrl!,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/icons/popi_user_avatar.png',
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+                ),
         ),
         if (editable)
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xCCFFFFFF),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.add_a_photo_outlined,
-              size: 21,
-              color: AppColors.textSecondary,
-            ),
+          Builder(
+            builder: (context) {
+              final colorScheme = Theme.of(context).colorScheme;
+              return Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: 0.8),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.add_a_photo_outlined,
+                  size: 21,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              );
+            },
           ),
       ],
     );

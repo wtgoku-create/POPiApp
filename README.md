@@ -50,13 +50,14 @@ lib/
 
 ## 网络请求
 
-通过 `ref.read(dioProvider)` 获取 Dio 实例。生产项目中请在
-`lib/core/network/dio_client.dart` 中配置正式的 `baseUrl`、认证拦截器和错误处理。
+通过 `ref.read(dioProvider)` 获取 Dio 实例。默认 API 地址为
+`https://www.popi.art`，可在运行或构建时通过
+`--dart-define=API_BASE_URL=https://your-api.example.com` 覆盖。
 
 认证相关代码位于 `lib/features/auth/data/`：
 
-- `auth_api.dart`：定义登录和当前用户接口
-- `auth_repository.dart`：处理接口异常和 Token 保存
+- `auth_api.dart`：定义图形验证码、短信验证码、验证码登录和当前用户接口
+- `auth_repository.dart`：处理接口异常、Token 保存和登录态初始化
 - `lib/core/storage/secure_storage.dart`：安全保存 access token
 
 真实后端接入后，在 `lib/shared/providers/user_provider.dart` 调用

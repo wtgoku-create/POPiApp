@@ -2,10 +2,12 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
+import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 
 class PopiNavigationDrawer extends ConsumerStatefulWidget {
@@ -44,14 +46,16 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
   Widget build(BuildContext context) {
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final topInset = math.max(safeArea.top, 53.0);
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: math.min(360, MediaQuery.sizeOf(context).width * .9),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Color(0x33000000),
+            color: Colors.black.withValues(alpha: 0.28),
             offset: Offset(6, 0),
             blurRadius: 30,
           ),
@@ -74,31 +78,46 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                             alignment: Alignment.centerLeft,
                             fit: StackFit.expand,
                             children: [
-                              const DecoratedBox(
+                              DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: AppColors.pageBackground,
+                                  color: isDark
+                                      ? colorScheme.surfaceContainerHigh
+                                      : colorScheme.surface,
                                   borderRadius: BorderRadius.all(
                                     Radius.circular(AppRadii.pill),
                                   ),
+                                  border: Border.all(
+                                    color: colorScheme.outlineVariant
+                                        .withValues(alpha: isDark ? 0.65 : 1),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: isDark ? 0.14 : 0.05,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                               ),
                               TextField(
                                 controller: _searchController,
-                                cursorColor: AppColors.brand,
+                                cursorColor: colorScheme.primary,
                                 expands: true,
                                 minLines: null,
                                 maxLines: null,
                                 textAlignVertical: TextAlignVertical.center,
-                                style: const TextStyle(
-                                  color: AppColors.textPrimary,
+                                style: TextStyle(
+                                  color: colorScheme.onSurface,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
                                   height: 20 / 14,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   hintText: '搜索对话',
                                   hintStyle: TextStyle(
-                                    color: AppColors.textTertiary,
+                                    color: colorScheme.onSurfaceVariant,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w400,
                                     height: 20 / 14,
@@ -114,35 +133,17 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                   ),
                                 ),
                               ),
-                              const Positioned(
+                              Positioned(
                                 left: 10,
                                 child: IgnorePointer(
                                   child: AppSvgIcon.asset(
                                     'popi_search',
                                     size: 30,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ),
                             ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      SizedBox.square(
-                        dimension: 40,
-                        child: IconButton.outlined(
-                          tooltip: '新建对话',
-                          onPressed: _searchController.clear,
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppColors.surface,
-                            minimumSize: const Size.square(40),
-                            padding: EdgeInsets.zero,
-                            side: const BorderSide(color: AppColors.outline),
-                            shape: const CircleBorder(),
-                          ),
-                          icon: const AppSvgIcon.asset(
-                            'popi_new_conversation',
-                            size: 20,
                           ),
                         ),
                       ),
@@ -154,7 +155,6 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                       _NavigationItem(
                         iconAsset: 'popi_nav_conversation',
                         label: 'POPi对话',
-                        selected: true,
                         onTap: () => _openRoute(context, '/'),
                       ),
                       _NavigationItem(
@@ -181,21 +181,21 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                       _NavigationItem(
                         iconAsset: 'popi_nav_skill',
                         label: 'Skill',
-                        onTap: () => _openRoute(context, '/settings'),
+                        onTap: () => _openRoute(context, '/profile'),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Divider(
+                  Divider(
                     height: 1,
                     thickness: 1,
-                    color: AppColors.outlineVariant,
+                    color: colorScheme.outlineVariant,
                   ),
                   const SizedBox(height: 9),
                   Expanded(
                     child: Column(
                       children: [
-                        const SizedBox(
+                        SizedBox(
                           height: 40,
                           child: Padding(
                             padding: EdgeInsets.symmetric(
@@ -208,13 +208,17 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                   child: Text(
                                     '任务',
                                     style: TextStyle(
-                                      color: AppColors.textTertiary,
+                                      color: colorScheme.onSurfaceVariant,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                     ),
                                   ),
                                 ),
-                                AppSvgIcon.asset('popi_more', size: 30),
+                                AppSvgIcon.asset(
+                                  'popi_more',
+                                  size: 30,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
                               ],
                             ),
                           ),
@@ -281,7 +285,6 @@ class _NavigationItem extends StatelessWidget {
     this.iconWidth = 30,
     this.iconHeight = 30,
     this.flipIconVertically = false,
-    this.selected = false,
   });
 
   final String iconAsset;
@@ -290,13 +293,13 @@ class _NavigationItem extends StatelessWidget {
   final bool flipIconVertically;
   final String label;
   final VoidCallback onTap;
-  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.brand : AppColors.textPrimary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = colorScheme.onSurface;
     return Material(
-      color: selected ? AppColors.surfaceTint : AppColors.surface,
+      color: colorScheme.surface,
       borderRadius: BorderRadius.circular(AppRadii.pill),
       child: InkWell(
         onTap: onTap,
@@ -305,7 +308,7 @@ class _NavigationItem extends StatelessWidget {
         focusColor: Colors.transparent,
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed)) {
-            return AppColors.brand.withValues(alpha: .12);
+            return colorScheme.primary.withValues(alpha: .12);
           }
           return Colors.transparent;
         }),
@@ -323,7 +326,7 @@ class _NavigationItem extends StatelessWidget {
                       child: SizedBox(
                         width: iconWidth,
                         height: iconHeight,
-                        child: AppSvgIcon.asset(iconAsset),
+                        child: AppSvgIcon.asset(iconAsset, color: color),
                       ),
                     ),
                   ),
@@ -362,8 +365,11 @@ class _TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isNeutralIcon = iconAsset == 'popi_task_neutral';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: AppColors.surface,
+      color: colorScheme.surface,
       borderRadius: BorderRadius.circular(AppRadii.pill),
       child: InkWell(
         onTap: onTap,
@@ -372,7 +378,7 @@ class _TaskItem extends StatelessWidget {
         focusColor: Colors.transparent,
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed)) {
-            return AppColors.brand.withValues(alpha: .12);
+            return colorScheme.primary.withValues(alpha: .12);
           }
           return Colors.transparent;
         }),
@@ -380,15 +386,24 @@ class _TaskItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           child: Row(
             children: [
-              AppSvgIcon.asset(iconAsset, size: 30),
+              AppSvgIcon.asset(
+                iconAsset,
+                size: 30,
+                colorMapper: isNeutralIcon && isDark
+                    ? _NeutralTaskIconColorMapper(
+                        background: colorScheme.surfaceContainerHighest,
+                        foreground: colorScheme.onSurfaceVariant,
+                      )
+                    : null,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     height: 1.25,
@@ -403,7 +418,33 @@ class _TaskItem extends StatelessWidget {
   }
 }
 
-class _DrawerFooter extends StatelessWidget {
+class _NeutralTaskIconColorMapper extends ColorMapper {
+  const _NeutralTaskIconColorMapper({
+    required this.background,
+    required this.foreground,
+  });
+
+  final Color background;
+  final Color foreground;
+
+  @override
+  Color substitute(
+    String? id,
+    String elementName,
+    String attributeName,
+    Color color,
+  ) {
+    if (color == const Color(0xFFE8E8E8)) {
+      return background;
+    }
+    if (color == Colors.white) {
+      return foreground;
+    }
+    return color;
+  }
+}
+
+class _DrawerFooter extends ConsumerWidget {
   const _DrawerFooter({
     required this.onNotification,
     required this.onSettings,
@@ -413,22 +454,31 @@ class _DrawerFooter extends StatelessWidget {
   final VoidCallback onSettings;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+    final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
+    final displayId =
+        user?.code.isNotEmpty == true ? user!.code : user?.id ?? '--';
+
     return SizedBox(
       height: 47,
       child: Row(
         children: [
           ClipOval(
-            child: Image.asset(
-              'assets/icons/popi_user_avatar.png',
-              width: 47,
-              height: 47,
-              fit: BoxFit.cover,
-            ),
+            child: user?.avatarUrl?.isNotEmpty == true
+                ? Image.network(
+                    user!.avatarUrl!,
+                    width: 47,
+                    height: 47,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _defaultAvatar(),
+                  )
+                : _defaultAvatar(),
           ),
           const SizedBox(width: 10),
-          const SizedBox(
-            width: 81,
+          Expanded(
+            key: const Key('drawer-user-summary'),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,9 +486,11 @@ class _DrawerFooter extends StatelessWidget {
                 SizedBox(
                   height: 16,
                   child: Text(
-                    '啵啵',
+                    displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       height: 1,
@@ -449,16 +501,23 @@ class _DrawerFooter extends StatelessWidget {
                 SizedBox(
                   height: 15,
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '09821',
-                        style: TextStyle(
-                          color: AppColors.textTertiary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          height: 1,
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Text(
+                          displayId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            height: 1,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 2),
                       Image(
                         image: AssetImage(
                           'assets/icons/popi_user_badge.png',
@@ -472,16 +531,16 @@ class _DrawerFooter extends StatelessWidget {
               ],
             ),
           ),
-          const Spacer(),
           SizedBox.square(
             dimension: 40,
             child: IconButton(
               tooltip: '通知',
               padding: const EdgeInsets.all(5),
               onPressed: onNotification,
-              icon: const AppSvgIcon.asset(
+              icon: AppSvgIcon.asset(
                 'popi_notification',
                 size: 30,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -491,9 +550,10 @@ class _DrawerFooter extends StatelessWidget {
               tooltip: '个人设置',
               padding: const EdgeInsets.all(5),
               onPressed: onSettings,
-              icon: const AppSvgIcon.asset(
+              icon: AppSvgIcon.asset(
                 'popi_user_chevron',
                 size: 30,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -501,4 +561,11 @@ class _DrawerFooter extends StatelessWidget {
       ),
     );
   }
+
+  Widget _defaultAvatar() => Image.asset(
+        'assets/icons/popi_user_avatar.png',
+        width: 47,
+        height: 47,
+        fit: BoxFit.cover,
+      );
 }

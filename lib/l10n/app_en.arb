@@ -17,5 +17,34 @@
   "dark": "Dark",
   "language": "Language",
   "chinese": "Chinese",
-  "english": "English"
+  "english": "English",
+  "loginTitle": "Welcome to POPi",
+  "loginSubtitle": "Sign in to continue creating your own IP",
+  "phoneNumber": "Phone number",
+  "phoneNumberHint": "Enter your phone number",
+  "graphicalCaptcha": "Image verification",
+  "graphicalCaptchaHint": "Enter the characters",
+  "refreshCaptcha": "Refresh image verification",
+  "graphicalCaptchaRequired": "Enter the image verification code first",
+  "verificationCode": "Verification code",
+  "verificationCodeHint": "Enter the 6-digit code",
+  "sendVerificationCode": "Send code",
+  "sendingVerificationCode": "Sending…",
+  "verificationCodeSent": "Verification code sent",
+  "resendCountdown": "Resend in {seconds}s",
+  "@resendCountdown": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "phoneLogin": "Continue with phone",
+  "otherLoginMethods": "Other sign-in methods",
+  "wechatLogin": "Continue with WeChat",
+  "loginAgreement": "I have read and agree to the User Agreement and Privacy Policy",
+  "invalidPhoneNumber": "Enter a valid phone number",
+  "invalidVerificationCode": "Enter a valid 6-digit code",
+  "agreementRequired": "Please agree to the User Agreement and Privacy Policy first",
+  "loginSucceeded": "Signed in successfully",
+  "networkRequestFailed": "Network request failed. Try again later",
+  "wechatServicePending": "WeChat authorization is not connected yet"
 }

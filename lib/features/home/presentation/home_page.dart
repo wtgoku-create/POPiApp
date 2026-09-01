@@ -24,7 +24,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _messageController = TextEditingController();
   final _bodyScrollController = ScrollController();
   bool _drawerOpen = false;
-  bool _microphoneActive = false;
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
 
@@ -71,6 +70,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ? keyboardHeight + 20
         : (safeArea.bottom > 20 ? safeArea.bottom : 20);
     final composerClearance = 60.0 + 8 + composerBottomPadding + 20;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -105,9 +105,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                         padding: const EdgeInsets.all(5),
                         onPressed: () =>
                             _scaffoldKey.currentState?.openDrawer(),
-                        icon: const AppSvgIcon.asset(
+                        icon: AppSvgIcon.asset(
                           'popi_menu',
                           size: 30,
+                          color: colorScheme.onSurface,
                           semanticsLabel: '打开导航',
                         ),
                       ),
@@ -133,7 +134,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: Column(
                     children: [
                       SvgPicture.asset(
-                        'assets/icons/popi_wordmark.svg',
+                        'assets/icons/home_popi.svg',
                         key: const Key('popi-wordmark'),
                         width: 80,
                         height: 53,
@@ -163,11 +164,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 heightFactor: 1,
                 child: PopiMessageComposer(
                   controller: _messageController,
-                  microphoneActive: _microphoneActive,
                   onAttachment: _showAttachmentSheet,
-                  onMicrophone: () => setState(
-                    () => _microphoneActive = !_microphoneActive,
-                  ),
                   onSubmitted: _openConversation,
                 ),
               ),
@@ -239,6 +236,8 @@ class _WelcomeCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 541,
       child: Stack(
@@ -246,12 +245,17 @@ class _WelcomeCards extends StatelessWidget {
           Container(
             height: 271,
             decoration: BoxDecoration(
-              color: AppColors.surfaceTintStrong,
+              color: colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(AppRadii.card),
+              border: isDark
+                  ? Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+                    )
+                  : null,
             ),
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   left: 30,
                   top: 57,
                   child: SizedBox(
@@ -270,7 +274,7 @@ class _WelcomeCards extends StatelessWidget {
                         ],
                       ),
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: colorScheme.onSurface,
                         fontWeight: FontWeight.bold,
                         height: 1.4,
                       ),
@@ -281,7 +285,8 @@ class _WelcomeCards extends StatelessWidget {
                   left: 196.5,
                   top: 30,
                   child: Image.asset(
-                    'assets/icons/popi_welcome_mascot.png',
+                    'assets/icons/home_welcome.png',
+                    key: const Key('popi-welcome-mascot'),
                     width: 173,
                     height: 211,
                     fit: BoxFit.contain,
@@ -293,25 +298,43 @@ class _WelcomeCards extends StatelessWidget {
           Positioned(
             left: 0,
             right: 0,
-            top: 166,
+            top: isDark ? 160 : 166,
             child: Container(
-              height: 375,
+              key: const Key('home-welcome-panel'),
+              height: isDark ? 381 : 375,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: isDark
+                    ? colorScheme.surfaceContainerLow
+                    : colorScheme.surface,
                 borderRadius: BorderRadius.circular(AppRadii.card),
+                border: isDark
+                    ? Border.all(
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.45),
+                      )
+                    : null,
+                boxShadow: isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.16),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
+                        ),
+                      ]
+                    : null,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(
+                  SizedBox(
                     height: 20,
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         '先告诉我：',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: colorScheme.onSurface,
                           fontSize: 14,
                           height: 1,
                         ),
@@ -319,14 +342,14 @@ class _WelcomeCards extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  const SizedBox(
+                  SizedBox(
                     height: 20,
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         '你现在最想做什么？',
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: colorScheme.onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           height: 1,
@@ -366,13 +389,17 @@ class _PromptTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final end = Theme.of(context).brightness == Brightness.dark
+        ? colorScheme.surfaceContainerHighest
+        : endColor;
     return Material(
       color: Colors.transparent,
       child: Ink(
         height: 60,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.pageBackground, endColor],
+            colors: [colorScheme.surfaceContainerHigh, end],
           ),
           borderRadius: BorderRadius.circular(AppRadii.pill),
         ),
@@ -386,8 +413,8 @@ class _PromptTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -396,13 +423,14 @@ class _PromptTile extends StatelessWidget {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surface,
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
                     shape: BoxShape.circle,
                   ),
-                  child: const Center(
+                  child: Center(
                     child: AppSvgIcon.asset(
                       'popi_chevron_right',
+                      color: colorScheme.onSurfaceVariant,
                       semanticsLabel: '选择',
                     ),
                   ),

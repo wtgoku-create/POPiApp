@@ -205,6 +205,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'English'**
   String get english;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to POPi'**
+  String get loginTitle;
+
+  /// No description provided for @loginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue creating your own IP'**
+  String get loginSubtitle;
+
+  /// No description provided for @phoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number'**
+  String get phoneNumber;
+
+  /// No description provided for @phoneNumberHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your phone number'**
+  String get phoneNumberHint;
+
+  /// No description provided for @graphicalCaptcha.
+  ///
+  /// In en, this message translates to:
+  /// **'Image verification'**
+  String get graphicalCaptcha;
+
+  /// No description provided for @graphicalCaptchaHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the characters'**
+  String get graphicalCaptchaHint;
+
+  /// No description provided for @refreshCaptcha.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh image verification'**
+  String get refreshCaptcha;
+
+  /// No description provided for @graphicalCaptchaRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the image verification code first'**
+  String get graphicalCaptchaRequired;
+
+  /// No description provided for @verificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code'**
+  String get verificationCode;
+
+  /// No description provided for @verificationCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the 6-digit code'**
+  String get verificationCodeHint;
+
+  /// No description provided for @sendVerificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Send code'**
+  String get sendVerificationCode;
+
+  /// No description provided for @sendingVerificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get sendingVerificationCode;
+
+  /// No description provided for @verificationCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification code sent'**
+  String get verificationCodeSent;
+
+  /// No description provided for @resendCountdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend in {seconds}s'**
+  String resendCountdown(int seconds);
+
+  /// No description provided for @phoneLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with phone'**
+  String get phoneLogin;
+
+  /// No description provided for @otherLoginMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Other sign-in methods'**
+  String get otherLoginMethods;
+
+  /// No description provided for @wechatLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with WeChat'**
+  String get wechatLogin;
+
+  /// No description provided for @loginAgreement.
+  ///
+  /// In en, this message translates to:
+  /// **'I have read and agree to the User Agreement and Privacy Policy'**
+  String get loginAgreement;
+
+  /// No description provided for @invalidPhoneNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid phone number'**
+  String get invalidPhoneNumber;
+
+  /// No description provided for @invalidVerificationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid 6-digit code'**
+  String get invalidVerificationCode;
+
+  /// No description provided for @agreementRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please agree to the User Agreement and Privacy Policy first'**
+  String get agreementRequired;
+
+  /// No description provided for @loginSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in successfully'**
+  String get loginSucceeded;
+
+  /// No description provided for @networkRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Network request failed. Try again later'**
+  String get networkRequestFailed;
+
+  /// No description provided for @wechatServicePending.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat authorization is not connected yet'**
+  String get wechatServicePending;
 }
 
 class _AppLocalizationsDelegate

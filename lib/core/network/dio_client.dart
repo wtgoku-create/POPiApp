@@ -6,14 +6,20 @@ import 'auth_interceptor.dart';
 class DioClient {
   DioClient({
     required TokenStorage secureStorage,
-    String baseUrl = 'https://api.example.com',
+    String baseUrl = const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'https://www.popi.art',
+    ),
     bool enableLogging = false,
   }) : dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,
             connectTimeout: const Duration(seconds: 15),
             receiveTimeout: const Duration(seconds: 15),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
           ),
         ) {
     dio.interceptors.add(AuthInterceptor(secureStorage));

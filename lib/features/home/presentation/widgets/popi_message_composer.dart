@@ -11,17 +11,13 @@ class PopiMessageComposer extends ConsumerWidget {
   const PopiMessageComposer({
     required this.controller,
     required this.onAttachment,
-    required this.onMicrophone,
     required this.onSubmitted,
-    this.microphoneActive = false,
     super.key,
   });
 
   final TextEditingController controller;
   final VoidCallback onAttachment;
-  final VoidCallback onMicrophone;
   final ValueChanged<String> onSubmitted;
-  final bool microphoneActive;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,6 +26,8 @@ class PopiMessageComposer extends ConsumerWidget {
     final bottomPadding = keyboardHeight > 0
         ? keyboardHeight + 20
         : math.max(safeArea.bottom, 20).toDouble();
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedPadding(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
@@ -39,84 +37,87 @@ class PopiMessageComposer extends ConsumerWidget {
         math.max(safeArea.right, 20),
         bottomPadding,
       ),
-      child: Container(
-        key: const Key('popi-message-composer'),
-        height: 60,
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.only(left: 20, right: 10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: const [
-            BoxShadow(color: Color(0x08000000), blurRadius: 5),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                key: const Key('popi-message-input'),
-                controller: controller,
-                onTapOutside: (_) =>
-                    FocusManager.instance.primaryFocus?.unfocus(),
-                cursorColor: AppColors.brand,
-                textInputAction: TextInputAction.send,
-                onSubmitted: onSubmitted,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 370),
+          child: Container(
+            key: const Key('popi-message-composer'),
+            height: 60,
+            padding: const EdgeInsets.only(left: 20, right: 10),
+            decoration: BoxDecoration(
+              color: isDark ? colorScheme.surfaceContainerHigh : null,
+              gradient: isDark
+                  ? null
+                  : const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.pageBackground, AppColors.surface],
+                    ),
+              border: isDark
+                  ? Border.all(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+                    )
+                  : Border.all(color: AppColors.surface, width: 2),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                  blurRadius: isDark ? 14 : 20,
                 ),
-                decoration: const InputDecoration(
-                  hintText: '跟POPi说点什么...',
-                  hintStyle: TextStyle(
-                    color: AppColors.textTertiary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
+              ],
             ),
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: IconButton(
-                tooltip: microphoneActive ? '关闭工具' : '打开工具',
-                padding: EdgeInsets.zero,
-                onPressed: onMicrophone,
-                icon: const AppSvgIcon.asset(
-                  'popi_composer_tools',
-                  size: 40,
-                ),
-              ),
-            ),
-            CustomPaint(
-              painter: const _DashedCircleBorderPainter(
-                color: AppColors.brand,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceTint,
-                  shape: BoxShape.circle,
-                ),
-                child: SizedBox.square(
-                  dimension: 40,
-                  child: IconButton(
-                    tooltip: '添加附件',
-                    padding: EdgeInsets.zero,
-                    onPressed: onAttachment,
-                    color: AppColors.brand,
-                    icon: const AppSvgIcon.asset('popi_add', size: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('popi-message-input'),
+                    controller: controller,
+                    onTapOutside: (_) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
+                    cursorColor: colorScheme.primary,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: onSubmitted,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: '跟POPi说点什么...',
+                      hintStyle: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                      ),
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
-              ),
+                CustomPaint(
+                  painter: _DashedCircleBorderPainter(
+                    color: colorScheme.primary,
+                  ),
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child: IconButton(
+                      tooltip: '添加附件',
+                      padding: EdgeInsets.zero,
+                      onPressed: onAttachment,
+                      icon: AppSvgIcon.asset(
+                        'popi_add',
+                        size: 20,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

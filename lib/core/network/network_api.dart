@@ -1,0 +1,97 @@
+import 'package:dio/dio.dart';
+
+import 'api_exception.dart';
+
+/// Centralizes concrete HTTP contracts shared by feature data sources.
+class NetworkApi {
+  const NetworkApi(this.dio);
+
+  final Dio dio;
+
+  Future<Map<String, dynamic>> createCaptcha() async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/captcha/gen',
+    );
+    return _data(response);
+  }
+
+  Future<void> sendLoginCode({
+    required String phone,
+    required String captchaId,
+    required String captchaValue,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/auth/code',
+      queryParameters: {
+        'phone': phone,
+        'usage': 'LOGIN',
+        'captchaId': captchaId,
+        'captchaValue': captchaValue,
+      },
+    );
+    _data(response);
+  }
+
+  Future<Map<String, dynamic>> loginByCode({
+    required String phone,
+    required String code,
+    required String inviteCode,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/auth/loginByCode',
+      data: {'phone': phone, 'code': code, 'inviteCode': inviteCode},
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> currentUser() async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/auth/userInfo',
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> userPoints() async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/users/userPoints/total',
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> updateUser({
+    required String avatar,
+    required String name,
+    required String signature,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/users/user/update',
+      data: {'avatar': avatar, 'name': name, 'signature': signature},
+    );
+    return _data(response);
+  }
+
+  Future<void> logout() async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/auth/logout',
+    );
+    _data(response);
+  }
+
+  Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
+    final body = response.data;
+    if (body == null) {
+      throw const ApiException(message: '服务器返回了空响应');
+    }
+    if (body['status']?.toString() != '0000') {
+      throw ApiException(
+        message: body['message']?.toString() ?? '请求失败，请稍后重试',
+        statusCode: response.statusCode,
+      );
+    }
+    final data = body['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const ApiException(message: '服务器响应格式不正确');
+    }
+    return data;
+  }
+}

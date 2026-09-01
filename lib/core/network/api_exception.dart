@@ -7,8 +7,11 @@ class ApiException implements Exception {
   final int? statusCode;
 
   factory ApiException.fromDioException(DioException exception) {
+    final data = exception.response?.data;
+    final responseMessage =
+        data is Map<String, dynamic> ? data['message']?.toString() : null;
     return ApiException(
-      message: exception.message ?? 'Network request failed',
+      message: responseMessage ?? exception.message ?? 'Network request failed',
       statusCode: exception.response?.statusCode,
     );
   }

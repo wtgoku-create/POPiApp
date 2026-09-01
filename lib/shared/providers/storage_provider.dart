@@ -16,3 +16,7 @@ final preferencesStorageProvider = Provider<PreferencesStorage>(
 final secureStorageProvider = Provider<TokenStorage>(
   (ref) => const SecureStorage(FlutterSecureStorage()),
 );
+
+final accessTokenProvider = FutureProvider<String?>(
+  (ref) => ref.watch(secureStorageProvider).readAccessToken(),
+);

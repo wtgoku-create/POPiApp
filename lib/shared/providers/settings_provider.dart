@@ -25,19 +25,22 @@ class ThemeModeController extends Notifier<ThemeMode> {
 }
 
 final localeProvider =
-    NotifierProvider<LocaleController, Locale>(LocaleController.new);
+    NotifierProvider<LocaleController, Locale?>(LocaleController.new);
 
-class LocaleController extends Notifier<Locale> {
+class LocaleController extends Notifier<Locale?> {
   static const _key = 'locale';
 
   @override
-  Locale build() =>
-      Locale(ref.read(preferencesStorageProvider).getString(_key) ?? 'zh');
+  Locale? build() {
+    final languageCode =
+        ref.read(preferencesStorageProvider).getString(_key) ?? 'system';
+    return languageCode == 'system' ? null : Locale(languageCode);
+  }
 
-  Future<void> setLocale(Locale locale) async {
+  Future<void> setLocale(Locale? locale) async {
     state = locale;
     await ref
         .read(preferencesStorageProvider)
-        .setString(_key, locale.languageCode);
+        .setString(_key, locale?.languageCode ?? 'system');
   }
 }

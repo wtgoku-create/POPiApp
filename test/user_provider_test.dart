@@ -1,67 +1,131 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
-import 'package:popi_ai_app/shared/providers/storage_provider.dart';
+import 'package:popi_ai_app/features/auth/data/auth_api.dart';
+import 'package:popi_ai_app/features/auth/data/auth_repository.dart';
+import 'package:popi_ai_app/features/auth/domain/auth_session.dart';
+import 'package:popi_ai_app/features/auth/domain/captcha_challenge.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/auth/domain/user_points.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 void main() {
   const user = User(id: '1', name: '张三', email: 'test@example.com');
 
-  test('persists and restores the current user', () async {
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
+  ProviderContainer createContainer(_FakeAuthApi api) {
+    return ProviderContainer(
       overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        secureStorageProvider.overrideWithValue(_MemoryTokenStorage()),
+        authRepositoryProvider.overrideWithValue(
+          AuthRepository(api: api, secureStorage: _MemoryTokenStorage()),
+        ),
       ],
     );
+  }
+
+  test('keeps the current user in memory only', () async {
+    final container = createContainer(_FakeAuthApi());
     addTearDown(container.dispose);
 
     await container.read(userProvider.notifier).setUser(user);
     expect(container.read(userProvider), user);
 
-    final restoredContainer = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        secureStorageProvider.overrideWithValue(_MemoryTokenStorage()),
-      ],
-    );
-    addTearDown(restoredContainer.dispose);
-    expect(restoredContainer.read(userProvider), user);
+    final newContainer = createContainer(_FakeAuthApi());
+    addTearDown(newContainer.dispose);
+    expect(newContainer.read(userProvider), isNull);
   });
 
-  test('clears the current user', () async {
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        secureStorageProvider.overrideWithValue(_MemoryTokenStorage()),
-      ],
+  test('parses the user code returned by the user information endpoint', () {
+    final user = User.fromJson({
+      'id': 10561,
+      'code': 'u10561',
+      'name': '当前用户',
+      'email': 'user@popi.art',
+    });
+
+    expect(user.id, '10561');
+    expect(user.code, 'u10561');
+  });
+
+  test('loads user points into global state', () async {
+    final container = createContainer(_FakeAuthApi());
+    addTearDown(container.dispose);
+
+    await container.read(userPointsProvider.notifier).refresh();
+
+    expect(
+      container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
+      739,
     );
+  });
+
+  test('clears the user and points on logout', () async {
+    final api = _FakeAuthApi();
+    final container = createContainer(api);
     addTearDown(container.dispose);
 
     await container.read(userProvider.notifier).setUser(user);
+    await container.read(userPointsProvider.notifier).refresh();
     await container.read(userProvider.notifier).clearUser();
 
     expect(container.read(userProvider), isNull);
-    expect(preferences.getString('current_user'), isNull);
+    expect(container.read(userPointsProvider).valueOrNull, isNull);
+    expect(api.logoutCalled, isTrue);
   });
 }
 
+class _FakeAuthApi implements AuthApi {
+  bool logoutCalled = false;
+
+  @override
+  Future<CaptchaChallenge> createCaptcha() => throw UnimplementedError();
+
+  @override
+  Future<User> currentUser() => throw UnimplementedError();
+
+  @override
+  Future<AuthSession> loginByCode({
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> logout() async => logoutCalled = true;
+
+  @override
+  Future<void> sendLoginCode({
+    required String phone,
+    required String captchaId,
+    required String captchaValue,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<User> updateUser({
+    required String avatar,
+    required String name,
+    required String signature,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<UserPoints> userPoints() async => const UserPoints(
+        availableMemberPoints: 0,
+        availableOtherPoints: 739,
+        availableTotalPoints: 739,
+        consumePoints: 18164,
+      );
+}
+
 class _MemoryTokenStorage implements TokenStorage {
-  String? token;
+  @override
+  Future<void> deleteAccessToken() async {}
 
   @override
-  Future<String?> readAccessToken() async => token;
+  Future<String?> readAccessToken() async => null;
 
   @override
-  Future<void> writeAccessToken(String value) async => token = value;
-
-  @override
-  Future<void> deleteAccessToken() async => token = null;
+  Future<void> writeAccessToken(String value) async {}
 }
