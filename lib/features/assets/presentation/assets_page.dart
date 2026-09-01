@@ -54,35 +54,31 @@ class _LibraryNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 56,
-      child: Stack(
-        alignment: Alignment.center,
+      child: Row(
         children: [
-          const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _LibraryTab(label: '角色库'),
-              SizedBox(width: 20),
-              _LibraryTab(label: '资产库'),
-              SizedBox(width: 20),
-              _LibraryTab(label: '创作历史', selected: true),
-            ],
-          ),
-          Positioned(
-            right: 8,
-            child: SizedBox.square(
-              dimension: 40,
-              child: IconButton(
-                key: const Key('assets-navigation-menu'),
-                tooltip: '打开导航',
-                padding: EdgeInsets.zero,
-                onPressed: onMenuPressed,
-                icon: const AppSvgIcon.asset(
+          const SizedBox(width: 8),
+          SizedBox.square(
+            dimension: 40,
+            child: IconButton(
+              key: const Key('assets-navigation-menu'),
+              tooltip: '打开导航',
+              padding: EdgeInsets.zero,
+              onPressed: onMenuPressed,
+              icon: Transform.rotate(
+                angle: math.pi / 2,
+                child: const AppSvgIcon.asset(
                   'assets_history_chevron',
                   size: 40,
                 ),
               ),
             ),
           ),
+          const SizedBox(width: 17),
+          const _LibraryTab(label: '创作历史', selected: true),
+          const SizedBox(width: 20),
+          const _LibraryTab(label: '资产库'),
+          const SizedBox(width: 20),
+          const _LibraryTab(label: '角色库'),
         ],
       ),
     );
@@ -164,7 +160,7 @@ class _EmptyHistory extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Transform.translate(
-        offset: const Offset(0, -3),
+        offset: const Offset(0, -80),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

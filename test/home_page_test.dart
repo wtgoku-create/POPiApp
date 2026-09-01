@@ -71,6 +71,7 @@ void main() {
 
     expect(find.text('你现在最想做什么？'), findsOneWidget);
     expect(find.text('做一个新IP'), findsOneWidget);
+    expect(find.text('跟POPi说点什么...'), findsOneWidget);
     expect(find.byKey(const Key('popi-message-input')), findsOneWidget);
     expect(find.byType(AppFlowyEditor), findsOneWidget);
     expect(
@@ -109,7 +110,14 @@ void main() {
         tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy;
 
     await tester.tap(find.byKey(const Key('popi-message-input')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 110));
+    final animatingComposerHeight =
+        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    expect(animatingComposerHeight, greaterThan(60));
+    expect(animatingComposerHeight, lessThan(118));
+    await tester.pump(const Duration(milliseconds: 120));
+    await tester.pump();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
       118,
@@ -135,11 +143,15 @@ void main() {
     expect(find.byTooltip('语音输入'), findsOneWidget);
     expect(find.text('AI生成结果可能有误，仅供参考'), findsOneWidget);
     await tester.tapAt(const Offset(10, 800));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 220));
+    await tester.pump();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
       60,
     );
+    expect(find.text('跟POPi说点什么...'), findsOneWidget);
 
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pumpAndSettle();

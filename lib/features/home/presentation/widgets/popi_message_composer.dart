@@ -72,9 +72,11 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
       _PopiMessageComposerState();
 }
 
-class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
+class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
+    with SingleTickerProviderStateMixin {
   late final FocusNode _focusNode;
   late final EditorScrollController _editorScrollController;
+  late final AnimationController _composerAnimationController;
   final _sizeKey = GlobalKey();
   bool _hasFocus = false;
   int _focusRevision = 0;
@@ -83,6 +85,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
   void initState() {
     super.initState();
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
+    _composerAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    )..addStatusListener(_handleComposerAnimationStatus);
     _editorScrollController = EditorScrollController(
       editorState: widget.controller.editorState,
       shrinkWrap: true,
@@ -95,6 +101,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
     _focusNode
       ..removeListener(_handleFocusChanged)
       ..dispose();
+    _composerAnimationController
+      ..removeStatusListener(_handleComposerAnimationStatus)
+      ..dispose();
     _editorScrollController.dispose();
     super.dispose();
   }
@@ -102,7 +111,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
   void _handleFocusChanged() {
     final revision = ++_focusRevision;
     if (_focusNode.hasFocus) {
-      if (mounted && !_hasFocus) setState(() => _hasFocus = true);
+      if (mounted && !_hasFocus) {
+        setState(() => _hasFocus = true);
+        _composerAnimationController.forward();
+      }
       return;
     }
 
@@ -117,6 +129,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
         return;
       }
       setState(() => _hasFocus = false);
+      _composerAnimationController.reverse();
     });
   }
 
@@ -133,6 +146,13 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
     }
   }
 
+  void _handleComposerAnimationStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final safeArea = ref.watch(safeAreaInsetsProvider);
@@ -145,7 +165,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
     final hasImages = widget.selectedImages.isNotEmpty;
     return NotificationListener<SizeChangedLayoutNotification>(
       onNotification: (_) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
+        if (!_composerAnimationController.isAnimating) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
+        }
         return false;
       },
       child: SizeChangedLayoutNotifier(
@@ -165,60 +187,91 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    key: const Key('popi-message-composer'),
-                    width: double.infinity,
-                    // The focused design has a 94px content area, plus 10px
-                    // padding and a 2px border on both vertical sides.
-                    height: hasImages
-                        ? (_hasFocus ? 180 : 60)
-                        : (_hasFocus ? 118 : 60),
-                    padding: _hasFocus
-                        ? const EdgeInsets.all(10)
-                        : const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: isDark ? colorScheme.surfaceContainerHigh : null,
-                      gradient: isDark
-                          ? null
-                          : const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                AppColors.pageBackground,
-                                AppColors.surface,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final expandedHeight = hasImages ? 180.0 : 118.0;
+                      final contentHeight = _hasFocus ? expandedHeight : 60.0;
+                      final content = _ComposerContent(
+                        isExpanded: _hasFocus,
+                        images: widget.selectedImages,
+                        input: _buildInput(
+                          colorScheme,
+                          placeholderFontSize: _hasFocus ? 14 : 16,
+                        ),
+                        colorScheme: colorScheme,
+                        onAttachment: widget.onAttachment,
+                        onRemoveImage: widget.onRemoveImage,
+                        onKeepFocus: _focusNode.requestFocus,
+                      );
+                      return AnimatedBuilder(
+                        animation: _composerAnimationController,
+                        builder: (context, _) {
+                          final progress = Curves.easeInOutCubic.transform(
+                            _composerAnimationController.value,
+                          );
+                          final height = 60 + (expandedHeight - 60) * progress;
+                          final radius = AppRadii.pill +
+                              (AppRadii.card - AppRadii.pill) * progress;
+                          final borderRadius = BorderRadius.circular(radius);
+                          return Container(
+                            key: const Key('popi-message-composer'),
+                            width: double.infinity,
+                            height: height,
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? colorScheme.surfaceContainerHigh
+                                  : null,
+                              gradient: isDark
+                                  ? null
+                                  : const LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        AppColors.pageBackground,
+                                        AppColors.surface,
+                                      ],
+                                    ),
+                              border: isDark
+                                  ? Border.all(
+                                      color: colorScheme.outlineVariant
+                                          .withValues(alpha: .45),
+                                    )
+                                  : Border.all(
+                                      color: AppColors.surface,
+                                      width: 2,
+                                    ),
+                              borderRadius: borderRadius,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha: isDark ? 0.2 : 0.05,
+                                  ),
+                                  blurRadius: isDark ? 14 : 20,
+                                ),
                               ],
                             ),
-                      border: isDark
-                          ? Border.all(
-                              color: colorScheme.outlineVariant.withValues(
-                                alpha: .45,
+                            child: ClipRRect(
+                              borderRadius: borderRadius,
+                              child: OverflowBox(
+                                alignment: Alignment.topCenter,
+                                minWidth: constraints.maxWidth,
+                                maxWidth: constraints.maxWidth,
+                                minHeight: contentHeight,
+                                maxHeight: contentHeight,
+                                child: Padding(
+                                  padding: _hasFocus
+                                      ? const EdgeInsets.all(10)
+                                      : const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                        ),
+                                  child: content,
+                                ),
                               ),
-                            )
-                          : Border.all(color: AppColors.surface, width: 2),
-                      borderRadius: BorderRadius.circular(
-                        _hasFocus ? AppRadii.card : AppRadii.pill,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(
-                            alpha: isDark ? 0.2 : 0.05,
-                          ),
-                          blurRadius: isDark ? 14 : 20,
-                        ),
-                      ],
-                    ),
-                    child: _ComposerContent(
-                      isExpanded: _hasFocus,
-                      images: widget.selectedImages,
-                      input: _buildInput(
-                        colorScheme,
-                        placeholderFontSize: _hasFocus ? 14 : 16,
-                      ),
-                      colorScheme: colorScheme,
-                      onAttachment: widget.onAttachment,
-                      onRemoveImage: widget.onRemoveImage,
-                      onKeepFocus: _focusNode.requestFocus,
-                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -242,45 +295,60 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
     ColorScheme colorScheme, {
     required double placeholderFontSize,
   }) {
+    final placeholderStyle = TextStyle(
+      color: colorScheme.onSurfaceVariant,
+      fontSize: placeholderFontSize,
+      fontWeight: FontWeight.w400,
+    );
     final blockComponentBuilders = {
       ...standardBlockComponentBuilderMap,
       ParagraphBlockKeys.type: ParagraphBlockComponentBuilder(
         configuration: BlockComponentConfiguration(
           padding: (_) => EdgeInsets.zero,
           placeholderText: (_) => '跟POPi说点什么...',
-          placeholderTextStyle: (_, {textSpan}) => TextStyle(
-            color: colorScheme.onSurfaceVariant,
-            fontSize: placeholderFontSize,
-            fontWeight: FontWeight.w400,
-          ),
+          placeholderTextStyle: (_, {textSpan}) => placeholderStyle,
         ),
       )..showActions = (_) => false,
     };
 
     return TapRegion(
       onTapOutside: (_) => _dismissEditor(),
-      child: AppFlowyEditor(
-        key: const Key('popi-message-input'),
-        editorState: widget.controller.editorState,
-        editorScrollController: _editorScrollController,
-        focusNode: _focusNode,
-        shrinkWrap: true,
-        showMagnifier: true,
-        autoScrollEdgeOffset: 24,
-        blockComponentBuilders: blockComponentBuilders,
-        editorStyle: EditorStyle.mobile(
-          padding: EdgeInsets.zero,
-          cursorColor: colorScheme.primary,
-          dragHandleColor: colorScheme.primary,
-          selectionColor: colorScheme.primary.withValues(alpha: .18),
-          textStyleConfiguration: TextStyleConfiguration(
-            text: TextStyle(
-              color: colorScheme.onSurface,
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: AppFlowyEditor(
+              key: const Key('popi-message-input'),
+              editorState: widget.controller.editorState,
+              editorScrollController: _editorScrollController,
+              focusNode: _focusNode,
+              shrinkWrap: true,
+              showMagnifier: true,
+              autoScrollEdgeOffset: 24,
+              blockComponentBuilders: blockComponentBuilders,
+              editorStyle: EditorStyle.mobile(
+                padding: EdgeInsets.zero,
+                cursorColor: colorScheme.primary,
+                dragHandleColor: colorScheme.primary,
+                selectionColor: colorScheme.primary.withValues(alpha: .18),
+                textStyleConfiguration: TextStyleConfiguration(
+                  text: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          if (!_hasFocus && widget.controller.markdown.isEmpty)
+            IgnorePointer(
+              child: Text(
+                '跟POPi说点什么...',
+                key: const Key('popi-message-placeholder'),
+                style: placeholderStyle,
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -27,6 +27,8 @@ flutter test
 - `build-ios`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动运行时，使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，并上传 IPA Artifact。
 - `upload-ios-testflight`：独立的 TestFlight 上传节点。Tag 发布会自动执行；手动运行时只有同时勾选 `Build iOS IPA` 和 `Upload iOS IPA to TestFlight` 才会执行。
 
+iOS 构建号由 Workflow 自动生成为 `GitHub 运行序号 × 100 + 重跑次数`，每次新运行或重跑都会递增，避免 TestFlight 因构建号重复拒绝上传。`pubspec.yaml` 中的展示版本号仍按产品发布节奏手动维护。
+
 ## 手动打包
 
 1. 打开 GitHub 仓库的 **Actions** 页面。
