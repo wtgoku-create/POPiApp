@@ -71,9 +71,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         ? keyboardHeight + 20
         : (safeArea.bottom > 20 ? safeArea.bottom : 20).toDouble();
     final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
-    final composerClearance =
-        (_composerHeight > 0 ? _composerHeight : fallbackComposerHeight) + 20;
+    final composerInset =
+        _composerHeight > 0 ? _composerHeight : fallbackComposerHeight;
+    final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -131,7 +133,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               key: const Key('popi-home-scroll'),
               controller: _bodyScrollController,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(20, 10, 20, composerClearance),
+              padding: EdgeInsets.fromLTRB(20, 10, 20, contentBottomPadding),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 400),
@@ -159,14 +161,66 @@ class _HomePageState extends ConsumerState<HomePage> {
             Positioned(
               left: 0,
               right: 0,
+              bottom: composerInset - 1,
+              height: 32,
+              child: IgnorePointer(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.white],
+                  ).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      key: const Key('popi-composer-region-feather'),
+                      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              colorScheme.surface.withValues(
+                                alpha: isDark ? .05 : .02,
+                              ),
+                              colorScheme.surface.withValues(
+                                alpha: isDark ? .14 : .06,
+                              ),
+                            ],
+                            stops: const [0, .55, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
               bottom: 0,
-              child: Center(
-                heightFactor: 1,
-                child: PopiMessageComposer(
-                  controller: _messageController,
-                  onAttachment: _showAttachmentSheet,
-                  onHeightChanged: _handleComposerHeightChanged,
-                  onSubmitted: _openConversation,
+              child: ClipRect(
+                child: BackdropFilter(
+                  key: const Key('popi-composer-region-blur'),
+                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  child: ColoredBox(
+                    key: const Key('popi-composer-region-surface'),
+                    color: colorScheme.surface.withValues(
+                      alpha: isDark ? .14 : .06,
+                    ),
+                    child: Center(
+                      heightFactor: 1,
+                      child: PopiMessageComposer(
+                        controller: _messageController,
+                        onAttachment: _showAttachmentSheet,
+                        onHeightChanged: _handleComposerHeightChanged,
+                        onSubmitted: _openConversation,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

@@ -145,13 +145,13 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer> {
                               end: Alignment.bottomCenter,
                               colors: [
                                 AppColors.pageBackground,
-                                AppColors.surface
+                                AppColors.surface,
                               ],
                             ),
                       border: isDark
                           ? Border.all(
                               color: colorScheme.outlineVariant.withValues(
-                                alpha: 0.45,
+                                alpha: .45,
                               ),
                             )
                           : Border.all(color: AppColors.surface, width: 2),

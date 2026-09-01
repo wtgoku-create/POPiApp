@@ -231,6 +231,21 @@ void main() {
       (composer.decoration! as BoxDecoration).color,
       AppTheme.dark.colorScheme.surfaceContainerHigh,
     );
+    expect(
+      find.byKey(const Key('popi-composer-region-blur')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('popi-composer-region-feather')),
+      findsOneWidget,
+    );
+    final composerRegionSurface = tester.widget<ColoredBox>(
+      find.byKey(const Key('popi-composer-region-surface')),
+    );
+    expect(
+      composerRegionSurface.color,
+      AppTheme.dark.colorScheme.surface.withValues(alpha: .14),
+    );
 
     final mascot = tester.widget<Image>(
       find.byKey(const Key('popi-welcome-mascot')),
