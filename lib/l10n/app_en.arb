@@ -140,6 +140,7 @@
   "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
   "upgradeMembership": "Upgrade",
   "rechargeAndPoints": "Top up | Points details",
+  "rechargeAction": "Top up",
   "pointsDetailsTitle": "Points details",
   "rechargePointsPackage": "Top up points",
   "rechargedPoints": "Purchased points",

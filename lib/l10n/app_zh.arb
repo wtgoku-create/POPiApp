@@ -140,6 +140,7 @@
   "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
   "upgradeMembership": "升级会员",
   "rechargeAndPoints": "充值 | 积分详情",
+  "rechargeAction": "充值",
   "pointsDetailsTitle": "积分详情",
   "rechargePointsPackage": "充值积分包",
   "rechargedPoints": "充值积分",

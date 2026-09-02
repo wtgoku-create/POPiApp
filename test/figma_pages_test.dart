@@ -412,13 +412,27 @@ void main() {
   testWidgets('opens points details from profile and returns', (tester) async {
     await pumpPage(tester, const ProfilePage());
 
-    await tester.tap(find.byKey(const Key('profile-points-entry')));
+    await tester.tap(find.byKey(const Key('profile-points-details')));
     await tester.pumpAndSettle();
     expect(find.byType(PointsDetailsPage), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('points-details-back')));
     await tester.pumpAndSettle();
     expect(find.byType(ProfilePage), findsOneWidget);
+  });
+
+  testWidgets('opens recharge sheet directly from profile', (tester) async {
+    await pumpPage(
+      tester,
+      ProfilePage(pointPackageLoader: () async => _pointPackages),
+    );
+
+    await tester.tap(find.byKey(const Key('profile-points-recharge')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('points-recharge-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('points-package-600')), findsOneWidget);
+    expect(find.byType(PointsDetailsPage), findsNothing);
   });
 }
 

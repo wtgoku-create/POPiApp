@@ -411,6 +411,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rechargeAndPoints => '充值 | 积分详情';
 
   @override
+  String get rechargeAction => '充值';
+
+  @override
   String get pointsDetailsTitle => '积分详情';
 
   @override

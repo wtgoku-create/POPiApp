@@ -423,6 +423,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rechargeAndPoints => 'Top up | Points details';
 
   @override
+  String get rechargeAction => 'Top up';
+
+  @override
   String get pointsDetailsTitle => 'Points details';
 
   @override

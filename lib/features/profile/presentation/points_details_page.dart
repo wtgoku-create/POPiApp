@@ -23,6 +23,25 @@ typedef PointsLogPageLoader = Future<UserPointsLogPage> Function(
 );
 typedef PointPackageLoader = Future<List<PointPackage>> Function();
 
+Future<PointPackage?> showRechargePointsSheet({
+  required BuildContext context,
+  required int totalPoints,
+  required PointPackageLoader loadPackages,
+}) {
+  return AppSheet.show<PointPackage>(
+    context: context,
+    useSafeArea: false,
+    isScrollControlled: true,
+    showDragHandle: false,
+    backgroundColor: Colors.transparent,
+    barrierColor: const Color(0x33333333),
+    builder: (context) => _RechargePointsSheet(
+      totalPoints: totalPoints,
+      loadPackages: loadPackages,
+    ),
+  );
+}
+
 class PointsDetailsPage extends ConsumerStatefulWidget {
   const PointsDetailsPage({
     this.refreshOnOpen = true,
@@ -307,17 +326,10 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
 
   Future<void> _showRechargeSheet(int totalPoints) async {
     setState(() => _sheetOpen = true);
-    await AppSheet.show<PointPackage>(
+    await showRechargePointsSheet(
       context: context,
-      useSafeArea: false,
-      isScrollControlled: true,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x33333333),
-      builder: (context) => _RechargePointsSheet(
-        totalPoints: totalPoints,
-        loadPackages: _fetchPointPackages,
-      ),
+      totalPoints: totalPoints,
+      loadPackages: _fetchPointPackages,
     );
     if (mounted) setState(() => _sheetOpen = false);
   }

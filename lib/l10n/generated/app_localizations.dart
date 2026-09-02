@@ -878,6 +878,12 @@ abstract class AppLocalizations {
   /// **'Top up | Points details'**
   String get rechargeAndPoints;
 
+  /// No description provided for @rechargeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Top up'**
+  String get rechargeAction;
+
   /// No description provided for @pointsDetailsTitle.
   ///
   /// In en, this message translates to:

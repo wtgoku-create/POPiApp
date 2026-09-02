@@ -4,19 +4,25 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../data/point_package_repository.dart';
+import 'points_details_page.dart';
 import 'widgets/profile_chrome.dart';
 
 final _languageMenuExpandedProvider = StateProvider<bool>((ref) => false);
 final _themeMenuExpandedProvider = StateProvider<bool>((ref) => false);
 
 class ProfilePage extends ConsumerWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({this.pointPackageLoader, super.key});
+
+  final PointPackageLoader? pointPackageLoader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -114,7 +120,7 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const MembershipCard(),
+                MembershipCard(pointPackageLoader: pointPackageLoader),
                 const SizedBox(height: 20),
                 SettingsGroup(
                   children: [
@@ -365,7 +371,9 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class MembershipCard extends ConsumerWidget {
-  const MembershipCard({super.key});
+  const MembershipCard({this.pointPackageLoader, super.key});
+
+  final PointPackageLoader? pointPackageLoader;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -376,7 +384,7 @@ class MembershipCard extends ConsumerWidget {
     final memberLabel = user?.isMember == true
         ? l10n.memberLevel(user!.memberLevel.toString())
         : l10n.regularUser;
-    final totalPoints = points?.availableTotalPoints.toString() ?? '--';
+    final totalPoints = user?.allCoins ?? points?.availableTotalPoints;
 
     return Container(
       height: 140,
@@ -418,35 +426,78 @@ class MembershipCard extends ConsumerWidget {
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(AppRadii.pill),
               clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () => context.push('/profile/points'),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      const AppSvgIcon.asset(
-                        'common_brand_icon-vector',
-                        key: Key('profile-points-icon'),
-                        size: 12,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    const AppSvgIcon.asset(
+                      'common_brand_icon-vector',
+                      key: Key('profile-points-icon'),
+                      size: 12,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      totalPoints?.toString() ?? '--',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: colorScheme.onSurface,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        totalPoints,
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: colorScheme.onSurface,
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      key: const Key('profile-points-recharge'),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      onTap: () async {
+                        final loader = pointPackageLoader ??
+                            PointPackageRepository(
+                              NetworkApi(ref.read(dioProvider)),
+                            ).fetchAll;
+                        await showRechargePointsSheet(
+                          context: context,
+                          totalPoints: totalPoints ?? 0,
+                          loadPackages: loader,
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          l10n.rechargeAction,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                      const Spacer(),
-                      Text(
-                        l10n.rechargeAndPoints,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: colorScheme.onSurfaceVariant,
+                    ),
+                    Text(
+                      '|',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    InkWell(
+                      key: const Key('profile-points-details'),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                      onTap: () => context.push('/profile/points'),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          l10n.pointsDetailsTitle,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
