@@ -139,6 +139,17 @@ void main() {
       (expandedScrollView.padding! as EdgeInsets).bottom,
       closeTo(expandedComposerHeight + 20, .5),
     );
+    final expandedComposerRect =
+        tester.getRect(find.byKey(const Key('popi-message-composer')));
+    await tester.tapAt(
+      Offset(expandedComposerRect.center.dx, expandedComposerRect.top + 70),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 220));
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      118,
+    );
     expect(find.text('SDXL1.0'), findsNothing);
     expect(find.byTooltip('语音输入'), findsOneWidget);
     expect(find.text('AI生成结果可能有误，仅供参考'), findsOneWidget);
@@ -173,8 +184,12 @@ void main() {
     );
 
     await tester.tap(find.text('做一个新IP'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('做一个新IP'), findsWidgets);
+    expect(
+      find.byKey(const Key('popi-message-placeholder')),
+      findsNothing,
+    );
 
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
@@ -264,6 +279,7 @@ void main() {
       6,
       (index) => XFile.fromData(
         imageBytes,
+        path: 'picked-$index.png',
         name: 'picked-$index.png',
         mimeType: 'image/png',
       ),
@@ -339,6 +355,54 @@ void main() {
     expect(find.byKey(const Key('popi-selected-image-4')), findsNothing);
     expect(find.byKey(const Key('popi-selected-image-3')), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('does not add the same gallery image twice', (tester) async {
+    final imageBytes = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    final duplicate = XFile.fromData(
+      imageBytes,
+      path: 'duplicate.png',
+      name: 'duplicate.png',
+      mimeType: 'image/png',
+    );
+    final unique = XFile.fromData(
+      imageBytes,
+      path: 'unique.png',
+      name: 'unique.png',
+      mimeType: 'image/png',
+    );
+    var pickCount = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: HomePage(
+            pickImages: () async =>
+                pickCount++ == 0 ? [duplicate] : [duplicate, unique],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> pickFromGallery() async {
+      await tester.tap(find.byTooltip('添加附件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('相册'));
+      await tester.pumpAndSettle();
+    }
+
+    await pickFromGallery();
+    await pickFromGallery();
+
+    expect(find.byKey(const Key('popi-selected-image-0')), findsOneWidget);
+    expect(find.byKey(const Key('popi-selected-image-1')), findsOneWidget);
+    expect(find.byKey(const Key('popi-selected-image-2')), findsNothing);
   });
 
   testWidgets('rejects a gallery image larger than 6MB', (tester) async {

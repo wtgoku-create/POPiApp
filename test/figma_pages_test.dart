@@ -84,6 +84,70 @@ void main() {
     expect(decoration.color, AppColors.surfaceTint);
   });
 
+  testWidgets('renders populated asset center and selection controls',
+      (tester) async {
+    await pumpPage(tester, const AssetsPage.sample());
+
+    expect(find.byKey(const Key('assets-history-list')), findsOneWidget);
+    expect(find.text('继续任务'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('assets-section-资产库')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-works-grid')), findsOneWidget);
+    expect(find.text('2026.09.01'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('assets-toggle-selection')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-selection-actions')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('assets-work-0')));
+    await tester.pumpAndSettle();
+    expect(find.text('下载'), findsOneWidget);
+    expect(find.text('删除'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('assets-section-角色库')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-roles-grid')), findsOneWidget);
+    expect(find.text('AI真人'), findsOneWidget);
+    expect(find.text('二次元'), findsOneWidget);
+  });
+
+  testWidgets('renders works and role empty states', (tester) async {
+    await pumpPage(
+      tester,
+      const AssetsPage(initialSection: AssetLibrarySection.works),
+    );
+    expect(find.text('暂无作品'), findsOneWidget);
+
+    await pumpPage(
+      tester,
+      const AssetsPage(initialSection: AssetLibrarySection.roles),
+    );
+    expect(find.text('暂无角色'), findsOneWidget);
+    expect(find.text('创建角色为你的视频增添人物资产'), findsOneWidget);
+  });
+
+  testWidgets('asset library back button returns to the previous page',
+      (tester) async {
+    await pumpPage(
+      tester,
+      const Scaffold(body: Center(child: Text('上一页'))),
+    );
+
+    final navigator = Navigator.of(tester.element(find.text('上一页')));
+    final routeClosed = navigator.push(
+      MaterialPageRoute<void>(builder: (_) => const AssetsPage.sample()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('assets-navigation-back')));
+    await tester.pumpAndSettle();
+    await routeClosed;
+
+    expect(find.text('上一页'), findsOneWidget);
+    expect(find.byType(Drawer), findsNothing);
+  });
+
   testWidgets('renders profile design', (tester) async {
     await pumpPage(tester, const ProfilePage());
 

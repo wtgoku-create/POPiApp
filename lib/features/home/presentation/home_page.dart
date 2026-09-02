@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -161,9 +162,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         const SizedBox(height: 32),
                         _WelcomeCards(
                           prompts: _prompts,
-                          onPromptSelected: (prompt) {
-                            _messageController.setText(prompt);
-                          },
+                          onPromptSelected: _selectPrompt,
                         ),
                       ],
                     ),
@@ -258,6 +257,11 @@ class _HomePageState extends ConsumerState<HomePage> {
     AppToast.info(context, '对话功能待接入');
   }
 
+  Future<void> _selectPrompt(String prompt) async {
+    await _messageController.setText(prompt);
+    if (mounted) setState(() {});
+  }
+
   void _handleComposerHeightChanged(double height) {
     if ((height - _composerHeight).abs() < .5 || !mounted) return;
     setState(() => _composerHeight = height);
@@ -281,12 +285,19 @@ class _HomePageState extends ConsumerState<HomePage> {
 
       final selected = <PopiComposerImage>[];
       var hasOversizedImage = false;
-      for (final image in images.take(remaining)) {
+      for (final image in images) {
+        if (selected.length >= remaining) break;
         final bytes = await image.readAsBytes();
         if (bytes.lengthInBytes > _maxImageBytes) {
           hasOversizedImage = true;
           continue;
         }
+        final isDuplicate = [..._selectedImages, ...selected].any(
+          (selectedImage) =>
+              selectedImage.name == image.name &&
+              listEquals(selectedImage.bytes, bytes),
+        );
+        if (isDuplicate) continue;
         selected.add(PopiComposerImage(name: image.name, bytes: bytes));
       }
       if (!mounted) return;

@@ -18,7 +18,7 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, hasAccessToken) {
       ),
       GoRoute(
         path: '/assets',
-        builder: (context, state) => const AssetsPage(),
+        builder: (context, state) => const AssetsPage.sample(),
       ),
       GoRoute(
         path: '/profile',
