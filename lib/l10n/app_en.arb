@@ -145,6 +145,8 @@
   "rechargedPoints": "Purchased points",
   "giftPoints": "Bonus points",
   "pointsPackage": "Points package",
+  "pointPackagesEmpty": "No point packages available",
+  "pointPackagesLoadFailed": "Unable to load point packages",
   "pointsUsageDescription": "This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.",
   "dailyFreePoints": "Daily free points",
   "seedanceTrial": "Seedance 2.0 trial",

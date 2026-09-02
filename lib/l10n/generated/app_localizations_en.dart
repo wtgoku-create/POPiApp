@@ -438,6 +438,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pointsPackage => 'Points package';
 
   @override
+  String get pointPackagesEmpty => 'No point packages available';
+
+  @override
+  String get pointPackagesLoadFailed => 'Unable to load point packages';
+
+  @override
   String get pointsUsageDescription =>
       'This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.';
 

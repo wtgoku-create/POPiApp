@@ -10,6 +10,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/points_details_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
+import 'package:popi_ai_app/features/profile/domain/point_package.dart';
 import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 
@@ -272,9 +273,10 @@ void main() {
   testWidgets('opens and selects a recharge points package', (tester) async {
     await pumpPage(
       tester,
-      const PointsDetailsPage(
+      PointsDetailsPage(
         refreshOnOpen: false,
         loadPointsLogOnOpen: false,
+        pointPackageLoader: () async => _pointPackages,
       ),
     );
 
@@ -374,6 +376,39 @@ void main() {
     }
   });
 
+  testWidgets('layers the recharge sheet and packages in dark mode',
+      (tester) async {
+    await pumpPage(
+      tester,
+      PointsDetailsPage(
+        refreshOnOpen: false,
+        loadPointsLogOnOpen: false,
+        pointPackageLoader: () async => _pointPackages,
+      ),
+      theme: AppTheme.dark,
+    );
+
+    await tester.tap(find.byKey(const Key('points-recharge-entry')));
+    await tester.pumpAndSettle();
+
+    final sheet = tester.widget<Container>(
+      find.byKey(const Key('points-recharge-sheet')),
+    );
+    final sheetDecoration = sheet.decoration! as BoxDecoration;
+    expect(sheetDecoration.color, AppTheme.dark.colorScheme.surfaceContainer);
+    expect(sheetDecoration.boxShadow, hasLength(2));
+
+    final unselectedPackage = tester.widget<DecoratedBox>(
+      find.byKey(const Key('points-package-1000')),
+    );
+    final packageDecoration = unselectedPackage.decoration as BoxDecoration;
+    expect(
+      packageDecoration.color,
+      AppTheme.dark.colorScheme.surfaceContainerHigh,
+    );
+    expect(packageDecoration.border, isNotNull);
+  });
+
   testWidgets('opens points details from profile and returns', (tester) async {
     await pumpPage(tester, const ProfilePage());
 
@@ -404,3 +439,19 @@ UserPointsLogEntry _pointsLogEntry(int id) {
     createTime: DateTime.parse('2026-09-02T16:05:48+08:00'),
   );
 }
+
+final _pointPackages = List.generate(
+  6,
+  (index) => PointPackage(
+    id: index + 1,
+    name: '${30 * (index + 1)}包',
+    currency: 'CNY',
+    priceAmount: [30, 50, 100, 300, 500, 1000][index].toDouble(),
+    pointsAmount: [600, 1000, 2000, 6000, 10000, 20000][index],
+    bonusPoints: 0,
+    enabled: true,
+    sortOrder: index + 1,
+    createdAt: null,
+    updatedAt: null,
+  ),
+);

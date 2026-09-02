@@ -12,25 +12,30 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../data/point_package_repository.dart';
 import '../data/user_points_log_repository.dart';
+import '../domain/point_package.dart';
 import '../domain/user_points_log.dart';
 
 typedef PointsLogPageLoader = Future<UserPointsLogPage> Function(
   int page,
   int pageSize,
 );
+typedef PointPackageLoader = Future<List<PointPackage>> Function();
 
 class PointsDetailsPage extends ConsumerStatefulWidget {
   const PointsDetailsPage({
     this.refreshOnOpen = true,
     this.loadPointsLogOnOpen = true,
     this.pointsLogPageLoader,
+    this.pointPackageLoader,
     super.key,
   });
 
   final bool refreshOnOpen;
   final bool loadPointsLogOnOpen;
   final PointsLogPageLoader? pointsLogPageLoader;
+  final PointPackageLoader? pointPackageLoader;
 
   @override
   ConsumerState<PointsDetailsPage> createState() => _PointsDetailsPageState();
@@ -42,6 +47,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
   final _scrollController = ScrollController();
   final List<UserPointsLogEntry> _entries = [];
   late final UserPointsLogRepository? _pointsLogRepository;
+  late final PointPackageRepository? _pointPackageRepository;
   bool _sheetOpen = false;
   bool _isInitialLoading = false;
   bool _isLoadingMore = false;
@@ -52,8 +58,12 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
   @override
   void initState() {
     super.initState();
+    final networkApi = NetworkApi(ref.read(dioProvider));
     _pointsLogRepository = widget.pointsLogPageLoader == null
-        ? UserPointsLogRepository(NetworkApi(ref.read(dioProvider)))
+        ? UserPointsLogRepository(networkApi)
+        : null;
+    _pointPackageRepository = widget.pointPackageLoader == null
+        ? PointPackageRepository(networkApi)
         : null;
     _scrollController.addListener(_handleScroll);
     if (widget.refreshOnOpen) unawaited(_refreshUser());
@@ -89,6 +99,12 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final loader = widget.pointsLogPageLoader;
     if (loader != null) return loader(page, _pageSize);
     return _pointsLogRepository!.fetchPage(page: page, pageSize: _pageSize);
+  }
+
+  Future<List<PointPackage>> _fetchPointPackages() {
+    final loader = widget.pointPackageLoader;
+    if (loader != null) return loader();
+    return _pointPackageRepository!.fetchAll();
   }
 
   Future<void> _loadPointsLog({bool firstPage = false}) async {
@@ -291,14 +307,17 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
 
   Future<void> _showRechargeSheet(int totalPoints) async {
     setState(() => _sheetOpen = true);
-    await AppSheet.show<int>(
+    await AppSheet.show<PointPackage>(
       context: context,
       useSafeArea: false,
       isScrollControlled: true,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x33333333),
-      builder: (context) => _RechargePointsSheet(totalPoints: totalPoints),
+      builder: (context) => _RechargePointsSheet(
+        totalPoints: totalPoints,
+        loadPackages: _fetchPointPackages,
+      ),
     );
     if (mounted) setState(() => _sheetOpen = false);
   }
@@ -418,30 +437,61 @@ class _PointsSummaryCard extends StatelessWidget {
 }
 
 class _RechargePointsSheet extends StatefulWidget {
-  const _RechargePointsSheet({required this.totalPoints});
+  const _RechargePointsSheet({
+    required this.totalPoints,
+    required this.loadPackages,
+  });
 
   final int totalPoints;
+  final PointPackageLoader loadPackages;
 
   @override
   State<_RechargePointsSheet> createState() => _RechargePointsSheetState();
 }
 
 class _RechargePointsSheetState extends State<_RechargePointsSheet> {
-  static const _packages = <(int, int)>[
-    (600, 30),
-    (1000, 50),
-    (2000, 100),
-    (6000, 300),
-    (10000, 500),
-    (20000, 1000),
-  ];
+  List<PointPackage> _packages = const [];
+  PointPackage? _selectedPackage;
+  bool _isLoading = true;
+  Object? _loadError;
 
-  int _selectedPoints = 600;
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadPackages(showLoading: false));
+  }
+
+  Future<void> _loadPackages({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _loadError = null;
+      });
+    }
+    try {
+      final packages = await widget.loadPackages();
+      if (!mounted) return;
+      setState(() {
+        _packages = packages;
+        _selectedPackage = packages.isEmpty ? null : packages.first;
+        _isLoading = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load point packages: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() {
+        _loadError = error;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final height = math.min(663.0, MediaQuery.sizeOf(context).height);
 
     return Container(
@@ -449,8 +499,22 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
       height: height,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: isDark ? colorScheme.surfaceContainer : colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  blurRadius: 0,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 24,
+                  offset: const Offset(0, -8),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         children: [
@@ -500,8 +564,15 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                   child: FilledButton(
                     key: const Key('points-upgrade-membership'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.surfaceTintStrong,
-                      foregroundColor: AppColors.textPrimary,
+                      backgroundColor: isDark
+                          ? colorScheme.surfaceContainerHighest
+                          : AppColors.surfaceTintStrong,
+                      foregroundColor: isDark
+                          ? colorScheme.onSurface
+                          : AppColors.textPrimary,
+                      side: isDark
+                          ? BorderSide(color: colorScheme.outlineVariant)
+                          : BorderSide.none,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
                     onPressed: () {},
@@ -524,35 +595,7 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
           const SizedBox(height: 20),
           SizedBox(
             height: 342,
-            child: Column(
-              children: [
-                for (var row = 0; row < 3; row++) ...[
-                  SizedBox(
-                    height: row == 0 ? 106 : 104,
-                    child: Row(
-                      children: [
-                        for (var column = 0; column < 2; column++) ...[
-                          Expanded(
-                            child: _PointsPackageCard(
-                              points: _packages[row * 2 + column].$1,
-                              price: _packages[row * 2 + column].$2,
-                              selected: _selectedPoints ==
-                                  _packages[row * 2 + column].$1,
-                              onTap: () => setState(
-                                () => _selectedPoints =
-                                    _packages[row * 2 + column].$1,
-                              ),
-                            ),
-                          ),
-                          if (column == 0) const SizedBox(width: 14),
-                        ],
-                      ],
-                    ),
-                  ),
-                  if (row != 2) const SizedBox(height: 14),
-                ],
-              ],
-            ),
+            child: _buildPackageGrid(l10n),
           ),
           const SizedBox(height: 10),
           SizedBox(
@@ -560,8 +603,8 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
             width: double.infinity,
             child: Text.rich(
               TextSpan(
-                style: const TextStyle(
-                  color: AppColors.textTertiary,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: 14,
                   height: 22 / 14,
                 ),
@@ -571,16 +614,16 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                   TextSpan(text: l10n.rechargeAgreementPrefix),
                   TextSpan(
                     text: l10n.userAgreement,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       decoration: TextDecoration.underline,
                     ),
                   ),
                   TextSpan(text: l10n.conjunctionAnd),
                   TextSpan(
                     text: l10n.privacyPolicy,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       decoration: TextDecoration.underline,
                     ),
                   ),
@@ -594,7 +637,13 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
             height: 50,
             child: FilledButton(
               key: const Key('points-recharge-confirm'),
-              onPressed: () => Navigator.pop(context, _selectedPoints),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.brand,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: _selectedPackage == null
+                  ? null
+                  : () => Navigator.pop(context, _selectedPackage),
               child: Text(
                 l10n.confirm,
                 style: const TextStyle(
@@ -608,93 +657,163 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
       ),
     );
   }
+
+  Widget _buildPackageGrid(AppLocalizations l10n) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          key: Key('point-packages-loading'),
+        ),
+      );
+    }
+    if (_loadError != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l10n.pointPackagesLoadFailed),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              key: const Key('point-packages-retry'),
+              onPressed: _loadPackages,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_packages.isEmpty) {
+      return Center(child: Text(l10n.pointPackagesEmpty));
+    }
+
+    return GridView.builder(
+      key: const Key('point-packages-grid'),
+      padding: EdgeInsets.zero,
+      itemCount: _packages.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        mainAxisExtent: 104,
+      ),
+      itemBuilder: (context, index) {
+        final package = _packages[index];
+        return _PointsPackageCard(
+          package: package,
+          selected: _selectedPackage?.id == package.id,
+          onTap: () => setState(() => _selectedPackage = package),
+        );
+      },
+    );
+  }
 }
 
 class _PointsPackageCard extends StatelessWidget {
   const _PointsPackageCard({
-    required this.points,
-    required this.price,
+    required this.package,
     required this.selected,
     required this.onTap,
   });
 
-  final int points;
-  final int price;
+  final PointPackage package;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final decoration = BoxDecoration(
+      color: selected
+          ? null
+          : isDark
+              ? colorScheme.surfaceContainerHigh
+              : const Color(0xFFFBFAFF),
+      gradient: selected
+          ? LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [
+                      colorScheme.surfaceContainerHighest,
+                      colorScheme.primaryContainer,
+                    ]
+                  : [AppColors.surface, AppColors.surfaceTint],
+              stops: const [.33, 1],
+            )
+          : null,
+      borderRadius: BorderRadius.circular(24),
+      border: !selected && isDark
+          ? Border.all(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+            )
+          : null,
+    );
+
     return Semantics(
       selected: selected,
       button: true,
-      label: '$points',
-      child: InkWell(
-        key: Key('points-package-$points'),
-        borderRadius: BorderRadius.circular(24),
-        onTap: onTap,
-        child: CustomPaint(
-          key: selected ? const Key('points-package-selected') : null,
-          foregroundPainter: selected
-              ? const _DashedRoundedBorderPainter(
-                  color: AppColors.brand,
-                  radius: 24,
-                )
-              : null,
-          child: Ink(
-            decoration: BoxDecoration(
-              color: selected ? null : const Color(0xFFFBFAFF),
-              gradient: selected
-                  ? const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [AppColors.surface, AppColors.surfaceTint],
-                      stops: [.33, 1],
+      label: '${package.totalPoints}',
+      child: DecoratedBox(
+        key: Key('points-package-${package.totalPoints}'),
+        decoration: decoration,
+        child: Material(
+          type: MaterialType.transparency,
+          borderRadius: BorderRadius.circular(24),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: onTap,
+            child: CustomPaint(
+              key: selected ? const Key('points-package-selected') : null,
+              foregroundPainter: selected
+                  ? const _DashedRoundedBorderPainter(
+                      color: AppColors.brand,
+                      radius: 24,
                     )
                   : null,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox.square(
-                        dimension: 15,
-                        child: Center(
-                          child: Image.asset(
-                            'assets/images/assets_points.png',
-                            width: 15,
-                            height: 9.93,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox.square(
+                          dimension: 15,
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/assets_points.png',
+                              width: 15,
+                              height: 9.93,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '$points',
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 25,
-                          fontWeight: FontWeight.w700,
-                          height: 21 / 25,
+                        const SizedBox(width: 3),
+                        Text(
+                          '${package.totalPoints}',
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 25,
+                            fontWeight: FontWeight.w700,
+                            height: 21 / 25,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '¥$price',
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      height: 24 / 16,
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Text(
+                      _formatPackagePrice(package),
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        height: 24 / 16,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -702,6 +821,17 @@ class _PointsPackageCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatPackagePrice(PointPackage package) {
+  final amount = package.priceAmount == package.priceAmount.truncateToDouble()
+      ? package.priceAmount.toInt().toString()
+      : package.priceAmount.toStringAsFixed(2);
+  return switch (package.currency.toUpperCase()) {
+    'CNY' => '¥$amount',
+    'USD' => '\$$amount',
+    _ => '${package.currency} $amount'.trim(),
+  };
 }
 
 class _DashedRoundedBorderPainter extends CustomPainter {

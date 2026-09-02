@@ -908,6 +908,18 @@ abstract class AppLocalizations {
   /// **'Points package'**
   String get pointsPackage;
 
+  /// No description provided for @pointPackagesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No point packages available'**
+  String get pointPackagesEmpty;
+
+  /// No description provided for @pointPackagesLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load point packages'**
+  String get pointPackagesLoadFailed;
+
   /// No description provided for @pointsUsageDescription.
   ///
   /// In en, this message translates to:

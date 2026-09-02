@@ -145,6 +145,8 @@
   "rechargedPoints": "充值积分",
   "giftPoints": "赠送积分",
   "pointsPackage": "积分包",
+  "pointPackagesEmpty": "暂无可用积分包",
+  "pointPackagesLoadFailed": "积分包加载失败",
   "pointsUsageDescription": "此信用额度/计划可在POPi移动端、POPi.air跟POPi.TV上使用并且实时互通",
   "dailyFreePoints": "每日免费积分",
   "seedanceTrial": "Seedance2.0体验版",

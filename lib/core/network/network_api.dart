@@ -69,6 +69,24 @@ class NetworkApi {
     return _data(response);
   }
 
+  Future<List<dynamic>> pointPackages() async {
+    final response = await dio.get<dynamic>(
+      '/api_client/users/pointPackage/list',
+    );
+    final body = response.data;
+    if (body is List) return body;
+    if (body is! Map) throw const ApiException();
+    if (body['status']?.toString() != '0000') {
+      throw ApiException(
+        message: body['message']?.toString(),
+        statusCode: response.statusCode,
+      );
+    }
+    final data = body['data'];
+    if (data is! List) throw const ApiException();
+    return data;
+  }
+
   Future<Map<String, dynamic>> updateUser({
     required String avatar,
     required String name,

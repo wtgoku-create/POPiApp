@@ -426,6 +426,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pointsPackage => '积分包';
 
   @override
+  String get pointPackagesEmpty => '暂无可用积分包';
+
+  @override
+  String get pointPackagesLoadFailed => '积分包加载失败';
+
+  @override
   String get pointsUsageDescription =>
       '此信用额度/计划可在POPi移动端、POPi.air跟POPi.TV上使用并且实时互通';
 
