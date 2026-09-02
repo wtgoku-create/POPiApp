@@ -842,33 +842,89 @@ class _RolesGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final indices = switch (filter) {
-      1 => [4, 7, 13, 14],
-      2 => [1, 2, 6, 8, 11],
-      3 => [0, 3, 5, 9, 10],
-      _ => List.generate(15, (index) => index),
-    };
+    final roles = filter == 0
+        ? _sampleRoles
+        : _sampleRoles.where((role) => role.category == filter).toList();
 
-    return GridView.builder(
+    return ListView.separated(
       key: const Key('assets-roles-grid'),
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: indices.length,
+      itemCount: roles.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        final assetIndex = indices[index] + 1;
-        return Image.asset(
-          'assets/images/assets_role_grid_${assetIndex.toString().padLeft(2, '0')}.png',
-          width: 128,
-          height: 128,
-          fit: BoxFit.cover,
+        final role = roles[index];
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Container(
+            key: Key('assets-role-${role.assetIndex}'),
+            width: 400,
+            height: 100,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadii.card),
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/assets_role_list_${role.assetIndex.toString().padLeft(2, '0')}.png',
+                    width: 80,
+                    height: 80,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        role.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        role.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
   }
+}
+
+class _RoleItem {
+  const _RoleItem({
+    required this.assetIndex,
+    required this.name,
+    required this.description,
+    required this.category,
+  });
+
+  final int assetIndex;
+  final String name;
+  final String description;
+  final int category;
 }
 
 class _WorkGroup {
@@ -933,4 +989,43 @@ const _sampleWorkGroups = [
       selectionAsset: 'assets/images/assets_works_selection_10.png',
     ),
   ]),
+];
+
+const _sampleRoles = [
+  _RoleItem(
+    assetIndex: 1,
+    name: '夏禾',
+    description: 'xxxxxxxxx',
+    category: 2,
+  ),
+  _RoleItem(
+    assetIndex: 2,
+    name: '金发王子',
+    description: 'xxxxxxxxx',
+    category: 1,
+  ),
+  _RoleItem(
+    assetIndex: 3,
+    name: '人鱼公主',
+    description: 'xxxxxxxxx',
+    category: 1,
+  ),
+  _RoleItem(
+    assetIndex: 4,
+    name: '糯叽叽',
+    description: 'xxxxxxxxx',
+    category: 2,
+  ),
+  _RoleItem(
+    assetIndex: 5,
+    name: '花西冷少',
+    description: 'xxxxxxxxx',
+    category: 1,
+  ),
+  _RoleItem(
+    assetIndex: 6,
+    name: '莓莓',
+    description: 'xxxxxxxxx',
+    category: 3,
+  ),
 ];

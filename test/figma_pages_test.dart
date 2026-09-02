@@ -120,6 +120,19 @@ void main() {
     expect(find.byKey(const Key('assets-roles-grid')), findsOneWidget);
     expect(find.text('AI真人'), findsOneWidget);
     expect(find.text('二次元'), findsOneWidget);
+    expect(find.text('夏禾'), findsOneWidget);
+    expect(find.text('金发王子'), findsOneWidget);
+    expect(find.text('莓莓'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('assets-role-1'))),
+      const Size(400, 100),
+    );
+
+    await tester.tap(find.text('AI真人'));
+    await tester.pumpAndSettle();
+    expect(find.text('夏禾'), findsNothing);
+    expect(find.text('金发王子'), findsOneWidget);
+    expect(find.text('莓莓'), findsNothing);
   });
 
   testWidgets('renders works and role empty states', (tester) async {
