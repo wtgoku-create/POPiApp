@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
+
 class ProfileTopBar extends StatelessWidget {
   const ProfileTopBar({super.key});
 
@@ -20,7 +22,7 @@ class ProfileTopBar extends StatelessWidget {
               dimension: 40,
               child: IconButton(
                 key: const Key('profile-back'),
-                tooltip: '返回',
+                tooltip: AppLocalizations.of(context)!.back,
                 padding: EdgeInsets.zero,
                 onPressed: () => context.pop(),
                 icon: const Icon(Icons.arrow_back_ios_new, size: 21),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
+
 class AppSplash extends StatefulWidget {
   const AppSplash({required this.child, super.key});
 
@@ -104,7 +106,7 @@ class _SplashOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Build something useful.',
+                AppLocalizations.of(context)!.splashTagline,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: foreground.withValues(alpha: .72),
                       letterSpacing: 0,

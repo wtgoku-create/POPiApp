@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
@@ -21,21 +22,6 @@ class PopiNavigationDrawer extends ConsumerStatefulWidget {
 class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
   final _searchController = TextEditingController();
 
-  static const _tasks = [
-    ('生活剧情Vlog', 'home_drawer_task-red'),
-    ('抖音AI漫剧博主', 'home_drawer_task-blue'),
-    ('角色介绍撰写', 'home_drawer_task-gold'),
-    ('AI与插画师打造卡通IP角色功能', 'home_drawer_task-neutral'),
-    ('人类渲染图生成需求', 'home_drawer_task-neutral'),
-    ('搞笑视频相关话题', 'home_drawer_task-neutral'),
-    ('IP商业化模式', 'home_drawer_task-neutral'),
-    ('简约商务PPT模板', 'home_drawer_task-neutral'),
-    ('生成上海东方明珠繁华背景图', 'home_drawer_task-neutral'),
-    ('推荐短视频博主', 'home_drawer_task-neutral'),
-    ('当前微博话题热度排行榜', 'home_drawer_task-neutral'),
-    ('搞笑剧情Vlog', 'home_drawer_task-neutral'),
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -44,6 +30,21 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final tasks = [
+      (l10n.taskLifeStoryVlog, 'home_drawer_task-red'),
+      (l10n.taskDouyinAiDrama, 'home_drawer_task-blue'),
+      (l10n.taskCharacterIntroduction, 'home_drawer_task-gold'),
+      (l10n.taskCartoonIpCharacter, 'home_drawer_task-neutral'),
+      (l10n.taskHumanRender, 'home_drawer_task-neutral'),
+      (l10n.taskComedyVideoTopics, 'home_drawer_task-neutral'),
+      (l10n.taskIpMonetization, 'home_drawer_task-neutral'),
+      (l10n.taskBusinessPpt, 'home_drawer_task-neutral'),
+      (l10n.taskShanghaiBackground, 'home_drawer_task-neutral'),
+      (l10n.taskVideoCreatorRecommendations, 'home_drawer_task-neutral'),
+      (l10n.taskWeiboTrends, 'home_drawer_task-neutral'),
+      (l10n.taskComedyStoryVlog, 'home_drawer_task-neutral'),
+    ];
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final topInset = math.max(safeArea.top, 53.0);
     final colorScheme = Theme.of(context).colorScheme;
@@ -115,7 +116,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                   height: 20 / 14,
                                 ),
                                 decoration: InputDecoration(
-                                  hintText: '搜索对话',
+                                  hintText: l10n.searchConversations,
                                   hintStyle: TextStyle(
                                     color: colorScheme.onSurfaceVariant,
                                     fontSize: 14,
@@ -154,7 +155,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                     children: [
                       _NavigationItem(
                         iconAsset: 'home_drawer_nav-conversation',
-                        label: 'POPi对话',
+                        label: l10n.popiConversations,
                         onTap: () => _openRoute(context, '/'),
                       ),
                       _NavigationItem(
@@ -162,12 +163,12 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         iconWidth: 18.4994,
                         iconHeight: 20.716,
                         flipIconVertically: true,
-                        label: '角色',
+                        label: l10n.roles,
                         onTap: () => _openRoute(context, '/profile'),
                       ),
                       _NavigationItem(
                         iconAsset: 'home_drawer_nav-asset',
-                        label: '资产',
+                        label: l10n.assets,
                         onTap: () => _openRoute(context, '/assets'),
                       ),
                       _NavigationItem(
@@ -175,8 +176,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         iconWidth: 20.1321,
                         iconHeight: 18.8766,
                         flipIconVertically: true,
-                        label: '灵感库',
-                        onTap: () => _showPending(context, '灵感库功能待接入'),
+                        label: l10n.inspirationLibrary,
+                        onTap: () =>
+                            _showPending(context, l10n.inspirationPending),
                       ),
                       _NavigationItem(
                         iconAsset: 'home_drawer_nav-skill',
@@ -206,7 +208,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '任务',
+                                    l10n.tasks,
                                     style: TextStyle(
                                       color: colorScheme.onSurfaceVariant,
                                       fontSize: 14,
@@ -227,9 +229,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                           child: ListView.builder(
                             padding: EdgeInsets.zero,
                             itemExtent: 40,
-                            itemCount: _tasks.length,
+                            itemCount: tasks.length,
                             itemBuilder: (context, index) {
-                              final task = _tasks[index];
+                              final task = tasks[index];
                               return _TaskItem(
                                 label: task.$1,
                                 iconAsset: task.$2,
@@ -253,7 +255,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
             ),
             const SizedBox(height: 20),
             _DrawerFooter(
-              onNotification: () => _showPending(context, '通知'),
+              onNotification: () => _showPending(context, l10n.notifications),
               onSettings: () => _openRoute(context, '/profile'),
             ),
           ],
@@ -455,6 +457,7 @@ class _DrawerFooter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
@@ -534,7 +537,7 @@ class _DrawerFooter extends ConsumerWidget {
           SizedBox.square(
             dimension: 40,
             child: IconButton(
-              tooltip: '通知',
+              tooltip: l10n.notifications,
               padding: const EdgeInsets.all(5),
               onPressed: onNotification,
               icon: AppSvgIcon.asset(
@@ -547,7 +550,7 @@ class _DrawerFooter extends ConsumerWidget {
           SizedBox.square(
             dimension: 40,
             child: IconButton(
-              tooltip: '个人设置',
+              tooltip: l10n.profileSettings,
               padding: const EdgeInsets.all(5),
               onPressed: onSettings,
               icon: AppSvgIcon.asset(

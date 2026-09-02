@@ -1,17 +1,14 @@
 name: popi_ai_app
 description: A Flutter starter template with Riverpod, go_router, Dio, localization and theme switching.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.0.0+1802
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  appflowy_editor:
-    git:
-      url: https://github.com/AppFlowy-IO/appflowy-editor.git
-      ref: 01eccc6ee36bd07698bd80915289fe7070478cd2
   dio: ^5.8.0+1
+  extended_text_field: ^17.0.0
   flutter:
     sdk: flutter
   flutter_localizations:

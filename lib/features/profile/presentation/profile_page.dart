@@ -104,7 +104,7 @@ class ProfilePage extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 28),
                       ),
                       child: Text(
-                        '编辑资料',
+                        l10n.editProfile,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 16,
@@ -116,14 +116,14 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 20),
                 const MembershipCard(),
                 const SizedBox(height: 20),
-                const SettingsGroup(
+                SettingsGroup(
                   children: [
                     SettingsRow(
-                      iconWidget: AppSvgIcon.asset(
+                      iconWidget: const AppSvgIcon.asset(
                         'profile_settings_account',
                         size: 20,
                       ),
-                      label: '账号管理',
+                      label: l10n.accountManagement,
                     ),
                   ],
                 ),
@@ -135,7 +135,7 @@ class ProfilePage extends ConsumerWidget {
                         'profile_settings_phone',
                         size: 20,
                       ),
-                      label: '手机号',
+                      label: l10n.phoneNumber,
                       value: '+86 $displayPhone',
                     ),
                     SettingsRow(
@@ -143,7 +143,7 @@ class ProfilePage extends ConsumerWidget {
                         'profile_settings_wechat',
                         size: 21,
                       ),
-                      label: '微信号',
+                      label: l10n.wechatId,
                       value: 'dssads222',
                     ),
                     SettingsRow(
@@ -151,7 +151,7 @@ class ProfilePage extends ConsumerWidget {
                         'profile_settings_douyin',
                         size: 20,
                       ),
-                      label: '抖音',
+                      label: l10n.douyin,
                       value: 'Alice',
                     ),
                   ],
@@ -182,7 +182,7 @@ class ProfilePage extends ConsumerWidget {
                           },
                         ),
                         TreeSettingsOption(
-                          label: 'English',
+                          label: l10n.english,
                           selected: locale?.languageCode == 'en',
                           onTap: () async {
                             await ref
@@ -259,7 +259,7 @@ class ProfilePage extends ConsumerWidget {
                     SettingsRow(
                       key: const Key('profile-logout-menu'),
                       icon: Icons.logout,
-                      label: '退出登录',
+                      label: l10n.logout,
                       showChevron: false,
                       onTap: () => _confirmLogout(context, ref),
                     ),
@@ -274,6 +274,7 @@ class ProfilePage extends ConsumerWidget {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await AppSheet.show<bool>(
       context: context,
       builder: (sheetContext) => Padding(
@@ -282,7 +283,7 @@ class ProfilePage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '退出登录',
+              l10n.logout,
               style: TextStyle(
                 color: Theme.of(sheetContext).colorScheme.onSurface,
                 fontSize: 20,
@@ -291,7 +292,7 @@ class ProfilePage extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '退出后需要重新登录才能继续使用',
+              l10n.logoutDescription,
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
@@ -306,7 +307,7 @@ class ProfilePage extends ConsumerWidget {
                 key: const Key('confirm-logout-button'),
                 onPressed: () => Navigator.of(sheetContext).pop(true),
                 icon: const Icon(Icons.logout),
-                label: const Text('确认退出登录'),
+                label: Text(l10n.confirmLogout),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFD92D20),
                   foregroundColor: Colors.white,
@@ -326,7 +327,7 @@ class ProfilePage extends ConsumerWidget {
                   foregroundColor: Theme.of(sheetContext).colorScheme.onSurface,
                   shape: const StadiumBorder(),
                 ),
-                child: const Text('取消'),
+                child: Text(l10n.cancel),
               ),
             ),
           ],
@@ -340,7 +341,7 @@ class ProfilePage extends ConsumerWidget {
       await ref.read(userProvider.notifier).clearUser();
       if (context.mounted) context.go('/login');
     } catch (_) {
-      if (context.mounted) AppToast.error(context, '退出登录失败，请稍后重试');
+      if (context.mounted) AppToast.error(context, l10n.logoutFailed);
     }
   }
 
@@ -352,7 +353,7 @@ class ProfilePage extends ConsumerWidget {
   String _languageLabel(Locale? locale, AppLocalizations l10n) =>
       switch (locale?.languageCode) {
         'zh' => l10n.chinese,
-        'en' => 'English',
+        'en' => l10n.english,
         _ => l10n.system,
       };
 
@@ -368,11 +369,13 @@ class MembershipCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userProvider);
     final points = ref.watch(userPointsProvider).valueOrNull;
     final colorScheme = Theme.of(context).colorScheme;
-    final memberLabel =
-        user?.isMember == true ? '会员 ${user!.memberLevel}' : '普通用户';
+    final memberLabel = user?.isMember == true
+        ? l10n.memberLevel(user!.memberLevel.toString())
+        : l10n.regularUser;
     final totalPoints = points?.availableTotalPoints.toString() ?? '--';
 
     return Container(
@@ -399,7 +402,10 @@ class MembershipCard extends ConsumerWidget {
                 height: 40,
                 child: FilledButton(
                   onPressed: () {},
-                  child: const Text('升级会员', style: TextStyle(fontSize: 16)),
+                  child: Text(
+                    l10n.upgradeMembership,
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
             ],
@@ -426,7 +432,7 @@ class MembershipCard extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '充值 | 积分详情',
+                  l10n.rechargeAndPoints,
                   style: TextStyle(
                     fontSize: 16,
                     color: colorScheme.onSurfaceVariant,

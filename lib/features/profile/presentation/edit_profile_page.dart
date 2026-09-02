@@ -68,7 +68,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '昵称*',
+                        l10n.nicknameRequiredLabel,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 16,
@@ -92,7 +92,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '可以输入中文、英文、数字。最多15个字符。',
+                        l10n.nicknameHelp,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 13,
@@ -154,9 +154,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text(
-                                  '确认',
-                                  style: TextStyle(
+                              : Text(
+                                  l10n.confirm,
+                                  style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -180,9 +180,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       );
 
   Future<void> _saveProfile() async {
+    final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      AppToast.error(context, '请输入昵称');
+      AppToast.error(context, l10n.nicknameRequired);
       return;
     }
 
@@ -190,10 +191,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     try {
       await ref.read(userProvider.notifier).updateUser(name: name);
       if (!mounted) return;
-      AppToast.success(context, '资料已更新');
+      AppToast.success(context, l10n.profileUpdated);
       context.pop();
     } catch (_) {
-      if (mounted) AppToast.error(context, '资料更新失败，请稍后重试');
+      if (mounted) AppToast.error(context, l10n.profileUpdateFailed);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }

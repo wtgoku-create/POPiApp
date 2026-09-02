@@ -80,17 +80,17 @@ class NetworkApi {
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
     final body = response.data;
     if (body == null) {
-      throw const ApiException(message: '服务器返回了空响应');
+      throw const ApiException();
     }
     if (body['status']?.toString() != '0000') {
       throw ApiException(
-        message: body['message']?.toString() ?? '请求失败，请稍后重试',
+        message: body['message']?.toString(),
         statusCode: response.statusCode,
       );
     }
     final data = body['data'];
     if (data is! Map<String, dynamic>) {
-      throw const ApiException(message: '服务器响应格式不正确');
+      throw const ApiException();
     }
     return data;
   }

@@ -63,7 +63,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chinese => '中文';
 
   @override
-  String get english => '英文';
+  String get english => 'English';
 
   @override
   String get loginTitle => '欢迎登录 POPi';
@@ -138,4 +138,293 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get wechatServicePending => '微信授权服务待接入';
+
+  @override
+  String get back => '返回';
+
+  @override
+  String get backToPreviousPage => '返回上一页';
+
+  @override
+  String get cancel => '取消';
+
+  @override
+  String get confirm => '确认';
+
+  @override
+  String get openNavigation => '打开导航';
+
+  @override
+  String get selectAction => '选择';
+
+  @override
+  String get conversationPending => '对话功能待接入';
+
+  @override
+  String get maximumImageCount => '最多上传5张图片';
+
+  @override
+  String get imageTooLarge => '单张图片不能超过6MB';
+
+  @override
+  String get imageReadFailed => '无法读取图片，请稍后重试';
+
+  @override
+  String get gallery => '相册';
+
+  @override
+  String get file => '文件';
+
+  @override
+  String get homeGreetingTitle => '嗨，我是POPi~\n';
+
+  @override
+  String get homeGreetingBody => '我来帮你一起\n把一个账号做起来！';
+
+  @override
+  String get homePromptIntro => '先告诉我：';
+
+  @override
+  String get homePromptQuestion => '你现在最想做什么？';
+
+  @override
+  String get homePromptCreateIp => '做一个新IP';
+
+  @override
+  String get homePromptImproveAccount => '让我的老帐号变好';
+
+  @override
+  String get homePromptHasReference => '我已经有参考账号';
+
+  @override
+  String get homePromptUnsure => '我还不知道做什么';
+
+  @override
+  String get aiDisclaimer => 'AI生成结果可能有误，仅供参考';
+
+  @override
+  String get composerPlaceholder => '跟POPi说点什么...';
+
+  @override
+  String selectedImageLabel(String name) {
+    return '已选择图片：$name';
+  }
+
+  @override
+  String get removeImage => '移除图片';
+
+  @override
+  String get addAttachment => '添加附件';
+
+  @override
+  String get voiceInput => '语音输入';
+
+  @override
+  String get sendMessage => '发送消息';
+
+  @override
+  String get searchConversations => '搜索对话';
+
+  @override
+  String get popiConversations => 'POPi对话';
+
+  @override
+  String get roles => '角色';
+
+  @override
+  String get assets => '资产';
+
+  @override
+  String get inspirationLibrary => '灵感库';
+
+  @override
+  String get inspirationPending => '灵感库功能待接入';
+
+  @override
+  String get tasks => '任务';
+
+  @override
+  String get notifications => '通知';
+
+  @override
+  String get profileSettings => '个人设置';
+
+  @override
+  String get taskLifeStoryVlog => '生活剧情Vlog';
+
+  @override
+  String get taskDouyinAiDrama => '抖音AI漫剧博主';
+
+  @override
+  String get taskCharacterIntroduction => '角色介绍撰写';
+
+  @override
+  String get taskCartoonIpCharacter => 'AI与插画师打造卡通IP角色功能';
+
+  @override
+  String get taskHumanRender => '人类渲染图生成需求';
+
+  @override
+  String get taskComedyVideoTopics => '搞笑视频相关话题';
+
+  @override
+  String get taskIpMonetization => 'IP商业化模式';
+
+  @override
+  String get taskBusinessPpt => '简约商务PPT模板';
+
+  @override
+  String get taskShanghaiBackground => '生成上海东方明珠繁华背景图';
+
+  @override
+  String get taskVideoCreatorRecommendations => '推荐短视频博主';
+
+  @override
+  String get taskWeiboTrends => '当前微博话题热度排行榜';
+
+  @override
+  String get taskComedyStoryVlog => '搞笑剧情Vlog';
+
+  @override
+  String downloadedWorks(int count) {
+    return '已下载$count个作品';
+  }
+
+  @override
+  String get creationHistory => '创作历史';
+
+  @override
+  String get assetLibrary => '资产库';
+
+  @override
+  String get roleLibrary => '角色库';
+
+  @override
+  String get filterAll => '全部';
+
+  @override
+  String get agentAccountMode => 'Agent账号模式';
+
+  @override
+  String get vlog => 'Vlog';
+
+  @override
+  String get shortDrama => '短剧';
+
+  @override
+  String get images => '图片';
+
+  @override
+  String get videos => '视频';
+
+  @override
+  String get aiHuman => 'AI真人';
+
+  @override
+  String get anime => '二次元';
+
+  @override
+  String get threeD => '3D';
+
+  @override
+  String get noRoles => '暂无角色';
+
+  @override
+  String get noRolesDescription => '创建角色为你的视频增添人物资产';
+
+  @override
+  String get noHistory => '暂无历史';
+
+  @override
+  String get noWorks => '暂无作品';
+
+  @override
+  String get noHistoryDescription => '开启Agent对话\n创建属于你的短视频账号';
+
+  @override
+  String get noWorksDescription => '你创造的图片、视频、音频在这里';
+
+  @override
+  String get goGenerate => '去生成';
+
+  @override
+  String get yesterday => '昨天';
+
+  @override
+  String daysAgo(int count) {
+    return '$count天前';
+  }
+
+  @override
+  String get sampleAccountQuestion => '有没有你喜欢、想学习的账号有...';
+
+  @override
+  String pointsSpent(int points) {
+    return '本次消耗$points积分';
+  }
+
+  @override
+  String get continueTask => '继续任务';
+
+  @override
+  String get download => '下载';
+
+  @override
+  String get delete => '删除';
+
+  @override
+  String get editProfile => '编辑资料';
+
+  @override
+  String get accountManagement => '账号管理';
+
+  @override
+  String get wechatId => '微信号';
+
+  @override
+  String get douyin => '抖音';
+
+  @override
+  String get logout => '退出登录';
+
+  @override
+  String get logoutDescription => '退出后需要重新登录才能继续使用';
+
+  @override
+  String get confirmLogout => '确认退出登录';
+
+  @override
+  String get logoutFailed => '退出登录失败，请稍后重试';
+
+  @override
+  String get regularUser => '普通用户';
+
+  @override
+  String memberLevel(String level) {
+    return '会员 $level';
+  }
+
+  @override
+  String get upgradeMembership => '升级会员';
+
+  @override
+  String get rechargeAndPoints => '充值 | 积分详情';
+
+  @override
+  String get nicknameRequiredLabel => '昵称*';
+
+  @override
+  String get nicknameHelp => '可以输入中文、英文、数字。最多15个字符。';
+
+  @override
+  String get nicknameRequired => '请输入昵称';
+
+  @override
+  String get profileUpdated => '资料已更新';
+
+  @override
+  String get profileUpdateFailed => '资料更新失败，请稍后重试';
+
+  @override
+  String get splashTagline => '让创意更有价值。';
 }

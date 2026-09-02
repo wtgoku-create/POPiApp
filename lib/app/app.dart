@@ -1,4 +1,3 @@
-import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
@@ -85,7 +84,6 @@ class _RouterApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
-        AppFlowyEditorLocalizations.delegate,
       ],
       routerConfig: router,
       builder: (context, child) => SafeAreaStoreSync(
@@ -113,7 +111,6 @@ class _StartupApp extends StatelessWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
-        AppFlowyEditorLocalizations.delegate,
       ],
       home: const Scaffold(
         body: Center(child: CircularProgressIndicator()),

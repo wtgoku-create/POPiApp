@@ -142,4 +142,303 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get wechatServicePending =>
       'WeChat authorization is not connected yet';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get backToPreviousPage => 'Back to previous page';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get openNavigation => 'Open navigation';
+
+  @override
+  String get selectAction => 'Select';
+
+  @override
+  String get conversationPending => 'Conversations are not connected yet';
+
+  @override
+  String get maximumImageCount => 'You can upload up to 5 images';
+
+  @override
+  String get imageTooLarge => 'Each image must be no larger than 6 MB';
+
+  @override
+  String get imageReadFailed => 'Unable to read the image. Try again later';
+
+  @override
+  String get gallery => 'Photos';
+
+  @override
+  String get file => 'File';
+
+  @override
+  String get homeGreetingTitle => 'Hi, I\'m POPi~\n';
+
+  @override
+  String get homeGreetingBody => 'I\'ll help you\nbuild an account together!';
+
+  @override
+  String get homePromptIntro => 'First, tell me:';
+
+  @override
+  String get homePromptQuestion => 'What do you want to do most right now?';
+
+  @override
+  String get homePromptCreateIp => 'Create a new IP';
+
+  @override
+  String get homePromptImproveAccount => 'Improve my existing account';
+
+  @override
+  String get homePromptHasReference => 'I already have a reference account';
+
+  @override
+  String get homePromptUnsure => 'I\'m not sure what to create yet';
+
+  @override
+  String get aiDisclaimer =>
+      'AI-generated results may be inaccurate and are for reference only';
+
+  @override
+  String get composerPlaceholder => 'Say something to POPi...';
+
+  @override
+  String selectedImageLabel(String name) {
+    return 'Selected image: $name';
+  }
+
+  @override
+  String get removeImage => 'Remove image';
+
+  @override
+  String get addAttachment => 'Add attachment';
+
+  @override
+  String get voiceInput => 'Voice input';
+
+  @override
+  String get sendMessage => 'Send message';
+
+  @override
+  String get searchConversations => 'Search conversations';
+
+  @override
+  String get popiConversations => 'POPi conversations';
+
+  @override
+  String get roles => 'Roles';
+
+  @override
+  String get assets => 'Assets';
+
+  @override
+  String get inspirationLibrary => 'Inspiration';
+
+  @override
+  String get inspirationPending => 'Inspiration is not connected yet';
+
+  @override
+  String get tasks => 'Tasks';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get profileSettings => 'Profile settings';
+
+  @override
+  String get taskLifeStoryVlog => 'Lifestyle story vlog';
+
+  @override
+  String get taskDouyinAiDrama => 'Douyin AI comic creator';
+
+  @override
+  String get taskCharacterIntroduction => 'Write a character introduction';
+
+  @override
+  String get taskCartoonIpCharacter =>
+      'Create a cartoon IP character with AI and illustrators';
+
+  @override
+  String get taskHumanRender => 'Generate a human rendering';
+
+  @override
+  String get taskComedyVideoTopics => 'Comedy video topics';
+
+  @override
+  String get taskIpMonetization => 'IP monetization models';
+
+  @override
+  String get taskBusinessPpt => 'Minimal business presentation template';
+
+  @override
+  String get taskShanghaiBackground => 'Generate a bustling Shanghai skyline';
+
+  @override
+  String get taskVideoCreatorRecommendations =>
+      'Recommend short-video creators';
+
+  @override
+  String get taskWeiboTrends => 'Current Weibo trending topics';
+
+  @override
+  String get taskComedyStoryVlog => 'Comedy story vlog';
+
+  @override
+  String downloadedWorks(int count) {
+    return 'Downloaded $count works';
+  }
+
+  @override
+  String get creationHistory => 'History';
+
+  @override
+  String get assetLibrary => 'Library';
+
+  @override
+  String get roleLibrary => 'Characters';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get agentAccountMode => 'Agent account';
+
+  @override
+  String get vlog => 'Vlog';
+
+  @override
+  String get shortDrama => 'Short drama';
+
+  @override
+  String get images => 'Images';
+
+  @override
+  String get videos => 'Videos';
+
+  @override
+  String get aiHuman => 'AI human';
+
+  @override
+  String get anime => 'Anime';
+
+  @override
+  String get threeD => '3D';
+
+  @override
+  String get noRoles => 'No characters yet';
+
+  @override
+  String get noRolesDescription =>
+      'Create characters to add reusable talent to your videos';
+
+  @override
+  String get noHistory => 'No history yet';
+
+  @override
+  String get noWorks => 'No works yet';
+
+  @override
+  String get noHistoryDescription =>
+      'Start an Agent conversation\nto create your own short-video account';
+
+  @override
+  String get noWorksDescription =>
+      'Your images, videos, and audio will appear here';
+
+  @override
+  String get goGenerate => 'Create now';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String daysAgo(int count) {
+    return '$count days ago';
+  }
+
+  @override
+  String get sampleAccountQuestion =>
+      'Is there an account you like and want to learn from...';
+
+  @override
+  String pointsSpent(int points) {
+    return 'Spent $points points';
+  }
+
+  @override
+  String get continueTask => 'Continue';
+
+  @override
+  String get download => 'Download';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get editProfile => 'Edit profile';
+
+  @override
+  String get accountManagement => 'Account management';
+
+  @override
+  String get wechatId => 'WeChat ID';
+
+  @override
+  String get douyin => 'Douyin';
+
+  @override
+  String get logout => 'Sign out';
+
+  @override
+  String get logoutDescription =>
+      'You\'ll need to sign in again to continue using POPi';
+
+  @override
+  String get confirmLogout => 'Confirm sign out';
+
+  @override
+  String get logoutFailed => 'Unable to sign out. Try again later';
+
+  @override
+  String get regularUser => 'Regular user';
+
+  @override
+  String memberLevel(String level) {
+    return 'Member $level';
+  }
+
+  @override
+  String get upgradeMembership => 'Upgrade';
+
+  @override
+  String get rechargeAndPoints => 'Top up | Points details';
+
+  @override
+  String get nicknameRequiredLabel => 'Nickname*';
+
+  @override
+  String get nicknameHelp =>
+      'Chinese, English, and numbers are supported. Up to 15 characters.';
+
+  @override
+  String get nicknameRequired => 'Enter a nickname';
+
+  @override
+  String get profileUpdated => 'Profile updated';
+
+  @override
+  String get profileUpdateFailed =>
+      'Unable to update your profile. Try again later';
+
+  @override
+  String get splashTagline => 'Build something useful.';
 }

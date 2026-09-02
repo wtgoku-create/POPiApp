@@ -17,7 +17,10 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 void main() {
-  Future<_LoginTestContext> pumpLoginPage(WidgetTester tester) async {
+  Future<_LoginTestContext> pumpLoginPage(
+    WidgetTester tester, {
+    ThemeData? theme,
+  }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -38,7 +41,7 @@ void main() {
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
-          theme: AppTheme.light,
+          theme: theme ?? AppTheme.light,
           locale: const Locale('zh'),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -67,6 +70,30 @@ void main() {
     expect(find.byKey(const Key('wechat-login-button')), findsOneWidget);
     expect(find.byKey(const Key('agreement-checkbox')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uses dark surfaces and text colors in dark mode',
+      (tester) async {
+    await pumpLoginPage(tester, theme: AppTheme.dark);
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, AppTheme.dark.colorScheme.surface);
+
+    final title = tester.widget<Text>(find.text('欢迎登录 POPi'));
+    expect(title.style?.color, AppTheme.dark.colorScheme.onSurface);
+
+    final subtitle = tester.widget<Text>(find.text('登录后继续创作你的专属 IP'));
+    expect(subtitle.style?.color, AppTheme.dark.colorScheme.onSurfaceVariant);
+
+    final captchaSurface = tester.widget<Material>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('refresh-captcha-button')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(captchaSurface.color, AppTheme.dark.colorScheme.surface);
   });
 
   testWidgets('validates phone and verification code before login',

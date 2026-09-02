@@ -68,7 +68,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('打开导航'));
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skill'));
     await tester.pumpAndSettle();

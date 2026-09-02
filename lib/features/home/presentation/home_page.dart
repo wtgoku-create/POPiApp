@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
@@ -32,16 +34,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
   final List<PopiComposerImage> _selectedImages = [];
+  bool _mentionMode = false;
 
   static const _maxImageCount = 5;
   static const _maxImageBytes = 6 * 1024 * 1024;
-
-  static const _prompts = [
-    ('做一个新IP', Color(0xFFF3EFFF)),
-    ('让我的老帐号变好', AppColors.surfaceTint),
-    ('我已经有参考账号', Color(0xFFF0F4F9)),
-    ('我还不知道做什么', AppColors.pageBackground),
-  ];
 
   @override
   void dispose() {
@@ -73,11 +69,11 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final composerBottomPadding = keyboardHeight > 0
-        ? keyboardHeight + 20
-        : (safeArea.bottom > 20 ? safeArea.bottom : 20).toDouble();
+    final composerBottomPadding =
+        math.max(safeArea.bottom, keyboardHeight + 20).toDouble();
     final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
     final composerInset =
         _composerHeight > 0 ? _composerHeight : fallbackComposerHeight;
@@ -118,7 +114,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: SizedBox.square(
                         dimension: 40,
                         child: IconButton(
-                          tooltip: '打开导航',
+                          key: const Key('popi-open-navigation'),
+                          tooltip: l10n.openNavigation,
                           padding: const EdgeInsets.all(5),
                           onPressed: () =>
                               _scaffoldKey.currentState?.openDrawer(),
@@ -126,7 +123,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                             'common_navigation_menu',
                             size: 30,
                             color: colorScheme.onSurface,
-                            semanticsLabel: '打开导航',
+                            semanticsLabel: l10n.openNavigation,
                           ),
                         ),
                       ),
@@ -161,7 +158,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                         const SizedBox(height: 32),
                         _WelcomeCards(
-                          prompts: _prompts,
+                          prompts: [
+                            (l10n.homePromptCreateIp, const Color(0xFFF3EFFF)),
+                            (
+                              l10n.homePromptImproveAccount,
+                              AppColors.surfaceTint
+                            ),
+                            (
+                              l10n.homePromptHasReference,
+                              const Color(0xFFF0F4F9)
+                            ),
+                            (l10n.homePromptUnsure, AppColors.pageBackground),
+                          ],
                           onPromptSelected: _selectPrompt,
                         ),
                       ],
@@ -231,6 +239,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           onRemoveImage: _removeSelectedImage,
                           onHeightChanged: _handleComposerHeightChanged,
                           onSubmitted: _openConversation,
+                          onMentionRequested: _showMentionSheet,
                         ),
                       ),
                     ),
@@ -254,7 +263,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   void _openConversation(String value) {
     if (value.trim().isEmpty) return;
-    AppToast.info(context, '对话功能待接入');
+    AppToast.info(context, AppLocalizations.of(context)!.conversationPending);
   }
 
   Future<void> _selectPrompt(String prompt) async {
@@ -270,7 +279,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   Future<void> _pickImageFromGallery() async {
     final remaining = _maxImageCount - _selectedImages.length;
     if (remaining <= 0) {
-      AppToast.info(context, '最多上传5张图片');
+      AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
       return;
     }
 
@@ -303,15 +312,28 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (!mounted) return;
       if (selected.isNotEmpty) {
         setState(() => _selectedImages.addAll(selected));
+        if (_mentionMode) {
+          _mentionMode = false;
+          final markdown = _messageController.markdown;
+          if (markdown.endsWith('@')) {
+            await _messageController.setText(
+              markdown.substring(0, markdown.length - 1),
+            );
+          }
+          await _messageController.insertImage(selected.first.bytes);
+          if (!mounted) return;
+        }
       }
       if (hasOversizedImage) {
-        AppToast.error(context, '单张图片不能超过6MB');
+        AppToast.error(context, AppLocalizations.of(context)!.imageTooLarge);
       }
       if (images.length > remaining) {
-        AppToast.info(context, '最多上传5张图片');
+        AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
       }
     } catch (_) {
-      if (mounted) AppToast.info(context, '无法读取图片，请稍后重试');
+      if (mounted) {
+        AppToast.info(context, AppLocalizations.of(context)!.imageReadFailed);
+      }
     }
   }
 
@@ -321,6 +343,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   void _showAttachmentSheet() {
+    final l10n = AppLocalizations.of(context)!;
     AppSheet.show<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -335,7 +358,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     _pickImageFromGallery();
                   },
                   icon: const Icon(Icons.photo_outlined),
-                  label: const Text('相册'),
+                  label: Text(l10n.gallery),
                 ),
               ),
               const SizedBox(width: 12),
@@ -343,10 +366,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.pop(sheetContext);
-                    AppToast.info(context, '文件');
+                    AppToast.info(context, l10n.file);
                   },
                   icon: const Icon(Icons.attach_file),
-                  label: const Text('文件'),
+                  label: Text(l10n.file),
                 ),
               ),
             ],
@@ -354,6 +377,61 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
     );
+  }
+
+  void _showMentionSheet() {
+    if (_selectedImages.isEmpty) return;
+    _mentionMode = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppSheet.show<void>(
+        context: context,
+        builder: (sheetContext) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: SizedBox(
+              height: 92,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) {
+                  final image = _selectedImages[index];
+                  return InkWell(
+                    key: Key('popi-mention-image-$index'),
+                    borderRadius: BorderRadius.circular(AppRadii.card),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _insertMentionImage(image);
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadii.card),
+                      child: Image.memory(
+                        image.bytes,
+                        width: 92,
+                        height: 92,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _insertMentionImage(PopiComposerImage image) async {
+    _mentionMode = false;
+    final markdown = _messageController.markdown;
+    if (markdown.endsWith('@')) {
+      await _messageController.setText(
+        markdown.substring(0, markdown.length - 1),
+      );
+    }
+    await _messageController.insertImage(image.bytes);
   }
 }
 
@@ -368,6 +446,7 @@ class _WelcomeCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
@@ -396,11 +475,11 @@ class _WelcomeCards extends StatelessWidget {
                       TextSpan(
                         children: [
                           TextSpan(
-                            text: '嗨，我是POPi~\n',
+                            text: l10n.homeGreetingTitle,
                             style: TextStyle(fontSize: 20),
                           ),
                           TextSpan(
-                            text: '我来帮你一起\n把一个账号做起来！',
+                            text: l10n.homeGreetingBody,
                             style: TextStyle(fontSize: 18),
                           ),
                         ],
@@ -464,7 +543,7 @@ class _WelcomeCards extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '先告诉我：',
+                        l10n.homePromptIntro,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 14,
@@ -479,7 +558,7 @@ class _WelcomeCards extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        '你现在最想做什么？',
+                        l10n.homePromptQuestion,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 18,
@@ -563,7 +642,8 @@ class _PromptTile extends StatelessWidget {
                     child: AppSvgIcon.asset(
                       'home_welcome_chevron',
                       color: colorScheme.onSurfaceVariant,
-                      semanticsLabel: '选择',
+                      semanticsLabel:
+                          AppLocalizations.of(context)!.selectAction,
                     ),
                   ),
                 ),

@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 
@@ -16,37 +17,168 @@ class PopiComposerImage {
   final Uint8List bytes;
 }
 
+class _InlineComposerImage {
+  const _InlineComposerImage.bytes(this.bytes) : source = null;
+  const _InlineComposerImage.network(this.source) : bytes = null;
+
+  final Uint8List? bytes;
+  final String? source;
+}
+
+class _ComposerImageSpanBuilder extends SpecialTextSpanBuilder {
+  _ComposerImageSpanBuilder(this.images);
+
+  final Map<int, _InlineComposerImage> images;
+
+  @override
+  SpecialText? createSpecialText(
+    String flag, {
+    TextStyle? textStyle,
+    SpecialTextGestureTapCallback? onTap,
+    int? index,
+  }) {
+    if (isStart(flag, _ComposerImageSpecialText.flag)) {
+      return _ComposerImageSpecialText(
+        images,
+        textStyle,
+        start: index! - (_ComposerImageSpecialText.flag.length - 1),
+      );
+    }
+    return null;
+  }
+}
+
+class _ComposerImageSpecialText extends SpecialText {
+  _ComposerImageSpecialText(
+    this.images,
+    TextStyle? textStyle, {
+    required this.start,
+  }) : super(flag, ']', textStyle);
+
+  static const flag = '[popi-image:';
+  final Map<int, _InlineComposerImage> images;
+  final int start;
+
+  @override
+  InlineSpan finishText() {
+    final token = toString();
+    final id = int.tryParse(token.substring(flag.length, token.length - 1));
+    final image = id == null ? null : images[id];
+    if (image == null) return TextSpan(text: token, style: textStyle);
+    return ExtendedWidgetSpan(
+      start: start,
+      actualText: token,
+      deleteAll: true,
+      alignment: PlaceholderAlignment.middle,
+      child: _InlineImageWidget(image: image),
+    );
+  }
+}
+
+class _InlineImageWidget extends StatelessWidget {
+  const _InlineImageWidget({required this.image});
+
+  final _InlineComposerImage image;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = image.bytes != null
+        ? Image.memory(
+            image.bytes!,
+            width: 24,
+            height: 24,
+            cacheWidth: 48,
+            cacheHeight: 48,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.low,
+          )
+        : Image.network(
+            image.source!,
+            width: 24,
+            height: 24,
+            cacheWidth: 48,
+            cacheHeight: 48,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.low,
+          );
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 class PopiMessageComposerController {
   PopiMessageComposerController({String initialText = ''})
-      : editorState = EditorState(
-          document: Document.blank(withInitialText: false)
-            ..insert([0], [paragraphNode(text: initialText)]),
-        );
+      : textController = TextEditingController(text: initialText) {
+    textController.selection =
+        TextSelection.collapsed(offset: initialText.length);
+    specialTextSpanBuilder = _ComposerImageSpanBuilder(_images);
+    textNotifier.value = markdown;
+    textController.addListener(_handleTextChanged);
+  }
 
-  final EditorState editorState;
+  final TextEditingController textController;
+  late final SpecialTextSpanBuilder specialTextSpanBuilder;
+  final Map<int, _InlineComposerImage> _images = {};
+  int _nextImageId = 0;
+  final ValueNotifier<String> textNotifier = ValueNotifier('');
 
-  String get markdown => documentToMarkdown(editorState.document).trim();
+  String get markdown =>
+      textController.text.replaceAll(RegExp(r'\[popi-image:\d+\]'), '').trim();
+
+  void _handleTextChanged() {
+    final value = markdown;
+    if (textNotifier.value != value) textNotifier.value = value;
+  }
 
   void dismissKeyboard() {
-    editorState.selection = null;
-    editorState.service.keyboardService?.closeKeyboard();
-    editorState.service.keyboardService?.disable();
+    FocusManager.instance.primaryFocus?.unfocus();
   }
 
   Future<void> setText(String value) async {
-    final transaction = editorState.transaction;
-    final children = editorState.document.root.children.toList();
-    if (children.isNotEmpty) {
-      transaction.deleteNodes(children);
-    }
-    transaction.insertNode([0], paragraphNode(text: value));
-    transaction.afterSelection = Selection.collapsed(
-      Position(path: const [0], offset: value.length),
+    _images.clear();
+    textController.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
     );
-    await editorState.apply(transaction);
   }
 
-  void dispose() => editorState.dispose();
+  Future<void> insertImage(Uint8List bytes) async {
+    _insertInlineImage(_InlineComposerImage.bytes(bytes));
+  }
+
+  Future<void> insertImageSource(String source) async {
+    _insertInlineImage(_InlineComposerImage.network(source));
+  }
+
+  void _insertInlineImage(_InlineComposerImage image) {
+    final selection = textController.selection.isValid
+        ? textController.selection
+        : TextSelection.collapsed(offset: textController.text.length);
+    final start = selection.start.clamp(0, textController.text.length);
+    final end = selection.end.clamp(start, textController.text.length);
+    final id = _nextImageId++;
+    final token = '[popi-image:$id]';
+    _images[id] = image;
+    final text = textController.text.replaceRange(start, end, token);
+    textController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: start + token.length),
+    );
+  }
+
+  void dispose() {
+    textController
+      ..removeListener(_handleTextChanged)
+      ..dispose();
+    textNotifier.dispose();
+  }
 }
 
 class PopiMessageComposer extends ConsumerStatefulWidget {
@@ -57,6 +189,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     required this.onRemoveImage,
     required this.onHeightChanged,
     required this.onSubmitted,
+    this.onMentionRequested,
     super.key,
   });
 
@@ -66,6 +199,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<double> onHeightChanged;
   final ValueChanged<String> onSubmitted;
+  final VoidCallback? onMentionRequested;
 
   @override
   ConsumerState<PopiMessageComposer> createState() =>
@@ -75,11 +209,11 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     with SingleTickerProviderStateMixin {
   late final FocusNode _focusNode;
-  late final EditorScrollController _editorScrollController;
   late final AnimationController _composerAnimationController;
   final _sizeKey = GlobalKey();
   bool _hasFocus = false;
   int _focusRevision = 0;
+  bool _mentionSheetOpen = false;
 
   @override
   void initState() {
@@ -89,10 +223,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       vsync: this,
       duration: const Duration(milliseconds: 220),
     )..addStatusListener(_handleComposerAnimationStatus);
-    _editorScrollController = EditorScrollController(
-      editorState: widget.controller.editorState,
-      shrinkWrap: true,
-    );
+    widget.controller.textNotifier.addListener(_handleTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
   }
 
@@ -104,8 +235,19 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     _composerAnimationController
       ..removeStatusListener(_handleComposerAnimationStatus)
       ..dispose();
-    _editorScrollController.dispose();
+    widget.controller.textNotifier.removeListener(_handleTextChanged);
     super.dispose();
+  }
+
+  void _handleTextChanged() {
+    if (_mentionSheetOpen || !mounted) return;
+    if (widget.controller.markdown.endsWith('@')) {
+      _mentionSheetOpen = true;
+      widget.onMentionRequested?.call();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mentionSheetOpen = false;
+      });
+    }
   }
 
   void _handleFocusChanged() {
@@ -118,9 +260,6 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       return;
     }
 
-    // AppFlowy removes its caret and selection overlays during the next frame.
-    // Keep the editor constraints stable until that cleanup layout is complete.
-    widget.controller.editorState.selection = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
           _focusNode.hasFocus ||
@@ -155,11 +294,11 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomPadding = keyboardHeight > 0
-        ? keyboardHeight + 20
-        : math.max(safeArea.bottom, 20).toDouble();
+    final bottomPadding =
+        math.max(safeArea.bottom, keyboardHeight + 20).toDouble();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImages = widget.selectedImages.isNotEmpty;
@@ -189,92 +328,101 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final expandedHeight = hasImages ? 180.0 : 118.0;
+                      final expandedHeight = hasImages ? 220.0 : 158.0;
                       final contentHeight = _hasFocus ? expandedHeight : 60.0;
-                      final content = _ComposerContent(
-                        isExpanded: _hasFocus,
-                        images: widget.selectedImages,
-                        input: _buildInput(
-                          colorScheme,
-                          placeholderFontSize: _hasFocus ? 14 : 16,
-                        ),
-                        colorScheme: colorScheme,
-                        onAttachment: widget.onAttachment,
-                        onRemoveImage: widget.onRemoveImage,
-                        onKeepFocus: _focusNode.requestFocus,
-                      );
-                      return AnimatedBuilder(
-                        animation: _composerAnimationController,
-                        builder: (context, _) {
-                          final progress = Curves.easeInOutCubic.transform(
-                            _composerAnimationController.value,
+                      return ValueListenableBuilder<String>(
+                        valueListenable: widget.controller.textNotifier,
+                        builder: (context, text, _) {
+                          final content = _ComposerContent(
+                            isExpanded: _hasFocus,
+                            hasText: text.isNotEmpty,
+                            images: widget.selectedImages,
+                            input: _buildInput(
+                              colorScheme,
+                              placeholderFontSize: _hasFocus ? 14 : 16,
+                            ),
+                            colorScheme: colorScheme,
+                            onAttachment: widget.onAttachment,
+                            onRemoveImage: widget.onRemoveImage,
+                            onKeepFocus: _focusNode.requestFocus,
+                            onSubmitted: () => widget.onSubmitted(text),
                           );
-                          final height = 60 + (expandedHeight - 60) * progress;
-                          final radius = AppRadii.pill +
-                              (AppRadii.card - AppRadii.pill) * progress;
-                          final borderRadius = BorderRadius.circular(radius);
-                          return TapRegion(
-                            onTapOutside: (_) => _dismissEditor(),
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onTap: _focusNode.requestFocus,
-                              child: Container(
-                                key: const Key('popi-message-composer'),
-                                width: double.infinity,
-                                height: height,
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? colorScheme.surfaceContainerHigh
-                                      : null,
-                                  gradient: isDark
-                                      ? null
-                                      : const LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            AppColors.pageBackground,
-                                            AppColors.surface,
-                                          ],
-                                        ),
-                                  border: isDark
-                                      ? Border.all(
-                                          color: colorScheme.outlineVariant
-                                              .withValues(alpha: .45),
-                                        )
-                                      : Border.all(
-                                          color: AppColors.surface,
-                                          width: 2,
-                                        ),
-                                  borderRadius: borderRadius,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: isDark ? 0.2 : 0.05,
-                                      ),
-                                      blurRadius: isDark ? 14 : 20,
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: borderRadius,
-                                  child: OverflowBox(
-                                    alignment: Alignment.topCenter,
-                                    minWidth: constraints.maxWidth,
-                                    maxWidth: constraints.maxWidth,
-                                    minHeight: contentHeight,
-                                    maxHeight: contentHeight,
-                                    child: Padding(
-                                      padding: _hasFocus
-                                          ? const EdgeInsets.all(10)
-                                          : const EdgeInsets.symmetric(
-                                              horizontal: 10,
+                          return AnimatedBuilder(
+                            animation: _composerAnimationController,
+                            builder: (context, _) {
+                              final progress = Curves.easeInOutCubic.transform(
+                                _composerAnimationController.value,
+                              );
+                              final height =
+                                  60 + (expandedHeight - 60) * progress;
+                              final radius = AppRadii.pill +
+                                  (AppRadii.card - AppRadii.pill) * progress;
+                              final borderRadius =
+                                  BorderRadius.circular(radius);
+                              return TapRegion(
+                                onTapOutside: (_) => _dismissEditor(),
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: _focusNode.requestFocus,
+                                  child: Container(
+                                    key: const Key('popi-message-composer'),
+                                    width: double.infinity,
+                                    height: height,
+                                    decoration: BoxDecoration(
+                                      color: isDark
+                                          ? colorScheme.surfaceContainerHigh
+                                          : null,
+                                      gradient: isDark
+                                          ? null
+                                          : const LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                AppColors.pageBackground,
+                                                AppColors.surface,
+                                              ],
                                             ),
-                                      child: content,
+                                      border: isDark
+                                          ? Border.all(
+                                              color: colorScheme.outlineVariant
+                                                  .withValues(alpha: .45),
+                                            )
+                                          : Border.all(
+                                              color: AppColors.surface,
+                                              width: 2,
+                                            ),
+                                      borderRadius: borderRadius,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: isDark ? 0.2 : 0.05,
+                                          ),
+                                          blurRadius: isDark ? 14 : 20,
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: borderRadius,
+                                      child: OverflowBox(
+                                        alignment: Alignment.topCenter,
+                                        minWidth: constraints.maxWidth,
+                                        maxWidth: constraints.maxWidth,
+                                        minHeight: contentHeight,
+                                        maxHeight: contentHeight,
+                                        child: Padding(
+                                          padding: _hasFocus
+                                              ? const EdgeInsets.all(10)
+                                              : const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                ),
+                                          child: content,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           );
                         },
                       );
@@ -282,7 +430,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'AI生成结果可能有误，仅供参考',
+                    l10n.aiDisclaimer,
                     style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
                       fontSize: 11,
@@ -302,58 +450,36 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     ColorScheme colorScheme, {
     required double placeholderFontSize,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final placeholderStyle = TextStyle(
       color: colorScheme.onSurfaceVariant,
       fontSize: placeholderFontSize,
       fontWeight: FontWeight.w400,
     );
-    final blockComponentBuilders = {
-      ...standardBlockComponentBuilderMap,
-      ParagraphBlockKeys.type: ParagraphBlockComponentBuilder(
-        configuration: BlockComponentConfiguration(
-          padding: (_) => EdgeInsets.zero,
-          placeholderText: (_) => '跟POPi说点什么...',
-          placeholderTextStyle: (_, {textSpan}) => placeholderStyle,
-        ),
-      )..showActions = (_) => false,
-    };
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: AppFlowyEditor(
-            key: const Key('popi-message-input'),
-            editorState: widget.controller.editorState,
-            editorScrollController: _editorScrollController,
-            focusNode: _focusNode,
-            shrinkWrap: true,
-            showMagnifier: true,
-            autoScrollEdgeOffset: 24,
-            blockComponentBuilders: blockComponentBuilders,
-            editorStyle: EditorStyle.mobile(
-              padding: EdgeInsets.zero,
-              cursorColor: colorScheme.primary,
-              dragHandleColor: colorScheme.primary,
-              selectionColor: colorScheme.primary.withValues(alpha: .18),
-              textStyleConfiguration: TextStyleConfiguration(
-                text: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (!_hasFocus && widget.controller.markdown.isEmpty)
-          IgnorePointer(
-            child: Text(
-              '跟POPi说点什么...',
-              key: const Key('popi-message-placeholder'),
-              style: placeholderStyle,
-            ),
-          ),
-      ],
+    return ExtendedTextField(
+      key: const Key('popi-message-input'),
+      focusNode: _focusNode,
+      controller: widget.controller.textController,
+      specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
+      minLines: 1,
+      maxLines: 4,
+      cursorColor: colorScheme.primary,
+      style: TextStyle(
+        color: colorScheme.onSurface,
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        filled: false,
+        fillColor: Colors.transparent,
+        contentPadding: EdgeInsets.zero,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        hintText: l10n.composerPlaceholder,
+        hintStyle: placeholderStyle,
+      ),
     );
   }
 }
@@ -374,12 +500,13 @@ class _SelectedImagePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final isCompact = size <= 28;
     final buttonSize = isCompact ? 18.0 : 24.0;
     final buttonInset = isCompact ? 2.0 : 3.0;
     final iconSize = isCompact ? 13.0 : 17.0;
     return Semantics(
-      label: '已选择图片：${image.name}',
+      label: l10n.selectedImageLabel(image.name),
       child: SizedBox.square(
         dimension: size,
         child: Stack(
@@ -420,7 +547,7 @@ class _SelectedImagePreview extends StatelessWidget {
                     ),
                     child: IconButton(
                       key: Key('popi-remove-selected-image-$index'),
-                      tooltip: '移除图片',
+                      tooltip: l10n.removeImage,
                       constraints: BoxConstraints.tightFor(
                         width: buttonSize,
                         height: buttonSize,
@@ -451,21 +578,25 @@ class _SelectedImagePreview extends StatelessWidget {
 class _ComposerContent extends StatelessWidget {
   const _ComposerContent({
     required this.isExpanded,
+    required this.hasText,
     required this.images,
     required this.input,
     required this.colorScheme,
     required this.onAttachment,
     required this.onRemoveImage,
     required this.onKeepFocus,
+    required this.onSubmitted,
   });
 
   final bool isExpanded;
+  final bool hasText;
   final List<PopiComposerImage> images;
   final Widget input;
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
   final VoidCallback onKeepFocus;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -502,7 +633,10 @@ class _ComposerContent extends StatelessWidget {
           child: Padding(
             padding: hasImages
                 ? isExpanded
-                    ? const EdgeInsets.only(top: 66, bottom: 50)
+                    ? EdgeInsets.only(
+                        top: 66,
+                        bottom: 50,
+                      )
                     : EdgeInsets.only(left: 58 + compactImageStripWidth)
                 : isExpanded
                     ? const EdgeInsets.only(bottom: 50)
@@ -511,7 +645,7 @@ class _ComposerContent extends StatelessWidget {
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
                 width: double.infinity,
-                height: isExpanded ? 44 : 24,
+                height: isExpanded ? 84 : 24,
                 child: input,
               ),
             ),
@@ -526,17 +660,31 @@ class _ComposerContent extends StatelessWidget {
             onPressed: onAttachment,
           ),
         ),
-        IgnorePointer(
-          ignoring: !isExpanded,
-          child: AnimatedOpacity(
-            duration: duration,
-            curve: curve,
-            opacity: isExpanded ? 1 : 0,
-            child: Align(
-              alignment: Alignment.bottomRight,
-              child: _VoiceButton(
-                color: colorScheme.primary,
-                onPressed: onKeepFocus,
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            ignoring: !isExpanded,
+            child: AnimatedOpacity(
+              duration: duration,
+              curve: curve,
+              opacity: isExpanded ? 1 : 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _VoiceButton(
+                    color: colorScheme.primary,
+                    onPressed: onKeepFocus,
+                  ),
+                  if (hasText) const SizedBox(width: 8),
+                  AnimatedSize(
+                    duration: duration,
+                    curve: curve,
+                    child: hasText
+                        ? _SendButton(onPressed: onSubmitted)
+                        : const SizedBox.shrink(),
+                  ),
+                ],
               ),
             ),
           ),
@@ -557,12 +705,13 @@ class _AttachmentButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CustomPaint(
       painter: _DashedCircleBorderPainter(color: color),
       child: SizedBox.square(
         dimension: 40,
         child: IconButton(
-          tooltip: '添加附件',
+          tooltip: l10n.addAttachment,
           padding: EdgeInsets.zero,
           onPressed: onPressed,
           icon: AppSvgIcon.asset(
@@ -584,15 +733,51 @@ class _VoiceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CustomPaint(
       painter: _DashedCircleBorderPainter(color: color),
       child: SizedBox.square(
         dimension: 40,
         child: IconButton(
-          tooltip: '语音输入',
+          tooltip: l10n.voiceInput,
+          constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+          style: IconButton.styleFrom(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
           padding: EdgeInsets.zero,
           onPressed: onPressed,
           icon: Icon(Icons.mic_none_rounded, size: 18, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _SendButton extends StatelessWidget {
+  const _SendButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: 40,
+      child: IconButton(
+        key: const Key('popi-send-button'),
+        tooltip: AppLocalizations.of(context)!.sendMessage,
+        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: const Color(0xFF6F47F5),
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(),
+        ),
+        onPressed: onPressed,
+        icon: AppSvgIcon.asset(
+          'home_composer_send',
+          size: 25,
+          color: Colors.white,
+          semanticsLabel: AppLocalizations.of(context)!.sendMessage,
         ),
       ),
     );

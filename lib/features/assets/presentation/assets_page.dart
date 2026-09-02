@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../home/presentation/widgets/popi_navigation_drawer.dart';
 
@@ -140,7 +141,11 @@ class _AssetsPageState extends State<AssetsPage> {
   void _downloadSelected() {
     if (_selectedWorks.isEmpty) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已下载${_selectedWorks.length}个作品')),
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!.downloadedWorks(_selectedWorks.length),
+        ),
+      ),
     );
   }
 
@@ -177,6 +182,7 @@ class _LibraryNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
       height: 56,
       child: Row(
@@ -186,7 +192,7 @@ class _LibraryNavigation extends StatelessWidget {
             dimension: 30,
             child: IconButton(
               key: const Key('assets-navigation-back'),
-              tooltip: '返回上一页',
+              tooltip: l10n.backToPreviousPage,
               padding: EdgeInsets.zero,
               onPressed: onBackPressed,
               icon: Transform.rotate(
@@ -200,19 +206,19 @@ class _LibraryNavigation extends StatelessWidget {
           ),
           const SizedBox(width: 15),
           _LibraryTab(
-            label: '创作历史',
+            label: l10n.creationHistory,
             selected: selected == AssetLibrarySection.history,
             onTap: () => onSelected(AssetLibrarySection.history),
           ),
           const SizedBox(width: 20),
           _LibraryTab(
-            label: '资产库',
+            label: l10n.assetLibrary,
             selected: selected == AssetLibrarySection.works,
             onTap: () => onSelected(AssetLibrarySection.works),
           ),
           const SizedBox(width: 20),
           _LibraryTab(
-            label: '角色库',
+            label: l10n.roleLibrary,
             selected: selected == AssetLibrarySection.roles,
             onTap: () => onSelected(AssetLibrarySection.roles),
           ),
@@ -270,14 +276,28 @@ class _SectionFilters extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final VoidCallback onToggleSelection;
 
-  List<String> get _labels => switch (section) {
-        AssetLibrarySection.history => ['全部', 'Agent账号模式', 'Vlog', '短剧'],
-        AssetLibrarySection.works => ['全部', '图片', '视频'],
-        AssetLibrarySection.roles => ['全部', 'AI真人', '二次元', '3D'],
-      };
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final labels = switch (section) {
+      AssetLibrarySection.history => [
+          l10n.filterAll,
+          l10n.agentAccountMode,
+          l10n.vlog,
+          l10n.shortDrama,
+        ],
+      AssetLibrarySection.works => [
+          l10n.filterAll,
+          l10n.images,
+          l10n.videos,
+        ],
+      AssetLibrarySection.roles => [
+          l10n.filterAll,
+          l10n.aiHuman,
+          l10n.anime,
+          l10n.threeD,
+        ],
+    };
     return SizedBox(
       key: const Key('assets-history-filters'),
       height: 36,
@@ -287,7 +307,7 @@ class _SectionFilters extends StatelessWidget {
             child: ListView.separated(
               padding: const EdgeInsets.only(left: 20),
               scrollDirection: Axis.horizontal,
-              itemCount: _labels.length,
+              itemCount: labels.length,
               separatorBuilder: (_, __) => const SizedBox(width: 5),
               itemBuilder: (context, index) {
                 final active = selected == index;
@@ -306,7 +326,7 @@ class _SectionFilters extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                     ),
                     child: Text(
-                      _labels[index],
+                      labels[index],
                       style: TextStyle(
                         color:
                             active ? AppColors.brand : AppColors.textTertiary,
@@ -330,7 +350,7 @@ class _SectionFilters extends StatelessWidget {
                   foregroundColor: AppColors.textPrimary,
                 ),
                 child: selectingWorks
-                    ? const Text('取消', style: TextStyle(fontSize: 16))
+                    ? Text(l10n.cancel, style: const TextStyle(fontSize: 16))
                     : const Icon(Icons.format_list_bulleted, size: 22),
               ),
             ),
@@ -348,6 +368,7 @@ class _LibraryEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (section == AssetLibrarySection.roles) {
       return Center(
         child: Transform.translate(
@@ -362,18 +383,18 @@ class _LibraryEmptyState extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
               const SizedBox(height: 10),
-              const Text(
-                '暂无角色',
-                style: TextStyle(
+              Text(
+                l10n.noRoles,
+                style: const TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 25,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                '创建角色为你的视频增添人物资产',
-                style: TextStyle(
+              Text(
+                l10n.noRolesDescription,
+                style: const TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: 16,
                   height: 30 / 16,
@@ -399,7 +420,7 @@ class _LibraryEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              isHistory ? '暂无历史' : '暂无作品',
+              isHistory ? l10n.noHistory : l10n.noWorks,
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 25,
@@ -408,7 +429,7 @@ class _LibraryEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              isHistory ? '开启Agent对话\n创建属于你的短视频账号' : '你创造的图片、视频、音频在这里',
+              isHistory ? l10n.noHistoryDescription : l10n.noWorksDescription,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textSecondary,
@@ -423,9 +444,12 @@ class _LibraryEmptyState extends StatelessWidget {
               child: FilledButton(
                 key: const Key('assets-go-generate'),
                 onPressed: () => context.go('/'),
-                child: const Text(
-                  '去生成',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                child: Text(
+                  l10n.goGenerate,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -439,25 +463,22 @@ class _LibraryEmptyState extends StatelessWidget {
 class _HistoryList extends StatelessWidget {
   const _HistoryList();
 
-  static const _times = [
-    '12:27',
-    '昨天',
-    '7天前',
-    '30天前',
-    '30天前',
-    '30天前',
-    '30天前',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final times = [
+      '12:27',
+      l10n.yesterday,
+      l10n.daysAgo(7),
+      for (var index = 0; index < 4; index++) l10n.daysAgo(30),
+    ];
     return ListView.builder(
       key: const Key('assets-history-list'),
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      itemCount: _times.length,
+      itemCount: times.length,
       itemExtent: 104,
       itemBuilder: (context, index) => _HistoryItem(
-        time: _times[index],
+        time: times[index],
         current: index == 0,
       ),
     );
@@ -472,6 +493,7 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
       height: 94,
       child: Padding(
@@ -492,9 +514,9 @@ class _HistoryItem extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Text(
-                            'Agent账号模式',
-                            style: TextStyle(
+                          Text(
+                            l10n.agentAccountMode,
+                            style: const TextStyle(
                               color: AppColors.textTertiary,
                               fontSize: 14,
                             ),
@@ -510,8 +532,8 @@ class _HistoryItem extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      const Text(
-                        '有没有你喜欢、想学习的账号有...',
+                      Text(
+                        l10n.sampleAccountQuestion,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -531,18 +553,9 @@ class _HistoryItem extends StatelessWidget {
                               fit: BoxFit.contain,
                             ),
                             const SizedBox(width: 3),
-                            const Text.rich(
-                              TextSpan(
-                                text: '本次消耗',
-                                children: [
-                                  TextSpan(
-                                    text: '44',
-                                    style: TextStyle(color: AppColors.brand),
-                                  ),
-                                  TextSpan(text: '积分'),
-                                ],
-                              ),
-                              style: TextStyle(
+                            Text(
+                              l10n.pointsSpent(44),
+                              style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontSize: 14,
                               ),
@@ -564,9 +577,9 @@ class _HistoryItem extends StatelessWidget {
                           color: AppColors.surfaceTintStrong,
                           borderRadius: BorderRadius.circular(AppRadii.pill),
                         ),
-                        child: const Text(
-                          '继续任务',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.continueTask,
+                          style: const TextStyle(
                             color: AppColors.brand,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -748,6 +761,7 @@ class _SelectionActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       key: const Key('assets-selection-actions'),
       height: 104,
@@ -760,13 +774,13 @@ class _SelectionActions extends StatelessWidget {
         children: [
           _SelectionAction(
             icon: Icons.file_download_outlined,
-            label: '下载',
+            label: l10n.download,
             enabled: hasSelection,
             onTap: onDownload,
           ),
           _SelectionAction(
             icon: Icons.delete_outline,
-            label: '删除',
+            label: l10n.delete,
             color: const Color(0xFFF05A5A),
             enabled: hasSelection,
             onTap: onDelete,

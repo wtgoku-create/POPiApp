@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:extended_text_field/extended_text_field.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/home/presentation/widgets/popi_message_composer.dart';
+import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
@@ -27,17 +28,15 @@ void main() {
     expect(controller.markdown, '做一个新IP');
   });
 
-  test('message composer controller clears the editor selection on dismiss',
-      () {
+  test('message composer controller keeps a valid selection on dismiss', () {
     final controller = PopiMessageComposerController(initialText: '输入内容');
     addTearDown(controller.dispose);
-    controller.editorState.selection = Selection.collapsed(
-      Position(path: const [0], offset: 2),
-    );
+    controller.textController.selection =
+        const TextSelection.collapsed(offset: 2);
 
     controller.dismissKeyboard();
 
-    expect(controller.editorState.selection, isNull);
+    expect(controller.textController.selection.extentOffset, 2);
   });
 
   testWidgets('renders the mobile welcome layout and drawer', (tester) async {
@@ -64,7 +63,10 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.light, home: const HomePage()),
+        child: _LocalizedTestApp(
+          theme: AppTheme.light,
+          home: const HomePage(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -73,7 +75,7 @@ void main() {
     expect(find.text('做一个新IP'), findsOneWidget);
     expect(find.text('跟POPi说点什么...'), findsOneWidget);
     expect(find.byKey(const Key('popi-message-input')), findsOneWidget);
-    expect(find.byType(AppFlowyEditor), findsOneWidget);
+    expect(find.byType(ExtendedTextField), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('popi-message-input'))).height,
       24,
@@ -115,16 +117,16 @@ void main() {
     final animatingComposerHeight =
         tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
     expect(animatingComposerHeight, greaterThan(60));
-    expect(animatingComposerHeight, lessThan(118));
+    expect(animatingComposerHeight, lessThan(158));
     await tester.pump(const Duration(milliseconds: 120));
     await tester.pump();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      118,
+      158,
     );
     expect(
       tester.getSize(find.byKey(const Key('popi-message-input'))).height,
-      44,
+      84,
     );
     final expandedComposerHeight = tester
         .getSize(
@@ -148,7 +150,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      118,
+      158,
     );
     expect(find.text('SDXL1.0'), findsNothing);
     expect(find.byTooltip('语音输入'), findsOneWidget);
@@ -176,8 +178,17 @@ void main() {
       tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy,
       lessThan(wordmarkTop),
     );
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 1);
+    await tester.pumpAndSettle();
+    final composerBottomNearKeyboardClose =
+        tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy;
     tester.view.resetViewInsets();
     await tester.pumpAndSettle();
+    expect(
+      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
+      composerBottomNearKeyboardClose,
+    );
     expect(
       tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy,
       wordmarkTop,
@@ -244,11 +255,35 @@ void main() {
     );
   });
 
+  testWidgets('renders home content in English', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: _LocalizedTestApp(
+          theme: AppTheme.light,
+          locale: const Locale('en'),
+          home: const HomePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('What do you want to do most right now?'),
+      findsOneWidget,
+    );
+    expect(find.text('Create a new IP'), findsOneWidget);
+    expect(find.text('Say something to POPi...'), findsOneWidget);
+    expect(find.byTooltip('Open navigation'), findsOneWidget);
+  });
+
   testWidgets('collapsing the focused editor does not read dirty text layout',
       (tester) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(theme: AppTheme.light, home: const HomePage()),
+        child: _LocalizedTestApp(
+          theme: AppTheme.light,
+          home: const HomePage(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -287,7 +322,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: _LocalizedTestApp(
           theme: AppTheme.light,
           home: HomePage(pickImages: () async => images),
         ),
@@ -328,7 +363,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      180,
+      220,
     );
     final expandedImageRect = tester.getRect(firstImage);
     final expandedRemoveButtonRect = tester.getRect(firstRemoveButton);
@@ -379,7 +414,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: _LocalizedTestApp(
           theme: AppTheme.light,
           home: HomePage(
             pickImages: () async =>
@@ -414,7 +449,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        child: MaterialApp(
+        child: _LocalizedTestApp(
           theme: AppTheme.light,
           home: HomePage(pickImages: () async => [oversizedImage]),
         ),
@@ -445,7 +480,10 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.dark, home: const HomePage()),
+        child: _LocalizedTestApp(
+          theme: AppTheme.dark,
+          home: const HomePage(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -517,4 +555,27 @@ void main() {
     expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _LocalizedTestApp extends StatelessWidget {
+  const _LocalizedTestApp({
+    required this.theme,
+    required this.home,
+    this.locale = const Locale('zh'),
+  });
+
+  final ThemeData theme;
+  final Widget home;
+  final Locale locale;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: theme,
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: home,
+    );
+  }
 }

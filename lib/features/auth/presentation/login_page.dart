@@ -51,9 +51,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -84,8 +85,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Text(
                               l10n.loginTitle,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
                                 fontSize: 28,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -94,8 +95,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Text(
                               l10n.loginSubtitle,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
                                 fontSize: 15,
                               ),
                             ),
@@ -112,14 +113,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 labelText: l10n.phoneNumber,
                                 hintText: l10n.phoneNumberHint,
                                 counterText: '',
-                                prefixIcon: const Padding(
+                                prefixIcon: Padding(
                                   padding: EdgeInsets.only(left: 18, right: 10),
                                   child: Center(
                                     widthFactor: 1,
                                     child: Text(
                                       '+86',
                                       style: TextStyle(
-                                        color: AppColors.textPrimary,
+                                        color: colorScheme.onSurface,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -226,8 +227,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   ),
                                   child: Text(
                                     l10n.otherLoginMethods,
-                                    style: const TextStyle(
-                                      color: AppColors.textTertiary,
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -248,8 +249,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 ),
                                 label: Text(
                                   l10n.wechatLogin,
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
+                                  style: TextStyle(
+                                    color: colorScheme.onSurface,
                                     fontSize: 17,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -281,8 +282,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     Expanded(
                                       child: Text(
                                         l10n.loginAgreement,
-                                        style: const TextStyle(
-                                          color: AppColors.textSecondary,
+                                        style: TextStyle(
+                                          color: colorScheme.onSurfaceVariant,
                                           fontSize: 13,
                                           height: 1.6,
                                         ),
@@ -417,7 +418,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   String _errorMessage(Object error) {
-    if (error case ApiException(message: final message)) return message;
+    if (error case ApiException(message: final String message)
+        when message.trim().isNotEmpty) {
+      return message;
+    }
     return AppLocalizations.of(context)!.networkRequestFailed;
   }
 }
@@ -437,10 +441,11 @@ class _CaptchaPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: refreshTooltip,
       child: Material(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         shape: RoundedRectangleBorder(
           side: BorderSide(color: Theme.of(context).colorScheme.outline),
           borderRadius: BorderRadius.circular(AppRadii.medium),
