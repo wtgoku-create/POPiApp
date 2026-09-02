@@ -47,6 +47,21 @@ void main() {
     expect(user.code, 'u10561');
   });
 
+  test('parses point balances returned by the user information endpoint', () {
+    final user = User.fromJson({
+      'id': 10561,
+      'memberCoins': 1100,
+      'otherCoins': 100,
+      'pointPackageCoins': 88,
+      'allCoins': 1750,
+    });
+
+    expect(user.memberCoins, 1100);
+    expect(user.otherCoins, 100);
+    expect(user.pointPackageCoins, 88);
+    expect(user.allCoins, 1750);
+  });
+
   test('loads user points into global state', () async {
     final container = createContainer(_FakeAuthApi());
     addTearDown(container.dispose);
@@ -57,6 +72,21 @@ void main() {
       container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
       739,
     );
+  });
+
+  test('refreshes user coin balances into global state', () async {
+    final api = _FakeAuthApi();
+    final container = createContainer(api);
+    addTearDown(container.dispose);
+
+    await container.read(userProvider.notifier).refreshUser();
+
+    final refreshed = container.read(userProvider);
+    expect(api.currentUserCalls, 1);
+    expect(refreshed?.memberCoins, 1100);
+    expect(refreshed?.otherCoins, 100);
+    expect(refreshed?.pointPackageCoins, 88);
+    expect(refreshed?.allCoins, 1750);
   });
 
   test('clears the user and points on logout', () async {
@@ -76,12 +106,24 @@ void main() {
 
 class _FakeAuthApi implements AuthApi {
   bool logoutCalled = false;
+  int currentUserCalls = 0;
 
   @override
   Future<CaptchaChallenge> createCaptcha() => throw UnimplementedError();
 
   @override
-  Future<User> currentUser() => throw UnimplementedError();
+  Future<User> currentUser() async {
+    currentUserCalls++;
+    return const User(
+      id: '1',
+      name: '张三',
+      email: 'test@example.com',
+      memberCoins: 1100,
+      otherCoins: 100,
+      pointPackageCoins: 88,
+      allCoins: 1750,
+    );
+  }
 
   @override
   Future<AuthSession> loginByCode({

@@ -411,6 +411,71 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rechargeAndPoints => '充值 | 积分详情';
 
   @override
+  String get pointsDetailsTitle => '积分详情';
+
+  @override
+  String get rechargePointsPackage => '充值积分包';
+
+  @override
+  String get rechargedPoints => '充值积分';
+
+  @override
+  String get giftPoints => '赠送积分';
+
+  @override
+  String get pointsPackage => '积分包';
+
+  @override
+  String get pointsUsageDescription =>
+      '此信用额度/计划可在POPi移动端、POPi.air跟POPi.TV上使用并且实时互通';
+
+  @override
+  String get dailyFreePoints => '每日免费积分';
+
+  @override
+  String get seedanceTrial => 'Seedance2.0体验版';
+
+  @override
+  String get samplePointsDate => '2026-09-02 09：46';
+
+  @override
+  String get pointsHistoryNotice => '可查看30天内的积分消耗明细，更新可能延时';
+
+  @override
+  String get pointsLogEmpty => '暂无积分明细';
+
+  @override
+  String get pointsLogLoadFailed => '积分明细加载失败';
+
+  @override
+  String get pointsLogUnknownSource => '积分变动';
+
+  @override
+  String get retry => '重试';
+
+  @override
+  String get pointsBalance => '余额';
+
+  @override
+  String get rechargeMembershipNotice =>
+      '温馨提示：只有会员才可享受会员角色、图片视频去水印等功能。仅购买积分无法获得相应权益。购买的积分有效期为1年。';
+
+  @override
+  String get customerServiceContact => '客服联系方式:13100671900';
+
+  @override
+  String get rechargeAgreementPrefix => '充值即表示您同意遵守';
+
+  @override
+  String get userAgreement => '用户协议';
+
+  @override
+  String get conjunctionAnd => '和';
+
+  @override
+  String get privacyPolicy => '隐私政策';
+
+  @override
   String get nicknameRequiredLabel => '昵称*';
 
   @override

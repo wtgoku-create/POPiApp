@@ -411,34 +411,44 @@ class MembershipCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          Container(
+          SizedBox(
             height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
+            child: Material(
+              key: const Key('profile-points-entry'),
               color: colorScheme.surface,
               borderRadius: BorderRadius.circular(AppRadii.pill),
-            ),
-            child: Row(
-              children: [
-                const AppSvgIcon.asset(
-                  'common_brand_icon-vector',
-                  key: Key('profile-points-icon'),
-                  size: 12,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  totalPoints,
-                  style: TextStyle(fontSize: 18, color: colorScheme.onSurface),
-                ),
-                const Spacer(),
-                Text(
-                  l10n.rechargeAndPoints,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: colorScheme.onSurfaceVariant,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => context.push('/profile/points'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      const AppSvgIcon.asset(
+                        'common_brand_icon-vector',
+                        key: Key('profile-points-icon'),
+                        size: 12,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        totalPoints,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        l10n.rechargeAndPoints,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ],

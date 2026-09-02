@@ -46,7 +46,7 @@ class NetworkApi {
 
   Future<Map<String, dynamic>> currentUser() async {
     final response = await dio.get<Map<String, dynamic>>(
-      '/api_client/auth/userInfo',
+      '/api_client/users/user/info',
     );
     return _data(response);
   }
@@ -54,6 +54,17 @@ class NetworkApi {
   Future<Map<String, dynamic>> userPoints() async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/users/userPoints/total',
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> userPointsLog({
+    required int page,
+    required int pageSize,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/users/userPointsLog/list',
+      queryParameters: {'page': page, 'pageSize': pageSize},
     );
     return _data(response);
   }

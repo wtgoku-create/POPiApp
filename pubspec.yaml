@@ -1,7 +1,7 @@
 name: popi_ai_app
 description: A Flutter starter template with Riverpod, go_router, Dio, localization and theme switching.
 publish_to: "none"
-version: 1.0.0+1802
+version: 1.0.0+1902
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

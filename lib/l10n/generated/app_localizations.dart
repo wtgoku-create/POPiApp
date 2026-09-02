@@ -878,6 +878,132 @@ abstract class AppLocalizations {
   /// **'Top up | Points details'**
   String get rechargeAndPoints;
 
+  /// No description provided for @pointsDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Points details'**
+  String get pointsDetailsTitle;
+
+  /// No description provided for @rechargePointsPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Top up points'**
+  String get rechargePointsPackage;
+
+  /// No description provided for @rechargedPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchased points'**
+  String get rechargedPoints;
+
+  /// No description provided for @giftPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus points'**
+  String get giftPoints;
+
+  /// No description provided for @pointsPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Points package'**
+  String get pointsPackage;
+
+  /// No description provided for @pointsUsageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.'**
+  String get pointsUsageDescription;
+
+  /// No description provided for @dailyFreePoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily free points'**
+  String get dailyFreePoints;
+
+  /// No description provided for @seedanceTrial.
+  ///
+  /// In en, this message translates to:
+  /// **'Seedance 2.0 trial'**
+  String get seedanceTrial;
+
+  /// No description provided for @samplePointsDate.
+  ///
+  /// In en, this message translates to:
+  /// **'2026-09-02 09:46'**
+  String get samplePointsDate;
+
+  /// No description provided for @pointsHistoryNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'View point activity from the last 30 days. Updates may be delayed.'**
+  String get pointsHistoryNotice;
+
+  /// No description provided for @pointsLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No point activity yet'**
+  String get pointsLogEmpty;
+
+  /// No description provided for @pointsLogLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load point activity'**
+  String get pointsLogLoadFailed;
+
+  /// No description provided for @pointsLogUnknownSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Points activity'**
+  String get pointsLogUnknownSource;
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @pointsBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'balance'**
+  String get pointsBalance;
+
+  /// No description provided for @rechargeMembershipNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year.'**
+  String get rechargeMembershipNotice;
+
+  /// No description provided for @customerServiceContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer service: 13100671900'**
+  String get customerServiceContact;
+
+  /// No description provided for @rechargeAgreementPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'By topping up, you agree to the '**
+  String get rechargeAgreementPrefix;
+
+  /// No description provided for @userAgreement.
+  ///
+  /// In en, this message translates to:
+  /// **'User Agreement'**
+  String get userAgreement;
+
+  /// No description provided for @conjunctionAnd.
+  ///
+  /// In en, this message translates to:
+  /// **' and '**
+  String get conjunctionAnd;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
   /// No description provided for @nicknameRequiredLabel.
   ///
   /// In en, this message translates to:

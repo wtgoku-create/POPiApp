@@ -11,6 +11,8 @@ class AppSheet {
     bool isDismissible = true,
     bool enableDrag = true,
     bool showDragHandle = true,
+    Color? backgroundColor,
+    Color? barrierColor,
   }) {
     return showModalBottomSheet<T>(
       context: context,
@@ -19,6 +21,8 @@ class AppSheet {
       isDismissible: isDismissible,
       enableDrag: enableDrag,
       showDragHandle: showDragHandle,
+      backgroundColor: backgroundColor,
+      barrierColor: barrierColor,
       builder: builder,
     );
   }

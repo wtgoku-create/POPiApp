@@ -8,7 +8,9 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/points_details_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
+import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 
 void main() {
@@ -34,6 +36,13 @@ void main() {
         GoRoute(
           path: '/profile/edit',
           builder: (_, __) => const EditProfilePage(),
+        ),
+        GoRoute(
+          path: '/profile/points',
+          builder: (_, __) => const PointsDetailsPage(
+            refreshOnOpen: false,
+            loadPointsLogOnOpen: false,
+          ),
         ),
       ],
     );
@@ -231,4 +240,167 @@ void main() {
     expect(find.text('昵称*'), findsOneWidget);
     expect(find.text('确认'), findsOneWidget);
   });
+
+  testWidgets('renders points details design', (tester) async {
+    await pumpPage(
+      tester,
+      const PointsDetailsPage(
+        refreshOnOpen: false,
+        loadPointsLogOnOpen: false,
+      ),
+    );
+
+    expect(find.text('积分详情'), findsNWidgets(2));
+    expect(find.byKey(const Key('points-summary-card')), findsOneWidget);
+    expect(find.byKey(const Key('points-details-icon')), findsOneWidget);
+    expect(find.text('1750'), findsOneWidget);
+    expect(find.text('充值积分包'), findsOneWidget);
+    expect(find.text('暂无积分明细'), findsOneWidget);
+    expect(find.byKey(const Key('points-transaction-card')), findsOneWidget);
+
+    expect(
+      tester.getSize(find.byKey(const Key('points-summary-card'))),
+      const Size(400, 203),
+    );
+    final pointsIcon = tester.widget<Image>(
+      find.byKey(const Key('points-details-icon')),
+    );
+    expect(pointsIcon.width, 20);
+    expect(pointsIcon.height, closeTo(13.24, 0.01));
+  });
+
+  testWidgets('opens and selects a recharge points package', (tester) async {
+    await pumpPage(
+      tester,
+      const PointsDetailsPage(
+        refreshOnOpen: false,
+        loadPointsLogOnOpen: false,
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('points-recharge-entry')));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const Key('points-recharge-sheet'));
+    expect(sheet, findsOneWidget);
+    expect(tester.getSize(sheet).height, 663);
+    expect(find.byKey(const Key('points-package-600')), findsOneWidget);
+    expect(find.byKey(const Key('points-package-20000')), findsOneWidget);
+    expect(find.byKey(const Key('points-package-selected')), findsOneWidget);
+    expect(find.byType(ImageFiltered), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('points-package-1000')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('points-package-1000')),
+        matching: find.byKey(const Key('points-package-selected')),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('points-recharge-confirm')));
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+  });
+
+  testWidgets('loads the next points log page near the bottom', (tester) async {
+    final requests = <(int, int)>[];
+
+    Future<UserPointsLogPage> loadPage(int page, int pageSize) async {
+      requests.add((page, pageSize));
+      final start = (page - 1) * pageSize + 1;
+      final itemCount = page == 1 ? pageSize : 1;
+      return UserPointsLogPage(
+        page: page,
+        pageSize: pageSize,
+        pageCount: 2,
+        total: 21,
+        items: List.generate(
+          itemCount,
+          (index) => _pointsLogEntry(start + index),
+        ),
+      );
+    }
+
+    await pumpPage(
+      tester,
+      PointsDetailsPage(
+        refreshOnOpen: false,
+        pointsLogPageLoader: loadPage,
+      ),
+    );
+
+    expect(requests, [(1, 20)]);
+    expect(find.byKey(const Key('points-log-1')), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const Key('points-details-scroll')),
+      const Offset(0, -1400),
+    );
+    await tester.pumpAndSettle();
+
+    expect(requests, [(1, 20), (2, 20)]);
+    expect(find.byKey(const Key('points-log-21')), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const Key('points-details-scroll')),
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(requests, [(1, 20), (2, 20)]);
+  });
+
+  testWidgets('separates points cards from the page in dark mode',
+      (tester) async {
+    await pumpPage(
+      tester,
+      const PointsDetailsPage(
+        refreshOnOpen: false,
+        loadPointsLogOnOpen: false,
+      ),
+      theme: AppTheme.dark,
+    );
+
+    for (final key in const [
+      Key('points-summary-card'),
+      Key('points-transaction-card'),
+    ]) {
+      final card = tester.widget<Container>(find.byKey(key));
+      final decoration = card.decoration! as BoxDecoration;
+      expect(decoration.color, AppTheme.dark.colorScheme.surfaceContainerHigh);
+      expect(decoration.color, isNot(AppTheme.dark.scaffoldBackgroundColor));
+      expect(decoration.boxShadow, hasLength(2));
+    }
+  });
+
+  testWidgets('opens points details from profile and returns', (tester) async {
+    await pumpPage(tester, const ProfilePage());
+
+    await tester.tap(find.byKey(const Key('profile-points-entry')));
+    await tester.pumpAndSettle();
+    expect(find.byType(PointsDetailsPage), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('points-details-back')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
+  });
+}
+
+UserPointsLogEntry _pointsLogEntry(int id) {
+  return UserPointsLogEntry(
+    id: id,
+    userId: 0,
+    userCode: '',
+    userName: '',
+    points: id.isEven ? 10 : -1,
+    changeType: 2,
+    sourceType: 'post_refund',
+    sourceId: 'source-$id',
+    content: '积分记录 $id',
+    beforePoints: 134,
+    afterPoints: 133,
+    status: 1,
+    createTime: DateTime.parse('2026-09-02T16:05:48+08:00'),
+  );
 }

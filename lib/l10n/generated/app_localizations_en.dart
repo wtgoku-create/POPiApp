@@ -423,6 +423,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rechargeAndPoints => 'Top up | Points details';
 
   @override
+  String get pointsDetailsTitle => 'Points details';
+
+  @override
+  String get rechargePointsPackage => 'Top up points';
+
+  @override
+  String get rechargedPoints => 'Purchased points';
+
+  @override
+  String get giftPoints => 'Bonus points';
+
+  @override
+  String get pointsPackage => 'Points package';
+
+  @override
+  String get pointsUsageDescription =>
+      'This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.';
+
+  @override
+  String get dailyFreePoints => 'Daily free points';
+
+  @override
+  String get seedanceTrial => 'Seedance 2.0 trial';
+
+  @override
+  String get samplePointsDate => '2026-09-02 09:46';
+
+  @override
+  String get pointsHistoryNotice =>
+      'View point activity from the last 30 days. Updates may be delayed.';
+
+  @override
+  String get pointsLogEmpty => 'No point activity yet';
+
+  @override
+  String get pointsLogLoadFailed => 'Unable to load point activity';
+
+  @override
+  String get pointsLogUnknownSource => 'Points activity';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get pointsBalance => 'balance';
+
+  @override
+  String get rechargeMembershipNotice =>
+      'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year.';
+
+  @override
+  String get customerServiceContact => 'Customer service: 13100671900';
+
+  @override
+  String get rechargeAgreementPrefix => 'By topping up, you agree to the ';
+
+  @override
+  String get userAgreement => 'User Agreement';
+
+  @override
+  String get conjunctionAnd => ' and ';
+
+  @override
+  String get privacyPolicy => 'Privacy Policy';
+
+  @override
   String get nicknameRequiredLabel => 'Nickname*';
 
   @override
