@@ -117,16 +117,44 @@ void main() {
     final animatingComposerHeight =
         tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
     expect(animatingComposerHeight, greaterThan(60));
-    expect(animatingComposerHeight, lessThan(158));
+    expect(animatingComposerHeight, lessThan(112));
     await tester.pump(const Duration(milliseconds: 120));
     await tester.pump();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      158,
+      112,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
+      42,
+    );
+    tester.testTextInput.enterText('第一行\n第二行\n第三行\n第四行\n第五行');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 90));
+    final growingHeight =
+        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    expect(growingHeight, greaterThan(112));
+    expect(growingHeight, lessThan(154));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      154,
     );
     expect(
       tester.getSize(find.byKey(const Key('popi-message-input'))).height,
       84,
+    );
+    tester.testTextInput.enterText('');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 90));
+    final shrinkingHeight =
+        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    expect(shrinkingHeight, greaterThan(112));
+    expect(shrinkingHeight, lessThan(154));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
+      112,
     );
     final expandedComposerHeight = tester
         .getSize(
@@ -150,7 +178,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 220));
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      158,
+      112,
     );
     expect(find.text('SDXL1.0'), findsNothing);
     expect(find.byTooltip('语音输入'), findsOneWidget);
@@ -363,7 +391,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      220,
+      178,
     );
     final expandedImageRect = tester.getRect(firstImage);
     final expandedRemoveButtonRect = tester.getRect(firstRemoveButton);

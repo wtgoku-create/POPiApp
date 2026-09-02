@@ -328,99 +328,121 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                 children: [
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final expandedHeight = hasImages ? 220.0 : 158.0;
-                      final contentHeight = _hasFocus ? expandedHeight : 60.0;
-                      return ValueListenableBuilder<String>(
-                        valueListenable: widget.controller.textNotifier,
-                        builder: (context, text, _) {
-                          final content = _ComposerContent(
-                            isExpanded: _hasFocus,
-                            hasText: text.isNotEmpty,
-                            images: widget.selectedImages,
-                            input: _buildInput(
-                              colorScheme,
-                              placeholderFontSize: _hasFocus ? 14 : 16,
-                            ),
-                            colorScheme: colorScheme,
-                            onAttachment: widget.onAttachment,
-                            onRemoveImage: widget.onRemoveImage,
-                            onKeepFocus: _focusNode.requestFocus,
-                            onSubmitted: () => widget.onSubmitted(text),
+                      return ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: widget.controller.textController,
+                        builder: (context, value, _) {
+                          final text = widget.controller.markdown;
+                          final inputHeight = _expandedInputHeight(
+                            value.text,
+                            constraints.maxWidth - 20,
+                            Directionality.of(context),
                           );
-                          return AnimatedBuilder(
-                            animation: _composerAnimationController,
-                            builder: (context, _) {
-                              final progress = Curves.easeInOutCubic.transform(
-                                _composerAnimationController.value,
+                          return TweenAnimationBuilder<double>(
+                            tween: Tween(end: inputHeight),
+                            duration: _composerAnimationController.isCompleted
+                                ? const Duration(milliseconds: 180)
+                                : Duration.zero,
+                            curve: Curves.easeOutCubic,
+                            builder: (context, animatedInputHeight, _) {
+                              final expandedHeight =
+                                  (hasImages ? 136.0 : 70.0) +
+                                      animatedInputHeight;
+                              final contentHeight =
+                                  _hasFocus ? expandedHeight : 60.0;
+                              final content = _ComposerContent(
+                                isExpanded: _hasFocus,
+                                hasText: text.isNotEmpty,
+                                images: widget.selectedImages,
+                                expandedInputHeight: animatedInputHeight,
+                                input: _buildInput(
+                                  colorScheme,
+                                  placeholderFontSize: _hasFocus ? 14 : 16,
+                                ),
+                                colorScheme: colorScheme,
+                                onAttachment: widget.onAttachment,
+                                onRemoveImage: widget.onRemoveImage,
+                                onKeepFocus: _focusNode.requestFocus,
+                                onSubmitted: () => widget.onSubmitted(text),
                               );
-                              final height =
-                                  60 + (expandedHeight - 60) * progress;
-                              final radius = AppRadii.pill +
-                                  (AppRadii.card - AppRadii.pill) * progress;
-                              final borderRadius =
-                                  BorderRadius.circular(radius);
-                              return TapRegion(
-                                onTapOutside: (_) => _dismissEditor(),
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.translucent,
-                                  onTap: _focusNode.requestFocus,
-                                  child: Container(
-                                    key: const Key('popi-message-composer'),
-                                    width: double.infinity,
-                                    height: height,
-                                    decoration: BoxDecoration(
-                                      color: isDark
-                                          ? colorScheme.surfaceContainerHigh
-                                          : null,
-                                      gradient: isDark
-                                          ? null
-                                          : const LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                AppColors.pageBackground,
-                                                AppColors.surface,
-                                              ],
-                                            ),
-                                      border: isDark
-                                          ? Border.all(
-                                              color: colorScheme.outlineVariant
-                                                  .withValues(alpha: .45),
-                                            )
-                                          : Border.all(
-                                              color: AppColors.surface,
-                                              width: 2,
-                                            ),
-                                      borderRadius: borderRadius,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: isDark ? 0.2 : 0.05,
-                                          ),
-                                          blurRadius: isDark ? 14 : 20,
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: borderRadius,
-                                      child: OverflowBox(
-                                        alignment: Alignment.topCenter,
-                                        minWidth: constraints.maxWidth,
-                                        maxWidth: constraints.maxWidth,
-                                        minHeight: contentHeight,
-                                        maxHeight: contentHeight,
-                                        child: Padding(
-                                          padding: _hasFocus
-                                              ? const EdgeInsets.all(10)
-                                              : const EdgeInsets.symmetric(
-                                                  horizontal: 10,
+                              return AnimatedBuilder(
+                                animation: _composerAnimationController,
+                                builder: (context, _) {
+                                  final progress =
+                                      Curves.easeInOutCubic.transform(
+                                    _composerAnimationController.value,
+                                  );
+                                  final height =
+                                      60 + (expandedHeight - 60) * progress;
+                                  final radius = AppRadii.pill +
+                                      (AppRadii.card - AppRadii.pill) *
+                                          progress;
+                                  final borderRadius =
+                                      BorderRadius.circular(radius);
+                                  return TapRegion(
+                                    onTapOutside: (_) => _dismissEditor(),
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.translucent,
+                                      onTap: _focusNode.requestFocus,
+                                      child: Container(
+                                        key: const Key('popi-message-composer'),
+                                        width: double.infinity,
+                                        height: height,
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? colorScheme.surfaceContainerHigh
+                                              : null,
+                                          gradient: isDark
+                                              ? null
+                                              : const LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    AppColors.pageBackground,
+                                                    AppColors.surface,
+                                                  ],
                                                 ),
-                                          child: content,
+                                          border: isDark
+                                              ? Border.all(
+                                                  color: colorScheme
+                                                      .outlineVariant
+                                                      .withValues(alpha: .45),
+                                                )
+                                              : Border.all(
+                                                  color: AppColors.surface,
+                                                  width: 2,
+                                                ),
+                                          borderRadius: borderRadius,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: isDark ? 0.2 : 0.05,
+                                              ),
+                                              blurRadius: isDark ? 14 : 20,
+                                            ),
+                                          ],
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: borderRadius,
+                                          child: OverflowBox(
+                                            alignment: Alignment.topCenter,
+                                            minWidth: constraints.maxWidth,
+                                            maxWidth: constraints.maxWidth,
+                                            minHeight: contentHeight,
+                                            maxHeight: contentHeight,
+                                            child: Padding(
+                                              padding: _hasFocus
+                                                  ? const EdgeInsets.all(10)
+                                                  : const EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                    ),
+                                              child: content,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ),
+                                  );
+                                },
                               );
                             },
                           );
@@ -461,13 +483,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       focusNode: _focusNode,
       controller: widget.controller.textController,
       specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
-      minLines: 1,
+      minLines: _hasFocus ? 2 : 1,
       maxLines: 4,
       cursorColor: colorScheme.primary,
       style: TextStyle(
         color: colorScheme.onSurface,
         fontSize: 14,
         fontWeight: FontWeight.w400,
+        height: 1.5,
       ),
       decoration: InputDecoration(
         isDense: true,
@@ -481,6 +504,26 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
         hintStyle: placeholderStyle,
       ),
     );
+  }
+
+  double _expandedInputHeight(
+    String rawText,
+    double maxWidth,
+    TextDirection textDirection,
+  ) {
+    final tokenizedText =
+        rawText.replaceAll(RegExp(r'\[popi-image:\d+\]'), '\uFFFC');
+    final displayText = tokenizedText.isEmpty ? ' ' : tokenizedText;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: displayText,
+        style: const TextStyle(fontSize: 14, height: 1.5),
+      ),
+      maxLines: 4,
+      textDirection: textDirection,
+    )..layout(maxWidth: maxWidth);
+    final lines = painter.computeLineMetrics().length.clamp(2, 4);
+    return lines * 21.0;
   }
 }
 
@@ -580,6 +623,7 @@ class _ComposerContent extends StatelessWidget {
     required this.isExpanded,
     required this.hasText,
     required this.images,
+    required this.expandedInputHeight,
     required this.input,
     required this.colorScheme,
     required this.onAttachment,
@@ -591,6 +635,7 @@ class _ComposerContent extends StatelessWidget {
   final bool isExpanded;
   final bool hasText;
   final List<PopiComposerImage> images;
+  final double expandedInputHeight;
   final Widget input;
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
@@ -645,7 +690,7 @@ class _ComposerContent extends StatelessWidget {
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
                 width: double.infinity,
-                height: isExpanded ? 84 : 24,
+                height: isExpanded ? expandedInputHeight : 24,
                 child: input,
               ),
             ),
