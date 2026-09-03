@@ -980,6 +980,60 @@ abstract class AppLocalizations {
   /// **'Membership purchases are coming soon'**
   String get membershipComingSoon;
 
+  /// No description provided for @restorePurchases.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get restorePurchases;
+
+  /// No description provided for @purchaseProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting to the App Store…'**
+  String get purchaseProcessing;
+
+  /// No description provided for @purchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase complete. Your benefits are updated'**
+  String get purchaseSuccess;
+
+  /// No description provided for @purchaseCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase canceled'**
+  String get purchaseCanceled;
+
+  /// No description provided for @purchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase could not be completed. Try again later'**
+  String get purchaseFailed;
+
+  /// No description provided for @storeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The App Store is currently unavailable'**
+  String get storeUnavailable;
+
+  /// No description provided for @storeProductUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This product was not found in the App Store. Check its configuration'**
+  String get storeProductUnavailable;
+
+  /// No description provided for @appleProductIdMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This item does not have an Apple Product ID'**
+  String get appleProductIdMissing;
+
+  /// No description provided for @restorePurchasesRequested.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases and membership benefits synced from your account'**
+  String get restorePurchasesRequested;
+
   /// No description provided for @membershipPlansEmpty.
   ///
   /// In en, this message translates to:

@@ -98,6 +98,28 @@ class NetworkApi {
     return list;
   }
 
+  Future<void> verifyApplePurchase({
+    required String productId,
+    required String businessProductId,
+    required String businessProductType,
+    required String? purchaseId,
+    required String verificationData,
+    required String transactionDate,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/payments/apple/verify',
+      data: {
+        'product_id': productId,
+        'business_product_id': businessProductId,
+        'business_product_type': businessProductType,
+        'purchase_id': purchaseId,
+        'verification_data': verificationData,
+        'transaction_date': transactionDate,
+      },
+    );
+    _data(response);
+  }
+
   Future<Map<String, dynamic>> updateUser({
     required String avatar,
     required String name,

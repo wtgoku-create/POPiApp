@@ -27,6 +27,7 @@ class ProductPlan {
     required this.updateTime,
     required this.deleted,
     required this.deleteTime,
+    this.appleProductId = '',
   });
 
   final int id;
@@ -56,6 +57,7 @@ class ProductPlan {
   final DateTime? updateTime;
   final bool deleted;
   final DateTime? deleteTime;
+  final String appleProductId;
 
   factory ProductPlan.fromJson(Map<String, dynamic> json) {
     final customInfo = json['custom_info'];
@@ -91,8 +93,27 @@ class ProductPlan {
       updateTime: _dateTime(json['updateTime']),
       deleted: _boolean(json['deleted']),
       deleteTime: _dateTime(json['deleteTime']),
+      appleProductId: _firstString(
+        json,
+        const ['apple_product_id', 'appleProductId', 'ios_product_id'],
+      ),
     );
   }
+}
+
+String _firstString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  final customInfo = json['custom_info'];
+  if (customInfo is Map) {
+    for (final key in keys) {
+      final value = customInfo[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+  }
+  return '';
 }
 
 class ProductPlanCustomInfo {

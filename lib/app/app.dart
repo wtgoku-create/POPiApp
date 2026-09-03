@@ -5,6 +5,7 @@ import 'package:toastification/toastification.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../shared/providers/settings_provider.dart';
 import '../shared/providers/storage_provider.dart';
+import '../shared/providers/purchase_provider.dart';
 import '../shared/providers/user_provider.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
 import 'router.dart';
@@ -40,6 +41,10 @@ class StarterApp extends ConsumerWidget {
               router: ref.watch(routerProvider(false)),
             );
           }
+
+          // Start listening before any purchase screen opens so interrupted
+          // StoreKit transactions can be verified after an app restart.
+          ref.watch(applePurchaseServiceProvider);
 
           final bootstrap = ref.watch(userBootstrapProvider);
           return bootstrap.when(

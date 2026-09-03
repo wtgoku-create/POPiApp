@@ -10,6 +10,7 @@ class PointPackage {
     required this.sortOrder,
     required this.createdAt,
     required this.updatedAt,
+    this.appleProductId = '',
   });
 
   final int id;
@@ -22,6 +23,7 @@ class PointPackage {
   final int sortOrder;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String appleProductId;
 
   int get totalPoints => pointsAmount + bonusPoints;
 
@@ -45,8 +47,20 @@ class PointPackage {
       updatedAt: updatedAt > 0
           ? DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000, isUtc: true)
           : null,
+      appleProductId: _firstString(
+        json,
+        const ['apple_product_id', 'appleProductId', 'ios_product_id'],
+      ),
     );
   }
+}
+
+String _firstString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return '';
 }
 
 int _integer(Object? value) {

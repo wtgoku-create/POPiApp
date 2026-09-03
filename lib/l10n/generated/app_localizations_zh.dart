@@ -468,6 +468,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get membershipComingSoon => '会员开通功能即将上线';
 
   @override
+  String get restorePurchases => '恢复购买';
+
+  @override
+  String get purchaseProcessing => '正在连接 App Store…';
+
+  @override
+  String get purchaseSuccess => '购买成功，权益已更新';
+
+  @override
+  String get purchaseCanceled => '已取消购买';
+
+  @override
+  String get purchaseFailed => '购买未完成，请稍后重试';
+
+  @override
+  String get storeUnavailable => '当前无法连接 App Store';
+
+  @override
+  String get storeProductUnavailable => 'App Store 中未找到该商品，请检查商品配置';
+
+  @override
+  String get appleProductIdMissing => '该商品尚未配置 Apple Product ID';
+
+  @override
+  String get restorePurchasesRequested => '已从账户同步购买记录和会员权益';
+
+  @override
   String get membershipPlansEmpty => '暂无可用会员方案';
 
   @override

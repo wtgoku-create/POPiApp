@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
+import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/membership_page.dart';
@@ -467,6 +468,16 @@ void main() {
     await pumpPage(tester, const ProfilePage());
 
     await tester.tap(find.byKey(const Key('profile-upgrade-membership')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MembershipPage), findsOneWidget);
+    expect(find.text('立即购买'), findsOneWidget);
+  });
+
+  testWidgets('opens membership from the home app bar', (tester) async {
+    await pumpPage(tester, const HomePage());
+
+    await tester.tap(find.byKey(const Key('home-membership-entry')));
     await tester.pumpAndSettle();
 
     expect(find.byType(MembershipPage), findsOneWidget);

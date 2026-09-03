@@ -38,6 +38,14 @@ class ProfilePage extends ConsumerWidget {
     final themeExpanded = ref.watch(_themeMenuExpandedProvider);
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final VoidCallback? copyUid = displayId == '--'
+        ? null
+        : () async {
+            await Clipboard.setData(ClipboardData(text: displayId));
+            if (context.mounted) {
+              AppToast.success(context, l10n.uidCopied);
+            }
+          };
 
     return Scaffold(
       body: Column(
@@ -60,43 +68,39 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'UID:$displayId',
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
+                Center(
+                  child: Tooltip(
+                    message: l10n.copyAction,
+                    child: InkWell(
                       key: const Key('profile-uid-copy'),
-                      tooltip: l10n.copyAction,
-                      onPressed: displayId == '--'
-                          ? null
-                          : () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: displayId),
-                              );
-                              if (context.mounted) {
-                                AppToast.success(context, l10n.uidCopied);
-                              }
-                            },
-                      padding: EdgeInsets.zero,
-                      alignment: Alignment.centerLeft,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 40,
-                        height: 40,
-                      ),
-                      icon: Icon(
-                        Icons.copy_outlined,
-                        size: 17,
-                        color: colorScheme.onSurfaceVariant,
+                      onTap: copyUid,
+                      borderRadius: BorderRadius.circular(AppRadii.small),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: SizedBox(
+                          height: 40,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'UID:$displayId',
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.copy_outlined,
+                                size: 17,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Center(
@@ -457,6 +461,10 @@ class MembershipCard extends ConsumerWidget {
                           context: context,
                           totalPoints: totalPoints ?? 0,
                           loadPackages: loader,
+                          onPurchase: pointPackageLoader == null
+                              ? (context, package) =>
+                                  purchasePointPackage(context, ref, package)
+                              : null,
                         );
                       },
                       child: Padding(

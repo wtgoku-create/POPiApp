@@ -7,9 +7,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
+import '../../../features/payments/data/apple_purchase_service.dart';
+import '../../../features/payments/domain/apple_product_catalog.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/purchase_provider.dart';
+import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../data/product_plan_repository.dart';
 import '../domain/product_plan.dart';
 
@@ -34,6 +39,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   int _selectedPlan = 0;
   int _selectedVariant = 0;
   bool _loadFailed = false;
+  bool _isPurchasing = false;
+  bool _isRestoring = false;
 
   @override
   void initState() {
@@ -70,7 +77,10 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: Column(
           children: [
             SizedBox(height: topPadding),
-            const _MembershipTopBar(),
+            _MembershipTopBar(
+              isRestoring: _isRestoring,
+              onRestore: _restorePurchases,
+            ),
             if (plans == null)
               const Expanded(
                 child: Center(
@@ -124,18 +134,26 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                     foregroundColor: colorScheme.surface,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.membershipComingSoon)),
-                    );
-                  },
-                  child: Text(
-                    plans[_selectedPlan].variants[_selectedVariant].buttonText,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  onPressed: _isPurchasing
+                      ? null
+                      : () => _purchaseMembership(
+                            plans[_selectedPlan].variants[_selectedVariant],
+                          ),
+                  child: _isPurchasing
+                      ? const SizedBox.square(
+                          key: Key('membership-purchase-loading'),
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          plans[_selectedPlan]
+                              .variants[_selectedVariant]
+                              .buttonText,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
               SizedBox(height: bottomPadding),
@@ -169,10 +187,65 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       debugPrintStack(stackTrace: stackTrace);
     }
   }
+
+  Future<void> _purchaseMembership(_MembershipPlan plan) async {
+    setState(() => _isPurchasing = true);
+    final outcome = await ref.read(applePurchaseServiceProvider).purchase(
+          productId: resolveAppleProductId(plan.appleProductId),
+          businessProductId: plan.id.toString(),
+          businessProductType: appleTestProductType,
+          consumable: false,
+        );
+    if (!mounted) return;
+    setState(() => _isPurchasing = false);
+    await _showPurchaseOutcome(outcome);
+  }
+
+  Future<void> _restorePurchases() async {
+    if (_isRestoring || _isPurchasing) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isRestoring = true);
+    try {
+      await ref.read(userProvider.notifier).refreshUser();
+      if (mounted) AppToast.info(context, l10n.restorePurchasesRequested);
+    } catch (_) {
+      if (mounted) AppToast.error(context, l10n.purchaseFailed);
+    } finally {
+      if (mounted) setState(() => _isRestoring = false);
+    }
+  }
+
+  Future<void> _showPurchaseOutcome(StorePurchaseOutcome outcome) async {
+    final l10n = AppLocalizations.of(context)!;
+    switch (outcome) {
+      case StorePurchaseOutcome.purchased:
+        await ref.read(userProvider.notifier).refreshUser();
+        if (mounted) AppToast.success(context, l10n.purchaseSuccess);
+        return;
+      case StorePurchaseOutcome.canceled:
+        AppToast.info(context, l10n.purchaseCanceled);
+        return;
+      case StorePurchaseOutcome.unavailable:
+        AppToast.error(context, l10n.storeUnavailable);
+        return;
+      case StorePurchaseOutcome.productNotFound:
+        AppToast.error(context, l10n.storeProductUnavailable);
+        return;
+      case StorePurchaseOutcome.failed:
+        AppToast.error(context, l10n.purchaseFailed);
+        return;
+    }
+  }
 }
 
 class _MembershipTopBar extends StatelessWidget {
-  const _MembershipTopBar();
+  const _MembershipTopBar({
+    required this.isRestoring,
+    required this.onRestore,
+  });
+
+  final bool isRestoring;
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +273,19 @@ class _MembershipTopBar extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+          Positioned(
+            right: 20,
+            child: TextButton(
+              key: const Key('membership-restore-button'),
+              onPressed: isRestoring ? null : onRestore,
+              child: isRestoring
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(AppLocalizations.of(context)!.restorePurchases),
             ),
           ),
         ],
@@ -730,6 +816,7 @@ class _BenefitsPanel extends StatelessWidget {
 
 class _MembershipPlan {
   const _MembershipPlan({
+    required this.id,
     required this.level,
     required this.title,
     required this.price,
@@ -742,8 +829,10 @@ class _MembershipPlan {
     required this.featureTitle,
     required this.description,
     required this.buttonText,
+    required this.appleProductId,
   });
 
+  final int id;
   final int level;
   final String title;
   final String price;
@@ -756,6 +845,7 @@ class _MembershipPlan {
   final String featureTitle;
   final String description;
   final String buttonText;
+  final String appleProductId;
 }
 
 class _MembershipPlanGroup {
@@ -794,6 +884,7 @@ bool _isPlusProduct(ProductPlan product) {
 _MembershipPlan _planFromProduct(ProductPlan product) {
   final customInfo = product.customInfo;
   return _MembershipPlan(
+    id: product.id,
     level: product.level,
     title: product.title,
     price: _centsToYuan(product.price),
@@ -806,6 +897,7 @@ _MembershipPlan _planFromProduct(ProductPlan product) {
     featureTitle: customInfo?.featureTitle ?? '',
     description: product.description,
     buttonText: customInfo?.buttonText ?? '',
+    appleProductId: product.appleProductId,
   );
 }
 

@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
+import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -80,6 +82,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pointsBalance = ref.watch(userProvider)?.allCoins ?? 0;
 
     return GestureDetector(
       key: const Key('popi-home-dismiss-keyboard'),
@@ -129,6 +132,18 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
                   ),
+                  actions: [
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 20),
+                        child: _MembershipEntry(
+                          points: pointsBalance,
+                          label: l10n.upgradeMembership,
+                          onTap: () => context.push('/profile/membership'),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -432,6 +447,96 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
     await _messageController.insertImage(image.bytes);
+  }
+}
+
+class _MembershipEntry extends StatelessWidget {
+  const _MembershipEntry({
+    required this.points,
+    required this.label,
+    required this.onTap,
+  });
+
+  final int points;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: const Key('home-membership-entry'),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          child: Ink(
+            height: 36,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? colorScheme.surfaceContainerHigh
+                  : colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(
+                color: isDark ? colorScheme.outlineVariant : AppColors.outline,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox.square(
+                  dimension: 16,
+                  child: Center(
+                    child: SizedBox(
+                      width: 12,
+                      height: 7.94,
+                      child: const AppSvgIcon.asset(
+                        'membership_points',
+                        key: Key('home-membership-icon'),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  '$points',
+                  key: const Key('home-membership-points'),
+                  style: const TextStyle(
+                    color: AppColors.brand,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                SizedBox(
+                  width: 1,
+                  height: 12,
+                  child: ColoredBox(color: colorScheme.outline),
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  key: const Key('home-membership-label'),
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -8,10 +8,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
+import '../../../features/payments/data/apple_purchase_service.dart';
+import '../../../features/payments/domain/apple_product_catalog.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/point_package_repository.dart';
 import '../data/user_points_log_repository.dart';
@@ -23,11 +27,16 @@ typedef PointsLogPageLoader = Future<UserPointsLogPage> Function(
   int pageSize,
 );
 typedef PointPackageLoader = Future<List<PointPackage>> Function();
+typedef PointPackagePurchaseHandler = Future<bool> Function(
+  BuildContext context,
+  PointPackage package,
+);
 
 Future<PointPackage?> showRechargePointsSheet({
   required BuildContext context,
   required int totalPoints,
   required PointPackageLoader loadPackages,
+  PointPackagePurchaseHandler? onPurchase,
 }) {
   return AppSheet.show<PointPackage>(
     context: context,
@@ -39,6 +48,7 @@ Future<PointPackage?> showRechargePointsSheet({
     builder: (context) => _RechargePointsSheet(
       totalPoints: totalPoints,
       loadPackages: loadPackages,
+      onPurchase: onPurchase,
     ),
   );
 }
@@ -331,6 +341,9 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
       context: context,
       totalPoints: totalPoints,
       loadPackages: _fetchPointPackages,
+      onPurchase: widget.pointPackageLoader == null
+          ? (context, package) => purchasePointPackage(context, ref, package)
+          : null,
     );
     if (mounted) setState(() => _sheetOpen = false);
   }
@@ -453,10 +466,12 @@ class _RechargePointsSheet extends StatefulWidget {
   const _RechargePointsSheet({
     required this.totalPoints,
     required this.loadPackages,
+    this.onPurchase,
   });
 
   final int totalPoints;
   final PointPackageLoader loadPackages;
+  final PointPackagePurchaseHandler? onPurchase;
 
   @override
   State<_RechargePointsSheet> createState() => _RechargePointsSheetState();
@@ -467,6 +482,7 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
   PointPackage? _selectedPackage;
   bool _isLoading = true;
   Object? _loadError;
+  bool _isPurchasing = false;
 
   @override
   void initState() {
@@ -649,21 +665,42 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                 backgroundColor: AppColors.brand,
                 foregroundColor: Colors.white,
               ),
-              onPressed: _selectedPackage == null
+              onPressed: _selectedPackage == null || _isPurchasing
                   ? null
-                  : () => Navigator.pop(context, _selectedPackage),
-              child: Text(
-                l10n.confirm,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+                  : _confirmPurchase,
+              child: _isPurchasing
+                  ? const SizedBox.square(
+                      key: Key('points-purchase-loading'),
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(
+                      l10n.confirm,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmPurchase() async {
+    final package = _selectedPackage;
+    if (package == null) return;
+    final purchase = widget.onPurchase;
+    if (purchase == null) {
+      Navigator.pop(context, package);
+      return;
+    }
+    setState(() => _isPurchasing = true);
+    final succeeded = await purchase(context, package);
+    if (!mounted) return;
+    setState(() => _isPurchasing = false);
+    if (succeeded) Navigator.pop(context, package);
   }
 
   Widget _buildPackageGrid(AppLocalizations l10n) {
@@ -714,6 +751,40 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
         );
       },
     );
+  }
+}
+
+Future<bool> purchasePointPackage(
+  BuildContext context,
+  WidgetRef ref,
+  PointPackage package,
+) async {
+  final l10n = AppLocalizations.of(context)!;
+  final outcome = await ref.read(applePurchaseServiceProvider).purchase(
+        productId: resolveAppleProductId(package.appleProductId),
+        businessProductId: package.id.toString(),
+        businessProductType: appleTestProductType,
+        // Every entry temporarily points to the same non-renewing subscription.
+        consumable: false,
+      );
+  if (!context.mounted) return false;
+  switch (outcome) {
+    case StorePurchaseOutcome.purchased:
+      await ref.read(userProvider.notifier).refreshUser();
+      if (context.mounted) AppToast.success(context, l10n.purchaseSuccess);
+      return true;
+    case StorePurchaseOutcome.canceled:
+      AppToast.info(context, l10n.purchaseCanceled);
+      return false;
+    case StorePurchaseOutcome.unavailable:
+      AppToast.error(context, l10n.storeUnavailable);
+      return false;
+    case StorePurchaseOutcome.productNotFound:
+      AppToast.error(context, l10n.storeProductUnavailable);
+      return false;
+    case StorePurchaseOutcome.failed:
+      AppToast.error(context, l10n.purchaseFailed);
+      return false;
   }
 }
 

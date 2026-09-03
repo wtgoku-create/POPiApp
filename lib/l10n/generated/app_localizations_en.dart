@@ -480,6 +480,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get membershipComingSoon => 'Membership purchases are coming soon';
 
   @override
+  String get restorePurchases => 'Restore purchases';
+
+  @override
+  String get purchaseProcessing => 'Connecting to the App Store…';
+
+  @override
+  String get purchaseSuccess => 'Purchase complete. Your benefits are updated';
+
+  @override
+  String get purchaseCanceled => 'Purchase canceled';
+
+  @override
+  String get purchaseFailed =>
+      'The purchase could not be completed. Try again later';
+
+  @override
+  String get storeUnavailable => 'The App Store is currently unavailable';
+
+  @override
+  String get storeProductUnavailable =>
+      'This product was not found in the App Store. Check its configuration';
+
+  @override
+  String get appleProductIdMissing =>
+      'This item does not have an Apple Product ID';
+
+  @override
+  String get restorePurchasesRequested =>
+      'Purchases and membership benefits synced from your account';
+
+  @override
   String get membershipPlansEmpty => 'No membership plans available';
 
   @override

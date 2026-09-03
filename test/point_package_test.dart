@@ -41,6 +41,7 @@ void main() {
                     'sort_order': 1,
                     'created_at': 1775117426,
                     'updated_at': 1779432180,
+                    'apple_product_id': 'com.popiai.app.points.600',
                   },
                   {
                     'id': 3,
@@ -78,6 +79,7 @@ void main() {
     expect(package.pointsAmount, 600);
     expect(package.bonusPoints, 0);
     expect(package.totalPoints, 600);
+    expect(package.appleProductId, 'com.popiai.app.points.600');
     expect(package.enabled, isTrue);
     expect(package.sortOrder, 1);
     expect(

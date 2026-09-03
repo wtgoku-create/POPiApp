@@ -57,6 +57,7 @@ void main() {
             code: 'u10561',
             name: '当前用户',
             email: 'user@popi.art',
+            allCoins: 200,
           ),
         );
 
@@ -99,6 +100,23 @@ void main() {
     expect(
       tester.getSize(find.byKey(const Key('popi-home-app-bar'))).height,
       56,
+    );
+    expect(find.text('升级会员'), findsOneWidget);
+    expect(find.text('200'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('home-membership-entry'))).height,
+      36,
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('home-membership-entry'))).width,
+      lessThan(160),
+    );
+    expect(
+      tester.getCenter(find.byKey(const Key('home-membership-points'))).dy,
+      closeTo(
+        tester.getCenter(find.byKey(const Key('home-membership-label'))).dy,
+        .5,
+      ),
     );
     expect(
       tester.getTopLeft(find.byKey(const Key('popi-home-app-bar'))).dy,

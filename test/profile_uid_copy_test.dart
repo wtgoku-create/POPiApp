@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
 void main() {
-  testWidgets('copies the UID when its icon is tapped', (tester) async {
+  testWidgets('copies the UID when its label is tapped', (tester) async {
     String? clipboardText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -60,7 +60,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('profile-uid-copy')));
+    final copyTarget = find.byKey(const Key('profile-uid-copy'));
+    final uidLabel = find.text('UID:u10561');
+    final targetRect = tester.getRect(copyTarget);
+    final labelRect = tester.getRect(uidLabel);
+    expect(targetRect.height, 40);
+    expect(targetRect.contains(labelRect.center), isTrue);
+
+    await tester.tap(uidLabel);
     await tester.pump();
     await tester.pumpAndSettle(
       const Duration(milliseconds: 100),

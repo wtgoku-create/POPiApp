@@ -45,6 +45,8 @@ void main() {
                         'goal_title': '专属内容｜独家连麦诊断帐号内容',
                         'new_user': true,
                         'point_amount': '每100积分≈￥3.56元',
+                        'apple_product_id':
+                            'com.popiai.app.subscription.max.monthly',
                       },
                       'planCategory': 'monthly',
                       'pointsGrantMode': 'once',
@@ -90,6 +92,10 @@ void main() {
     expect(plan.customInfo?.goalTitle, '专属内容｜独家连麦诊断帐号内容');
     expect(plan.customInfo?.newUser, isTrue);
     expect(plan.customInfo?.pointAmount, '每100积分≈￥3.56元');
+    expect(
+      plan.appleProductId,
+      'com.popiai.app.subscription.max.monthly',
+    );
     expect(plan.planCategory, 'monthly');
     expect(plan.pointsGrantMode, 'once');
     expect(plan.price, 129900);
