@@ -872,6 +872,126 @@ abstract class AppLocalizations {
   /// **'Upgrade'**
   String get upgradeMembership;
 
+  /// No description provided for @membershipStarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Starter Inspiration'**
+  String get membershipStarter;
+
+  /// No description provided for @membershipPlus.
+  ///
+  /// In en, this message translates to:
+  /// **'Plus Creator'**
+  String get membershipPlus;
+
+  /// No description provided for @membershipPro.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro Flagship'**
+  String get membershipPro;
+
+  /// No description provided for @membershipMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Studio'**
+  String get membershipMax;
+
+  /// No description provided for @limitedDiscount.
+  ///
+  /// In en, this message translates to:
+  /// **'40% off'**
+  String get limitedDiscount;
+
+  /// No description provided for @perMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'/month'**
+  String get perMonth;
+
+  /// No description provided for @membershipPointsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Approx. ¥{value} per 100 points'**
+  String membershipPointsValue(String value);
+
+  /// No description provided for @pointsPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'points/month'**
+  String get pointsPerMonth;
+
+  /// No description provided for @membershipPointsBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Includes {packagePoints} plan points + {giftPoints} bonus points'**
+  String membershipPointsBreakdown(int packagePoints, int giftPoints);
+
+  /// No description provided for @membershipCoreBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'Core membership benefits'**
+  String get membershipCoreBenefits;
+
+  /// No description provided for @benefitVoiceClone.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice cloning enabled'**
+  String get benefitVoiceClone;
+
+  /// No description provided for @benefitConcurrentTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {count} concurrent tasks'**
+  String benefitConcurrentTasks(int count);
+
+  /// No description provided for @benefitCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Free and member characters'**
+  String get benefitCharacters;
+
+  /// No description provided for @benefitWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark-free downloads'**
+  String get benefitWatermark;
+
+  /// No description provided for @benefitVip.
+  ///
+  /// In en, this message translates to:
+  /// **'Dedicated VIP channel'**
+  String get benefitVip;
+
+  /// No description provided for @benefitStoragePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Member storage limit: '**
+  String get benefitStoragePrefix;
+
+  /// No description provided for @openMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe now'**
+  String get openMembership;
+
+  /// No description provided for @membershipComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership purchases are coming soon'**
+  String get membershipComingSoon;
+
+  /// No description provided for @membershipPlansEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No membership plans available'**
+  String get membershipPlansEmpty;
+
+  /// No description provided for @membershipPlansLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load membership plans'**
+  String get membershipPlansLoadFailed;
+
   /// No description provided for @rechargeAndPoints.
   ///
   /// In en, this message translates to:

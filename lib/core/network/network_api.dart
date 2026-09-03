@@ -87,6 +87,17 @@ class NetworkApi {
     return data;
   }
 
+  Future<List<dynamic>> productPlans({int type = 1}) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/products/plan/list',
+      queryParameters: {'type': type},
+    );
+    final data = _data(response);
+    final list = data['list'];
+    if (list is! List) throw const ApiException();
+    return list;
+  }
+
   Future<Map<String, dynamic>> updateUser({
     required String avatar,
     required String name,

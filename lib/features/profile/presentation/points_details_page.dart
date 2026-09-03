@@ -587,7 +587,11 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                           : BorderSide.none,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      final router = GoRouter.of(context);
+                      Navigator.of(context).pop();
+                      router.push('/profile/membership');
+                    },
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(

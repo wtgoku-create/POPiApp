@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -8,9 +9,11 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/membership_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/points_details_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/features/profile/domain/point_package.dart';
+import 'package:popi_ai_app/features/profile/domain/product_plan.dart';
 import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 
@@ -43,6 +46,13 @@ void main() {
           builder: (_, __) => const PointsDetailsPage(
             refreshOnOpen: false,
             loadPointsLogOnOpen: false,
+          ),
+        ),
+        GoRoute(
+          path: '/profile/membership',
+          builder: (_, __) => MembershipPage(
+            initialPlans: _membershipPlans,
+            loadPlansOnOpen: false,
           ),
         ),
       ],
@@ -186,6 +196,363 @@ void main() {
     await tester.ensureVisible(logoutMenu);
     await tester.pumpAndSettle();
     expect(logoutMenu, findsOneWidget);
+  });
+
+  testWidgets('renders and switches membership plans', (tester) async {
+    await pumpPage(
+      tester,
+      MembershipPage(
+        initialPlans: _membershipPlans,
+        loadPlansOnOpen: false,
+      ),
+    );
+
+    expect(find.text('积分详情'), findsNothing);
+    expect(find.text('Starter 灵感初启'), findsNWidgets(2));
+    expect(find.text('1750'), findsOneWidget);
+    expect(find.text('Starter 1750 专属权益'), findsOneWidget);
+    expect(find.text('starter-小小尝试'), findsOneWidget);
+    expect(
+      find.byKey(const Key('membership-feature-title-icon')),
+      findsOneWidget,
+    );
+    final featureTitle = tester.widget<Text>(
+      find.byKey(const Key('membership-feature-title')),
+    );
+    expect(featureTitle.style?.fontSize, 16);
+    expect(
+      find.ancestor(
+        of: find.byKey(const Key('membership-feature-title')),
+        matching: find.byType(ListView),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('立即购买'), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
+      closeTo(668, .01),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('membership-open-button'))),
+      const Size(400, 50),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('membership-open-button'))).dy -
+          tester
+              .getBottomLeft(find.byKey(const Key('membership-plan-card')))
+              .dy,
+      closeTo(20, .5),
+    );
+    final starterMarkdown = tester.widget<MarkdownBody>(
+      find.byKey(const Key('membership-description-markdown')),
+    );
+    expect(starterMarkdown.data, contains('- [x] **Starter 1750 专属权益**'));
+    expect(starterMarkdown.data, contains('---\n\n### 创作能力'));
+
+    tester.view.physicalSize = const Size(440, 800);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
+      closeTo(512, .01),
+    );
+    tester.view.physicalSize = const Size(440, 956);
+    await tester.pumpAndSettle();
+
+    LinearGradient membershipGradient() {
+      final background = tester.widget<DecoratedBox>(
+        find.byKey(const Key('membership-background')),
+      );
+      return (background.decoration as BoxDecoration).gradient!
+          as LinearGradient;
+    }
+
+    expect(
+      membershipGradient().colors,
+      const [Color(0xFFF1EEFA), Color(0xFFF8F8F8)],
+    );
+
+    await tester.tap(find.byKey(const Key('membership-plan-tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Plus-小有成就'), findsOneWidget);
+    expect(
+      membershipGradient().colors,
+      const [Color(0xFFF9E9FF), Color(0xFFF8F8F8)],
+    );
+
+    await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
+    await tester.pumpAndSettle();
+    expect(
+      membershipGradient().colors,
+      const [Color(0xFFD9CDFF), Color(0xFFF8F8F8)],
+    );
+
+    await tester.drag(
+      find.byKey(const Key('membership-plan-tabs')),
+      const Offset(-900, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
+    await tester.pumpAndSettle();
+    expect(find.text('50000'), findsOneWidget);
+    expect(
+      membershipGradient().colors,
+      const [
+        Color(0xFFFFD8B2),
+        Color(0xFFE2D9FF),
+        Color(0xFFF8F8F8),
+      ],
+    );
+    expect(membershipGradient().stops, const [0, .2073, 1]);
+    final markdown = tester.widget<MarkdownBody>(
+      find.byKey(const Key('membership-description-markdown')),
+    );
+    expect(markdown.data, contains('Max 50000 专属权益'));
+  });
+
+  testWidgets('reverses plans and groups both Plus point options',
+      (tester) async {
+    await pumpPage(
+      tester,
+      MembershipPage(
+        initialPlans: _membershipPlans,
+        loadPlansOnOpen: false,
+      ),
+    );
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('membership-plan-tab-0')),
+        matching: find.text('Starter 灵感初启'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Plus 创作进阶'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('membership-plan-tab-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Plus 创作进阶'), findsNWidgets(2));
+    expect(find.byKey(const Key('membership-points-option-0')), findsOneWidget);
+    expect(find.byKey(const Key('membership-points-option-1')), findsOneWidget);
+    expect(find.text('5500'), findsOneWidget);
+    expect(find.text('14400'), findsOneWidget);
+    expect(find.text('包含：5500/套餐积分+0/赠送积分'), findsOneWidget);
+    expect(
+      tester
+          .widget<MarkdownBody>(
+            find.byKey(const Key('membership-description-markdown')),
+          )
+          .data,
+      contains('Plus 5500 专属权益'),
+    );
+
+    await tester.tap(find.byKey(const Key('membership-points-option-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('包含：14400/套餐积分+0/赠送积分'), findsOneWidget);
+    expect(find.text('包含：5500/套餐积分+0/赠送积分'), findsNothing);
+    expect(
+      tester
+          .widget<MarkdownBody>(
+            find.byKey(const Key('membership-description-markdown')),
+          )
+          .data,
+      contains('Plus 14400 专属权益'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('keeps spacing between the membership card and bottom button',
+      (tester) async {
+    await pumpPage(
+      tester,
+      MembershipPage(
+        initialPlans: _membershipPlans,
+        loadPlansOnOpen: false,
+      ),
+    );
+
+    final cardBottom =
+        tester.getBottomLeft(find.byKey(const Key('membership-plan-card'))).dy;
+    final buttonTop =
+        tester.getTopLeft(find.byKey(const Key('membership-open-button'))).dy;
+    expect(buttonTop - cardBottom, closeTo(20, .5));
+  });
+
+  testWidgets('aligns the selected membership tab to the content margin',
+      (tester) async {
+    await pumpPage(
+      tester,
+      MembershipPage(
+        initialPlans: _membershipPlans,
+        loadPlansOnOpen: false,
+      ),
+    );
+
+    expect(
+      tester.getTopLeft(find.byKey(const Key('membership-plan-tab-0'))).dx,
+      closeTo(20, .5),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('membership-plan-tabs')),
+      const Offset(-900, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.byKey(const Key('membership-plan-tab-3'))).dx,
+      closeTo(20, .5),
+    );
+
+    await tester.drag(
+      find.byKey(const Key('membership-plan-tabs')),
+      const Offset(900, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-0')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.byKey(const Key('membership-plan-tab-0'))).dx,
+      closeTo(20, .5),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('renders the membership page with dark theme surfaces',
+      (tester) async {
+    await pumpPage(
+      tester,
+      MembershipPage(
+        initialPlans: _membershipPlans,
+        loadPlansOnOpen: false,
+      ),
+      theme: AppTheme.dark,
+    );
+
+    final scheme = AppTheme.dark.colorScheme;
+    final background = tester.widget<DecoratedBox>(
+      find.byKey(const Key('membership-background')),
+    );
+    final backgroundDecoration = background.decoration as BoxDecoration;
+    final gradient = backgroundDecoration.gradient! as LinearGradient;
+    expect(gradient.colors, [const Color(0xFF241D38), scheme.surface]);
+
+    final card = tester.widget<Container>(
+      find.byKey(const Key('membership-plan-card')),
+    );
+    final cardDecoration = card.decoration! as BoxDecoration;
+    expect(cardDecoration.color, scheme.surfaceContainerHigh);
+    expect(cardDecoration.border, isNotNull);
+
+    final benefits = tester.widget<Container>(
+      find.byKey(const Key('membership-benefits')),
+    );
+    final benefitsDecoration = benefits.decoration! as BoxDecoration;
+    expect(benefitsDecoration.color, scheme.surfaceContainerHighest);
+
+    final selectedTab = tester.widget<AnimatedContainer>(
+      find.descendant(
+        of: find.byKey(const Key('membership-plan-tab-0')),
+        matching: find.byType(AnimatedContainer),
+      ),
+    );
+    final selectedDecoration = selectedTab.decoration! as BoxDecoration;
+    expect(selectedDecoration.color, scheme.surfaceContainerHighest);
+    expect(selectedDecoration.border, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opens membership from profile', (tester) async {
+    await pumpPage(tester, const ProfilePage());
+
+    await tester.tap(find.byKey(const Key('profile-upgrade-membership')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MembershipPage), findsOneWidget);
+    expect(find.text('立即购买'), findsOneWidget);
+  });
+
+  testWidgets('loads membership plan values from the repository',
+      (tester) async {
+    final product = ProductPlan.fromJson({
+      'id': 3,
+      'type': 1,
+      'title': 'Pro 旗舰能力',
+      'level': 3,
+      'coins': 32000,
+      'bonusPointsAmount': 2000,
+      'price': 8900,
+      'original_price_amount': 119,
+      'custom_info': {
+        'buttonText': '立即购买',
+        'discount_info': '限时7折',
+        'new_user': true,
+        'point_amount': '每100积分≈￥3.68元',
+      },
+    });
+
+    await pumpPage(
+      tester,
+      MembershipPage(planLoader: () async => [product]),
+    );
+
+    expect(find.text('34000'), findsOneWidget);
+    expect(find.text('8900'), findsNothing);
+    expect(find.text('¥89'), findsNothing);
+    expect(find.text('89'), findsOneWidget);
+    expect(find.text('限时7折'), findsOneWidget);
+    expect(find.text('立即购买'), findsOneWidget);
+  });
+
+  testWidgets('uses zero bonus points returned by the membership API',
+      (tester) async {
+    final product = ProductPlan.fromJson({
+      'id': 2,
+      'type': 1,
+      'title': 'Starter 灵感初启',
+      'level': 1,
+      'coins': 1750,
+      'bonusPointsAmount': 0,
+      'price': 7900,
+      'original_price_amount': 99,
+      'custom_info': {
+        'buttonText': '立即购买',
+        'discount_info': '限时活动 8折',
+        'new_user': true,
+        'point_amount': '每100积分≈￥4.5元',
+      },
+    });
+
+    await pumpPage(
+      tester,
+      MembershipPage(planLoader: () async => [product]),
+    );
+
+    expect(find.text('Starter 灵感初启'), findsNWidgets(2));
+    expect(find.text('79'), findsOneWidget);
+    expect(find.text('¥99'), findsOneWidget);
+    expect(find.text('1750'), findsOneWidget);
+    expect(find.text('限时活动 8折'), findsOneWidget);
+    expect(find.text('每100积分≈￥4.5元'), findsOneWidget);
+    expect(find.text('立即购买'), findsOneWidget);
+    final discountBadgeSize =
+        tester.getSize(find.byKey(const Key('membership-discount-badge')));
+    expect(discountBadgeSize.height, 40);
+    expect(discountBadgeSize.width, greaterThan(97));
+    expect(find.text('包含：1750/套餐积分+0/赠送积分'), findsOneWidget);
+  });
+
+  testWidgets('does not render local membership plan defaults', (tester) async {
+    await pumpPage(
+      tester,
+      const MembershipPage(loadPlansOnOpen: false),
+    );
+
+    expect(find.byKey(const Key('membership-plans-empty')), findsOneWidget);
+    expect(find.text('暂无可用会员方案'), findsOneWidget);
+    expect(find.byKey(const Key('membership-plan-card')), findsNothing);
+    expect(find.byKey(const Key('membership-plan-tabs')), findsNothing);
   });
 
   testWidgets('renders profile settings with theme-aware icons in dark mode',
@@ -482,3 +849,110 @@ final _pointPackages = List.generate(
     updatedAt: null,
   ),
 );
+
+final _membershipPlans = [
+  _membershipPlan(
+    id: 5,
+    level: 4,
+    title: 'Max 作品研修',
+    price: 12900,
+    originalPrice: 169,
+    coins: 50000,
+    bonusPoints: 0,
+    discount: '限时6折',
+    pointAmount: '每100积分≈￥2.58元',
+    concurrentTasks: 8,
+    storageMb: 10000,
+  ),
+  _membershipPlan(
+    id: 4,
+    level: 3,
+    title: 'Pro 旗舰能力',
+    price: 7900,
+    originalPrice: 99,
+    coins: 28000,
+    bonusPoints: 0,
+    discount: '限时6折',
+    pointAmount: '每100积分≈￥4.51元',
+    concurrentTasks: 4,
+    storageMb: 5000,
+  ),
+  _membershipPlan(
+    id: 31,
+    level: 2,
+    title: 'Plus 创作进阶',
+    price: 7900,
+    originalPrice: 99,
+    coins: 14400,
+    bonusPoints: 0,
+    discount: '限时6折',
+    pointAmount: '每100积分≈￥4.51元',
+    concurrentTasks: 4,
+    storageMb: 5000,
+  ),
+  _membershipPlan(
+    id: 3,
+    level: 2,
+    title: 'Plus 创作进阶',
+    price: 7900,
+    originalPrice: 99,
+    coins: 5500,
+    bonusPoints: 0,
+    discount: '限时6折',
+    pointAmount: '每100积分≈￥4.51元',
+    concurrentTasks: 4,
+    storageMb: 5000,
+  ),
+  _membershipPlan(
+    id: 2,
+    level: 1,
+    title: 'Starter 灵感初启',
+    price: 7900,
+    originalPrice: 99,
+    coins: 1750,
+    bonusPoints: 0,
+    discount: '限时活动 8折',
+    pointAmount: '每100积分≈￥4.5元',
+    concurrentTasks: 2,
+    storageMb: 1000,
+  ),
+];
+
+ProductPlan _membershipPlan({
+  required int id,
+  required int level,
+  required String title,
+  required int price,
+  required int originalPrice,
+  required int coins,
+  required int bonusPoints,
+  required String discount,
+  required String pointAmount,
+  required int concurrentTasks,
+  required int storageMb,
+}) {
+  return ProductPlan.fromJson({
+    'id': id,
+    'type': 1,
+    'title': title,
+    'description': '<mark>${title.split(' ').first} $coins 专属权益</mark>\n\n'
+        '<title>创作能力</title>\n\n'
+        '同时排队 ×$concurrentTasks\n\n会员存储空间限制 ${storageMb}mb',
+    'level': level,
+    'coins': coins,
+    'bonusPointsAmount': bonusPoints,
+    'price': price,
+    'original_price_amount': originalPrice,
+    'custom_info': {
+      'buttonText': '立即购买',
+      'discount_info': discount,
+      'point_amount': pointAmount,
+      'feature_title': switch (level) {
+        1 => 'starter-小小尝试',
+        2 => 'Plus-小有成就',
+        3 => 'Pro-IP进阶',
+        _ => 'Max-IP诊断',
+      },
+    },
+  });
+}

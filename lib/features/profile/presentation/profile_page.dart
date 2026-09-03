@@ -409,7 +409,8 @@ class MembershipCard extends ConsumerWidget {
               SizedBox(
                 height: 40,
                 child: FilledButton(
-                  onPressed: () {},
+                  key: const Key('profile-upgrade-membership'),
+                  onPressed: () => context.push('/profile/membership'),
                   child: Text(
                     l10n.upgradeMembership,
                     style: const TextStyle(fontSize: 16),

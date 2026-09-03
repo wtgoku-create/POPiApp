@@ -408,6 +408,72 @@ class AppLocalizationsZh extends AppLocalizations {
   String get upgradeMembership => '升级会员';
 
   @override
+  String get membershipStarter => 'Starter 灵感初启';
+
+  @override
+  String get membershipPlus => 'Plus 创作进阶';
+
+  @override
+  String get membershipPro => 'Pro 旗舰能力';
+
+  @override
+  String get membershipMax => 'Max 作品研修';
+
+  @override
+  String get limitedDiscount => '限时6折';
+
+  @override
+  String get perMonth => '每月';
+
+  @override
+  String membershipPointsValue(String value) {
+    return '每100积分≈￥$value元';
+  }
+
+  @override
+  String get pointsPerMonth => '积分/月';
+
+  @override
+  String membershipPointsBreakdown(int packagePoints, int giftPoints) {
+    return '包含：$packagePoints/套餐积分+$giftPoints/赠送积分';
+  }
+
+  @override
+  String get membershipCoreBenefits => '会员核心权益';
+
+  @override
+  String get benefitVoiceClone => '声音克隆功能开启';
+
+  @override
+  String benefitConcurrentTasks(int count) {
+    return '同时排队任务 ×$count';
+  }
+
+  @override
+  String get benefitCharacters => '免费+部分会员角色';
+
+  @override
+  String get benefitWatermark => '无水印下载';
+
+  @override
+  String get benefitVip => '专属VIP通道';
+
+  @override
+  String get benefitStoragePrefix => '会员存储空间限制 ';
+
+  @override
+  String get openMembership => '立即开通';
+
+  @override
+  String get membershipComingSoon => '会员开通功能即将上线';
+
+  @override
+  String get membershipPlansEmpty => '暂无可用会员方案';
+
+  @override
+  String get membershipPlansLoadFailed => '会员方案加载失败';
+
+  @override
   String get rechargeAndPoints => '充值 | 积分详情';
 
   @override

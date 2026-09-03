@@ -420,6 +420,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upgradeMembership => 'Upgrade';
 
   @override
+  String get membershipStarter => 'Starter Inspiration';
+
+  @override
+  String get membershipPlus => 'Plus Creator';
+
+  @override
+  String get membershipPro => 'Pro Flagship';
+
+  @override
+  String get membershipMax => 'Max Studio';
+
+  @override
+  String get limitedDiscount => '40% off';
+
+  @override
+  String get perMonth => '/month';
+
+  @override
+  String membershipPointsValue(String value) {
+    return 'Approx. ¥$value per 100 points';
+  }
+
+  @override
+  String get pointsPerMonth => 'points/month';
+
+  @override
+  String membershipPointsBreakdown(int packagePoints, int giftPoints) {
+    return 'Includes $packagePoints plan points + $giftPoints bonus points';
+  }
+
+  @override
+  String get membershipCoreBenefits => 'Core membership benefits';
+
+  @override
+  String get benefitVoiceClone => 'Voice cloning enabled';
+
+  @override
+  String benefitConcurrentTasks(int count) {
+    return 'Up to $count concurrent tasks';
+  }
+
+  @override
+  String get benefitCharacters => 'Free and member characters';
+
+  @override
+  String get benefitWatermark => 'Watermark-free downloads';
+
+  @override
+  String get benefitVip => 'Dedicated VIP channel';
+
+  @override
+  String get benefitStoragePrefix => 'Member storage limit: ';
+
+  @override
+  String get openMembership => 'Subscribe now';
+
+  @override
+  String get membershipComingSoon => 'Membership purchases are coming soon';
+
+  @override
+  String get membershipPlansEmpty => 'No membership plans available';
+
+  @override
+  String get membershipPlansLoadFailed => 'Unable to load membership plans';
+
+  @override
   String get rechargeAndPoints => 'Top up | Points details';
 
   @override
