@@ -69,6 +69,10 @@ void main() {
     expect(find.byKey(const Key('phone-login-button')), findsOneWidget);
     expect(find.byKey(const Key('wechat-login-button')), findsOneWidget);
     expect(find.byKey(const Key('agreement-checkbox')), findsOneWidget);
+    expect(
+      find.byKey(const Key('login-legal-document-links')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

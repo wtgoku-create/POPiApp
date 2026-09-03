@@ -533,7 +533,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rechargeMembershipNotice =>
-      '温馨提示：只有会员才可享受会员角色、图片视频去水印等功能。仅购买积分无法获得相应权益。购买的积分有效期为1年。';
+      '温馨提示：只有会员才可享受会员角色、图片视频去水印等功能。仅购买积分无法获得相应权益。购买的积分有效期为1年。如有任何疑问，请联系客服。';
 
   @override
   String get customerServiceContact => '客服联系方式:13100671900';

@@ -1109,7 +1109,7 @@ abstract class AppLocalizations {
   /// No description provided for @rechargeMembershipNotice.
   ///
   /// In en, this message translates to:
-  /// **'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year.'**
+  /// **'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year. If you have any questions, please contact customer service.'**
   String get rechargeMembershipNotice;
 
   /// No description provided for @customerServiceContact.

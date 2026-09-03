@@ -9,6 +9,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/legal_document_links.dart';
 import '../domain/captcha_challenge.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -280,12 +281,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(
-                                        l10n.loginAgreement,
+                                      child: LegalDocumentLinks(
+                                        key: const Key(
+                                          'login-legal-document-links',
+                                        ),
+                                        text: l10n.loginAgreement,
+                                        userAgreementLabel: l10n.userAgreement,
+                                        privacyPolicyLabel: l10n.privacyPolicy,
+                                        openFailedMessage:
+                                            l10n.networkRequestFailed,
                                         style: TextStyle(
                                           color: colorScheme.onSurfaceVariant,
                                           fontSize: 13,
                                           height: 1.6,
+                                        ),
+                                        linkStyle: const TextStyle(
+                                          color: AppColors.brand,
+                                          decoration: TextDecoration.underline,
                                         ),
                                       ),
                                     ),

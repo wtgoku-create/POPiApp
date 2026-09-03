@@ -665,6 +665,10 @@ void main() {
 
     final sheet = find.byKey(const Key('points-recharge-sheet'));
     expect(sheet, findsOneWidget);
+    expect(
+      find.byKey(const Key('recharge-legal-document-links')),
+      findsOneWidget,
+    );
     expect(tester.getSize(sheet).height, 663);
     expect(find.byKey(const Key('points-package-600')), findsOneWidget);
     expect(find.byKey(const Key('points-package-20000')), findsOneWidget);

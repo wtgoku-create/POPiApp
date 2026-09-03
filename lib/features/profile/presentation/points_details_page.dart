@@ -12,6 +12,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/legal_document_links.dart';
 import '../data/point_package_repository.dart';
 import '../data/user_points_log_repository.dart';
 import '../domain/point_package.dart';
@@ -617,33 +618,24 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
           SizedBox(
             height: 88,
             width: double.infinity,
-            child: Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 14,
-                  height: 22 / 14,
-                ),
-                children: [
-                  TextSpan(text: '${l10n.rechargeMembershipNotice}\n'),
-                  TextSpan(text: '${l10n.customerServiceContact}\n'),
-                  TextSpan(text: l10n.rechargeAgreementPrefix),
-                  TextSpan(
-                    text: l10n.userAgreement,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                  TextSpan(text: l10n.conjunctionAnd),
-                  TextSpan(
-                    text: l10n.privacyPolicy,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ],
+            child: LegalDocumentLinks(
+              key: const Key('recharge-legal-document-links'),
+              text: '${l10n.rechargeMembershipNotice}\n'
+                  '${l10n.rechargeAgreementPrefix}'
+                  '${l10n.userAgreement}'
+                  '${l10n.conjunctionAnd}'
+                  '${l10n.privacyPolicy}',
+              userAgreementLabel: l10n.userAgreement,
+              privacyPolicyLabel: l10n.privacyPolicy,
+              openFailedMessage: l10n.networkRequestFailed,
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 14,
+                height: 22 / 14,
+              ),
+              linkStyle: TextStyle(
+                color: colorScheme.onSurface,
+                decoration: TextDecoration.underline,
               ),
             ),
           ),
