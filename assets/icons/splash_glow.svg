@@ -1,9 +1,0 @@
-<svg preserveAspectRatio="none" overflow="visible" width="382" height="382" viewBox="0 0 382 382" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M382 0.01V381.99C382 382 382 382 381.99 382H0.01C0 382 0 382 0 381.99V0.01C0 0 0 0 0.01 0H381.99C382 0 382 0 382 0.01Z" fill="url(#splashGlow)"/>
-<defs>
-<radialGradient id="splashGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(191 191) scale(191)">
-<stop stop-color="#E1D7FF"/>
-<stop offset="1" stop-color="white" stop-opacity="0"/>
-</radialGradient>
-</defs>
-</svg>
