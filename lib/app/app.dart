@@ -7,86 +7,86 @@ import '../shared/providers/settings_provider.dart';
 import '../shared/providers/storage_provider.dart';
 import '../shared/providers/purchase_provider.dart';
 import '../shared/providers/user_provider.dart';
-import '../shared/widgets/app_splash.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
 import 'router.dart';
 import 'theme.dart';
 
-class StarterApp extends ConsumerWidget {
-  const StarterApp({super.key});
+class StarterApp extends ConsumerStatefulWidget {
+  const StarterApp({this.onReady, super.key});
+
+  final VoidCallback? onReady;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StarterApp> createState() => _StarterAppState();
+}
+
+class _StarterAppState extends ConsumerState<StarterApp> {
+  bool _readyNotified = false;
+
+  void _notifyReady() {
+    final onReady = widget.onReady;
+    if (_readyNotified || onReady == null) return;
+    _readyNotified = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => onReady());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
     final accessToken = ref.watch(accessTokenProvider);
 
-    return ToastificationWrapper(
-      config: const ToastificationConfig(itemWidth: 320),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 360),
-        reverseDuration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              scale: Tween<double>(begin: .985, end: 1).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: accessToken.when(
-          loading: () => _StartupApp(
-            key: const ValueKey('startup-app'),
-            themeMode: themeMode,
-            locale: locale,
-          ),
-          error: (_, __) => _RouterApp(
-            key: const ValueKey('router-app'),
+    final content = accessToken.when(
+      loading: () => _StartupApp(themeMode: themeMode, locale: locale),
+      error: (_, __) {
+        _notifyReady();
+        return _RouterApp(
+          themeMode: themeMode,
+          locale: locale,
+          router: ref.watch(routerProvider(false)),
+        );
+      },
+      data: (token) {
+        final hasAccessToken = token?.isNotEmpty ?? false;
+        if (!hasAccessToken) {
+          _notifyReady();
+          return _RouterApp(
             themeMode: themeMode,
             locale: locale,
             router: ref.watch(routerProvider(false)),
-          ),
-          data: (token) {
-            final hasAccessToken = token?.isNotEmpty ?? false;
-            if (!hasAccessToken) {
-              return _RouterApp(
-                key: const ValueKey('router-app'),
-                themeMode: themeMode,
-                locale: locale,
-                router: ref.watch(routerProvider(false)),
-              );
-            }
+          );
+        }
 
-            // Start listening before any purchase screen opens so interrupted
-            // StoreKit transactions can be verified after an app restart.
-            ref.watch(applePurchaseServiceProvider);
+        // Start listening before any purchase screen opens so interrupted
+        // StoreKit transactions can be verified after an app restart.
+        ref.watch(applePurchaseServiceProvider);
 
-            final bootstrap = ref.watch(userBootstrapProvider);
-            return bootstrap.when(
-              loading: () => _StartupApp(
-                key: const ValueKey('startup-app'),
-                themeMode: themeMode,
-                locale: locale,
-              ),
-              error: (_, __) => _RouterApp(
-                key: const ValueKey('router-app'),
-                themeMode: themeMode,
-                locale: locale,
-                router: ref.watch(routerProvider(false)),
-              ),
-              data: (_) => _RouterApp(
-                key: const ValueKey('router-app'),
-                themeMode: themeMode,
-                locale: locale,
-                router: ref.watch(routerProvider(true)),
-              ),
+        final bootstrap = ref.watch(userBootstrapProvider);
+        return bootstrap.when(
+          loading: () => _StartupApp(themeMode: themeMode, locale: locale),
+          error: (_, __) {
+            _notifyReady();
+            return _RouterApp(
+              themeMode: themeMode,
+              locale: locale,
+              router: ref.watch(routerProvider(false)),
             );
           },
-        ),
-      ),
+          data: (_) {
+            _notifyReady();
+            return _RouterApp(
+              themeMode: themeMode,
+              locale: locale,
+              router: ref.watch(routerProvider(true)),
+            );
+          },
+        );
+      },
+    );
+
+    return ToastificationWrapper(
+      config: const ToastificationConfig(itemWidth: 320),
+      child: content,
     );
   }
 }
@@ -96,7 +96,6 @@ class _RouterApp extends StatelessWidget {
     required this.themeMode,
     required this.locale,
     required this.router,
-    super.key,
   });
 
   final ThemeMode themeMode;
@@ -128,7 +127,6 @@ class _StartupApp extends StatelessWidget {
   const _StartupApp({
     required this.themeMode,
     required this.locale,
-    super.key,
   });
 
   final ThemeMode themeMode;
@@ -147,7 +145,10 @@ class _StartupApp extends StatelessWidget {
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
       ],
-      home: const AppSplashScreen(),
+      home: const ColoredBox(
+        key: Key('app-startup-placeholder'),
+        color: AppColors.surface,
+      ),
     );
   }
 }

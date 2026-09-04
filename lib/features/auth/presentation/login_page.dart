@@ -57,6 +57,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return PopScope(
       canPop: !_showPhoneLogin,
@@ -66,61 +67,82 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       child: Scaffold(
         backgroundColor: colorScheme.surface,
         resizeToAvoidBottomInset: true,
-        body: _LoginDesignViewport(
+        body: GestureDetector(
+          key: const Key('login-keyboard-dismiss-area'),
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              const _LoginIllustration(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 420),
-                reverseDuration: const Duration(milliseconds: 340),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) {
-                  final phoneDesign =
-                      child.key == const ValueKey('phone-login-design');
-                  final curved = CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                    reverseCurve: Curves.easeInCubic,
-                  );
-                  return FadeTransition(
-                    opacity: curved,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0, phoneDesign ? .055 : -.035),
-                        end: Offset.zero,
-                      ).animate(curved),
-                      child: ScaleTransition(
-                        scale:
-                            Tween<double>(begin: .985, end: 1).animate(curved),
-                        child: child,
-                      ),
+              _LoginDesignViewport(
+                keyboardInset: keyboardInset,
+                child: Stack(
+                  children: [
+                    const _LoginIllustration(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 420),
+                      reverseDuration: const Duration(milliseconds: 340),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        final phoneDesign =
+                            child.key == const ValueKey('phone-login-design');
+                        final curved = CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                          reverseCurve: Curves.easeInCubic,
+                        );
+                        return FadeTransition(
+                          opacity: curved,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: Offset(0, phoneDesign ? .055 : -.035),
+                              end: Offset.zero,
+                            ).animate(curved),
+                            child: ScaleTransition(
+                              scale: Tween<double>(begin: .985, end: 1)
+                                  .animate(curved),
+                              child: child,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _showPhoneLogin
+                          ? _PhoneLoginDesign(
+                              key: const ValueKey('phone-login-design'),
+                              phoneController: _phoneController,
+                              codeController: _codeController,
+                              agreed: _agreed,
+                              countdown: _countdown,
+                              sendingCode: _isSendingCode,
+                              loggingIn: _isLoggingIn,
+                              onBack: _showWelcomeLogin,
+                              onAgreementChanged: _toggleAgreement,
+                              onSendCode: _showCaptchaSheet,
+                              onLogin: _loginWithPhone,
+                            )
+                          : _WelcomeLoginDesign(
+                              key: const ValueKey('welcome-login-design'),
+                              agreed: _agreed,
+                              onBack: _closePage,
+                              onAgreementChanged: _toggleAgreement,
+                              onPhoneLogin: _openPhoneLogin,
+                              onWechatLogin: _loginWithWechat,
+                            ),
                     ),
-                  );
-                },
-                child: _showPhoneLogin
-                    ? _PhoneLoginDesign(
-                        key: const ValueKey('phone-login-design'),
-                        phoneController: _phoneController,
-                        codeController: _codeController,
-                        agreed: _agreed,
-                        countdown: _countdown,
-                        sendingCode: _isSendingCode,
-                        loggingIn: _isLoggingIn,
-                        onBack: _showWelcomeLogin,
-                        onAgreementChanged: _toggleAgreement,
-                        onSendCode: _showCaptchaSheet,
-                        onLogin: _loginWithPhone,
-                      )
-                    : _WelcomeLoginDesign(
-                        key: const ValueKey('welcome-login-design'),
-                        agreed: _agreed,
-                        onBack: _closePage,
-                        onAgreementChanged: _toggleAgreement,
-                        onPhoneLogin: _openPhoneLogin,
-                        onWechatLogin: _loginWithWechat,
-                      ),
+                  ],
+                ),
               ),
+              if (keyboardInset > 0)
+                Positioned(
+                  left: 20,
+                  top: MediaQuery.paddingOf(context).top + 8,
+                  width: 40,
+                  height: 40,
+                  child: _LoginKeyboardBackButton(
+                    onPressed: _showPhoneLogin ? _showWelcomeLogin : _closePage,
+                  ),
+                ),
             ],
           ),
         ),
@@ -378,31 +400,71 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-class _LoginDesignViewport extends StatelessWidget {
-  const _LoginDesignViewport({required this.child});
+class _LoginDesignViewport extends StatefulWidget {
+  const _LoginDesignViewport({
+    required this.child,
+    required this.keyboardInset,
+  });
 
   static const designSize = Size(440, 956);
 
   final Widget child;
+  final double keyboardInset;
+
+  @override
+  State<_LoginDesignViewport> createState() => _LoginDesignViewportState();
+}
+
+class _LoginDesignViewportState extends State<_LoginDesignViewport> {
+  final _scrollController = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant _LoginDesignViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.keyboardInset > oldWidget.keyboardInset) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final scale = math.min(constraints.maxWidth / designSize.width, 1.0);
-        final scaledSize = designSize * scale;
-        final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final scale = math.min(
+          constraints.maxWidth / _LoginDesignViewport.designSize.width,
+          1.0,
+        );
+        final scaledSize = _LoginDesignViewport.designSize * scale;
+        final keyboardOpen = widget.keyboardInset > 0;
         final canvas = SizedBox(
           width: scaledSize.width,
           height: scaledSize.height,
           child: FittedBox(
             fit: BoxFit.fill,
-            child: SizedBox.fromSize(size: designSize, child: child),
+            child: SizedBox.fromSize(
+              size: _LoginDesignViewport.designSize,
+              child: widget.child,
+            ),
           ),
         );
 
         return SingleChildScrollView(
-          reverse: keyboardOpen,
+          key: const Key('login-design-scroll-view'),
+          controller: _scrollController,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: keyboardOpen
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
@@ -674,6 +736,24 @@ class _LoginBackButton extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface,
         icon: const Icon(Icons.arrow_back_ios_new, size: 21),
       ),
+    );
+  }
+}
+
+class _LoginKeyboardBackButton extends StatelessWidget {
+  const _LoginKeyboardBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      key: const Key('login-keyboard-back-button'),
+      tooltip: AppLocalizations.of(context)!.backToPreviousPage,
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      color: Theme.of(context).colorScheme.onSurface,
+      icon: const Icon(Icons.arrow_back_ios_new, size: 21),
     );
   }
 }

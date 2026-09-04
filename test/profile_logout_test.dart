@@ -74,6 +74,7 @@ void main() {
     expect(api.logoutCalls, 1);
     expect(tokenStorage.token, isNull);
     expect(find.text('登录页面'), findsOneWidget);
+    expect(router.canPop(), isTrue);
   });
 }
 

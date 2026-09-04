@@ -20,18 +20,14 @@ import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
-import 'package:popi_ai_app/shared/widgets/app_splash.dart';
 
 void main() {
-  testWidgets('shows the Figma splash while restoring the session',
+  testWidgets('holds a blank frame while restoring the session',
       (tester) async {
-    tester.view.physicalSize = const Size(440, 956);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final tokenStorage = _DelayedTokenStorage();
+    var readyCalls = 0;
 
     await tester.pumpWidget(
       ProviderScope(
@@ -45,34 +41,20 @@ void main() {
             ),
           ),
         ],
-        child: const StarterApp(),
+        child: StarterApp(onReady: () => readyCalls += 1),
       ),
     );
     await tester.pump();
 
-    expect(find.byType(AppSplashScreen), findsOneWidget);
-    final splashCopy = tester.widget<Text>(
-      find.byKey(const Key('app-splash-copy')),
-    );
-    expect(splashCopy.data, startsWith('POPi\n'));
-    expect(
-      tester.getSize(find.byKey(const Key('app-splash-logo'))),
-      const Size(136, 90.1),
-    );
-    expect(
-      tester.getTopLeft(find.byKey(const Key('app-splash-glow'))).dy,
-      closeTo(223, .1),
-    );
+    expect(find.byKey(const Key('app-startup-placeholder')), findsOneWidget);
+    expect(readyCalls, 0);
 
     tokenStorage.complete(null);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 140));
-    expect(find.byType(AppSplashScreen), findsOneWidget);
+    await tester.pump();
+    expect(find.byKey(const Key('app-startup-placeholder')), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
-
-    await tester.pumpAndSettle();
-    expect(find.byType(AppSplashScreen), findsNothing);
-    expect(find.byType(HomePage), findsOneWidget);
+    expect(readyCalls, 1);
   });
 
   testWidgets('opens home when no access token is stored', (tester) async {

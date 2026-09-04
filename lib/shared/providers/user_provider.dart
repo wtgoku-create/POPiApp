@@ -79,9 +79,12 @@ class UserController extends Notifier<User?> {
   }
 
   Future<void> clearUser() async {
-    await ref.read(authRepositoryProvider).logout();
-    state = null;
-    ref.read(userPointsProvider.notifier).clear();
+    try {
+      await ref.read(authRepositoryProvider).logout();
+    } finally {
+      state = null;
+      ref.read(userPointsProvider.notifier).clear();
+    }
   }
 }
 

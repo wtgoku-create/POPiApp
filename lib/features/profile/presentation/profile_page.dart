@@ -349,7 +349,7 @@ class ProfilePage extends ConsumerWidget {
 
     try {
       await ref.read(userProvider.notifier).clearUser();
-      if (context.mounted) context.go('/login');
+      if (context.mounted) context.push('/login');
     } catch (_) {
       if (context.mounted) AppToast.error(context, l10n.logoutFailed);
     }

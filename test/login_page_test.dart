@@ -164,6 +164,75 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets('dismisses the keyboard when tapping outside a field',
+      (tester) async {
+    await pumpLoginPage(tester);
+
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const Key('login-phone-field')));
+    await tester.pump();
+
+    expect(
+      tester.testTextInput.isVisible,
+      isTrue,
+    );
+
+    await tester.tapAt(const Offset(360, 300));
+    await tester.pump();
+
+    expect(tester.testTextInput.isVisible, isFalse);
+  });
+
+  testWidgets('keeps the focused login field visible above the keyboard',
+      (tester) async {
+    await pumpLoginPage(tester);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const Key('login-code-field')));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final visibleBottom = tester.view.physicalSize.height -
+        tester.view.viewInsets.bottom / tester.view.devicePixelRatio;
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byKey(const Key('login-design-scroll-view')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(
+      tester.getBottomRight(find.byKey(const Key('login-code-field'))).dy,
+      lessThanOrEqualTo(visibleBottom),
+      reason:
+          'viewport=${tester.getSize(find.byKey(const Key('login-design-scroll-view')))}, '
+          'pixels=${scrollable.position.pixels}, '
+          'max=${scrollable.position.maxScrollExtent}',
+    );
+    final keyboardBackButton = find.byKey(
+      const Key('login-keyboard-back-button'),
+    );
+    expect(keyboardBackButton, findsOneWidget);
+    expect(tester.getTopLeft(keyboardBackButton).dy, greaterThanOrEqualTo(0));
+    expect(
+      tester.getBottomRight(keyboardBackButton).dy,
+      lessThan(visibleBottom),
+    );
+
+    await tester.tap(keyboardBackButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('login-phone-field')), findsNothing);
+  });
+
   testWidgets('sends an SMS then initializes the signed-in user',
       (tester) async {
     final context = await pumpLoginPage(tester);
