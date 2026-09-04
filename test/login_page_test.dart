@@ -20,8 +20,9 @@ void main() {
   Future<_LoginTestContext> pumpLoginPage(
     WidgetTester tester, {
     ThemeData? theme,
+    Size size = const Size(390, 844),
   }) async {
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -57,23 +58,62 @@ void main() {
     );
   }
 
-  testWidgets('renders phone, graphical captcha and WeChat login methods',
+  testWidgets('renders the welcome design then opens the phone form',
       (tester) async {
     await pumpLoginPage(tester);
 
-    expect(find.text('欢迎登录 POPi'), findsOneWidget);
-    expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
-    expect(find.byKey(const Key('login-captcha-field')), findsOneWidget);
-    expect(find.byKey(const Key('captcha-image')), findsOneWidget);
-    expect(find.byKey(const Key('login-code-field')), findsOneWidget);
-    expect(find.byKey(const Key('phone-login-button')), findsOneWidget);
+    expect(find.text('POPi\n“帮助人类更好的表达”'), findsOneWidget);
+    expect(find.byKey(const Key('login-welcome-illustration')), findsOneWidget);
+    expect(find.byKey(const Key('login-back-button')), findsOneWidget);
+    expect(find.byKey(const Key('login-phone-entry-button')), findsOneWidget);
     expect(find.byKey(const Key('wechat-login-button')), findsOneWidget);
     expect(find.byKey(const Key('agreement-checkbox')), findsOneWidget);
     expect(
       find.byKey(const Key('login-legal-document-links')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('login-phone-field')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
+    expect(find.byKey(const Key('login-code-field')), findsOneWidget);
+    expect(find.byKey(const Key('send-code-button')), findsOneWidget);
+    expect(find.byKey(const Key('phone-login-button')), findsOneWidget);
+    expect(find.byKey(const Key('login-back-button')), findsOneWidget);
+    expect(find.byKey(const Key('login-captcha-field')), findsNothing);
     expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('login-back-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('login-phone-entry-button')), findsOneWidget);
+    expect(find.byKey(const Key('login-phone-field')), findsNothing);
+  });
+
+  testWidgets('matches the Figma control and illustration geometry',
+      (tester) async {
+    await pumpLoginPage(tester, size: const Size(440, 956));
+
+    expect(
+      tester.getSize(find.byKey(const Key('login-welcome-illustration'))),
+      const Size(427, 427),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('login-phone-entry-button'))),
+      const Size(326, 55),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('wechat-login-button'))),
+      const Size(326, 55),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('login-back-button'))),
+      const Offset(20, 76),
+    );
   });
 
   testWidgets('uses dark surfaces and text colors in dark mode',
@@ -83,52 +123,73 @@ void main() {
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.backgroundColor, AppTheme.dark.colorScheme.surface);
 
-    final title = tester.widget<Text>(find.text('欢迎登录 POPi'));
+    final title = tester.widget<Text>(find.text('POPi\n“帮助人类更好的表达”'));
     expect(title.style?.color, AppTheme.dark.colorScheme.onSurface);
 
-    final subtitle = tester.widget<Text>(find.text('登录后继续创作你的专属 IP'));
-    expect(subtitle.style?.color, AppTheme.dark.colorScheme.onSurfaceVariant);
-
-    final captchaSurface = tester.widget<Material>(
-      find
-          .ancestor(
-            of: find.byKey(const Key('refresh-captcha-button')),
-            matching: find.byType(Material),
-          )
-          .first,
+    final wechatButton = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const Key('wechat-login-button')),
+        matching: find.byType(FilledButton),
+      ),
     );
-    expect(captchaSurface.color, AppTheme.dark.colorScheme.surface);
+    expect(
+      wechatButton.style?.backgroundColor?.resolve({}),
+      AppTheme.dark.colorScheme.surfaceContainerHighest,
+    );
+
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('validates phone and verification code before login',
       (tester) async {
-    await pumpLoginPage(tester);
+    final context = await pumpLoginPage(tester);
 
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('phone-login-button')));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('请输入正确的手机号'), findsOneWidget);
-    expect(find.text('请输入 6 位数字验证码'), findsOneWidget);
+    expect(context.api.loggedInPhone, isNull);
+    expect(context.storage.token, isNull);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
   });
 
   testWidgets('sends an SMS then initializes the signed-in user',
       (tester) async {
     final context = await pumpLoginPage(tester);
 
+    await tester.tap(find.byKey(const Key('login-phone-entry-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.enterText(
       find.byKey(const Key('login-phone-field')),
       '13800138000',
-    );
-    await tester.enterText(
-      find.byKey(const Key('login-captcha-field')),
-      'A2B3',
     );
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('send-code-button')));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('login-captcha-field')), findsOneWidget);
+    expect(find.byKey(const Key('captcha-image')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('login-captcha-field')),
+      'A2B3',
+    );
+    await tester.tap(find.byKey(const Key('confirm-send-code-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(context.api.sentPhone, '13800138000');
     expect(context.api.sentCaptchaId, '10019');

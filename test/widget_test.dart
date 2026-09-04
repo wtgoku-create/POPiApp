@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/app.dart';
+import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
 import 'package:popi_ai_app/features/auth/data/auth_repository.dart';
@@ -66,14 +68,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 140));
     expect(find.byType(AppSplashScreen), findsOneWidget);
-    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.byType(HomePage), findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(find.byType(AppSplashScreen), findsNothing);
-    expect(find.byType(LoginPage), findsOneWidget);
+    expect(find.byType(HomePage), findsOneWidget);
   });
 
-  testWidgets('opens login when no access token is stored', (tester) async {
+  testWidgets('opens home when no access token is stored', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
 
@@ -97,7 +99,72 @@ void main() {
     await tester.pump();
     await tester.pump();
 
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.byType(LoginPage), findsNothing);
+    final loginEntryLabel = tester.widget<Text>(
+      find.byKey(const Key('home-membership-label')),
+    );
+    expect(loginEntryLabel.data, anyOf('前往登录', 'Sign in'));
+    expect(find.byKey(const Key('home-membership-points')), findsNothing);
+    expect(find.byKey(const Key('home-login-entry-icon')), findsOneWidget);
+    expect(find.byKey(const Key('home-login-entry-chevron')), findsOneWidget);
+    expect(loginEntryLabel.style?.color, AppColors.brand);
+
+    const protectedDrawerEntries = [
+      'drawer-nav-conversation',
+      'drawer-nav-role',
+      'drawer-nav-assets',
+      'drawer-nav-inspiration',
+      'drawer-nav-skill',
+      'drawer-notification-button',
+      'drawer-profile-button',
+    ];
+    for (final entryKey in protectedDrawerEntries) {
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(entryKey)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(LoginPage), findsOneWidget, reason: entryKey);
+      Navigator.of(tester.element(find.byType(LoginPage))).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(HomePage), findsOneWidget, reason: entryKey);
+    }
+
+    await tester.tap(find.byKey(const Key('home-membership-entry')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
     expect(find.byType(LoginPage), findsOneWidget);
+  });
+
+  testWidgets('does not open login when user bootstrap returns 4001',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    const tokenStorage = _MemoryTokenStorage('expired-token');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          secureStorageProvider.overrideWithValue(tokenStorage),
+          authRepositoryProvider.overrideWithValue(
+            AuthRepository(
+              api: _ExpiredSessionAuthApi(),
+              secureStorage: tokenStorage,
+            ),
+          ),
+        ],
+        child: const StarterApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.byType(LoginPage), findsNothing);
   });
 
   testWidgets('drawer routes preserve a back stack', (tester) async {
@@ -228,4 +295,10 @@ class _AuthenticatedAuthApi extends _StartupAuthApi {
         availableTotalPoints: 739,
         consumePoints: 18164,
       );
+}
+
+class _ExpiredSessionAuthApi extends _StartupAuthApi {
+  @override
+  Future<User> currentUser() =>
+      throw const ApiException(statusCode: 4001, message: '登录已过期');
 }

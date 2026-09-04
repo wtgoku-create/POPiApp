@@ -9,9 +9,9 @@ import '../features/profile/presentation/membership_page.dart';
 import '../features/profile/presentation/points_details_page.dart';
 import '../features/profile/presentation/profile_page.dart';
 
-final routerProvider = Provider.family<GoRouter, bool>((ref, hasAccessToken) {
+final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
   return GoRouter(
-    initialLocation: hasAccessToken ? '/' : '/login',
+    initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(

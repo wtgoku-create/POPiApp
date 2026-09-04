@@ -302,6 +302,12 @@ abstract class AppLocalizations {
   /// **'Continue with phone'**
   String get phoneLogin;
 
+  /// No description provided for @loginOrRegister.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in / Register'**
+  String get loginOrRegister;
+
   /// No description provided for @otherLoginMethods.
   ///
   /// In en, this message translates to:
@@ -317,7 +323,7 @@ abstract class AppLocalizations {
   /// No description provided for @loginAgreement.
   ///
   /// In en, this message translates to:
-  /// **'I have read and agree to the User Agreement and Privacy Policy'**
+  /// **'By signing in, you agree to the User Agreement and Privacy Policy. New phone numbers register automatically.'**
   String get loginAgreement;
 
   /// No description provided for @invalidPhoneNumber.
@@ -871,6 +877,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upgrade'**
   String get upgradeMembership;
+
+  /// No description provided for @goToLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get goToLogin;
 
   /// No description provided for @membershipStarter.
   ///

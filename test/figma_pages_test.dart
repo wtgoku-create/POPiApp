@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
+import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
@@ -17,6 +18,7 @@ import 'package:popi_ai_app/features/profile/domain/point_package.dart';
 import 'package:popi_ai_app/features/profile/domain/product_plan.dart';
 import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
+import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
 
 void main() {
@@ -477,6 +479,18 @@ void main() {
 
   testWidgets('opens membership from the home app bar', (tester) async {
     await pumpPage(tester, const HomePage());
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomePage)),
+    );
+    await container.read(userProvider.notifier).setUser(
+          const User(
+            id: '10561',
+            name: '当前用户',
+            email: 'user@popi.art',
+            allCoins: 200,
+          ),
+        );
+    await tester.pump();
 
     await tester.tap(find.byKey(const Key('home-membership-entry')));
     await tester.pumpAndSettle();

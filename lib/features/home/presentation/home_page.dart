@@ -82,7 +82,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pointsBalance = ref.watch(userProvider)?.allCoins ?? 0;
+    final user = ref.watch(userProvider);
+    final isLoggedIn = user != null;
+    final pointsBalance = user?.allCoins ?? 0;
 
     return GestureDetector(
       key: const Key('popi-home-dismiss-keyboard'),
@@ -138,8 +140,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                         padding: const EdgeInsets.only(right: 20),
                         child: _MembershipEntry(
                           points: pointsBalance,
-                          label: l10n.upgradeMembership,
-                          onTap: () => context.push('/profile/membership'),
+                          showPoints: isLoggedIn,
+                          label: isLoggedIn
+                              ? l10n.upgradeMembership
+                              : l10n.goToLogin,
+                          onTap: () => context.push(
+                            isLoggedIn ? '/profile/membership' : '/login',
+                          ),
                         ),
                       ),
                     ),
@@ -453,11 +460,13 @@ class _HomePageState extends ConsumerState<HomePage> {
 class _MembershipEntry extends StatelessWidget {
   const _MembershipEntry({
     required this.points,
+    required this.showPoints,
     required this.label,
     required this.onTap,
   });
 
   final int points;
+  final bool showPoints;
   final String label;
   final VoidCallback onTap;
 
@@ -491,47 +500,66 @@ class _MembershipEntry extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox.square(
-                  dimension: 16,
-                  child: Center(
-                    child: SizedBox(
-                      width: 12,
-                      height: 7.94,
-                      child: const AppSvgIcon.asset(
-                        'membership_points',
-                        key: Key('home-membership-icon'),
+                if (showPoints) ...[
+                  SizedBox.square(
+                    dimension: 16,
+                    child: Center(
+                      child: SizedBox(
+                        width: 12,
+                        height: 7.94,
+                        child: const AppSvgIcon.asset(
+                          'membership_points',
+                          key: Key('home-membership-icon'),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 2),
-                Text(
-                  '$points',
-                  key: const Key('home-membership-points'),
-                  style: const TextStyle(
-                    color: AppColors.brand,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
+                  const SizedBox(width: 2),
+                  Text(
+                    '$points',
+                    key: const Key('home-membership-points'),
+                    style: const TextStyle(
+                      color: AppColors.brand,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 7),
-                SizedBox(
-                  width: 1,
-                  height: 12,
-                  child: ColoredBox(color: colorScheme.outline),
-                ),
-                const SizedBox(width: 7),
+                  const SizedBox(width: 7),
+                  SizedBox(
+                    width: 1,
+                    height: 12,
+                    child: ColoredBox(color: colorScheme.outline),
+                  ),
+                  const SizedBox(width: 7),
+                ] else ...[
+                  const Icon(
+                    Icons.login_rounded,
+                    key: Key('home-login-entry-icon'),
+                    size: 16,
+                    color: AppColors.brand,
+                  ),
+                  const SizedBox(width: 5),
+                ],
                 Text(
                   label,
                   key: const Key('home-membership-label'),
                   style: TextStyle(
-                    color: colorScheme.onSurface,
+                    color: showPoints ? colorScheme.onSurface : AppColors.brand,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     height: 1,
                   ),
                 ),
+                if (!showPoints) ...[
+                  const SizedBox(width: 2),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    key: Key('home-login-entry-chevron'),
+                    size: 17,
+                    color: AppColors.brand,
+                  ),
+                ],
               ],
             ),
           ),

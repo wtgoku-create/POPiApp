@@ -103,6 +103,8 @@ void main() {
     );
     expect(find.text('升级会员'), findsOneWidget);
     expect(find.text('200'), findsOneWidget);
+    expect(find.byKey(const Key('home-login-entry-icon')), findsNothing);
+    expect(find.byKey(const Key('home-login-entry-chevron')), findsNothing);
     expect(
       tester.getSize(find.byKey(const Key('home-membership-entry'))).height,
       36,

@@ -114,6 +114,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneLogin => 'Continue with phone';
 
   @override
+  String get loginOrRegister => 'Sign in / Register';
+
+  @override
   String get otherLoginMethods => 'Other sign-in methods';
 
   @override
@@ -121,7 +124,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loginAgreement =>
-      'I have read and agree to the User Agreement and Privacy Policy';
+      'By signing in, you agree to the User Agreement and Privacy Policy. New phone numbers register automatically.';
 
   @override
   String get invalidPhoneNumber => 'Enter a valid phone number';
@@ -418,6 +421,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upgradeMembership => 'Upgrade';
+
+  @override
+  String get goToLogin => 'Sign in';
 
   @override
   String get membershipStarter => 'Starter Inspiration';

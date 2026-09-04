@@ -113,13 +113,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get phoneLogin => '手机号登录';
 
   @override
+  String get loginOrRegister => '登录/注册';
+
+  @override
   String get otherLoginMethods => '其他登录方式';
 
   @override
   String get wechatLogin => '微信登录';
 
   @override
-  String get loginAgreement => '我已阅读并同意《用户协议》和《隐私政策》';
+  String get loginAgreement => '登录即代表同意《用户协议》和《隐私政策》未注册手机号将自动注册';
 
   @override
   String get invalidPhoneNumber => '请输入正确的手机号';
@@ -406,6 +409,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get upgradeMembership => '升级会员';
+
+  @override
+  String get goToLogin => '前往登录';
 
   @override
   String get membershipStarter => 'Starter 灵感初启';

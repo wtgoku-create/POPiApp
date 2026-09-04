@@ -1,13 +1,18 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../domain/captcha_challenge.dart';
@@ -22,7 +27,6 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _captchaController = TextEditingController();
   final _codeController = TextEditingController();
@@ -33,6 +37,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isCaptchaLoading = false;
   bool _isSendingCode = false;
   bool _isLoggingIn = false;
+  bool _showPhoneLogin = false;
 
   @override
   void initState() {
@@ -51,270 +56,195 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: colorScheme.surface,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Center(
-                              child: Image.asset(
-                                'assets/icons/common_brand_icon.png',
-                                width: 72,
-                                height: 72,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              l10n.loginTitle,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: colorScheme.onSurface,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              l10n.loginSubtitle,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 40),
-                            TextFormField(
-                              key: const Key('login-phone-field'),
-                              controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              autofillHints: const [
-                                AutofillHints.telephoneNumber
-                              ],
-                              maxLength: 11,
-                              decoration: InputDecoration(
-                                labelText: l10n.phoneNumber,
-                                hintText: l10n.phoneNumberHint,
-                                counterText: '',
-                                prefixIcon: Padding(
-                                  padding: EdgeInsets.only(left: 18, right: 10),
-                                  child: Center(
-                                    widthFactor: 1,
-                                    child: Text(
-                                      '+86',
-                                      style: TextStyle(
-                                        color: colorScheme.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              validator: (value) => _validatePhone(value, l10n),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    key: const Key('login-captcha-field'),
-                                    controller: _captchaController,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: InputDecoration(
-                                      labelText: l10n.graphicalCaptcha,
-                                      hintText: l10n.graphicalCaptchaHint,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                _CaptchaPreview(
-                                  challenge: _captcha,
-                                  loading: _isCaptchaLoading,
-                                  refreshTooltip: l10n.refreshCaptcha,
-                                  onRefresh:
-                                      _isCaptchaLoading ? null : _loadCaptcha,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              key: const Key('login-code-field'),
-                              controller: _codeController,
-                              keyboardType: TextInputType.number,
-                              autofillHints: const [AutofillHints.oneTimeCode],
-                              maxLength: 6,
-                              decoration: InputDecoration(
-                                labelText: l10n.verificationCode,
-                                hintText: l10n.verificationCodeHint,
-                                counterText: '',
-                                suffixIcon: Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: TextButton(
-                                    key: const Key('send-code-button'),
-                                    onPressed: _countdown == 0 &&
-                                            !_isSendingCode &&
-                                            !_isCaptchaLoading
-                                        ? _sendCode
-                                        : null,
-                                    child: Text(
-                                      _isSendingCode
-                                          ? l10n.sendingVerificationCode
-                                          : _countdown == 0
-                                              ? l10n.sendVerificationCode
-                                              : l10n
-                                                  .resendCountdown(_countdown),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              validator: (value) {
-                                if (!RegExp(r'^\d{6}$')
-                                    .hasMatch(value?.trim() ?? '')) {
-                                  return l10n.invalidVerificationCode;
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 22),
-                            SizedBox(
-                              height: 52,
-                              child: FilledButton(
-                                key: const Key('phone-login-button'),
-                                onPressed:
-                                    _isLoggingIn ? null : _loginWithPhone,
-                                child: _isLoggingIn
-                                    ? const SizedBox.square(
-                                        dimension: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(
-                                        l10n.phoneLogin,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            Row(
-                              children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    l10n.otherLoginMethods,
-                                    style: TextStyle(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            SizedBox(
-                              height: 52,
-                              child: OutlinedButton.icon(
-                                key: const Key('wechat-login-button'),
-                                onPressed: _loginWithWechat,
-                                icon: const Icon(
-                                  Icons.wechat,
-                                  color: Color(0xFF07C160),
-                                  size: 25,
-                                ),
-                                label: Text(
-                                  l10n.wechatLogin,
-                                  style: TextStyle(
-                                    color: colorScheme.onSurface,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: () => setState(() => _agreed = !_agreed),
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: Checkbox(
-                                        key: const Key('agreement-checkbox'),
-                                        value: _agreed,
-                                        onChanged: (value) => setState(
-                                          () => _agreed = value ?? false,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: LegalDocumentLinks(
-                                        key: const Key(
-                                          'login-legal-document-links',
-                                        ),
-                                        text: l10n.loginAgreement,
-                                        userAgreementLabel: l10n.userAgreement,
-                                        privacyPolicyLabel: l10n.privacyPolicy,
-                                        openFailedMessage:
-                                            l10n.networkRequestFailed,
-                                        style: TextStyle(
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontSize: 13,
-                                          height: 1.6,
-                                        ),
-                                        linkStyle: const TextStyle(
-                                          color: AppColors.brand,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+    return PopScope(
+      canPop: !_showPhoneLogin,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _showPhoneLogin) _showWelcomeLogin();
+      },
+      child: Scaffold(
+        backgroundColor: colorScheme.surface,
+        resizeToAvoidBottomInset: true,
+        body: _LoginDesignViewport(
+          child: Stack(
+            children: [
+              const _LoginIllustration(),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 420),
+                reverseDuration: const Duration(milliseconds: 340),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  final phoneDesign =
+                      child.key == const ValueKey('phone-login-design');
+                  final curved = CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  );
+                  return FadeTransition(
+                    opacity: curved,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: Offset(0, phoneDesign ? .055 : -.035),
+                        end: Offset.zero,
+                      ).animate(curved),
+                      child: ScaleTransition(
+                        scale:
+                            Tween<double>(begin: .985, end: 1).animate(curved),
+                        child: child,
                       ),
                     ),
+                  );
+                },
+                child: _showPhoneLogin
+                    ? _PhoneLoginDesign(
+                        key: const ValueKey('phone-login-design'),
+                        phoneController: _phoneController,
+                        codeController: _codeController,
+                        agreed: _agreed,
+                        countdown: _countdown,
+                        sendingCode: _isSendingCode,
+                        loggingIn: _isLoggingIn,
+                        onBack: _showWelcomeLogin,
+                        onAgreementChanged: _toggleAgreement,
+                        onSendCode: _showCaptchaSheet,
+                        onLogin: _loginWithPhone,
+                      )
+                    : _WelcomeLoginDesign(
+                        key: const ValueKey('welcome-login-design'),
+                        agreed: _agreed,
+                        onBack: _closePage,
+                        onAgreementChanged: _toggleAgreement,
+                        onPhoneLogin: _openPhoneLogin,
+                        onWechatLogin: _loginWithWechat,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _toggleAgreement() => setState(() => _agreed = !_agreed);
+
+  void _closePage() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      SystemNavigator.pop();
+    }
+  }
+
+  void _openPhoneLogin() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _showPhoneLogin = true);
+  }
+
+  void _showWelcomeLogin() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (_showPhoneLogin) setState(() => _showPhoneLogin = false);
+  }
+
+  Future<void> _showCaptchaSheet() async {
+    final l10n = AppLocalizations.of(context)!;
+    final phoneError = _validatePhone(_phoneController.text, l10n);
+    if (phoneError != null) {
+      AppToast.error(context, phoneError);
+      return;
+    }
+    if (!_ensureAgreement(l10n)) return;
+    if (_countdown > 0 || _isSendingCode) return;
+    if (_captcha == null && !_isCaptchaLoading) await _loadCaptcha();
+    if (!mounted) return;
+
+    await AppSheet.show<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          Future<void> refreshCaptcha() async {
+            await _loadCaptcha();
+            if (sheetContext.mounted) setSheetState(() {});
+          }
+
+          Future<void> confirm() async {
+            final sent = await _sendCode();
+            if (sent && sheetContext.mounted) {
+              Navigator.of(sheetContext).pop();
+            } else if (sheetContext.mounted) {
+              setSheetState(() {});
+            }
+          }
+
+          final colorScheme = Theme.of(context).colorScheme;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              4,
+              24,
+              24 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.graphicalCaptcha,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            );
-          },
-        ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const Key('login-captcha-field'),
+                        controller: _captchaController,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          hintText: l10n.graphicalCaptchaHint,
+                        ),
+                        onSubmitted: (_) => confirm(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    _CaptchaPreview(
+                      challenge: _captcha,
+                      loading: _isCaptchaLoading,
+                      refreshTooltip: l10n.refreshCaptcha,
+                      onRefresh: _isCaptchaLoading ? null : refreshCaptcha,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton(
+                    key: const Key('confirm-send-code-button'),
+                    onPressed: _isSendingCode ? null : confirm,
+                    child: _isSendingCode
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(l10n.sendVerificationCode),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -344,19 +274,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  Future<void> _sendCode() async {
+  Future<bool> _sendCode() async {
     final l10n = AppLocalizations.of(context)!;
     final phoneError = _validatePhone(_phoneController.text, l10n);
     if (phoneError != null) {
       AppToast.error(context, phoneError);
-      return;
+      return false;
     }
-    if (!_ensureAgreement(l10n)) return;
+    if (!_ensureAgreement(l10n)) return false;
     final captcha = _captcha;
     final captchaValue = _captchaController.text.trim();
     if (captcha == null || captchaValue.isEmpty) {
       AppToast.error(context, l10n.graphicalCaptchaRequired);
-      return;
+      return false;
     }
 
     setState(() => _isSendingCode = true);
@@ -366,13 +296,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             captchaId: captcha.id,
             captchaValue: captchaValue,
           );
-      if (!mounted) return;
+      if (!mounted) return false;
       _startCountdown();
       AppToast.success(context, l10n.verificationCodeSent);
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       AppToast.error(context, _errorMessage(error));
       await _loadCaptcha();
+      return false;
     } finally {
       if (mounted) setState(() => _isSendingCode = false);
     }
@@ -381,7 +313,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _loginWithPhone() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final phoneError = _validatePhone(_phoneController.text, l10n);
+    if (phoneError != null) {
+      AppToast.error(context, phoneError);
+      return;
+    }
+    if (!RegExp(r'^\d{6}$').hasMatch(_codeController.text.trim())) {
+      AppToast.error(context, l10n.invalidVerificationCode);
+      return;
+    }
 
     setState(() => _isLoggingIn = true);
     try {
@@ -435,6 +375,509 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return message;
     }
     return AppLocalizations.of(context)!.networkRequestFailed;
+  }
+}
+
+class _LoginDesignViewport extends StatelessWidget {
+  const _LoginDesignViewport({required this.child});
+
+  static const designSize = Size(440, 956);
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = math.min(constraints.maxWidth / designSize.width, 1.0);
+        final scaledSize = designSize * scale;
+        final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+        final canvas = SizedBox(
+          width: scaledSize.width,
+          height: scaledSize.height,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: SizedBox.fromSize(size: designSize, child: child),
+          ),
+        );
+
+        return SingleChildScrollView(
+          reverse: keyboardOpen,
+          physics: keyboardOpen
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Align(
+              alignment:
+                  keyboardOpen ? Alignment.topCenter : Alignment.bottomCenter,
+              child: canvas,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _WelcomeLoginDesign extends StatelessWidget {
+  const _WelcomeLoginDesign({
+    required this.agreed,
+    required this.onBack,
+    required this.onAgreementChanged,
+    required this.onPhoneLogin,
+    required this.onWechatLogin,
+    super.key,
+  });
+
+  final bool agreed;
+  final VoidCallback onBack;
+  final VoidCallback onAgreementChanged;
+  final VoidCallback onPhoneLogin;
+  final VoidCallback onWechatLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        _LoginBackButton(onPressed: onBack),
+        const Positioned(
+          left: 26,
+          top: 678,
+          width: 388,
+          child: _LoginBrandCopy(),
+        ),
+        Positioned(
+          left: 57,
+          top: 768,
+          width: 326,
+          child: Column(
+            children: [
+              _LoginActionButton(
+                key: const Key('login-phone-entry-button'),
+                label: l10n.phoneLogin,
+                onPressed: onPhoneLogin,
+              ),
+              const SizedBox(height: 10),
+              _LoginActionButton(
+                key: const Key('wechat-login-button'),
+                label: l10n.wechatLogin,
+                onPressed: onWechatLogin,
+                backgroundColor: colorScheme.brightness == Brightness.light
+                    ? const Color(0xFFF0F4F9)
+                    : colorScheme.surfaceContainerHighest,
+                foregroundColor: colorScheme.onSurface,
+                borderColor: colorScheme.brightness == Brightness.light
+                    ? const Color(0xFFDAD6E5)
+                    : colorScheme.outline,
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 26,
+          top: 918,
+          width: 388,
+          child: _LoginAgreement(
+            agreed: agreed,
+            onChanged: onAgreementChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PhoneLoginDesign extends StatelessWidget {
+  const _PhoneLoginDesign({
+    required this.phoneController,
+    required this.codeController,
+    required this.agreed,
+    required this.countdown,
+    required this.sendingCode,
+    required this.loggingIn,
+    required this.onBack,
+    required this.onAgreementChanged,
+    required this.onSendCode,
+    required this.onLogin,
+    super.key,
+  });
+
+  final TextEditingController phoneController;
+  final TextEditingController codeController;
+  final bool agreed;
+  final int countdown;
+  final bool sendingCode;
+  final bool loggingIn;
+  final VoidCallback onBack;
+  final VoidCallback onAgreementChanged;
+  final VoidCallback onSendCode;
+  final VoidCallback onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final fieldColor = colorScheme.brightness == Brightness.light
+        ? const Color(0xFFF0F4F9)
+        : colorScheme.surfaceContainerHighest;
+    final textStyle = TextStyle(
+      color: colorScheme.onSurface,
+      fontSize: 18,
+      height: 24 / 18,
+    );
+
+    return Stack(
+      children: [
+        _LoginBackButton(onPressed: onBack),
+        const Positioned(
+          left: 26,
+          top: 613,
+          width: 388,
+          child: _LoginBrandCopy(),
+        ),
+        Positioned(
+          left: 57,
+          top: 703,
+          width: 326,
+          child: Column(
+            children: [
+              _LoginFieldShell(
+                color: fieldColor,
+                child: Row(
+                  children: [
+                    Text('+86', style: textStyle),
+                    const SizedBox(width: 11),
+                    const _LoginFieldDivider(),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: TextField(
+                        key: const Key('login-phone-field'),
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.telephoneNumber],
+                        maxLength: 11,
+                        style: textStyle,
+                        decoration: _fieldDecoration(l10n.phoneNumberHint),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              _LoginFieldShell(
+                color: fieldColor,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const Key('login-code-field'),
+                        controller: codeController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        maxLength: 6,
+                        style: textStyle,
+                        decoration: _fieldDecoration(l10n.verificationCodeHint),
+                        onSubmitted: (_) => onLogin(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const _LoginFieldDivider(),
+                    const SizedBox(width: 14),
+                    TextButton(
+                      key: const Key('send-code-button'),
+                      onPressed:
+                          countdown > 0 || sendingCode ? null : onSendCode,
+                      style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: colorScheme.onSurface,
+                        disabledForegroundColor: colorScheme.onSurfaceVariant,
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      child: Text(
+                        sendingCode
+                            ? l10n.sendingVerificationCode
+                            : countdown > 0
+                                ? l10n.resendCountdown(countdown)
+                                : l10n.sendVerificationCode,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              _LoginActionButton(
+                key: const Key('phone-login-button'),
+                label: l10n.loginOrRegister,
+                onPressed: loggingIn ? null : onLogin,
+                loading: loggingIn,
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 26,
+          top: 918,
+          width: 388,
+          child: _LoginAgreement(
+            agreed: agreed,
+            onChanged: onAgreementChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static InputDecoration _fieldDecoration(String hintText) => InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0xFF999999),
+          fontSize: 18,
+          height: 24 / 18,
+        ),
+        counterText: '',
+        isCollapsed: true,
+        filled: false,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
+      );
+}
+
+class _LoginBackButton extends StatelessWidget {
+  const _LoginBackButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 20,
+      top: 76,
+      width: 40,
+      height: 40,
+      child: IconButton(
+        key: const Key('login-back-button'),
+        tooltip: AppLocalizations.of(context)!.backToPreviousPage,
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        color: Theme.of(context).colorScheme.onSurface,
+        icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+      ),
+    );
+  }
+}
+
+class _LoginIllustration extends StatelessWidget {
+  const _LoginIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: 6.5,
+      top: 170,
+      width: 427,
+      height: 427,
+      child: Lottie.asset(
+        'assets/images/login_welcome_animation.json',
+        key: const Key('login-welcome-illustration'),
+        fit: BoxFit.cover,
+        repeat: true,
+        animate: !MediaQuery.disableAnimationsOf(context),
+      ),
+    );
+  }
+}
+
+class _LoginBrandCopy extends StatelessWidget {
+  const _LoginBrandCopy();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Text(
+      'POPi\n${l10n.splashTagline}',
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: 25,
+        fontWeight: FontWeight.w700,
+        height: 1.2,
+        letterSpacing: .25,
+      ),
+    );
+  }
+}
+
+class _LoginFieldShell extends StatelessWidget {
+  const _LoginFieldShell({required this.color, required this.child});
+
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 326,
+      height: 55,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _LoginFieldDivider extends StatelessWidget {
+  const _LoginFieldDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ColorFiltered(
+      colorFilter: ColorFilter.mode(
+        dark ? Theme.of(context).colorScheme.onSurface : AppColors.textPrimary,
+        BlendMode.srcIn,
+      ),
+      child: SvgPicture.asset(
+        'assets/icons/login_field_divider.svg',
+        width: 1,
+        height: 15,
+      ),
+    );
+  }
+}
+
+class _LoginActionButton extends StatelessWidget {
+  const _LoginActionButton({
+    required this.label,
+    required this.onPressed,
+    this.backgroundColor = AppColors.brand,
+    this.foregroundColor = Colors.white,
+    this.borderColor,
+    this.loading = false,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color? borderColor;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 326,
+      height: 55,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          elevation: 0,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          disabledBackgroundColor: backgroundColor.withValues(alpha: .55),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            side: borderColor == null
+                ? BorderSide.none
+                : BorderSide(color: borderColor!),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        child: loading
+            ? const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
+class _LoginAgreement extends StatelessWidget {
+  const _LoginAgreement({required this.agreed, required this.onChanged});
+
+  final bool agreed;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          checked: agreed,
+          button: true,
+          child: InkResponse(
+            key: const Key('agreement-checkbox'),
+            onTap: onChanged,
+            radius: 22,
+            child: Container(
+              width: 15,
+              height: 15,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: agreed ? AppColors.brand : const Color(0xFFDAD6E5),
+                  width: 2,
+                ),
+              ),
+              child: agreed
+                  ? SvgPicture.asset(
+                      'assets/icons/login_checkbox_check.svg',
+                      width: 15,
+                      height: 15,
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: LegalDocumentLinks(
+            key: const Key('login-legal-document-links'),
+            text: l10n.loginAgreement,
+            userAgreementLabel: l10n.userAgreement,
+            privacyPolicyLabel: l10n.privacyPolicy,
+            openFailedMessage: l10n.networkRequestFailed,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 10,
+              height: 1.5,
+            ),
+            linkStyle: const TextStyle(
+              color: AppColors.brand,
+              fontSize: 10,
+              height: 1.5,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
