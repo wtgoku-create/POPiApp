@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,8 +18,61 @@ import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_splash.dart';
 
 void main() {
+  testWidgets('shows the Figma splash while restoring the session',
+      (tester) async {
+    tester.view.physicalSize = const Size(440, 956);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final tokenStorage = _DelayedTokenStorage();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          secureStorageProvider.overrideWithValue(tokenStorage),
+          authRepositoryProvider.overrideWithValue(
+            AuthRepository(
+              api: _StartupAuthApi(),
+              secureStorage: tokenStorage,
+            ),
+          ),
+        ],
+        child: const StarterApp(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(AppSplashScreen), findsOneWidget);
+    final splashCopy = tester.widget<Text>(
+      find.byKey(const Key('app-splash-copy')),
+    );
+    expect(splashCopy.data, startsWith('POPi\n'));
+    expect(
+      tester.getSize(find.byKey(const Key('app-splash-logo'))),
+      const Size(136, 90.1),
+    );
+    expect(
+      tester.getTopLeft(find.byKey(const Key('app-splash-glow'))).dy,
+      closeTo(223, .1),
+    );
+
+    tokenStorage.complete(null);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 140));
+    expect(find.byType(AppSplashScreen), findsOneWidget);
+    expect(find.byType(LoginPage), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(AppSplashScreen), findsNothing);
+    expect(find.byType(LoginPage), findsOneWidget);
+  });
+
   testWidgets('opens login when no access token is stored', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
@@ -81,6 +136,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(HomePage), findsOneWidget);
   });
+}
+
+class _DelayedTokenStorage implements TokenStorage {
+  final _completer = Completer<String?>();
+
+  void complete(String? token) => _completer.complete(token);
+
+  @override
+  Future<void> deleteAccessToken() async {}
+
+  @override
+  Future<String?> readAccessToken() => _completer.future;
+
+  @override
+  Future<void> writeAccessToken(String value) async {}
 }
 
 class _MemoryTokenStorage implements TokenStorage {

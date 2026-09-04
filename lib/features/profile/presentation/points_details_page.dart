@@ -193,7 +193,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final pageBody = Column(
       children: [
         SizedBox(
-          height: topPadding + 56,
+          height: topPadding + 48,
           child: Padding(
             padding: EdgeInsets.only(top: topPadding),
             child: Stack(
@@ -222,7 +222,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
                   l10n.pointsDetailsTitle,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 25,
+                    fontSize: AppTypeSizes.pageTitle,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -234,7 +234,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
           child: ListView(
             key: const Key('points-details-scroll'),
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
             children: [
               _PointsSummaryCard(
                 totalPoints: totalPoints,
@@ -243,7 +243,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
                 pointPackageCoins: pointPackageCoins,
                 onRecharge: () => _showRechargeSheet(totalPoints),
               ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 18),
               Text(
                 l10n.pointsDetailsTitle,
                 style: TextStyle(
@@ -371,8 +371,8 @@ class _PointsSummaryCard extends StatelessWidget {
 
     return Container(
       key: const Key('points-summary-card'),
-      height: 203,
-      padding: const EdgeInsets.all(20),
+      height: 176,
+      padding: const EdgeInsets.all(16),
       decoration: _pointsCardDecoration(context),
       child: Column(
         children: [
@@ -395,7 +395,7 @@ class _PointsSummaryCard extends StatelessWidget {
                   '$totalPoints',
                   style: TextStyle(
                     color: colorScheme.onSurface,
-                    fontSize: 30,
+                    fontSize: AppTypeSizes.largeMetric,
                     fontWeight: FontWeight.w700,
                     height: 0.8,
                   ),
@@ -442,16 +442,16 @@ class _PointsSummaryCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Divider(height: 0, thickness: 1, color: colorScheme.outlineVariant),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           _PointsBalanceRow(
             label: l10n.rechargedPoints,
             value: '$memberCoins',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _PointsBalanceRow(label: l10n.giftPoints, value: '$otherCoins'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _PointsBalanceRow(
             label: l10n.pointsPackage,
             value: '$pointPackageCoins',
@@ -521,12 +521,12 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final height = math.min(663.0, MediaQuery.sizeOf(context).height);
+    final height = math.min(600.0, MediaQuery.sizeOf(context).height);
 
     return Container(
       key: const Key('points-recharge-sheet'),
       height: height,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? colorScheme.surfaceContainer : colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
@@ -554,13 +554,13 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                 l10n.rechargePointsPackage,
                 style: TextStyle(
                   color: colorScheme.onSurface,
-                  fontSize: 25,
+                  fontSize: AppTypeSizes.pageTitle,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 10),
           SizedBox(
             height: 40,
             child: Row(
@@ -570,7 +570,7 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
                   '${widget.totalPoints}',
                   style: TextStyle(
                     color: colorScheme.onSurface,
-                    fontSize: 30,
+                    fontSize: AppTypeSizes.largeMetric,
                     fontWeight: FontWeight.w700,
                     height: 31 / 30,
                   ),
@@ -625,14 +625,14 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 342,
+            height: 284,
             child: _buildPackageGrid(l10n),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           SizedBox(
-            height: 88,
+            height: 82,
             width: double.infinity,
             child: LegalDocumentLinks(
               key: const Key('recharge-legal-document-links'),
@@ -646,8 +646,8 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
               openFailedMessage: l10n.networkRequestFailed,
               style: TextStyle(
                 color: colorScheme.onSurfaceVariant,
-                fontSize: 14,
-                height: 22 / 14,
+                fontSize: 12,
+                height: 18 / 12,
               ),
               linkStyle: TextStyle(
                 color: colorScheme.onSurface,
@@ -655,10 +655,10 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 46,
             child: FilledButton(
               key: const Key('points-recharge-confirm'),
               style: FilledButton.styleFrom(
@@ -738,9 +738,9 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
       itemCount: _packages.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        mainAxisExtent: 104,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        mainAxisExtent: 88,
       ),
       itemBuilder: (context, index) {
         final package = _packages[index];
@@ -874,7 +874,7 @@ class _PointsPackageCard extends StatelessWidget {
                           '${package.totalPoints}',
                           style: TextStyle(
                             color: colorScheme.onSurface,
-                            fontSize: 25,
+                            fontSize: 22,
                             fontWeight: FontWeight.w700,
                             height: 21 / 25,
                           ),

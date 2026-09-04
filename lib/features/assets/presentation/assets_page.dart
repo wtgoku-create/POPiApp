@@ -387,7 +387,7 @@ class _LibraryEmptyState extends StatelessWidget {
                 l10n.noRoles,
                 style: const TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 25,
+                  fontSize: AppTypeSizes.pageTitle,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -423,7 +423,7 @@ class _LibraryEmptyState extends StatelessWidget {
               isHistory ? l10n.noHistory : l10n.noWorks,
               style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 25,
+                fontSize: AppTypeSizes.pageTitle,
                 fontWeight: FontWeight.w700,
               ),
             ),

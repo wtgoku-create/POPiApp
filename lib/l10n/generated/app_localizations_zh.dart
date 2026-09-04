@@ -593,5 +593,5 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileUpdateFailed => '资料更新失败，请稍后重试';
 
   @override
-  String get splashTagline => '让创意更有价值。';
+  String get splashTagline => '“帮助人类更好的表达”';
 }

@@ -53,21 +53,21 @@ class ProfilePage extends ConsumerWidget {
           const ProfileTopBar(),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 60),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: [
                 Center(child: ProfileAvatar(imageUrl: user?.avatarUrl)),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Center(
                   child: Text(
                     displayName,
                     style: TextStyle(
                       color: colorScheme.onSurface,
-                      fontSize: 25,
+                      fontSize: AppTypeSizes.pageTitle,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Center(
                   child: Tooltip(
                     message: l10n.copyAction,
@@ -102,16 +102,16 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Center(
                   child: SizedBox(
-                    height: 50,
+                    height: 44,
                     child: OutlinedButton(
                       onPressed: () => context.push('/profile/edit'),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: colorScheme.surface,
                         side: BorderSide.none,
-                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                       ),
                       child: Text(
                         l10n.editProfile,
@@ -123,9 +123,9 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 MembershipCard(pointPackageLoader: pointPackageLoader),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 SettingsGroup(
                   children: [
                     SettingsRow(
@@ -137,7 +137,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 SettingsGroup(
                   children: [
                     SettingsRow(
@@ -166,7 +166,7 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 SettingsGroup(
                   children: [
                     TreeSettingsMenu(
@@ -391,11 +391,11 @@ class MembershipCard extends ConsumerWidget {
     final totalPoints = user?.allCoins ?? points?.availableTotalPoints;
 
     return Container(
-      height: 140,
-      padding: const EdgeInsets.all(20),
+      height: 124,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadii.medium),
       ),
       child: Column(
         children: [
@@ -423,7 +423,7 @@ class MembershipCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           SizedBox(
             height: 40,
             child: Material(
@@ -527,10 +527,10 @@ class SettingsGroup extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: isDark ? colorScheme.surfaceContainerLow : colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppRadii.medium),
         border: isDark
             ? Border.all(
                 color: colorScheme.outlineVariant.withValues(alpha: 0.45),
@@ -576,20 +576,20 @@ class SettingsRow extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(AppRadii.medium),
       child: SizedBox(
-        height: 50,
+        height: 48,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               SizedBox.square(
-                dimension: 22,
+                dimension: 20,
                 child: Center(
                   child: iconWidget == null
                       ? Icon(
                           icon,
-                          size: 22,
+                          size: 20,
                           color: colorScheme.onSurface,
                         )
                       : ColorFiltered(
@@ -606,7 +606,7 @@ class SettingsRow extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     color: colorScheme.onSurface,
                   ),
                 ),

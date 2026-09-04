@@ -1229,7 +1229,7 @@ abstract class AppLocalizations {
   /// No description provided for @splashTagline.
   ///
   /// In en, this message translates to:
-  /// **'Build something useful.'**
+  /// **'“Helping people express themselves better”'**
   String get splashTagline;
 }
 

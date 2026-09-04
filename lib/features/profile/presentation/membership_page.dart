@@ -113,47 +113,69 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                   });
                 },
               ),
-              const SizedBox(height: 30),
-              Expanded(
-                child: _MembershipPlanCard(
-                  group: plans[_selectedPlan],
-                  selectedVariant: _selectedVariant,
-                  onVariantSelected: (index) {
-                    setState(() => _selectedVariant = index);
-                  },
-                ),
-              ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: math.min(MediaQuery.sizeOf(context).width - 40, 400.0),
-                height: 50,
-                child: FilledButton(
-                  key: const Key('membership-open-button'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: colorScheme.onSurface,
-                    foregroundColor: colorScheme.surface,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                  ),
-                  onPressed: _isPurchasing
-                      ? null
-                      : () => _purchaseMembership(
-                            plans[_selectedPlan].variants[_selectedVariant],
-                          ),
-                  child: _isPurchasing
-                      ? const SizedBox.square(
-                          key: Key('membership-purchase-loading'),
-                          dimension: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(
-                          plans[_selectedPlan]
-                              .variants[_selectedVariant]
-                              .buttonText,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardHeight = math.min(
+                      620.0,
+                      constraints.maxHeight - 58,
+                    );
+                    return Column(
+                      children: [
+                        SizedBox(
+                          height: cardHeight,
+                          child: _MembershipPlanCard(
+                            group: plans[_selectedPlan],
+                            selectedVariant: _selectedVariant,
+                            onVariantSelected: (index) {
+                              setState(() => _selectedVariant = index);
+                            },
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: math.min(
+                            MediaQuery.sizeOf(context).width - 40,
+                            400.0,
+                          ),
+                          height: 46,
+                          child: FilledButton(
+                            key: const Key('membership-open-button'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: colorScheme.onSurface,
+                              foregroundColor: colorScheme.surface,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                            ),
+                            onPressed: _isPurchasing
+                                ? null
+                                : () => _purchaseMembership(
+                                      plans[_selectedPlan]
+                                          .variants[_selectedVariant],
+                                    ),
+                            child: _isPurchasing
+                                ? const SizedBox.square(
+                                    key: Key('membership-purchase-loading'),
+                                    dimension: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    plans[_selectedPlan]
+                                        .variants[_selectedVariant]
+                                        .buttonText,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
               SizedBox(height: bottomPadding),
@@ -251,7 +273,7 @@ class _MembershipTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final foreground = Theme.of(context).colorScheme.onSurface;
     return SizedBox(
-      height: 56,
+      height: 48,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -310,7 +332,7 @@ class _PlanTabs extends StatefulWidget {
 }
 
 class _PlanTabsState extends State<_PlanTabs> {
-  static const _tabWidth = 177.0;
+  static const _tabWidth = 160.0;
   final _controller = ScrollController();
   final _viewportKey = GlobalKey();
   late final List<GlobalKey> _tabKeys;
@@ -357,7 +379,7 @@ class _PlanTabsState extends State<_PlanTabs> {
         );
         return SizedBox(
           key: _viewportKey,
-          height: 50,
+          height: 44,
           child: ListView.separated(
             key: const Key('membership-plan-tabs'),
             controller: _controller,
@@ -370,7 +392,7 @@ class _PlanTabsState extends State<_PlanTabs> {
               return SizedBox(
                 key: _tabKeys[index],
                 width: _tabWidth,
-                height: 50,
+                height: 44,
                 child: InkWell(
                   key: Key('membership-plan-tab-$index'),
                   borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -400,7 +422,7 @@ class _PlanTabsState extends State<_PlanTabs> {
                         color: active
                             ? colorScheme.onSurface
                             : colorScheme.onSurfaceVariant,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -457,7 +479,7 @@ class _MembershipPlanCard extends StatelessWidget {
     return Container(
       key: const Key('membership-plan-card'),
       width: math.min(MediaQuery.sizeOf(context).width - 40, 400.0),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark
             ? colorScheme.surfaceContainerHigh
@@ -471,7 +493,7 @@ class _MembershipPlanCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 40,
+            height: 36,
             child: Row(
               children: [
                 Expanded(
@@ -489,8 +511,8 @@ class _MembershipPlanCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Container(
                   key: const Key('membership-discount-badge'),
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: colorScheme.primary.withValues(alpha: .12),
@@ -502,7 +524,7 @@ class _MembershipPlanCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: colorScheme.onSurface,
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -529,8 +551,8 @@ class _MembershipPlanCard extends StatelessWidget {
                   plan.price,
                   style: TextStyle(
                     color: colorScheme.onSurface,
-                    fontSize: 36,
-                    height: 44 / 36,
+                    fontSize: AppTypeSizes.price,
+                    height: 44 / AppTypeSizes.price,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -671,8 +693,8 @@ class _PlanPointsSelector extends StatelessWidget {
                             '${plans[index].points}',
                             style: TextStyle(
                               color: colorScheme.onSurface,
-                              fontSize: 25,
-                              height: 24 / 25,
+                              fontSize: 22,
+                              height: 24 / 22,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -683,8 +705,8 @@ class _PlanPointsSelector extends StatelessWidget {
                         '${plans[index].points}',
                         style: TextStyle(
                           color: colorScheme.onSurface,
-                          fontSize: 30,
-                          height: 31 / 30,
+                          fontSize: AppTypeSizes.largeMetric,
+                          height: 31 / AppTypeSizes.largeMetric,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

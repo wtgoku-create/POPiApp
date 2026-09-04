@@ -111,6 +111,12 @@ void main() {
       tester.getSize(find.byKey(const Key('home-membership-entry'))).width,
       lessThan(160),
     );
+    final membershipSurface = tester.widget<Ink>(
+      find.byKey(const Key('home-membership-surface')),
+    );
+    final membershipDecoration = membershipSurface.decoration! as BoxDecoration;
+    expect(membershipDecoration.border!.top.width, 1);
+    expect(membershipDecoration.boxShadow, isNull);
     expect(
       tester.getCenter(find.byKey(const Key('home-membership-points'))).dy,
       closeTo(

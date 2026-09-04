@@ -12,7 +12,7 @@ class ProfileTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final top = math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
     return SizedBox(
-      height: top + 56,
+      height: top + 48,
       child: Padding(
         padding: EdgeInsets.only(top: top),
         child: Row(
@@ -39,7 +39,7 @@ class ProfileTopBar extends StatelessWidget {
 
 class ProfileAvatar extends StatelessWidget {
   const ProfileAvatar({
-    this.size = 120,
+    this.size = 84,
     this.editable = false,
     this.imageUrl,
     super.key,

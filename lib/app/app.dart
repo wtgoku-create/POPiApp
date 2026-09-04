@@ -7,6 +7,7 @@ import '../shared/providers/settings_provider.dart';
 import '../shared/providers/storage_provider.dart';
 import '../shared/providers/purchase_provider.dart';
 import '../shared/providers/user_provider.dart';
+import '../shared/widgets/app_splash.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -22,45 +23,69 @@ class StarterApp extends ConsumerWidget {
 
     return ToastificationWrapper(
       config: const ToastificationConfig(itemWidth: 320),
-      child: accessToken.when(
-        loading: () => _StartupApp(
-          themeMode: themeMode,
-          locale: locale,
-        ),
-        error: (_, __) => _RouterApp(
-          themeMode: themeMode,
-          locale: locale,
-          router: ref.watch(routerProvider(false)),
-        ),
-        data: (token) {
-          final hasAccessToken = token?.isNotEmpty ?? false;
-          if (!hasAccessToken) {
-            return _RouterApp(
-              themeMode: themeMode,
-              locale: locale,
-              router: ref.watch(routerProvider(false)),
-            );
-          }
-
-          // Start listening before any purchase screen opens so interrupted
-          // StoreKit transactions can be verified after an app restart.
-          ref.watch(applePurchaseServiceProvider);
-
-          final bootstrap = ref.watch(userBootstrapProvider);
-          return bootstrap.when(
-            loading: () => _StartupApp(themeMode: themeMode, locale: locale),
-            error: (_, __) => _RouterApp(
-              themeMode: themeMode,
-              locale: locale,
-              router: ref.watch(routerProvider(false)),
-            ),
-            data: (_) => _RouterApp(
-              themeMode: themeMode,
-              locale: locale,
-              router: ref.watch(routerProvider(true)),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 360),
+        reverseDuration: const Duration(milliseconds: 280),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: .985, end: 1).animate(animation),
+              child: child,
             ),
           );
         },
+        child: accessToken.when(
+          loading: () => _StartupApp(
+            key: const ValueKey('startup-app'),
+            themeMode: themeMode,
+            locale: locale,
+          ),
+          error: (_, __) => _RouterApp(
+            key: const ValueKey('router-app'),
+            themeMode: themeMode,
+            locale: locale,
+            router: ref.watch(routerProvider(false)),
+          ),
+          data: (token) {
+            final hasAccessToken = token?.isNotEmpty ?? false;
+            if (!hasAccessToken) {
+              return _RouterApp(
+                key: const ValueKey('router-app'),
+                themeMode: themeMode,
+                locale: locale,
+                router: ref.watch(routerProvider(false)),
+              );
+            }
+
+            // Start listening before any purchase screen opens so interrupted
+            // StoreKit transactions can be verified after an app restart.
+            ref.watch(applePurchaseServiceProvider);
+
+            final bootstrap = ref.watch(userBootstrapProvider);
+            return bootstrap.when(
+              loading: () => _StartupApp(
+                key: const ValueKey('startup-app'),
+                themeMode: themeMode,
+                locale: locale,
+              ),
+              error: (_, __) => _RouterApp(
+                key: const ValueKey('router-app'),
+                themeMode: themeMode,
+                locale: locale,
+                router: ref.watch(routerProvider(false)),
+              ),
+              data: (_) => _RouterApp(
+                key: const ValueKey('router-app'),
+                themeMode: themeMode,
+                locale: locale,
+                router: ref.watch(routerProvider(true)),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -71,6 +96,7 @@ class _RouterApp extends StatelessWidget {
     required this.themeMode,
     required this.locale,
     required this.router,
+    super.key,
   });
 
   final ThemeMode themeMode;
@@ -99,7 +125,11 @@ class _RouterApp extends StatelessWidget {
 }
 
 class _StartupApp extends StatelessWidget {
-  const _StartupApp({required this.themeMode, required this.locale});
+  const _StartupApp({
+    required this.themeMode,
+    required this.locale,
+    super.key,
+  });
 
   final ThemeMode themeMode;
   final Locale? locale;
@@ -117,9 +147,7 @@ class _StartupApp extends StatelessWidget {
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
       ],
-      home: const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
+      home: const AppSplashScreen(),
     );
   }
 }

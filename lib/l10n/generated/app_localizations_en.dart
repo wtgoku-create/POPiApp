@@ -612,5 +612,5 @@ class AppLocalizationsEn extends AppLocalizations {
       'Unable to update your profile. Try again later';
 
   @override
-  String get splashTagline => 'Build something useful.';
+  String get splashTagline => '“Helping people express themselves better”';
 }

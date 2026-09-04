@@ -476,16 +476,17 @@ class _MembershipEntry extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadii.pill),
           child: Ink(
+            key: const Key('home-membership-surface'),
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: isDark
-                  ? colorScheme.surfaceContainerHigh
-                  : colorScheme.surface,
+                  ? colorScheme.surfaceContainerHighest
+                  : Colors.white.withValues(alpha: .5),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: Border.all(
-                color: isDark ? colorScheme.outlineVariant : AppColors.outline,
-              ),
+              border: isDark
+                  ? Border.all(color: colorScheme.outlineVariant)
+                  : Border.all(color: Colors.white),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

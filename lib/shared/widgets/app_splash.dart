@@ -1,119 +1,93 @@
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../../app/theme.dart';
 import '../../l10n/generated/app_localizations.dart';
 
-class AppSplash extends StatefulWidget {
-  const AppSplash({required this.child, super.key});
+class AppSplashScreen extends StatelessWidget {
+  const AppSplashScreen({super.key});
 
-  final Widget child;
-
-  @override
-  State<AppSplash> createState() => _AppSplashState();
-}
-
-class _AppSplashState extends State<AppSplash>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _overlayOpacity;
-  bool _isVisible = true;
+  static const _artboardSize = 382.0;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1900),
-    )..forward();
-
-    _overlayOpacity = Tween(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.7, 1, curve: Curves.easeOut),
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.surface,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
-    );
+      child: ColoredBox(
+        key: const Key('app-splash-screen'),
+        color: AppColors.surface,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final scale = math.min(
+              1.0,
+              math.min(
+                (constraints.maxWidth - 32) / _artboardSize,
+                constraints.maxHeight / _artboardSize,
+              ),
+            );
 
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed && mounted) {
-        setState(() => _isVisible = false);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        widget.child,
-        if (_isVisible)
-          FadeTransition(
-            opacity: _overlayOpacity,
-            child: const _SplashOverlay(),
-          ),
-      ],
-    );
-  }
-}
-
-class _SplashOverlay extends StatelessWidget {
-  const _SplashOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = isDark
-        ? const [Color(0xFF122B2B), Color(0xFF1D4E4A), Color(0xFF112321)]
-        : const [Color(0xFFE4F1EA), Color(0xFF8CC7AF), Color(0xFF356859)];
-    final foreground = isDark ? Colors.white : const Color(0xFF173B35);
-
-    return IgnorePointer(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: colors,
-          ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 88,
-                height: 88,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: isDark ? .12 : .72),
-                  borderRadius: BorderRadius.circular(24),
+            return Center(
+              child: Transform.translate(
+                offset: Offset(0, -64 * scale),
+                child: SizedBox.square(
+                  dimension: _artboardSize * scale,
+                  child: FittedBox(
+                    fit: BoxFit.fill,
+                    child: SizedBox.square(
+                      dimension: _artboardSize,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: SvgPicture.asset(
+                              'assets/icons/splash_glow.svg',
+                              key: const Key('app-splash-glow'),
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                          Positioned(
+                            left: 123,
+                            top: 139,
+                            width: 136,
+                            height: 90.1,
+                            child: SvgPicture.asset(
+                              'assets/icons/home_welcome_logo.svg',
+                              key: const Key('app-splash-logo'),
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                          Positioned(
+                            left: 27.5,
+                            top: 272,
+                            width: 327,
+                            child: Text(
+                              'POPi\n${AppLocalizations.of(context)!.splashTagline}',
+                              key: const Key('app-splash-copy'),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 25,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                                letterSpacing: .25,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                child: Image.asset('assets/icons/common_brand_icon.png'),
               ),
-              const SizedBox(height: 22),
-              Text(
-                'POPi',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppLocalizations.of(context)!.splashTagline,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: foreground.withValues(alpha: .72),
-                      letterSpacing: 0,
-                    ),
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

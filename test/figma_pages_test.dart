@@ -17,6 +17,7 @@ import 'package:popi_ai_app/features/profile/domain/point_package.dart';
 import 'package:popi_ai_app/features/profile/domain/product_plan.dart';
 import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
+import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
 
 void main() {
   setUp(() {
@@ -231,18 +232,18 @@ void main() {
     expect(find.text('立即购买'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
-      closeTo(668, .01),
+      closeTo(620, .01),
     );
     expect(
       tester.getSize(find.byKey(const Key('membership-open-button'))),
-      const Size(400, 50),
+      const Size(400, 46),
     );
     expect(
       tester.getTopLeft(find.byKey(const Key('membership-open-button'))).dy -
           tester
               .getBottomLeft(find.byKey(const Key('membership-plan-card')))
               .dy,
-      closeTo(20, .5),
+      closeTo(12, .5),
     );
     final starterMarkdown = tester.widget<MarkdownBody>(
       find.byKey(const Key('membership-description-markdown')),
@@ -254,7 +255,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
-      closeTo(512, .01),
+      closeTo(548, .01),
     );
     tester.view.physicalSize = const Size(440, 956);
     await tester.pumpAndSettle();
@@ -376,7 +377,7 @@ void main() {
         tester.getBottomLeft(find.byKey(const Key('membership-plan-card'))).dy;
     final buttonTop =
         tester.getTopLeft(find.byKey(const Key('membership-open-button'))).dy;
-    expect(buttonTop - cardBottom, closeTo(20, .5));
+    expect(buttonTop - cardBottom, closeTo(12, .5));
   });
 
   testWidgets('aligns the selected membership tab to the content margin',
@@ -549,7 +550,7 @@ void main() {
     expect(find.text('立即购买'), findsOneWidget);
     final discountBadgeSize =
         tester.getSize(find.byKey(const Key('membership-discount-badge')));
-    expect(discountBadgeSize.height, 40);
+    expect(discountBadgeSize.height, 36);
     expect(discountBadgeSize.width, greaterThan(97));
     expect(find.text('包含：1750/套餐积分+0/赠送积分'), findsOneWidget);
   });
@@ -652,7 +653,7 @@ void main() {
 
     expect(
       tester.getSize(find.byKey(const Key('points-summary-card'))),
-      const Size(400, 203),
+      const Size(400, 176),
     );
     final pointsIcon = tester.widget<Image>(
       find.byKey(const Key('points-details-icon')),
@@ -680,7 +681,12 @@ void main() {
       find.byKey(const Key('recharge-legal-document-links')),
       findsOneWidget,
     );
-    expect(tester.getSize(sheet).height, 663);
+    final legalLinks = tester.widget<LegalDocumentLinks>(
+      find.byKey(const Key('recharge-legal-document-links')),
+    );
+    expect(legalLinks.style.fontSize, 12);
+    expect(legalLinks.style.height, 1.5);
+    expect(tester.getSize(sheet).height, 600);
     expect(find.byKey(const Key('points-package-600')), findsOneWidget);
     expect(find.byKey(const Key('points-package-20000')), findsOneWidget);
     expect(find.byKey(const Key('points-package-selected')), findsOneWidget);

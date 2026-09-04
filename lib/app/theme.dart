@@ -22,6 +22,12 @@ abstract final class AppRadii {
   static const double pill = 100;
 }
 
+abstract final class AppTypeSizes {
+  static const double pageTitle = 20;
+  static const double largeMetric = 26;
+  static const double price = 32;
+}
+
 class AppTheme {
   static ThemeData get light => _theme(Brightness.light);
   static ThemeData get dark => _theme(Brightness.dark);
