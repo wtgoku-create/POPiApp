@@ -40,7 +40,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   int _selectedVariant = 0;
   bool _loadFailed = false;
   bool _isPurchasing = false;
-  bool _isRestoring = false;
 
   @override
   void initState() {
@@ -77,10 +76,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: Column(
           children: [
             SizedBox(height: topPadding),
-            _MembershipTopBar(
-              isRestoring: _isRestoring,
-              onRestore: _restorePurchases,
-            ),
+            const _MembershipTopBar(),
             if (plans == null)
               const Expanded(
                 child: Center(
@@ -223,20 +219,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     await _showPurchaseOutcome(outcome);
   }
 
-  Future<void> _restorePurchases() async {
-    if (_isRestoring || _isPurchasing) return;
-    final l10n = AppLocalizations.of(context)!;
-    setState(() => _isRestoring = true);
-    try {
-      await ref.read(userProvider.notifier).refreshUser();
-      if (mounted) AppToast.info(context, l10n.restorePurchasesRequested);
-    } catch (_) {
-      if (mounted) AppToast.error(context, l10n.purchaseFailed);
-    } finally {
-      if (mounted) setState(() => _isRestoring = false);
-    }
-  }
-
   Future<void> _showPurchaseOutcome(StorePurchaseOutcome outcome) async {
     final l10n = AppLocalizations.of(context)!;
     switch (outcome) {
@@ -261,13 +243,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 }
 
 class _MembershipTopBar extends StatelessWidget {
-  const _MembershipTopBar({
-    required this.isRestoring,
-    required this.onRestore,
-  });
-
-  final bool isRestoring;
-  final VoidCallback onRestore;
+  const _MembershipTopBar();
 
   @override
   Widget build(BuildContext context) {
@@ -295,19 +271,6 @@ class _MembershipTopBar extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ),
-          Positioned(
-            right: 20,
-            child: TextButton(
-              key: const Key('membership-restore-button'),
-              onPressed: isRestoring ? null : onRestore,
-              child: isRestoring
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(AppLocalizations.of(context)!.restorePurchases),
             ),
           ),
         ],

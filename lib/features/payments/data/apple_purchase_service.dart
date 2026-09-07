@@ -44,7 +44,16 @@ class ApplePurchaseService {
     required String businessProductType,
     required bool consumable,
   }) async {
-    if (!isSupported || !await _store.isAvailable()) {
+    debugPrint(
+        'purchase() called: productId=$productId, isSupported=$isSupported');
+    if (!isSupported) {
+      debugPrint(
+          'purchase: platform not supported (kIsWeb=$kIsWeb, platform=$defaultTargetPlatform)');
+      return StorePurchaseOutcome.unavailable;
+    }
+    final available = await _store.isAvailable();
+    debugPrint('purchase: store available=$available');
+    if (!available) {
       return StorePurchaseOutcome.unavailable;
     }
     if (productId.trim().isEmpty) {
@@ -52,7 +61,13 @@ class ApplePurchaseService {
     }
     if (_activePurchase != null) return StorePurchaseOutcome.failed;
 
+    debugPrint('purchase: querying product details for {$productId}');
     final response = await _store.queryProductDetails({productId});
+    debugPrint(
+      'purchase: query result - error=${response.error}, '
+      'productDetails=${response.productDetails.length}, '
+      'notFoundIDs=${response.notFoundIDs}',
+    );
     if (response.error != null || response.productDetails.isEmpty) {
       debugPrint(
         'StoreKit product query failed: productId=$productId, '
@@ -82,12 +97,6 @@ class ApplePurchaseService {
       _completeActive(StorePurchaseOutcome.failed);
     }
     return completer.future;
-  }
-
-  Future<bool> restorePurchases() async {
-    if (!isSupported || !await _store.isAvailable()) return false;
-    await _store.restorePurchases();
-    return true;
   }
 
   Future<void> _handlePurchaseUpdates(
