@@ -328,6 +328,10 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
+  Future<AuthSession> loginByWechat({required String code}) =>
+      throw UnimplementedError();
+
+  @override
   Future<void> logout() async {}
 
   @override

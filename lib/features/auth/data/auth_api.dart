@@ -19,6 +19,8 @@ abstract interface class AuthApi {
     String inviteCode = '',
   });
 
+  Future<AuthSession> loginByWechat({required String code});
+
   Future<User> currentUser();
 
   Future<UserPoints> userPoints();
@@ -67,6 +69,11 @@ class DefaultAuthApi implements AuthApi {
       inviteCode: inviteCode,
     );
     return AuthSession.fromJson(data);
+  }
+
+  @override
+  Future<AuthSession> loginByWechat({required String code}) async {
+    return AuthSession.fromJson(await networkApi.loginByWechat(code: code));
   }
 
   @override

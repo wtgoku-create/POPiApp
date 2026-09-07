@@ -44,6 +44,14 @@ class NetworkApi {
     return _data(response);
   }
 
+  Future<Map<String, dynamic>> loginByWechat({required String code}) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/auth/loginByWechat',
+      data: {'code': code},
+    );
+    return _data(response);
+  }
+
   Future<Map<String, dynamic>> currentUser() async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/users/user/info',

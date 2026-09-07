@@ -38,6 +38,21 @@ void main() {
     );
     expect(storage.token, isNull);
   });
+
+  test('initializes the current user after WeChat authorization', () async {
+    final events = <String>[];
+    final storage = _EventTokenStorage(events);
+    final repository = AuthRepository(
+      api: _FakeAuthApi(events),
+      secureStorage: storage,
+    );
+
+    final user = await repository.loginWithWechat(code: 'wechat-auth-code');
+
+    expect(user.name, '初始化用户');
+    expect(storage.token, 'token-from-wechat');
+    expect(events, ['wechat-login', 'save-token', 'current-user']);
+  });
 }
 
 class _FakeAuthApi implements AuthApi {
@@ -68,6 +83,15 @@ class _FakeAuthApi implements AuthApi {
     return const AuthSession(
       accessToken: 'token-from-login',
       user: User(id: '2', name: '登录响应用户', email: ''),
+    );
+  }
+
+  @override
+  Future<AuthSession> loginByWechat({required String code}) async {
+    events.add('wechat-login');
+    return const AuthSession(
+      accessToken: 'token-from-wechat',
+      user: User(id: '2', name: '微信登录响应用户', email: ''),
     );
   }
 

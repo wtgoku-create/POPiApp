@@ -143,6 +143,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wechatServicePending => '微信授权服务待接入';
 
   @override
+  String get wechatLoginCanceled => '已取消微信登录';
+
+  @override
+  String get wechatLoginUnavailable => '微信登录不可用，请检查微信是否已安装或应用配置是否完成';
+
+  @override
+  String get wechatLoginFailed => '微信登录失败，请重试';
+
+  @override
   String get back => '返回';
 
   @override

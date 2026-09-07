@@ -147,6 +147,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'WeChat authorization is not connected yet';
 
   @override
+  String get wechatLoginCanceled => 'WeChat sign-in was canceled';
+
+  @override
+  String get wechatLoginUnavailable =>
+      'WeChat sign-in is unavailable. Check that WeChat is installed and the app is configured.';
+
+  @override
+  String get wechatLoginFailed => 'WeChat sign-in failed. Please try again.';
+
+  @override
   String get back => 'Back';
 
   @override

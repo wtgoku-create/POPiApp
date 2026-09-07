@@ -55,6 +55,21 @@ class AuthRepository {
     }
   }
 
+  Future<User> loginWithWechat({required String code}) async {
+    try {
+      final session = await api.loginByWechat(code: code);
+      await secureStorage.writeAccessToken(session.accessToken);
+      try {
+        return await api.currentUser();
+      } catch (_) {
+        await secureStorage.deleteAccessToken();
+        rethrow;
+      }
+    } on DioException catch (exception) {
+      throw ApiException.fromDioException(exception);
+    }
+  }
+
   Future<User> fetchCurrentUser() async {
     try {
       return await api.currentUser();

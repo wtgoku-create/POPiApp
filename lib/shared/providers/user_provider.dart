@@ -59,6 +59,13 @@ class UserController extends Notifier<User?> {
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
 
+  Future<void> signInWithWechat({required String code}) async {
+    final user =
+        await ref.read(authRepositoryProvider).loginWithWechat(code: code);
+    await setUser(user);
+    unawaited(ref.read(userPointsProvider.notifier).refresh());
+  }
+
   Future<void> refreshUser() async {
     await setUser(await ref.read(authRepositoryProvider).fetchCurrentUser());
   }

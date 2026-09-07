@@ -362,6 +362,24 @@ abstract class AppLocalizations {
   /// **'WeChat authorization is not connected yet'**
   String get wechatServicePending;
 
+  /// No description provided for @wechatLoginCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat sign-in was canceled'**
+  String get wechatLoginCanceled;
+
+  /// No description provided for @wechatLoginUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat sign-in is unavailable. Check that WeChat is installed and the app is configured.'**
+  String get wechatLoginUnavailable;
+
+  /// No description provided for @wechatLoginFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat sign-in failed. Please try again.'**
+  String get wechatLoginFailed;
+
   /// No description provided for @back.
   ///
   /// In en, this message translates to:

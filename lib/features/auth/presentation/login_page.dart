@@ -15,6 +15,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
+import '../data/wechat_login_service.dart';
 import '../domain/captcha_challenge.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -37,6 +38,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isCaptchaLoading = false;
   bool _isSendingCode = false;
   bool _isLoggingIn = false;
+  bool _isWechatLoggingIn = false;
   bool _showPhoneLogin = false;
 
   @override
@@ -124,6 +126,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           : _WelcomeLoginDesign(
                               key: const ValueKey('welcome-login-design'),
                               agreed: _agreed,
+                              wechatLoggingIn: _isWechatLoggingIn,
                               onBack: _closePage,
                               onAgreementChanged: _toggleAgreement,
                               onPhoneLogin: _openPhoneLogin,
@@ -367,10 +370,44 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
-  void _loginWithWechat() {
+  Future<void> _loginWithWechat() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
-    AppToast.info(context, l10n.wechatServicePending);
+    if (_isWechatLoggingIn) return;
+
+    setState(() => _isWechatLoggingIn = true);
+    try {
+      final authorization = await WechatLoginService().authorize();
+      if (!mounted) return;
+      switch (authorization.status) {
+        case WechatAuthorizationStatus.authorized:
+          await ref.read(userProvider.notifier).signInWithWechat(
+                code: authorization.code!,
+              );
+          if (!mounted) return;
+          AppToast.success(context, l10n.loginSucceeded);
+          final onLoginSuccess = widget.onLoginSuccess;
+          if (onLoginSuccess != null) {
+            onLoginSuccess();
+          } else {
+            context.go('/');
+          }
+          return;
+        case WechatAuthorizationStatus.canceled:
+          AppToast.info(context, l10n.wechatLoginCanceled);
+          return;
+        case WechatAuthorizationStatus.unavailable:
+          AppToast.error(context, l10n.wechatLoginUnavailable);
+          return;
+        case WechatAuthorizationStatus.failed:
+          AppToast.error(context, l10n.wechatLoginFailed);
+          return;
+      }
+    } catch (error) {
+      if (mounted) AppToast.error(context, _errorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isWechatLoggingIn = false);
+    }
   }
 
   bool _ensureAgreement(AppLocalizations l10n) {
@@ -485,6 +522,7 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
 class _WelcomeLoginDesign extends StatelessWidget {
   const _WelcomeLoginDesign({
     required this.agreed,
+    required this.wechatLoggingIn,
     required this.onBack,
     required this.onAgreementChanged,
     required this.onPhoneLogin,
@@ -493,6 +531,7 @@ class _WelcomeLoginDesign extends StatelessWidget {
   });
 
   final bool agreed;
+  final bool wechatLoggingIn;
   final VoidCallback onBack;
   final VoidCallback onAgreementChanged;
   final VoidCallback onPhoneLogin;
@@ -526,7 +565,8 @@ class _WelcomeLoginDesign extends StatelessWidget {
               _LoginActionButton(
                 key: const Key('wechat-login-button'),
                 label: l10n.wechatLogin,
-                onPressed: onWechatLogin,
+                onPressed: wechatLoggingIn ? null : onWechatLogin,
+                loading: wechatLoggingIn,
                 backgroundColor: colorScheme.brightness == Brightness.light
                     ? const Color(0xFFF0F4F9)
                     : colorScheme.surfaceContainerHighest,
