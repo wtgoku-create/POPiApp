@@ -3,6 +3,7 @@ import '../domain/auth_session.dart';
 import '../domain/captcha_challenge.dart';
 import '../domain/user.dart';
 import '../domain/user_points.dart';
+import '../domain/wechat_app_login.dart';
 
 abstract interface class AuthApi {
   Future<CaptchaChallenge> createCaptcha();
@@ -19,7 +20,14 @@ abstract interface class AuthApi {
     String inviteCode = '',
   });
 
-  Future<AuthSession> loginByWechat({required String code});
+  Future<WechatAppLoginResponse> loginByWechatApp({required String code});
+
+  Future<AuthSession> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  });
 
   Future<User> currentUser();
 
@@ -72,8 +80,29 @@ class DefaultAuthApi implements AuthApi {
   }
 
   @override
-  Future<AuthSession> loginByWechat({required String code}) async {
-    return AuthSession.fromJson(await networkApi.loginByWechat(code: code));
+  Future<WechatAppLoginResponse> loginByWechatApp({
+    required String code,
+  }) async {
+    return WechatAppLoginResponse.fromJson(
+      await networkApi.loginByWechatApp(code: code),
+    );
+  }
+
+  @override
+  Future<AuthSession> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) async {
+    return AuthSession.fromJson(
+      await networkApi.registerWechatAppByPhone(
+        registerToken: registerToken,
+        phone: phone,
+        code: code,
+        inviteCode: inviteCode,
+      ),
+    );
   }
 
   @override

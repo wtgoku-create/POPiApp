@@ -7,6 +7,7 @@ import 'package:popi_ai_app/features/auth/domain/auth_session.dart';
 import 'package:popi_ai_app/features/auth/domain/captcha_challenge.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/domain/user_points.dart';
+import 'package:popi_ai_app/features/auth/domain/wechat_app_login.dart';
 
 void main() {
   test('initializes the current user after saving the login token', () async {
@@ -47,9 +48,11 @@ void main() {
       secureStorage: storage,
     );
 
-    final user = await repository.loginWithWechat(code: 'wechat-auth-code');
+    final result = await repository.loginWithWechatApp(
+      code: 'wechat-auth-code',
+    );
 
-    expect(user.name, '初始化用户');
+    expect(result, isA<WechatAppSignInSucceeded>());
     expect(storage.token, 'token-from-wechat');
     expect(events, ['wechat-login', 'save-token', 'current-user']);
   });
@@ -87,13 +90,26 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
-  Future<AuthSession> loginByWechat({required String code}) async {
+  Future<WechatAppLoginResponse> loginByWechatApp({
+    required String code,
+  }) async {
     events.add('wechat-login');
-    return const AuthSession(
-      accessToken: 'token-from-wechat',
-      user: User(id: '2', name: '微信登录响应用户', email: ''),
+    return const WechatAppLoginSucceeded(
+      AuthSession(
+        accessToken: 'token-from-wechat',
+        user: User(id: '2', name: '微信登录响应用户', email: ''),
+      ),
     );
   }
+
+  @override
+  Future<AuthSession> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) =>
+      throw UnimplementedError();
 
   @override
   Future<void> logout() async {}

@@ -12,6 +12,7 @@ import 'package:popi_ai_app/features/auth/domain/auth_session.dart';
 import 'package:popi_ai_app/features/auth/domain/captcha_challenge.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/domain/user_points.dart';
+import 'package:popi_ai_app/features/auth/domain/wechat_app_login.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
@@ -101,7 +102,16 @@ class _FakeAuthApi implements AuthApi {
       throw UnimplementedError();
 
   @override
-  Future<AuthSession> loginByWechat({required String code}) =>
+  Future<WechatAppLoginResponse> loginByWechatApp({required String code}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<AuthSession> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) =>
       throw UnimplementedError();
 
   @override

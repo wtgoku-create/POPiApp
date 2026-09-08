@@ -19,6 +19,12 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
         builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
+        path: '/WeChat/:appId/oauth',
+        builder: (context, state) => LoginPage(
+          wechatAuthorizationCode: state.uri.queryParameters['code'],
+        ),
+      ),
+      GoRoute(
         path: '/assets',
         builder: (context, state) => const AssetsPage.sample(),
       ),

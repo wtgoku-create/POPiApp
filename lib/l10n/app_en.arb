@@ -52,6 +52,8 @@
   "wechatLoginCanceled": "WeChat sign-in was canceled",
   "wechatLoginUnavailable": "WeChat sign-in is unavailable. Check that WeChat is installed and the app is configured.",
   "wechatLoginFailed": "WeChat sign-in failed. Please try again.",
+  "wechatPhoneBindingRequired": "Bind a phone number to finish WeChat sign-in",
+  "bindPhone": "Bind phone number",
   "back": "Back",
   "backToPreviousPage": "Back to previous page",
   "cancel": "Cancel",

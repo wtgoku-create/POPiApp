@@ -380,6 +380,18 @@ abstract class AppLocalizations {
   /// **'WeChat sign-in failed. Please try again.'**
   String get wechatLoginFailed;
 
+  /// No description provided for @wechatPhoneBindingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind a phone number to finish WeChat sign-in'**
+  String get wechatPhoneBindingRequired;
+
+  /// No description provided for @bindPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind phone number'**
+  String get bindPhone;
+
   /// No description provided for @back.
   ///
   /// In en, this message translates to:

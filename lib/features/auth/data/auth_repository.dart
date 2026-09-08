@@ -5,6 +5,7 @@ import '../../../core/storage/secure_storage.dart';
 import '../domain/captcha_challenge.dart';
 import '../domain/user.dart';
 import '../domain/user_points.dart';
+import '../domain/wechat_app_login.dart';
 import 'auth_api.dart';
 
 class AuthRepository {
@@ -55,9 +56,41 @@ class AuthRepository {
     }
   }
 
-  Future<User> loginWithWechat({required String code}) async {
+  Future<WechatAppSignInResult> loginWithWechatApp({
+    required String code,
+  }) async {
     try {
-      final session = await api.loginByWechat(code: code);
+      final response = await api.loginByWechatApp(code: code);
+      if (response
+          case WechatAppPhoneBindingRequired(
+            registerToken: final registerToken,
+          )) {
+        return WechatAppSignInPhoneBindingRequired(registerToken);
+      }
+      final session = (response as WechatAppLoginSucceeded).session;
+      await secureStorage.writeAccessToken(session.accessToken);
+      try {
+        return WechatAppSignInSucceeded(await api.currentUser());
+      } catch (_) {
+        await secureStorage.deleteAccessToken();
+        rethrow;
+      }
+    } on DioException catch (exception) {
+      throw ApiException.fromDioException(exception);
+    }
+  }
+
+  Future<User> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+  }) async {
+    try {
+      final session = await api.registerWechatAppByPhone(
+        registerToken: registerToken,
+        phone: phone,
+        code: code,
+      );
       await secureStorage.writeAccessToken(session.accessToken);
       try {
         return await api.currentUser();

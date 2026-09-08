@@ -152,6 +152,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wechatLoginFailed => '微信登录失败，请重试';
 
   @override
+  String get wechatPhoneBindingRequired => '请先绑定手机号以完成微信登录';
+
+  @override
+  String get bindPhone => '绑定手机号';
+
+  @override
   String get back => '返回';
 
   @override

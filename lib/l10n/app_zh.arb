@@ -52,6 +52,8 @@
   "wechatLoginCanceled": "已取消微信登录",
   "wechatLoginUnavailable": "微信登录不可用，请检查微信是否已安装或应用配置是否完成",
   "wechatLoginFailed": "微信登录失败，请重试",
+  "wechatPhoneBindingRequired": "请先绑定手机号以完成微信登录",
+  "bindPhone": "绑定手机号",
   "back": "返回",
   "backToPreviousPage": "返回上一页",
   "cancel": "取消",

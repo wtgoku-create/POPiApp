@@ -44,10 +44,28 @@ class NetworkApi {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> loginByWechat({required String code}) async {
+  Future<Map<String, dynamic>> loginByWechatApp({required String code}) async {
     final response = await dio.post<Map<String, dynamic>>(
-      '/api_client/auth/loginByWechat',
+      '/api_client/auth/loginByWxApp',
       data: {'code': code},
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/auth/wxAppRegisterByPhone',
+      data: {
+        'registerToken': registerToken,
+        'phone': phone,
+        'code': code,
+        'inviteCode': inviteCode,
+      },
     );
     return _data(response);
   }

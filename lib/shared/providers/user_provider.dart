@@ -7,6 +7,7 @@ import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/domain/user.dart';
 import '../../features/auth/domain/user_points.dart';
+import '../../features/auth/domain/wechat_app_login.dart';
 import 'network_provider.dart';
 import 'storage_provider.dart';
 import '../type/user_type.dart';
@@ -59,9 +60,29 @@ class UserController extends Notifier<User?> {
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
 
-  Future<void> signInWithWechat({required String code}) async {
+  Future<WechatAppSignInResult> signInWithWechatApp({
+    required String code,
+  }) async {
+    final result =
+        await ref.read(authRepositoryProvider).loginWithWechatApp(code: code);
+    if (result case WechatAppSignInSucceeded(user: final user)) {
+      await setUser(user);
+      unawaited(ref.read(userPointsProvider.notifier).refresh());
+    }
+    return result;
+  }
+
+  Future<void> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+  }) async {
     final user =
-        await ref.read(authRepositoryProvider).loginWithWechat(code: code);
+        await ref.read(authRepositoryProvider).registerWechatAppByPhone(
+              registerToken: registerToken,
+              phone: phone,
+              code: code,
+            );
     await setUser(user);
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }

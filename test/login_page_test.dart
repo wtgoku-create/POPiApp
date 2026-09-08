@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
 import 'package:popi_ai_app/features/auth/data/auth_repository.dart';
@@ -11,6 +12,7 @@ import 'package:popi_ai_app/features/auth/domain/auth_session.dart';
 import 'package:popi_ai_app/features/auth/domain/captcha_challenge.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/domain/user_points.dart';
+import 'package:popi_ai_app/features/auth/domain/wechat_app_login.dart';
 import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
@@ -280,6 +282,50 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
+
+  testWidgets('handles the WeChat Universal Link authorization callback',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final api = _FakeAuthApi();
+    final storage = _MemoryTokenStorage();
+    final repository = AuthRepository(api: api, secureStorage: storage);
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
+        secureStorageProvider.overrideWithValue(storage),
+        authRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider(false));
+    router.go(
+      'https://app.popi.art/WeChat/wxf99ad5d5c7b4fe37/oauth?code=callback-code&state=state',
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          theme: AppTheme.light,
+          locale: const Locale('zh'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          routerConfig: router,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.wechatAuthorizationCode, 'callback-code');
+    expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 }
 
 class _LoginTestContext {
@@ -299,6 +345,7 @@ class _FakeAuthApi implements AuthApi {
   String? sentCaptchaId;
   String? sentCaptchaValue;
   String? loggedInPhone;
+  String? wechatAuthorizationCode;
   bool currentUserRequested = false;
 
   @override
@@ -328,7 +375,19 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
-  Future<AuthSession> loginByWechat({required String code}) =>
+  Future<WechatAppLoginResponse> loginByWechatApp(
+      {required String code}) async {
+    wechatAuthorizationCode = code;
+    return const WechatAppPhoneBindingRequired('wechat-register-token');
+  }
+
+  @override
+  Future<AuthSession> registerWechatAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+    String inviteCode = '',
+  }) =>
       throw UnimplementedError();
 
   @override

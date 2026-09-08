@@ -157,6 +157,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get wechatLoginFailed => 'WeChat sign-in failed. Please try again.';
 
   @override
+  String get wechatPhoneBindingRequired =>
+      'Bind a phone number to finish WeChat sign-in';
+
+  @override
+  String get bindPhone => 'Bind phone number';
+
+  @override
   String get back => 'Back';
 
   @override

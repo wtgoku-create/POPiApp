@@ -17,11 +17,17 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/wechat_login_service.dart';
 import '../domain/captcha_challenge.dart';
+import '../domain/wechat_app_login.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key, this.onLoginSuccess});
+  const LoginPage({
+    super.key,
+    this.onLoginSuccess,
+    this.wechatAuthorizationCode,
+  });
 
   final VoidCallback? onLoginSuccess;
+  final String? wechatAuthorizationCode;
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -40,11 +46,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isLoggingIn = false;
   bool _isWechatLoggingIn = false;
   bool _showPhoneLogin = false;
+  String? _wechatRegisterToken;
 
   @override
   void initState() {
     super.initState();
     Future<void>.microtask(_loadCaptcha);
+    final wechatAuthorizationCode = widget.wechatAuthorizationCode?.trim();
+    if (wechatAuthorizationCode != null && wechatAuthorizationCode.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _completeWechatLogin(wechatAuthorizationCode);
+      });
+    }
   }
 
   @override
@@ -118,6 +131,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               countdown: _countdown,
                               sendingCode: _isSendingCode,
                               loggingIn: _isLoggingIn,
+                              wechatPhoneBinding: _wechatRegisterToken != null,
                               onBack: _showWelcomeLogin,
                               onAgreementChanged: _toggleAgreement,
                               onSendCode: _showCaptchaSheet,
@@ -167,12 +181,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   void _openPhoneLogin() {
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() => _showPhoneLogin = true);
+    setState(() {
+      _wechatRegisterToken = null;
+      _showPhoneLogin = true;
+    });
   }
 
   void _showWelcomeLogin() {
     FocusManager.instance.primaryFocus?.unfocus();
-    if (_showPhoneLogin) setState(() => _showPhoneLogin = false);
+    if (_showPhoneLogin) {
+      setState(() {
+        _wechatRegisterToken = null;
+        _showPhoneLogin = false;
+      });
+    }
   }
 
   Future<void> _showCaptchaSheet() async {
@@ -350,10 +372,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     setState(() => _isLoggingIn = true);
     try {
-      await ref.read(userProvider.notifier).signInWithCode(
-            phone: _phoneController.text.trim(),
-            code: _codeController.text.trim(),
-          );
+      final registerToken = _wechatRegisterToken;
+      if (registerToken == null) {
+        await ref.read(userProvider.notifier).signInWithCode(
+              phone: _phoneController.text.trim(),
+              code: _codeController.text.trim(),
+            );
+      } else {
+        await ref.read(userProvider.notifier).registerWechatAppByPhone(
+              registerToken: registerToken,
+              phone: _phoneController.text.trim(),
+              code: _codeController.text.trim(),
+            );
+      }
       if (!mounted) return;
       AppToast.success(context, l10n.loginSucceeded);
       final onLoginSuccess = widget.onLoginSuccess;
@@ -381,17 +412,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (!mounted) return;
       switch (authorization.status) {
         case WechatAuthorizationStatus.authorized:
-          await ref.read(userProvider.notifier).signInWithWechat(
-                code: authorization.code!,
-              );
-          if (!mounted) return;
-          AppToast.success(context, l10n.loginSucceeded);
-          final onLoginSuccess = widget.onLoginSuccess;
-          if (onLoginSuccess != null) {
-            onLoginSuccess();
-          } else {
-            context.go('/');
-          }
+          setState(() => _isWechatLoggingIn = false);
+          await _completeWechatLogin(authorization.code!);
           return;
         case WechatAuthorizationStatus.canceled:
           AppToast.info(context, l10n.wechatLoginCanceled);
@@ -402,6 +424,41 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         case WechatAuthorizationStatus.failed:
           AppToast.error(context, l10n.wechatLoginFailed);
           return;
+      }
+    } catch (error) {
+      if (mounted) AppToast.error(context, _errorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isWechatLoggingIn = false);
+    }
+  }
+
+  Future<void> _completeWechatLogin(String code) async {
+    if (_isWechatLoggingIn) return;
+
+    setState(() => _isWechatLoggingIn = true);
+    try {
+      final result = await ref.read(userProvider.notifier).signInWithWechatApp(
+            code: code,
+          );
+      if (!mounted) return;
+      if (result
+          case WechatAppSignInPhoneBindingRequired(
+            registerToken: final registerToken,
+          )) {
+        setState(() {
+          _wechatRegisterToken = registerToken;
+          _showPhoneLogin = true;
+        });
+        AppToast.info(
+            context, AppLocalizations.of(context)!.wechatPhoneBindingRequired);
+        return;
+      }
+      AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
+      final onLoginSuccess = widget.onLoginSuccess;
+      if (onLoginSuccess != null) {
+        onLoginSuccess();
+      } else {
+        context.go('/');
       }
     } catch (error) {
       if (mounted) AppToast.error(context, _errorMessage(error));
@@ -600,6 +657,7 @@ class _PhoneLoginDesign extends StatelessWidget {
     required this.countdown,
     required this.sendingCode,
     required this.loggingIn,
+    required this.wechatPhoneBinding,
     required this.onBack,
     required this.onAgreementChanged,
     required this.onSendCode,
@@ -613,6 +671,7 @@ class _PhoneLoginDesign extends StatelessWidget {
   final int countdown;
   final bool sendingCode;
   final bool loggingIn;
+  final bool wechatPhoneBinding;
   final VoidCallback onBack;
   final VoidCallback onAgreementChanged;
   final VoidCallback onSendCode;
@@ -719,7 +778,8 @@ class _PhoneLoginDesign extends StatelessWidget {
               const SizedBox(height: 10),
               _LoginActionButton(
                 key: const Key('phone-login-button'),
-                label: l10n.loginOrRegister,
+                label:
+                    wechatPhoneBinding ? l10n.bindPhone : l10n.loginOrRegister,
                 onPressed: loggingIn ? null : onLogin,
                 loading: loggingIn,
               ),
