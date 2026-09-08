@@ -49,7 +49,7 @@ class NetworkApi {
       '/api_client/auth/loginByWxApp',
       data: {'code': code},
     );
-    return _data(response);
+    return _wechatAuthData(response);
   }
 
   Future<Map<String, dynamic>> registerWechatAppByPhone({
@@ -67,7 +67,7 @@ class NetworkApi {
         'inviteCode': inviteCode,
       },
     );
-    return _data(response);
+    return _wechatAuthData(response);
   }
 
   Future<Map<String, dynamic>> currentUser() async {
@@ -181,5 +181,31 @@ class NetworkApi {
       throw const ApiException();
     }
     return data;
+  }
+
+  // The WeChat endpoints have historically returned their result directly,
+  // while other API endpoints use the standard status/data envelope.
+  Map<String, dynamic> _wechatAuthData(
+    Response<Map<String, dynamic>> response,
+  ) {
+    final body = response.data;
+    if (body == null) throw const ApiException();
+
+    final status = body['status']?.toString();
+    if (status != null && status != '0000') {
+      throw ApiException(
+        message: body['message']?.toString(),
+        statusCode: response.statusCode,
+      );
+    }
+
+    final data = body['data'];
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+
+    if (body.containsKey('token') || body.containsKey('registerToken')) {
+      return body;
+    }
+    throw const ApiException();
   }
 }

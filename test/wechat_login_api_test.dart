@@ -76,4 +76,34 @@ void main() {
       'inviteCode': '',
     });
   });
+
+  test('accepts the direct response format documented for WeChat login',
+      () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          handler.resolve(
+            Response<Map<String, dynamic>>(
+              requestOptions: options,
+              statusCode: 200,
+              data: {
+                'registerToken': 'register-token',
+                'needBindPhone': true,
+                'user': null,
+                'expired': 0,
+              },
+            ),
+          );
+        },
+      ),
+    );
+
+    final result = await NetworkApi(dio).loginByWechatApp(
+      code: 'wechat-auth-code',
+    );
+
+    expect(result['registerToken'], 'register-token');
+    expect(result['needBindPhone'], isTrue);
+  });
 }

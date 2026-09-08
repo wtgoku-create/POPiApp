@@ -9,7 +9,7 @@ class DioClient {
     required TokenStorage secureStorage,
     String baseUrl = const String.fromEnvironment(
       'API_BASE_URL',
-      defaultValue: 'https://www.popi.art',
+      defaultValue: 'https://wwwtest.popi.art',
       // defaultValue: 'http://192.168.77.245:8080' ,
     ),
     bool enableLogging = false,

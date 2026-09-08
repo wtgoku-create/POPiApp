@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -425,7 +426,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           AppToast.error(context, l10n.wechatLoginFailed);
           return;
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'WeChat authorization failed: '
+          '${error.runtimeType}: $error\n$stackTrace',
+        );
+      }
       if (mounted) AppToast.error(context, _errorMessage(error));
     } finally {
       if (mounted) setState(() => _isWechatLoggingIn = false);
@@ -460,7 +467,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       } else {
         context.go('/');
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'WeChat app login completion failed: '
+          '${error.runtimeType}: $error\n$stackTrace',
+        );
+      }
       if (mounted) AppToast.error(context, _errorMessage(error));
     } finally {
       if (mounted) setState(() => _isWechatLoggingIn = false);

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:fluwx/fluwx.dart';
 
 enum WechatAuthorizationStatus { authorized, canceled, unavailable, failed }
@@ -39,7 +40,7 @@ class WechatLoginService {
   final Fluwx _fluwx;
 
   Future<WechatAuthorizationResult> authorize() async {
-    if (appId.trim().isEmpty || !await _fluwx.isWeChatInstalled) {
+    if (appId.trim().isEmpty) {
       return const WechatAuthorizationResult.unavailable();
     }
 
@@ -48,12 +49,21 @@ class WechatLoginService {
       universalLink: universalLink,
     );
     if (!registered) return const WechatAuthorizationResult.failed();
+    if (!await _fluwx.isWeChatInstalled) {
+      return const WechatAuthorizationResult.unavailable();
+    }
 
     final completer = Completer<WechatAuthorizationResult>();
     late final FluwxCancelable subscriber;
     subscriber = _fluwx.addSubscriber((response) {
       if (response is! WeChatAuthResponse || completer.isCompleted) return;
       final code = response.code?.trim();
+      if (kDebugMode) {
+        debugPrint(
+          'WeChat authorization response: '
+          'errCode=${response.errCode}, hasCode=${code?.isNotEmpty ?? false}',
+        );
+      }
       if (response.errCode == 0 && code != null && code.isNotEmpty) {
         completer.complete(WechatAuthorizationResult.authorized(code));
       } else if (response.errCode == -2) {
