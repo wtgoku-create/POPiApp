@@ -23,7 +23,7 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 void main() {
-  testWidgets('holds a blank frame while restoring the session',
+  testWidgets('keeps native splash until the home frame is ready',
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
@@ -49,10 +49,13 @@ void main() {
 
     expect(find.byKey(const Key('app-startup-placeholder')), findsOneWidget);
     expect(readyCalls, 0);
+    await tester.pump(const Duration(seconds: 2));
+    expect(readyCalls, 0);
 
     tokenStorage.complete(null);
     await tester.pump();
     await tester.pump();
+    expect(find.byKey(const Key('startup-artwork')), findsNothing);
     expect(find.byKey(const Key('app-startup-placeholder')), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     expect(readyCalls, 1);
@@ -82,6 +85,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
+    expect(find.byKey(const Key('startup-artwork')), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     expect(find.byType(LoginPage), findsNothing);
     final loginEntryLabel = tester.widget<Text>(

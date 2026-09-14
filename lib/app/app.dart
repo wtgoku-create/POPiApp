@@ -145,6 +145,7 @@ class _StartupApp extends StatelessWidget {
       localizationsDelegates: const [
         ...AppLocalizations.localizationsDelegates,
       ],
+      // main() holds the native splash until the destination's first frame.
       home: const ColoredBox(
         key: Key('app-startup-placeholder'),
         color: AppColors.surface,

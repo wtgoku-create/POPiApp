@@ -614,80 +614,84 @@ class _PlanPointsSelector extends StatelessWidget {
     final multiple = plans.length > 1;
     return SizedBox(
       height: multiple ? 41 : 31,
-      child: Row(
-        children: [
-          for (var index = 0; index < plans.length; index++) ...[
-            InkWell(
-              key: Key('membership-points-option-$index'),
-              borderRadius: BorderRadius.circular(AppRadii.pill),
-              onTap: multiple ? () => onSelected(index) : null,
-              child: Container(
-                width: multiple
-                    ? plans[index].points.toString().length > 4
-                        ? 125
-                        : 111
-                    : null,
-                height: multiple ? 41 : 31,
-                padding: EdgeInsets.symmetric(horizontal: multiple ? 10 : 0),
-                decoration: BoxDecoration(
-                  color: multiple && selected == index
-                      ? colorScheme.primary.withValues(alpha: .1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: Center(
-                        child: AppSvgIcon.asset(
-                          'membership_points',
-                          size: 14,
-                        ),
-                      ),
-                    ),
-                    if (multiple)
-                      Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '${plans[index].points}',
-                            style: TextStyle(
-                              color: colorScheme.onSurface,
-                              fontSize: 22,
-                              height: 24 / 22,
-                              fontWeight: FontWeight.w700,
-                            ),
+      child: SingleChildScrollView(
+        key: const Key('membership-points-scroll'),
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < plans.length; index++) ...[
+              InkWell(
+                key: Key('membership-points-option-$index'),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                onTap: multiple ? () => onSelected(index) : null,
+                child: Container(
+                  width: multiple
+                      ? plans[index].points.toString().length > 4
+                          ? 125
+                          : 111
+                      : null,
+                  height: multiple ? 41 : 31,
+                  padding: EdgeInsets.symmetric(horizontal: multiple ? 10 : 0),
+                  decoration: BoxDecoration(
+                    color: multiple && selected == index
+                        ? colorScheme.primary.withValues(alpha: .1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppRadii.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 30,
+                        height: 30,
+                        child: Center(
+                          child: AppSvgIcon.asset(
+                            'membership_points',
+                            size: 14,
                           ),
                         ),
-                      )
-                    else
-                      Text(
-                        '${plans[index].points}',
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: AppTypeSizes.largeMetric,
-                          height: 31 / AppTypeSizes.largeMetric,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
-                  ],
+                      if (multiple)
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              '${plans[index].points}',
+                              style: TextStyle(
+                                color: colorScheme.onSurface,
+                                fontSize: 22,
+                                height: 24 / 22,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          '${plans[index].points}',
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: AppTypeSizes.largeMetric,
+                            height: 31 / AppTypeSizes.largeMetric,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
+              if (index != plans.length - 1) const SizedBox(width: 10),
+            ],
+            const SizedBox(width: 3),
+            Text(
+              AppLocalizations.of(context)!.pointsPerMonth,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 16,
+              ),
             ),
-            if (index != plans.length - 1) const SizedBox(width: 10),
           ],
-          const SizedBox(width: 3),
-          Text(
-            AppLocalizations.of(context)!.pointsPerMonth,
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontSize: 16,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -847,6 +851,8 @@ List<_MembershipPlanGroup> _groupPlans(List<ProductPlan> products) {
   _MembershipPlanGroup? plusGroup;
 
   for (final product in products.reversed) {
+    // Temporarily hide Core from the membership page.
+    if (product.id == 9) continue;
     final plan = _planFromProduct(product);
     if (_isPlusProduct(product)) {
       if (plusGroup == null) {
