@@ -1013,8 +1013,14 @@ abstract class AppLocalizations {
   /// No description provided for @openMembership.
   ///
   /// In en, this message translates to:
-  /// **'Subscribe now'**
+  /// **'Activate now'**
   String get openMembership;
+
+  /// No description provided for @membershipDurationNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'30-day membership. Does not auto-renew.'**
+  String get membershipDurationNotice;
 
   /// No description provided for @membershipComingSoon.
   ///

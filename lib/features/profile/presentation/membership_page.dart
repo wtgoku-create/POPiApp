@@ -115,7 +115,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                   builder: (context, constraints) {
                     final cardHeight = math.min(
                       620.0,
-                      constraints.maxHeight - 58,
+                      constraints.maxHeight - 90,
                     );
                     return Column(
                       children: [
@@ -169,6 +169,12 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                   ),
                           ),
                         ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(l10n.membershipDurationNotice,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ),
                       ],
                     );
                   },
@@ -211,7 +217,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final outcome = await ref.read(applePurchaseServiceProvider).purchase(
           productId: resolveAppleProductId(plan.appleProductId),
           businessProductId: plan.id.toString(),
-          businessProductType: appleTestProductType,
+          businessProductType: appleMembershipType,
           consumable: false,
         );
     if (!mounted) return;

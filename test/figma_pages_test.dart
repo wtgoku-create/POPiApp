@@ -257,8 +257,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
-      closeTo(548, .01),
+      closeTo(516, .01),
     );
+    expect(find.text('30天会员，到期不自动续费'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     tester.view.physicalSize = const Size(440, 956);
     await tester.pumpAndSettle();
 
@@ -409,15 +411,16 @@ void main() {
         final isEntryPlan = coins == 5700;
         expect(find.text(isEntryPlan ? '299' : '599'), findsOneWidget);
         expect(
-          find.text(isEntryPlan
-              ? '包含：5500/套餐积分+200/赠送积分'
-              : '包含：14400/套餐积分+300/赠送积分'),
+          find.text(
+              isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分'),
           findsOneWidget,
         );
         expect(
-          tester.widget<MarkdownBody>(
-            find.byKey(const Key('membership-description-markdown')),
-          ).data,
+          tester
+              .widget<MarkdownBody>(
+                find.byKey(const Key('membership-description-markdown')),
+              )
+              .data,
           contains('Plus ${isEntryPlan ? 5500 : 14400} 专属权益'),
         );
       }

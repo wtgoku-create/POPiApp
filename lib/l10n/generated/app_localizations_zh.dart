@@ -486,6 +486,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openMembership => '立即开通';
 
   @override
+  String get membershipDurationNotice => '30天会员，到期不自动续费';
+
+  @override
   String get membershipComingSoon => '会员开通功能即将上线';
 
   @override

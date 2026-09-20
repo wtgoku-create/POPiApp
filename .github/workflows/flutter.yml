@@ -74,6 +74,9 @@ jobs:
       - name: Test
         run: flutter test --coverage
 
+      - name: Test Studio product and API isolation
+        run: flutter test --flavor popistudio test/apple_product_catalog_test.dart test/apple_purchase_api_test.dart test/app_identifier_header_test.dart
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4

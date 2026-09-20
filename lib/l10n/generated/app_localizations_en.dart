@@ -497,7 +497,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get benefitStoragePrefix => 'Member storage limit: ';
 
   @override
-  String get openMembership => 'Subscribe now';
+  String get openMembership => 'Activate now';
+
+  @override
+  String get membershipDurationNotice =>
+      '30-day membership. Does not auto-renew.';
 
   @override
   String get membershipComingSoon => 'Membership purchases are coming soon';

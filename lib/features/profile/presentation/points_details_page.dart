@@ -761,11 +761,11 @@ Future<bool> purchasePointPackage(
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final outcome = await ref.read(applePurchaseServiceProvider).purchase(
-        productId: resolveAppleProductId(package.appleProductId),
+        productId:
+            resolveAppleProductId(package.appleProductId, consumable: true),
         businessProductId: package.id.toString(),
-        businessProductType: appleTestProductType,
-        // Every entry temporarily points to the same non-renewing subscription.
-        consumable: false,
+        businessProductType: appleConsumableType,
+        consumable: true,
       );
   if (!context.mounted) return false;
   switch (outcome) {

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/network/network_api.dart';
+import '../domain/apple_product_catalog.dart';
 
 enum StorePurchaseOutcome {
   purchased,
@@ -33,7 +34,6 @@ class ApplePurchaseService {
   Completer<StorePurchaseOutcome>? _activePurchase;
   String? _activeProductId;
   String? _activeBusinessProductId;
-  String? _activeBusinessProductType;
 
   bool get isSupported =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -44,6 +44,12 @@ class ApplePurchaseService {
     required String businessProductType,
     required bool consumable,
   }) async {
+    final expectedType = appleProductType(productId);
+    if (expectedType == null ||
+        expectedType != businessProductType ||
+        consumable != (expectedType == appleConsumableType)) {
+      return StorePurchaseOutcome.productNotFound;
+    }
     debugPrint(
         'purchase() called: productId=$productId, isSupported=$isSupported');
     if (!isSupported) {
@@ -80,7 +86,6 @@ class ApplePurchaseService {
     _activePurchase = completer;
     _activeProductId = productId;
     _activeBusinessProductId = businessProductId;
-    _activeBusinessProductType = businessProductType;
     final purchaseParam = PurchaseParam(
       productDetails: response.productDetails.single,
     );
@@ -122,10 +127,17 @@ class ApplePurchaseService {
 
   Future<void> _verifyAndFinish(PurchaseDetails purchase) async {
     try {
+      final productType = appleProductType(purchase.productID);
+      if (productType == null) {
+        _completeIfActive(purchase, StorePurchaseOutcome.productNotFound);
+        return;
+      }
       await _networkApi.verifyApplePurchase(
         productId: purchase.productID,
-        businessProductId: _activeBusinessProductId ?? '',
-        businessProductType: _activeBusinessProductType ?? '',
+        businessProductId: purchase.productID == _activeProductId
+            ? _activeBusinessProductId ?? ''
+            : '',
+        businessProductType: productType,
         purchaseId: purchase.purchaseID,
         verificationData: purchase.verificationData.serverVerificationData,
         transactionDate: purchase.transactionDate ?? '',
@@ -153,7 +165,6 @@ class ApplePurchaseService {
     _activePurchase = null;
     _activeProductId = null;
     _activeBusinessProductId = null;
-    _activeBusinessProductType = null;
     if (completer != null && !completer.isCompleted) {
       completer.complete(outcome);
     }

@@ -1,12 +1,14 @@
 import 'package:dio/dio.dart';
 
 import 'api_exception.dart';
+import '../app_config.dart';
 
 /// Centralizes concrete HTTP contracts shared by feature data sources.
 class NetworkApi {
-  const NetworkApi(this.dio);
+  const NetworkApi(this.dio, {this.appConfig});
 
   final Dio dio;
+  final AppConfig? appConfig;
 
   Future<Map<String, dynamic>> createCaptcha() async {
     final response = await dio.get<Map<String, dynamic>>(
@@ -136,6 +138,7 @@ class NetworkApi {
       '/api_client/payments/apple/verify',
       data: {
         'product_id': productId,
+        'bundle_id': (appConfig ?? AppConfig.current).bundleId,
         'business_product_id': businessProductId,
         'business_product_type': businessProductType,
         'purchase_id': purchaseId,

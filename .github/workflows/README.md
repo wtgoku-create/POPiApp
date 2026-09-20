@@ -1,5 +1,7 @@
 # GitHub Actions
 
+双应用本地构建、商品映射和后端接口要求见 [双应用对接说明](../../docs/app-flavors.md)。
+
 ## 提交前校验
 
 项目使用 Lefthook 管理 Git 提交钩子。首次配置前，请安装 Lefthook 并在项目根目录执行：
