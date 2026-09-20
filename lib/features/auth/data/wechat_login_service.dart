@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:fluwx/fluwx.dart';
+import '../../../core/app_config.dart';
 
 enum WechatAuthorizationStatus { authorized, canceled, unavailable, failed }
 
@@ -27,19 +28,16 @@ class WechatAuthorizationResult {
 class WechatLoginService {
   WechatLoginService({Fluwx? fluwx}) : _fluwx = fluwx ?? _sharedFluwx;
 
-  static const appId = String.fromEnvironment(
-    'WECHAT_APP_ID',
-    defaultValue: 'wxf99ad5d5c7b4fe37',
-  );
-  static const universalLink = String.fromEnvironment(
-    'WECHAT_UNIVERSAL_LINK',
-    defaultValue: 'https://app.popi.art/WeChat/',
-  );
+  static String get appId => AppConfig.current.wechatAppId;
+  static String get universalLink => AppConfig.current.wechatUniversalLink;
   static final _sharedFluwx = Fluwx();
 
   final Fluwx _fluwx;
 
   Future<WechatAuthorizationResult> authorize() async {
+    if (!AppConfig.current.wechatEnabled) {
+      return const WechatAuthorizationResult.unavailable();
+    }
     if (appId.trim().isEmpty) {
       return const WechatAuthorizationResult.unavailable();
     }

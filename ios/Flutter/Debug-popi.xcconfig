@@ -1,0 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug-popi.xcconfig"
+#include "Generated.xcconfig"
+FLUTTER_BUILD_MODE = debug
+FLAVOR = popi
+APP_DISPLAY_NAME = POPi AI
+WECHAT_APP_ID = wxf99ad5d5c7b4fe37

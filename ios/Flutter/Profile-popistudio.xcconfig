@@ -1,0 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile-popistudio.xcconfig"
+#include "Generated.xcconfig"
+FLUTTER_BUILD_MODE = profile
+FLAVOR = popistudio
+APP_DISPLAY_NAME = POPi Studio
+WECHAT_APP_ID = wx0d9c23195606fc80

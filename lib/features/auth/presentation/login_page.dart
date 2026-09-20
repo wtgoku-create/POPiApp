@@ -17,6 +17,7 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/wechat_login_service.dart';
+import '../../../core/app_config.dart';
 import '../domain/captcha_challenge.dart';
 import '../domain/wechat_app_login.dart';
 
@@ -632,19 +633,20 @@ class _WelcomeLoginDesign extends StatelessWidget {
                 onPressed: onPhoneLogin,
               ),
               const SizedBox(height: 10),
-              _LoginActionButton(
-                key: const Key('wechat-login-button'),
-                label: l10n.wechatLogin,
-                onPressed: wechatLoggingIn ? null : onWechatLogin,
-                loading: wechatLoggingIn,
-                backgroundColor: colorScheme.brightness == Brightness.light
-                    ? const Color(0xFFF0F4F9)
-                    : colorScheme.surfaceContainerHighest,
-                foregroundColor: colorScheme.onSurface,
-                borderColor: colorScheme.brightness == Brightness.light
-                    ? const Color(0xFFDAD6E5)
-                    : colorScheme.outline,
-              ),
+              if (AppConfig.current.wechatEnabled)
+                _LoginActionButton(
+                  key: const Key('wechat-login-button'),
+                  label: l10n.wechatLogin,
+                  onPressed: wechatLoggingIn ? null : onWechatLogin,
+                  loading: wechatLoggingIn,
+                  backgroundColor: colorScheme.brightness == Brightness.light
+                      ? const Color(0xFFF0F4F9)
+                      : colorScheme.surfaceContainerHighest,
+                  foregroundColor: colorScheme.onSurface,
+                  borderColor: colorScheme.brightness == Brightness.light
+                      ? const Color(0xFFDAD6E5)
+                      : colorScheme.outline,
+                ),
             ],
           ),
         ),

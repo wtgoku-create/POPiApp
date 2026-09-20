@@ -45,6 +45,21 @@ android {
         }
     }
 
+    flavorDimensions += "brand"
+    buildFeatures { resValues = true }
+    productFlavors {
+        create("popi") {
+            dimension = "brand"
+            applicationId = "com.popiai.app"
+            resValue("string", "app_name", "POPi AI")
+        }
+        create("popistudio") {
+            dimension = "brand"
+            applicationId = "com.popistudio.app"
+            resValue("string", "app_name", "POPi Studio")
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {

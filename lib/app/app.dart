@@ -10,6 +10,7 @@ import '../shared/providers/user_provider.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
 import 'router.dart';
 import 'theme.dart';
+import '../core/app_config.dart';
 
 class StarterApp extends ConsumerStatefulWidget {
   const StarterApp({this.onReady, super.key});
@@ -105,7 +106,7 @@ class _RouterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'POPi',
+      title: AppConfig.current.displayName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
@@ -135,7 +136,7 @@ class _StartupApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'POPi',
+      title: AppConfig.current.displayName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

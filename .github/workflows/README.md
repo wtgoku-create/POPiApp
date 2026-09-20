@@ -25,7 +25,7 @@ flutter test
 - `flutter.yml` 中的 `verify`：打 Tag 或手动运行打包工作流时执行格式检查、`flutter analyze` 和 `flutter test`，通过后才进入打包节点。
 - `build-android`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动勾选时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
 - `build-ios`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动运行时，使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，并上传 IPA Artifact。
-- `upload-ios-testflight`：独立的 TestFlight 上传节点。Tag 发布会自动执行；手动运行时只有同时勾选 `Build iOS IPA` 和 `Upload iOS IPA to TestFlight` 才会执行。
+- `upload-ios-testflight`：仅手动运行且同时勾选 `Build iOS IPA` 和 `Upload iOS IPA to TestFlight` 时执行；Tag 不自动上传。
 
 iOS 构建号由 Workflow 自动生成为 `GitHub 运行序号 × 100 + 重跑次数`，每次新运行或重跑都会递增，避免 TestFlight 因构建号重复拒绝上传。`pubspec.yaml` 中的展示版本号仍按产品发布节奏手动维护。
 
@@ -33,10 +33,10 @@ iOS 构建号由 Workflow 自动生成为 `GitHub 运行序号 × 100 + 重跑�
 
 1. 打开 GitHub 仓库的 **Actions** 页面。
 2. 选择 **Flutter CI and Android Build**。
-3. 点击 **Run workflow**，手动运行打包工作流。
+3. 点击 **Run workflow**，选择 `popi` 或 `popistudio`。Tag 构建默认 `popi`。
 4. 使用复选框选择 `Build Android APK`、`Build iOS IPA`，可以单独打包 APK、IPA，也可以同时勾选。
 5. 只有需要上传 TestFlight 时，才勾选 `Upload iOS IPA to TestFlight`。
-6. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`。
+6. 完成后在 **Artifacts** 下载 `<flavor>-android-apk-signed` 或 `<flavor>-ios-signed`。
 
 ## 签名发布
 
@@ -47,16 +47,17 @@ Android Job 需要在 GitHub 仓库的 **Settings → Secrets and variables → 
 - `ANDROID_KEY_ALIAS`：Key alias
 - `ANDROID_KEY_PASSWORD`：Key 密码
 
-当前 Android 包名为：
+两套 Android 包名分别为：
 
 ```text
 com.popiai.app
+com.popistudio.app
 ```
 
 Android 发布构建产物为：
 
 ```text
-build/app/outputs/flutter-apk/app-release.apk
+build/app/outputs/flutter-apk/app-<flavor>-release.apk
 ```
 
 你不上架 Google Play 时，可以直接分发签名 APK。`upload-keystore.jks` 是 Android 签名密钥，后续更新必须继续使用同一把密钥，务必妥善备份，不能提交到仓库。
@@ -68,10 +69,9 @@ iOS Job 构建的是签名 IPA，目标平台是 iPhone/iPad，不是 macOS。�
 
 - `IOS_CERTIFICATE_BASE64`：Apple Distribution `.p12` 文件转 Base64
 - `IOS_CERTIFICATE_PASSWORD`：`.p12` 文件密码
-- `IOS_PROVISIONING_PROFILE_BASE64`：与 Bundle ID 和证书匹配的 `.mobileprovision` 转 Base64
-- `IOS_PROVISIONING_PROFILE_NAME`：Provisioning Profile 的 Name
+- `IOS_PROVISIONING_PROFILE_BASE64`：POPi 的 `.mobileprovision` 转 Base64
+- `IOS_STUDIO_PROVISIONING_PROFILE_BASE64`：Studio 的 `.mobileprovision` 转 Base64
 - `IOS_TEAM_ID`：Apple Developer Team ID
-- `IOS_BUNDLE_ID`：Apple Developer 中注册的 App Bundle ID
 
 TestFlight 自动上传还需要在同一页面配置 App Store Connect API Secrets：
 
@@ -79,7 +79,7 @@ TestFlight 自动上传还需要在同一页面配置 App Store Connect API Secr
 - `APPSTORE_KEY_ID`：App Store Connect API Key ID
 - `APPSTORE_PRIVATE_KEY`：下载的 `.p8` 私钥完整内容，包含 `BEGIN PRIVATE KEY` 和 `END PRIVATE KEY`
 
-CI 会将 `IOS_BUNDLE_ID` 替换工程中的默认 `com.example.flutterStarter` 占位值。
+CI 根据 flavor 选择固定 Bundle ID，并校验描述文件中的应用标识和团队；Profile 名称从文件解析，不再需要 IOS_BUNDLE_ID 或 IOS_PROVISIONING_PROFILE_NAME Secrets。
 
 示例转换命令：
 

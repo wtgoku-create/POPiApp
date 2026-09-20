@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../storage/secure_storage.dart';
 import 'auth_interceptor.dart';
+import '../app_config.dart';
 
 class DioClient {
   DioClient({
@@ -20,6 +21,7 @@ class DioClient {
             receiveTimeout: const Duration(seconds: 15),
             headers: {
               'Accept': 'application/json',
+              'X-App-Identifier': AppConfig.current.bundleId,
               'Content-Type': 'application/json',
             },
           ),
