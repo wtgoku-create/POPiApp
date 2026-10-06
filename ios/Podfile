@@ -36,7 +36,15 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  wechat_sdk = installer.pod_targets.find { |target| target.name == 'WechatOpenSDK-XCFramework' }
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    if wechat_sdk && wechat_sdk.root_spec.version.to_s == '2.0.7' &&
+       (target.name == 'WechatOpenSDK-XCFramework' || target.name.start_with?('Pods-Runner'))
+      # 2.0.7 includes arm64 simulators; override its stale podspec exclusion without inheriting it.
+      target.build_configurations.each do |config|
+        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
+      end
+    end
   end
 end

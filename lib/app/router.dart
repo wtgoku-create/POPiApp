@@ -26,7 +26,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
       GoRoute(
         path: '/assets',
-        builder: (context, state) => const AssetsPage.sample(),
+        builder: (context, state) => AssetsPage.sample(
+            initialSection: state.uri.queryParameters['section'] == 'roles'
+                ? AssetLibrarySection.roles
+                : AssetLibrarySection.works),
       ),
       GoRoute(
         path: '/profile',

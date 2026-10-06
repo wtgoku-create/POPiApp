@@ -6,20 +6,23 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/presentation/widgets/popi_navigation_drawer.dart';
+import 'role_library_list.dart';
+import 'asset_preview_page.dart';
 
-enum AssetLibrarySection { history, works, roles }
+enum AssetLibrarySection { works, roles }
 
 class AssetsPage extends StatefulWidget {
   const AssetsPage({
     super.key,
     this.hasSampleContent = false,
-    this.initialSection = AssetLibrarySection.history,
+    this.initialSection = AssetLibrarySection.works,
   });
 
   const AssetsPage.sample({
     super.key,
-    this.initialSection = AssetLibrarySection.history,
+    this.initialSection = AssetLibrarySection.works,
   }) : hasSampleContent = true;
 
   final bool hasSampleContent;
@@ -52,13 +55,13 @@ class _AssetsPageState extends State<AssetsPage> {
   Widget build(BuildContext context) {
     final statusBarHeight =
         math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
-    final showFilters =
-        _section != AssetLibrarySection.roles || widget.hasSampleContent;
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: const PopiNavigationDrawer(),
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? const Color(0xFFF5F4FA)
+          : Theme.of(context).colorScheme.surface,
       body: Column(
         children: [
           SizedBox(height: statusBarHeight),
@@ -67,16 +70,20 @@ class _AssetsPageState extends State<AssetsPage> {
             onBackPressed: _goBack,
             onSelected: _changeSection,
           ),
-          if (showFilters) ...[
+          ...[
             const SizedBox(height: 10),
             _SectionFilters(
               section: _section,
               selected: _selectedFilter,
               selectingWorks: _selectingWorks,
-              onSelected: (index) => setState(() => _selectedFilter = index),
+              onSelected: (index) => setState(() {
+                _selectedFilter = index;
+                _selectedWorks.clear();
+              }),
               onToggleSelection: _toggleSelectionMode,
             ),
           ],
+          if (_section == AssetLibrarySection.roles) const SizedBox(height: 16),
           Expanded(child: _buildSection()),
         ],
       ),
@@ -84,21 +91,30 @@ class _AssetsPageState extends State<AssetsPage> {
   }
 
   Widget _buildSection() {
+    if (_section == AssetLibrarySection.roles) {
+      return RoleLibraryList(
+          category: _selectedFilter == 0 ? 'official' : 'personal');
+    }
     if (!widget.hasSampleContent) {
       return _LibraryEmptyState(section: _section);
     }
 
     return switch (_section) {
-      AssetLibrarySection.history => const _HistoryList(),
       AssetLibrarySection.works => _WorksLibrary(
           groups: _workGroups,
+          filter: _selectedFilter,
           selecting: _selectingWorks,
           selected: _selectedWorks,
           onToggle: _toggleWork,
+          onPreview: _previewWork,
+          onLongPress: (index) => setState(() {
+            _selectingWorks = true;
+            _selectedWorks.add(index);
+          }),
           onDownload: _downloadSelected,
           onDelete: _deleteSelected,
         ),
-      AssetLibrarySection.roles => _RolesGrid(filter: _selectedFilter),
+      AssetLibrarySection.roles => throw StateError('Roles handled above'),
     };
   }
 
@@ -125,9 +141,6 @@ class _AssetsPageState extends State<AssetsPage> {
     setState(() {
       _selectingWorks = !_selectingWorks;
       _selectedWorks.clear();
-      if (_selectingWorks && _workGroups.isNotEmpty) {
-        _selectedWorks.addAll([0, 1]);
-      }
     });
   }
 
@@ -143,14 +156,24 @@ class _AssetsPageState extends State<AssetsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          AppLocalizations.of(context)!.downloadedWorks(_selectedWorks.length),
+          AppLocalizations.of(context)!.assetDownloadUnavailable,
         ),
       ),
     );
   }
 
-  void _deleteSelected() {
+  Future<void> _deleteSelected() async {
     if (_selectedWorks.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await AppDialog.confirm(
+        context: context,
+        title: l10n.deleteAssetsTitle,
+        description: l10n.deleteAssetsDescription(_selectedWorks.length),
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.delete,
+        confirmKey: const Key('confirm-delete-assets'),
+        destructive: true);
+    if (confirmed != true || !mounted) return;
     var flatIndex = 0;
     final groups = <_WorkGroup>[];
     for (final group in _workGroups) {
@@ -166,6 +189,16 @@ class _AssetsPageState extends State<AssetsPage> {
       _selectedWorks.clear();
       _selectingWorks = false;
     });
+  }
+
+  void _previewWork(int index) {
+    final item = _workGroups.expand((group) => group.items).elementAt(index);
+    Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (context) => AssetPreviewPage(
+        asset: item.asset,
+        isVideo: item.isVideo,
+      ),
+    ));
   }
 }
 
@@ -204,24 +237,32 @@ class _LibraryNavigation extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 15),
-          _LibraryTab(
-            label: l10n.creationHistory,
-            selected: selected == AssetLibrarySection.history,
-            onTap: () => onSelected(AssetLibrarySection.history),
-          ),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(AppRadii.pill)),
+            child: Row(children: [
+              Expanded(
+                  child: _LibraryTab(
+                label: l10n.assetLibrary,
+                selected: selected == AssetLibrarySection.works,
+                onTap: () => onSelected(AssetLibrarySection.works),
+              )),
+              Expanded(
+                  child: _LibraryTab(
+                label: l10n.roleLibrary,
+                selected: selected == AssetLibrarySection.roles,
+                onTap: () => onSelected(AssetLibrarySection.roles),
+              )),
+            ]),
+          )),
           const SizedBox(width: 20),
-          _LibraryTab(
-            label: l10n.assetLibrary,
-            selected: selected == AssetLibrarySection.works,
-            onTap: () => onSelected(AssetLibrarySection.works),
-          ),
-          const SizedBox(width: 20),
-          _LibraryTab(
-            label: l10n.roleLibrary,
-            selected: selected == AssetLibrarySection.roles,
-            onTap: () => onSelected(AssetLibrarySection.roles),
-          ),
         ],
       ),
     );
@@ -243,16 +284,24 @@ class _LibraryTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       key: Key('assets-section-$label'),
+      borderRadius: BorderRadius.circular(AppRadii.pill),
       onTap: onTap,
-      child: SizedBox(
-        height: 40,
+      child: Container(
+        height: 34,
+        decoration: BoxDecoration(
+            color: selected
+                ? Theme.of(context).colorScheme.surface
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadii.pill)),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? AppColors.textPrimary : AppColors.textTertiary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ),
@@ -280,22 +329,14 @@ class _SectionFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final labels = switch (section) {
-      AssetLibrarySection.history => [
-          l10n.filterAll,
-          l10n.agentAccountMode,
-          l10n.vlog,
-          l10n.shortDrama,
-        ],
       AssetLibrarySection.works => [
           l10n.filterAll,
           l10n.images,
           l10n.videos,
         ],
       AssetLibrarySection.roles => [
-          l10n.filterAll,
-          l10n.aiHuman,
-          l10n.anime,
-          l10n.threeD,
+          l10n.officialRoles,
+          l10n.myRoles,
         ],
     };
     return SizedBox(
@@ -321,17 +362,27 @@ class _SectionFilters extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color:
-                          active ? AppColors.surfaceTint : Colors.transparent,
+                      color: active
+                          ? section == AssetLibrarySection.roles
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.05)
+                              : AppColors.surfaceTint
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                     ),
                     child: Text(
                       labels[index],
                       style: TextStyle(
-                        color:
-                            active ? AppColors.brand : AppColors.textTertiary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        color: active
+                            ? section == AssetLibrarySection.roles
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.black
+                            : AppColors.textTertiary,
+                        fontSize:
+                            section == AssetLibrarySection.roles ? 14 : 16,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                   ),
@@ -351,7 +402,9 @@ class _SectionFilters extends StatelessWidget {
                 ),
                 child: selectingWorks
                     ? Text(l10n.cancel, style: const TextStyle(fontSize: 16))
-                    : const Icon(Icons.format_list_bulleted, size: 22),
+                    : Tooltip(
+                        message: l10n.selectAssets,
+                        child: const Icon(Icons.checklist, size: 22)),
               ),
             ),
           const SizedBox(width: 12),
@@ -406,7 +459,6 @@ class _LibraryEmptyState extends StatelessWidget {
       );
     }
 
-    final isHistory = section == AssetLibrarySection.history;
     return Center(
       child: Transform.translate(
         offset: const Offset(0, -80),
@@ -420,7 +472,7 @@ class _LibraryEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              isHistory ? l10n.noHistory : l10n.noWorks,
+              l10n.noWorks,
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: AppTypeSizes.pageTitle,
@@ -429,7 +481,7 @@ class _LibraryEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              isHistory ? l10n.noHistoryDescription : l10n.noWorksDescription,
+              l10n.noWorksDescription,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.textSecondary,
@@ -460,157 +512,26 @@ class _LibraryEmptyState extends StatelessWidget {
   }
 }
 
-class _HistoryList extends StatelessWidget {
-  const _HistoryList();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final times = [
-      '12:27',
-      l10n.yesterday,
-      l10n.daysAgo(7),
-      for (var index = 0; index < 4; index++) l10n.daysAgo(30),
-    ];
-    return ListView.builder(
-      key: const Key('assets-history-list'),
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      itemCount: times.length,
-      itemExtent: 104,
-      itemBuilder: (context, index) => _HistoryItem(
-        time: times[index],
-        current: index == 0,
-      ),
-    );
-  }
-}
-
-class _HistoryItem extends StatelessWidget {
-  const _HistoryItem({required this.time, required this.current});
-
-  final String time;
-  final bool current;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SizedBox(
-      height: 94,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Image.asset(
-              'assets/images/assets_history_item.png',
-              width: 74,
-              height: 74,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Stack(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            l10n.agentAccountMode,
-                            style: const TextStyle(
-                              color: AppColors.textTertiary,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            time,
-                            style: const TextStyle(
-                              color: AppColors.textTertiary,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        l10n.sampleAccountQuestion,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      if (current) ...[
-                        const SizedBox(height: 3),
-                        Row(
-                          children: [
-                            Image.asset(
-                              'assets/images/assets_points.png',
-                              width: 15,
-                              height: 10,
-                              fit: BoxFit.contain,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              l10n.pointsSpent(44),
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (current)
-                    Positioned(
-                      right: 0,
-                      top: 17,
-                      child: Container(
-                        width: 97,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceTintStrong,
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                        ),
-                        child: Text(
-                          l10n.continueTask,
-                          style: const TextStyle(
-                            color: AppColors.brand,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _WorksLibrary extends StatelessWidget {
   const _WorksLibrary({
     required this.groups,
+    required this.filter,
     required this.selecting,
     required this.selected,
     required this.onToggle,
+    required this.onPreview,
+    required this.onLongPress,
     required this.onDownload,
     required this.onDelete,
   });
 
   final List<_WorkGroup> groups;
+  final int filter;
   final bool selecting;
   final Set<int> selected;
   final ValueChanged<int> onToggle;
+  final ValueChanged<int> onPreview;
+  final ValueChanged<int> onLongPress;
   final VoidCallback onDownload;
   final VoidCallback onDelete;
 
@@ -624,6 +545,12 @@ class _WorksLibrary extends StatelessWidget {
     final sections = <Widget>[];
     for (final group in groups) {
       final groupOffset = offset;
+      final visible = [
+        for (var i = 0; i < group.items.length; i++)
+          if (filter == 0 || (filter == 2) == group.items[i].isVideo) i
+      ];
+      offset += group.items.length;
+      if (visible.isEmpty) continue;
       sections.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -649,23 +576,25 @@ class _WorksLibrary extends StatelessWidget {
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
-          itemCount: group.items.length,
+          itemCount: visible.length,
           itemBuilder: (context, index) {
-            final globalIndex = groupOffset + index;
+            final itemIndex = visible[index];
+            final globalIndex = groupOffset + itemIndex;
             return _WorkTile(
               key: Key('assets-work-$globalIndex'),
-              item: group.items[index],
+              item: group.items[itemIndex],
               selecting: selecting,
               selectionNumber: selected.contains(globalIndex)
                   ? selected.toList().indexOf(globalIndex) + 1
                   : null,
-              onTap: () => onToggle(globalIndex),
+              onTap: () =>
+                  selecting ? onToggle(globalIndex) : onPreview(globalIndex),
+              onLongPress: () => onLongPress(globalIndex),
             );
           },
         ),
       );
       sections.add(const SizedBox(height: 20));
-      offset += group.items.length;
     }
 
     return Stack(
@@ -680,6 +609,7 @@ class _WorksLibrary extends StatelessWidget {
             alignment: Alignment.bottomCenter,
             child: _SelectionActions(
               hasSelection: selected.isNotEmpty,
+              selectionCount: selected.length,
               onDownload: onDownload,
               onDelete: onDelete,
             ),
@@ -696,24 +626,27 @@ class _WorkTile extends StatelessWidget {
     required this.selecting,
     required this.selectionNumber,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final _WorkItem item;
   final bool selecting;
   final int? selectionNumber;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(
           fit: StackFit.expand,
           children: [
             Image.asset(
-              selecting ? item.selectionAsset : item.asset,
+              item.asset,
               fit: BoxFit.cover,
             ),
             if (selecting)
@@ -751,11 +684,13 @@ class _WorkTile extends StatelessWidget {
 class _SelectionActions extends StatelessWidget {
   const _SelectionActions({
     required this.hasSelection,
+    required this.selectionCount,
     required this.onDownload,
     required this.onDelete,
   });
 
   final bool hasSelection;
+  final int selectionCount;
   final VoidCallback onDownload;
   final VoidCallback onDelete;
 
@@ -764,29 +699,36 @@ class _SelectionActions extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       key: const Key('assets-selection-actions'),
-      height: 104,
-      decoration: const BoxDecoration(
-        color: Color(0xFFFAFAFA),
+      height: 104 + MediaQuery.paddingOf(context).bottom,
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _SelectionAction(
-            icon: Icons.file_download_outlined,
-            label: l10n.download,
-            enabled: hasSelection,
-            onTap: onDownload,
-          ),
-          _SelectionAction(
-            icon: Icons.delete_outline,
-            label: l10n.delete,
-            color: const Color(0xFFF05A5A),
-            enabled: hasSelection,
-            onTap: onDelete,
-          ),
-        ],
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const SizedBox(height: 8),
+        Text(l10n.selectedAssets(selectionCount),
+            style: Theme.of(context).textTheme.labelMedium),
+        Expanded(
+            child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _SelectionAction(
+              icon: Icons.file_download_outlined,
+              label: l10n.download,
+              enabled: hasSelection,
+              onTap: onDownload,
+            ),
+            _SelectionAction(
+              icon: Icons.delete_outline,
+              label: l10n.delete,
+              color: const Color(0xFFF05A5A),
+              enabled: hasSelection,
+              onTap: onDelete,
+            ),
+          ],
+        )),
+      ]),
     );
   }
 }
@@ -835,98 +777,6 @@ class _SelectionAction extends StatelessWidget {
   }
 }
 
-class _RolesGrid extends StatelessWidget {
-  const _RolesGrid({required this.filter});
-
-  final int filter;
-
-  @override
-  Widget build(BuildContext context) {
-    final roles = filter == 0
-        ? _sampleRoles
-        : _sampleRoles.where((role) => role.category == filter).toList();
-
-    return ListView.separated(
-      key: const Key('assets-roles-grid'),
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      itemCount: roles.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final role = roles[index];
-        return Align(
-          alignment: Alignment.topCenter,
-          child: Container(
-            key: Key('assets-role-${role.assetIndex}'),
-            width: 400,
-            height: 100,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadii.card),
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/images/assets_role_list_${role.assetIndex.toString().padLeft(2, '0')}.png',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        role.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        role.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _RoleItem {
-  const _RoleItem({
-    required this.assetIndex,
-    required this.name,
-    required this.description,
-    required this.category,
-  });
-
-  final int assetIndex;
-  final String name;
-  final String description;
-  final int category;
-}
-
 class _WorkGroup {
   const _WorkGroup(this.date, this.items);
 
@@ -938,10 +788,12 @@ class _WorkItem {
   const _WorkItem(
     this.asset, {
     required this.selectionAsset,
+    this.isVideo = false,
   });
 
   final String asset;
   final String selectionAsset;
+  final bool isVideo;
 }
 
 const _sampleWorkGroups = [
@@ -960,6 +812,7 @@ const _sampleWorkGroups = [
     ),
     _WorkItem(
       'assets/images/assets_works_gallery_04.png',
+      isVideo: true,
       selectionAsset: 'assets/images/assets_works_selection_04.png',
     ),
     _WorkItem(
@@ -982,50 +835,13 @@ const _sampleWorkGroups = [
     ),
     _WorkItem(
       'assets/images/assets_works_gallery_09.png',
+      isVideo: true,
       selectionAsset: 'assets/images/assets_works_selection_09.png',
     ),
     _WorkItem(
       'assets/images/assets_works_gallery_10.png',
+      isVideo: true,
       selectionAsset: 'assets/images/assets_works_selection_10.png',
     ),
   ]),
-];
-
-const _sampleRoles = [
-  _RoleItem(
-    assetIndex: 1,
-    name: '夏禾',
-    description: 'xxxxxxxxx',
-    category: 2,
-  ),
-  _RoleItem(
-    assetIndex: 2,
-    name: '金发王子',
-    description: 'xxxxxxxxx',
-    category: 1,
-  ),
-  _RoleItem(
-    assetIndex: 3,
-    name: '人鱼公主',
-    description: 'xxxxxxxxx',
-    category: 1,
-  ),
-  _RoleItem(
-    assetIndex: 4,
-    name: '糯叽叽',
-    description: 'xxxxxxxxx',
-    category: 2,
-  ),
-  _RoleItem(
-    assetIndex: 5,
-    name: '花西冷少',
-    description: 'xxxxxxxxx',
-    category: 1,
-  ),
-  _RoleItem(
-    assetIndex: 6,
-    name: '莓莓',
-    description: 'xxxxxxxxx',
-    category: 3,
-  ),
 ];

@@ -72,7 +72,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('你现在最想做什么？'), findsOneWidget);
+    expect(find.textContaining('你现在最想做什么？'), findsOneWidget);
     expect(find.text('做一个新IP'), findsOneWidget);
     expect(find.text('跟POPi说点什么...'), findsOneWidget);
     expect(find.byKey(const Key('popi-message-input')), findsOneWidget);
@@ -283,8 +283,17 @@ void main() {
     final searchDecoration = searchBackground.decoration as BoxDecoration;
     expect(searchDecoration.color, AppTheme.light.colorScheme.surface);
     expect(searchDecoration.border, isA<Border>());
-    expect(searchDecoration.boxShadow, isNotEmpty);
-    expect(find.byTooltip('新建对话'), findsNothing);
+    expect(searchDecoration.boxShadow, isNull);
+    final searchField = tester.widget<TextField>(find.descendant(
+        of: find.byKey(const Key('popi-drawer-search')),
+        matching: find.byType(TextField)));
+    expect(searchField.decoration!.isCollapsed, isTrue);
+    expect(searchField.decoration!.contentPadding,
+        const EdgeInsets.fromLTRB(40, 10, 12, 10));
+    expect(find.byTooltip('新建对话'), findsOneWidget);
+    expect(find.text('我的IP账号'), findsNothing);
+    expect(find.text('灵感库'), findsNothing);
+    expect(find.text('Skill'), findsNothing);
 
     final navigationInkWell = tester.widget<InkWell>(
       find.ancestor(
@@ -307,6 +316,21 @@ void main() {
       taskInkWell.overlayColor?.resolve(pressedStates),
       AppColors.brand.withValues(alpha: .12),
     );
+    final drawer = tester
+        .widget<Container>(find.byKey(const Key('popi-navigation-drawer')));
+    expect((drawer.decoration as BoxDecoration).borderRadius,
+        const BorderRadius.horizontal(right: Radius.circular(30)));
+    expect(drawer.clipBehavior, Clip.antiAlias);
+    final search = find.descendant(
+        of: find.byKey(const Key('popi-drawer-search')),
+        matching: find.byType(TextField));
+    await tester.enterText(search, '角色介绍');
+    await tester.pumpAndSettle();
+    expect(find.text('角色介绍撰写'), findsOneWidget);
+    expect(find.text('生活剧情Vlog'), findsNothing);
+    await tester.enterText(search, '');
+    await tester.pumpAndSettle();
+    expect(find.text('生活剧情Vlog'), findsOneWidget);
   });
 
   testWidgets('renders home content in English', (tester) async {
@@ -322,7 +346,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('What do you want to do most right now?'),
+      find.textContaining('What do you want to do most right now?'),
       findsOneWidget,
     );
     expect(find.text('Create a new IP'), findsOneWidget);
@@ -578,7 +602,7 @@ void main() {
     );
     expect(
       (mascot.image as AssetImage).assetName,
-      'assets/icons/home_welcome_banner.png',
+      'assets/images/home_welcome_character.png',
     );
 
     await tester.tap(find.byTooltip('打开导航'));
@@ -606,7 +630,7 @@ void main() {
     expect(neutralTaskIcon.colorMapper, isNotNull);
 
     final navigationLabel = tester.widget<Text>(find.text('POPi对话'));
-    expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
+    expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.primary);
     expect(tester.takeException(), isNull);
   });
 }

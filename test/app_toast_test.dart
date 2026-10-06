@@ -8,6 +8,7 @@ void main() {
   testWidgets('info toast uses the compact surface style and can be closed', (
     tester,
   ) async {
+    var message = 'Hi';
     await tester.pumpWidget(
       ToastificationWrapper(
         config: const ToastificationConfig(itemWidth: 320),
@@ -17,10 +18,7 @@ void main() {
             body: Builder(
               builder: (context) => Center(
                 child: FilledButton(
-                  onPressed: () => AppToast.info(
-                    context,
-                    'Hi, Bytedance dance dance',
-                  ),
+                  onPressed: () => AppToast.info(context, message),
                   child: const Text('Show toast'),
                 ),
               ),
@@ -38,29 +36,42 @@ void main() {
       const Duration(seconds: 2),
     );
 
-    expect(find.text('Hi, Bytedance dance dance'), findsOneWidget);
+    expect(find.text('Hi'), findsOneWidget);
     expect(find.byIcon(Icons.info_rounded), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
 
-    final toastContainer =
-        tester.widgetList<Container>(find.byType(Container)).firstWhere(
-      (container) {
-        final decoration = container.decoration;
+    final toastFinder = find.byWidgetPredicate(
+      (widget) {
+        if (widget is! Container) return false;
+        final decoration = widget.decoration;
         return decoration is BoxDecoration &&
             decoration.borderRadius == BorderRadius.circular(AppRadii.small);
       },
     );
+    final toastContainer = tester.widget<Container>(toastFinder);
     final decoration = toastContainer.decoration! as BoxDecoration;
     expect(decoration.color?.toARGB32(), AppColors.surface.toARGB32());
     expect(decoration.border, isNotNull);
     expect(decoration.boxShadow, isNotEmpty);
     expect(toastContainer.constraints?.minHeight, 48);
     expect(toastContainer.constraints?.maxWidth, 320);
-    expect(tester.getSize(find.byWidget(toastContainer)).width, 304);
+    expect(tester.getSize(toastFinder).width, lessThan(304));
+    expect(tester.getCenter(toastFinder).dx, 400);
 
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
 
-    expect(find.text('Hi, Bytedance dance dance'), findsNothing);
+    expect(find.text('Hi'), findsNothing);
+
+    message = 'A long toast message that wraps while keeping the existing '
+        'maximum width and close button visible.';
+    await tester.tap(find.text('Show toast'));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(toastFinder).width, 304);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
   });
 }

@@ -12,6 +12,149 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get officialRoles => '官方角色';
+
+  @override
+  String get roleDetails => '角色详情';
+
+  @override
+  String get roleArchive => '角色档案';
+
+  @override
+  String get rolePositioning => '人物定位';
+
+  @override
+  String get roleStyle => '性格与表达风格';
+
+  @override
+  String get roleAudience => '面向受众';
+
+  @override
+  String get roleTags => '内容标签';
+
+  @override
+  String get roleBoundaries => '表达边界';
+
+  @override
+  String get roleAppearance => '人物外形';
+
+  @override
+  String get roleFieldPending => '待补充';
+
+  @override
+  String get roleCertified => '已存证';
+
+  @override
+  String get roleUncertified => '未存证';
+
+  @override
+  String get roleProfileReady => '人设已就绪/可以继续丰富';
+
+  @override
+  String get roleProfilePending => '人设待完善';
+
+  @override
+  String get roleStoryTitle => '让角色更有自己的故事';
+
+  @override
+  String get roleStoryDescription => '和Agent聊聊性格、表达方式或新的创作方向。整理并确认后，用于下一次选题。';
+
+  @override
+  String get improveRole => '完善角色设定';
+
+  @override
+  String get createWithRole => '围绕角色创作';
+
+  @override
+  String get deleteRoleTitle => '确认删除该角色？';
+
+  @override
+  String get deleteRoleDescription => '删除后，该角色将不会再出现在个人和社区角色库中，且无法恢复。';
+
+  @override
+  String get roleDeleteUnavailable => '当前角色不可删除';
+
+  @override
+  String improveRolePrompt(String title) {
+    return '帮我完善角色“$title”的性格、表达方式和创作方向。';
+  }
+
+  @override
+  String createRolePrompt(String title) {
+    return '围绕角色“$title”创作，帮我推荐适合的选题。';
+  }
+
+  @override
+  String get roleDescription => '角色介绍';
+
+  @override
+  String get noRoleDescription => '暂无角色介绍';
+
+  @override
+  String get myRoles => '我的角色';
+
+  @override
+  String get noOfficialRoles => '暂无官方角色';
+
+  @override
+  String get noMyRoles => '暂无我的角色';
+
+  @override
+  String get myRolesEmptyDescription => '创建角色作为人物资产丰富视频';
+
+  @override
+  String get createNewRole => '创建角色';
+
+  @override
+  String get createNewRolePrompt => '帮我创建一个新角色，先聊聊人物定位、性格和表达风格。';
+
+  @override
+  String get noMoreRoles => '已加载全部角色';
+
+  @override
+  String get retryLoadingRoles => '加载失败，点击重试';
+
+  @override
+  String get selectAssets => '批量选择';
+
+  @override
+  String get assetPreview => '图片预览';
+
+  @override
+  String get videoCoverPreview => '视频封面预览';
+
+  @override
+  String get assetDownloadUnavailable => '当前资产没有可下载的源文件';
+
+  @override
+  String get deleteAssetsTitle => '确认删除资产？';
+
+  @override
+  String deleteAssetsDescription(int count) {
+    return '将删除选中的 $count 个资产，此操作无法撤销。';
+  }
+
+  @override
+  String selectedAssets(int count) {
+    return '已选择 $count 项';
+  }
+
+  @override
+  String get myIpAccounts => '我的IP账号';
+
+  @override
+  String get ipAccountsPending => 'IP账号功能待接入';
+
+  @override
+  String get newConversation => '新建对话';
+
+  @override
+  String get changeAvatar => '更换头像';
+
+  @override
+  String get avatarSelectionFailed => '无法读取图片，请重新选择或检查相册权限';
+
+  @override
   String get home => '首页';
 
   @override
@@ -78,7 +221,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get phoneNumberHint => '请输入手机号';
 
   @override
-  String get graphicalCaptcha => '图形验证码';
+  String get passwordLogin => '密码登录';
+
+  @override
+  String get codeLogin => '验证码登录';
+
+  @override
+  String get passwordHint => '请输入密码';
+
+  @override
+  String get invalidPassword => '请输入至少 6 位密码';
+
+  @override
+  String get showPassword => '显示密码';
+
+  @override
+  String get hidePassword => '隐藏密码';
+
+  @override
+  String get graphicalCaptcha => '人机验证';
+
+  @override
+  String get captchaSliderHint => '向右拖动滑块完成拼图';
+
+  @override
+  String get captchaSliderMoving => '松开滑块完成验证';
+
+  @override
+  String get captchaVerifying => '正在验证…';
+
+  @override
+  String get captchaLoadFailed => '验证码加载失败，请点击刷新重试';
+
+  @override
+  String get captchaVerificationFailed => '验证失败，请重试';
+
+  @override
+  String get captchaTooManyErrors => '失败次数过多，请点击刷新重试';
 
   @override
   String get graphicalCaptchaHint => '请输入图中字符';
@@ -93,7 +272,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verificationCode => '验证码';
 
   @override
-  String get verificationCodeHint => '请输入 6 位验证码';
+  String get verificationCodeHint => '请输入验证码';
 
   @override
   String get sendVerificationCode => '获取验证码';
@@ -122,7 +301,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wechatLogin => '微信登录';
 
   @override
-  String get loginAgreement => '登录即代表同意《用户协议》和《隐私政策》未注册手机号将自动注册';
+  String get douyinLogin => '抖音登录';
+
+  @override
+  String get douyinLoginCanceled => '已取消抖音登录';
+
+  @override
+  String get douyinLoginUnavailable => '抖音登录暂未开放，请使用手机号或微信登录';
+
+  @override
+  String get douyinLoginFailed => '抖音登录失败，请重试';
+
+  @override
+  String get douyinPhoneBindingRequired => '请绑定手机号以完成抖音登录';
+
+  @override
+  String get loginAgreement => '登录即代表同意《用户协议》和《隐私政策》';
 
   @override
   String get invalidPhoneNumber => '请输入正确的手机号';
@@ -209,7 +403,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePromptCreateIp => '做一个新IP';
 
   @override
-  String get homePromptImproveAccount => '让我的老帐号变好';
+  String get homePromptImproveAccount => '让我的老账号变好';
 
   @override
   String get homePromptHasReference => '我已经有参考账号';
@@ -406,10 +600,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logout => '退出登录';
 
   @override
-  String get logoutDescription => '退出后需要重新登录才能继续使用';
+  String get logoutConfirmationTitle => '确认退出登录？';
 
   @override
-  String get confirmLogout => '确认退出登录';
+  String get logoutDescription => '退出登录不会丢失任何数据\n你仍可以登录此账号';
+
+  @override
+  String get confirmLogout => '确认退出';
 
   @override
   String get logoutFailed => '退出登录失败，请稍后重试';
@@ -581,7 +778,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rechargeMembershipNotice =>
-      '温馨提示：只有会员才可享受会员角色、图片视频去水印等功能。仅购买积分无法获得相应权益。购买的积分有效期为1年。如有任何疑问，请联系客服。';
+      '温馨提示：只有会员才可享受会员角色、图片视频去水印等功能。仅购买积分无法获得相应权益。购买的积分有效期为1年。';
 
   @override
   String get customerServiceContact => '客服联系方式:13100671900';

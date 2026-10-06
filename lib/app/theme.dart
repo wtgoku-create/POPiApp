@@ -88,7 +88,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        shape: cardShape,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colorScheme.surface,

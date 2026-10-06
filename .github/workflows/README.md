@@ -29,6 +29,21 @@ flutter test
 
 iOS 构建号由 Workflow 自动生成为 `GitHub 运行序号 × 100 + 重跑次数`，每次新运行或重跑都会递增，避免 TestFlight 因构建号重复拒绝上传。`pubspec.yaml` 中的展示版本号仍按产品发布节奏手动维护。
 
+## 环境配置
+
+- 普通分支 Push 和 Pull Request 的 `flutter-ci.yml` 使用 `config/env/development.json` 运行测试。
+- Tag 和手动发布的 `flutter.yml` 使用 `config/env/production.json` 运行测试并构建 Android APK、iOS IPA，API 指向生产环境。
+- 工作流通过 `tool/flutter_env.dart` 读取环境文件，注入 Dart 编译参数，同时生成 iOS 微信 App ID 和 Associated Domains 配置。
+
+发布构建等价于：
+
+```bash
+dart run tool/flutter_env.dart production build apk --release
+dart run tool/flutter_env.dart production build ipa --release
+```
+
+公共配置统一在环境 JSON 文件中维护；签名密钥和 App Store Connect 私钥继续使用 GitHub Secrets。
+
 ## 手动打包
 
 1. 打开 GitHub 仓库的 **Actions** 页面。

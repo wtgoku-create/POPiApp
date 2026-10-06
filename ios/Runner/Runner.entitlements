@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:app.popi.art</string>
+		<string>applinks:$(WECHAT_ASSOCIATED_DOMAIN)</string>
 	</array>
 </dict>
 </plist>

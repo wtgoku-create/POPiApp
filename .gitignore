@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/config/env/*.local.json
+/ios/Flutter/Environment.xcconfig
 
 # Symbolication related
 app.*.symbols

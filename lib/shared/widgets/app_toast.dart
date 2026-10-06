@@ -51,22 +51,30 @@ class AppToast {
     return toastification.show(
       context: context,
       type: type,
-      style: ToastificationStyle.flat,
+      style: ToastificationStyle.simple,
       autoCloseDuration: const Duration(seconds: 3),
       alignment: Alignment.topCenter,
       primaryColor: accentColor,
       backgroundColor: colorScheme.surface,
       foregroundColor: colorScheme.onSurface,
-      icon: _ToastStatusIcon(icon: icon, color: accentColor),
-      title: Text(
-        message,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          height: 1.35,
-        ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ToastStatusIcon(icon: icon, color: accentColor),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              message,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
       padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

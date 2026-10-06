@@ -44,27 +44,40 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
       (l10n.taskVideoCreatorRecommendations, 'home_drawer_task-neutral'),
       (l10n.taskWeiboTrends, 'home_drawer_task-neutral'),
       (l10n.taskComedyStoryVlog, 'home_drawer_task-neutral'),
-    ];
+    ]
+        .where((task) => task.$1
+            .toLowerCase()
+            .contains(_searchController.text.trim().toLowerCase()))
+        .toList();
     final safeArea = ref.watch(safeAreaInsetsProvider);
-    final topInset = math.max(safeArea.top, 53.0);
+    final topInset = math.max(
+        math.max(safeArea.top, MediaQuery.viewPaddingOf(context).top) + 8,
+        53.0);
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoggedIn = ref.watch(userProvider) != null;
+    final route =
+        GoRouter.maybeOf(context)?.routeInformationProvider.value.uri.path ??
+            '/';
 
     return Container(
+      key: const Key('popi-navigation-drawer'),
       width: math.min(360, MediaQuery.sizeOf(context).width * .9),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(30)),
         color: colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
+            color: Colors.black.withValues(alpha: 0.2),
             offset: Offset(6, 0),
             blurRadius: 30,
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, topInset, 20, 20),
+        padding: EdgeInsets.fromLTRB(
+            20, topInset, 20, math.max(20, safeArea.bottom)),
         child: Column(
           children: [
             Expanded(
@@ -92,23 +105,14 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                     color: colorScheme.outlineVariant
                                         .withValues(alpha: isDark ? 0.65 : 1),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: isDark ? 0.14 : 0.05,
-                                      ),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
                               ),
                               TextField(
                                 controller: _searchController,
+                                onChanged: (_) => setState(() {}),
+                                textInputAction: TextInputAction.search,
                                 cursorColor: colorScheme.primary,
-                                expands: true,
-                                minLines: null,
-                                maxLines: null,
+                                maxLines: 1,
                                 textAlignVertical: TextAlignVertical.center,
                                 style: TextStyle(
                                   color: colorScheme.onSurface,
@@ -124,14 +128,16 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                                     fontWeight: FontWeight.w400,
                                     height: 20 / 14,
                                   ),
-                                  isDense: true,
+                                  isCollapsed: true,
                                   filled: false,
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
                                   contentPadding: EdgeInsets.only(
                                     left: 40,
-                                    right: 30,
+                                    right: 12,
+                                    top: 10,
+                                    bottom: 10,
                                   ),
                                 ),
                               ),
@@ -149,6 +155,21 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('drawer-new-conversation'),
+                            tooltip: l10n.newConversation,
+                            style: IconButton.styleFrom(
+                                side: BorderSide(color: colorScheme.outline),
+                                backgroundColor: colorScheme.surface,
+                                padding: const EdgeInsets.all(10)),
+                            icon: AppSvgIcon.asset('home_drawer_new',
+                                size: 20, color: colorScheme.onSurface),
+                            onPressed: () => _openProtectedRoute(context,
+                                isLoggedIn: isLoggedIn, route: '/'),
+                          )),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -158,6 +179,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         key: const Key('drawer-nav-conversation'),
                         iconAsset: 'home_drawer_nav-conversation',
                         label: l10n.popiConversations,
+                        selected: route == '/',
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,
@@ -174,38 +196,18 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,
-                          route: '/profile',
+                          route: '/assets?section=roles',
                         ),
                       ),
                       _NavigationItem(
                         key: const Key('drawer-nav-assets'),
                         iconAsset: 'home_drawer_nav-asset',
                         label: l10n.assets,
+                        selected: route == '/assets',
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,
                           route: '/assets',
-                        ),
-                      ),
-                      _NavigationItem(
-                        key: const Key('drawer-nav-inspiration'),
-                        iconAsset: 'home_drawer_nav-inspiration',
-                        iconWidth: 20.1321,
-                        iconHeight: 18.8766,
-                        flipIconVertically: true,
-                        label: l10n.inspirationLibrary,
-                        onTap: () => isLoggedIn
-                            ? _showPending(context, l10n.inspirationPending)
-                            : _openRoute(context, '/login'),
-                      ),
-                      _NavigationItem(
-                        key: const Key('drawer-nav-skill'),
-                        iconAsset: 'home_drawer_nav-skill',
-                        label: 'Skill',
-                        onTap: () => _openProtectedRoute(
-                          context,
-                          isLoggedIn: isLoggedIn,
-                          route: '/profile',
                         ),
                       ),
                     ],
@@ -324,6 +326,7 @@ class _NavigationItem extends StatelessWidget {
     this.iconWidth = 30,
     this.iconHeight = 30,
     this.flipIconVertically = false,
+    this.selected = false,
     super.key,
   });
 
@@ -331,15 +334,18 @@ class _NavigationItem extends StatelessWidget {
   final double iconWidth;
   final double iconHeight;
   final bool flipIconVertically;
+  final bool selected;
   final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = colorScheme.onSurface;
+    final color = selected ? colorScheme.primary : colorScheme.onSurface;
     return Material(
-      color: colorScheme.surface,
+      color: selected
+          ? colorScheme.primary.withValues(alpha: 0.05)
+          : colorScheme.surface,
       borderRadius: BorderRadius.circular(AppRadii.pill),
       child: InkWell(
         onTap: onTap,
@@ -525,7 +531,7 @@ class _DrawerFooter extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 16,
+                  height: 22,
                   child: Text(
                     displayName,
                     maxLines: 1,
@@ -534,7 +540,7 @@ class _DrawerFooter extends ConsumerWidget {
                       color: colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      height: 1,
+                      height: 22 / 18,
                     ),
                   ),
                 ),

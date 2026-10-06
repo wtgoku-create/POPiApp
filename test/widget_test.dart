@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/app.dart';
-import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
@@ -88,21 +87,16 @@ void main() {
     expect(find.byKey(const Key('startup-artwork')), findsNothing);
     expect(find.byType(HomePage), findsOneWidget);
     expect(find.byType(LoginPage), findsNothing);
-    final loginEntryLabel = tester.widget<Text>(
-      find.byKey(const Key('home-membership-label')),
-    );
-    expect(loginEntryLabel.data, anyOf('前往登录', 'Sign in'));
+    expect(find.byKey(const Key('home-membership-entry')), findsOneWidget);
     expect(find.byKey(const Key('home-membership-points')), findsNothing);
     expect(find.byKey(const Key('home-login-entry-icon')), findsOneWidget);
     expect(find.byKey(const Key('home-login-entry-chevron')), findsOneWidget);
-    expect(loginEntryLabel.style?.color, AppColors.brand);
 
     const protectedDrawerEntries = [
       'drawer-nav-conversation',
       'drawer-nav-role',
       'drawer-nav-assets',
-      'drawer-nav-inspiration',
-      'drawer-nav-skill',
+      'drawer-new-conversation',
       'drawer-notification-button',
       'drawer-profile-button',
     ];
@@ -179,7 +173,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Skill'));
+    await tester.tap(find.byKey(const Key('drawer-profile-button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(ProfilePage), findsOneWidget);
@@ -224,11 +218,25 @@ class _MemoryTokenStorage implements TokenStorage {
 
 class _StartupAuthApi implements AuthApi {
   @override
-  Future<CaptchaChallenge> createCaptcha() async => const CaptchaChallenge(
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  }) =>
+      throw UnimplementedError();
+
+  @override
+  Future<CaptchaChallenge> createCaptcha({required String phone}) async =>
+      const CaptchaChallenge(
         id: 'test-captcha',
-        imageBase64:
+        bgUrl:
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        puzzleUrl:
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
       );
+
+  @override
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification) async =>
+      'captcha-token';
 
   @override
   Future<User> currentUser() => throw UnimplementedError();
@@ -260,8 +268,7 @@ class _StartupAuthApi implements AuthApi {
   @override
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   }) =>
       throw UnimplementedError();
 

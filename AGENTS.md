@@ -147,3 +147,17 @@ flutter build macos --debug
 - 保留用户已有改动，不使用破坏性 Git 命令。
 - 不为了小功能进行无关重构。
 - 修改完成后报告改动文件和验证结果。
+
+## UI Conventions
+
+## Environment Configuration
+
+- Manage public environment settings in `config/env/*.json` and read them through `lib/core/config/app_config.dart`; do not add scattered `fromEnvironment` calls or hardcoded service URLs.
+- Use `dart run tool/flutter_env.dart <environment> <Flutter command>` to keep Dart and iOS WeChat settings aligned. Local overrides use `*.local.json` and remain ignored by Git.
+
+## Dialogs
+
+- All centered dialogs follow the POPi Figma dialog style: https://www.figma.com/design/z1Yu18HoQT0qeUmc5zX9P9?node-id=1378-3319.
+- Reuse `lib/shared/widgets/app_dialog.dart`. Use a surface background, 26px corners, centered confirmation copy, and horizontal pill action buttons. Confirmation dialogs default to 330px width and 30px padding; destructive confirmation uses #D63D43.
+- Do not add a top-right close icon. Allow dismissal through cancel, the barrier, and platform back navigation where appropriate.
+- Bottom sheets used for content selection remain separate from centered dialogs.

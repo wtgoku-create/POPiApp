@@ -2,17 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../storage/secure_storage.dart';
+import '../config/app_config.dart';
 import 'auth_interceptor.dart';
 
 class DioClient {
   DioClient({
     required TokenStorage secureStorage,
-    String baseUrl = const String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: 'https://wwwtest.popi.art',
-      // defaultValue: 'http://192.168.77.245:8080' ,
-    ),
-    bool enableLogging = false,
+    String baseUrl = AppConfig.apiBaseUrl,
+    bool enableLogging = AppConfig.enableApiLogging,
   }) : dio = Dio(
           BaseOptions(
             baseUrl: baseUrl,

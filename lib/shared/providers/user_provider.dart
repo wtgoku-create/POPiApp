@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/network_api.dart';
 import '../../features/auth/data/auth_api.dart';
 import '../../features/auth/data/auth_repository.dart';
+import '../../features/auth/data/douyin_auth_api.dart';
+import '../../features/auth/domain/douyin_app_login.dart';
 import '../../features/auth/domain/user.dart';
 import '../../features/auth/domain/user_points.dart';
 import '../../features/auth/domain/wechat_app_login.dart';
@@ -19,8 +21,13 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     api: DefaultAuthApi(NetworkApi(ref.watch(dioProvider))),
     secureStorage: ref.watch(secureStorageProvider),
+    douyinApi: ref.watch(douyinAuthApiProvider),
   );
 });
+
+final douyinAuthApiProvider = Provider<DouyinAuthApi>(
+  (ref) => DefaultDouyinAuthApi(NetworkApi(ref.watch(dioProvider))),
+);
 
 final userStatusProvider = Provider<UserStatus>((ref) {
   return ref.watch(userProvider) == null
@@ -60,6 +67,18 @@ class UserController extends Notifier<User?> {
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
 
+  Future<void> signInWithPassword({
+    required String phone,
+    required String password,
+  }) async {
+    final user = await ref.read(authRepositoryProvider).loginWithPassword(
+          phone: phone,
+          password: password,
+        );
+    await setUser(user);
+    unawaited(ref.read(userPointsProvider.notifier).refresh());
+  }
+
   Future<WechatAppSignInResult> signInWithWechatApp({
     required String code,
   }) async {
@@ -79,6 +98,33 @@ class UserController extends Notifier<User?> {
   }) async {
     final user =
         await ref.read(authRepositoryProvider).registerWechatAppByPhone(
+              registerToken: registerToken,
+              phone: phone,
+              code: code,
+            );
+    await setUser(user);
+    unawaited(ref.read(userPointsProvider.notifier).refresh());
+  }
+
+  Future<DouyinAppSignInResult> signInWithDouyinApp({
+    required String code,
+  }) async {
+    final result =
+        await ref.read(authRepositoryProvider).loginWithDouyinApp(code: code);
+    if (result case DouyinAppSignInSucceeded(user: final user)) {
+      await setUser(user);
+      unawaited(ref.read(userPointsProvider.notifier).refresh());
+    }
+    return result;
+  }
+
+  Future<void> registerDouyinAppByPhone({
+    required String registerToken,
+    required String phone,
+    required String code,
+  }) async {
+    final user =
+        await ref.read(authRepositoryProvider).registerDouyinAppByPhone(
               registerToken: registerToken,
               phone: phone,
               code: code,

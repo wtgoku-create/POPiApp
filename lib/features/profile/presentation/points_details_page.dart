@@ -521,12 +521,19 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final height = math.min(600.0, MediaQuery.sizeOf(context).height);
+    final mediaQuery = MediaQuery.of(context);
 
     return Container(
       key: const Key('points-recharge-sheet'),
-      height: height,
-      padding: const EdgeInsets.all(16),
+      constraints: BoxConstraints(
+        maxHeight: mediaQuery.size.height - mediaQuery.padding.top,
+      ),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        math.max(16, mediaQuery.padding.bottom),
+      ),
       decoration: BoxDecoration(
         color: isDark ? colorScheme.surfaceContainer : colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
@@ -545,145 +552,148 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
               ]
             : null,
       ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 35,
-            child: Center(
-              child: Text(
-                l10n.rechargePointsPackage,
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: AppTypeSizes.pageTitle,
-                  fontWeight: FontWeight.w700,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 35,
+              child: Center(
+                child: Text(
+                  l10n.rechargePointsPackage,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: AppTypeSizes.pageTitle,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 40,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  '${widget.totalPoints}',
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: AppTypeSizes.largeMetric,
-                    fontWeight: FontWeight.w700,
-                    height: 31 / 30,
-                  ),
-                ),
-                const SizedBox(width: 3),
-                Padding(
-                  padding: const EdgeInsets.only(top: 9),
-                  child: Text(
-                    l10n.pointsBalance,
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    '${widget.totalPoints}',
                     style: TextStyle(
                       color: colorScheme.onSurface,
-                      fontSize: 16,
+                      fontSize: AppTypeSizes.largeMetric,
+                      fontWeight: FontWeight.w700,
+                      height: 31 / 30,
                     ),
                   ),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: 97,
-                  height: 40,
-                  child: FilledButton(
-                    key: const Key('points-upgrade-membership'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: isDark
-                          ? colorScheme.surfaceContainerHighest
-                          : AppColors.surfaceTintStrong,
-                      foregroundColor: isDark
-                          ? colorScheme.onSurface
-                          : AppColors.textPrimary,
-                      side: isDark
-                          ? BorderSide(color: colorScheme.outlineVariant)
-                          : BorderSide.none,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                  const SizedBox(width: 3),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 9),
+                    child: Text(
+                      l10n.pointsBalance,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 16,
+                      ),
                     ),
-                    onPressed: () {
-                      final router = GoRouter.of(context);
-                      Navigator.of(context).pop();
-                      router.push('/profile/membership');
-                    },
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        l10n.upgradeMembership,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                  ),
+                  const Spacer(),
+                  SizedBox(
+                    width: 97,
+                    height: 40,
+                    child: FilledButton(
+                      key: const Key('points-upgrade-membership'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: isDark
+                            ? colorScheme.surfaceContainerHighest
+                            : AppColors.surfaceTintStrong,
+                        foregroundColor: isDark
+                            ? colorScheme.onSurface
+                            : AppColors.textPrimary,
+                        side: isDark
+                            ? BorderSide(color: colorScheme.outlineVariant)
+                            : BorderSide.none,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      onPressed: () {
+                        final router = GoRouter.of(context);
+                        Navigator.of(context).pop();
+                        router.push('/profile/membership');
+                      },
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          l10n.upgradeMembership,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 284,
+              child: _buildPackageGrid(l10n),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: LegalDocumentLinks(
+                key: const Key('recharge-legal-document-links'),
+                text: '${l10n.rechargeMembershipNotice}\n'
+                    '${l10n.customerServiceContact}\n'
+                    '${l10n.rechargeAgreementPrefix}'
+                    '${l10n.userAgreement}'
+                    '${l10n.conjunctionAnd}'
+                    '${l10n.privacyPolicy}',
+                userAgreementLabel: l10n.userAgreement,
+                privacyPolicyLabel: l10n.privacyPolicy,
+                openFailedMessage: l10n.networkRequestFailed,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                  height: 18 / 12,
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 284,
-            child: _buildPackageGrid(l10n),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 82,
-            width: double.infinity,
-            child: LegalDocumentLinks(
-              key: const Key('recharge-legal-document-links'),
-              text: '${l10n.rechargeMembershipNotice}\n'
-                  '${l10n.rechargeAgreementPrefix}'
-                  '${l10n.userAgreement}'
-                  '${l10n.conjunctionAnd}'
-                  '${l10n.privacyPolicy}',
-              userAgreementLabel: l10n.userAgreement,
-              privacyPolicyLabel: l10n.privacyPolicy,
-              openFailedMessage: l10n.networkRequestFailed,
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 12,
-                height: 18 / 12,
-              ),
-              linkStyle: TextStyle(
-                color: colorScheme.onSurface,
-                decoration: TextDecoration.underline,
+                linkStyle: TextStyle(
+                  color: colorScheme.onSurface,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 46,
-            child: FilledButton(
-              key: const Key('points-recharge-confirm'),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.brand,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: _selectedPackage == null || _isPurchasing
-                  ? null
-                  : _confirmPurchase,
-              child: _isPurchasing
-                  ? const SizedBox.square(
-                      key: Key('points-purchase-loading'),
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(
-                      l10n.confirm,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton(
+                key: const Key('points-recharge-confirm'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: _selectedPackage == null || _isPurchasing
+                    ? null
+                    : _confirmPurchase,
+                child: _isPurchasing
+                    ? const SizedBox.square(
+                        key: Key('points-purchase-loading'),
+                        dimension: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        l10n.confirm,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

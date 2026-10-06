@@ -63,6 +63,21 @@ void main() {
     expect(user.allCoins, 1750);
   });
 
+  test('password login updates the current user and point balances', () async {
+    final container = createContainer(_FakeAuthApi());
+    addTearDown(container.dispose);
+    expect(container.read(userProvider), isNull);
+    await container.read(userProvider.notifier).signInWithPassword(
+          phone: '13800138000',
+          password: 'password',
+        );
+    await container.read(userPointsProvider.future);
+    expect(container.read(userProvider)?.id, '1');
+    expect(container.read(userStatusProvider).name, 'authenticated');
+    expect(container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
+        739);
+  });
+
   test('loads user points into global state', () async {
     final container = createContainer(_FakeAuthApi());
     addTearDown(container.dispose);
@@ -110,7 +125,12 @@ class _FakeAuthApi implements AuthApi {
   int currentUserCalls = 0;
 
   @override
-  Future<CaptchaChallenge> createCaptcha() => throw UnimplementedError();
+  Future<CaptchaChallenge> createCaptcha({required String phone}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification) async =>
+      'captcha-token';
 
   @override
   Future<User> currentUser() async {
@@ -135,6 +155,16 @@ class _FakeAuthApi implements AuthApi {
       throw UnimplementedError();
 
   @override
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  }) async =>
+      const AuthSession(
+        accessToken: 'password-token',
+        user: User(id: '1', name: '张三', email: 'test@example.com'),
+      );
+
+  @override
   Future<WechatAppLoginResponse> loginByWechatApp({required String code}) =>
       throw UnimplementedError();
 
@@ -153,8 +183,7 @@ class _FakeAuthApi implements AuthApi {
   @override
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   }) =>
       throw UnimplementedError();
 

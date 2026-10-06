@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -356,7 +357,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 expandedInputHeight: animatedInputHeight,
                                 input: _buildInput(
                                   colorScheme,
-                                  placeholderFontSize: _hasFocus ? 14 : 16,
+                                  placeholderFontSize: 14,
                                 ),
                                 colorScheme: colorScheme,
                                 onAttachment: widget.onAttachment,
@@ -751,19 +752,20 @@ class _AttachmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return CustomPaint(
-      painter: _DashedCircleBorderPainter(color: color),
-      child: SizedBox.square(
-        dimension: 40,
-        child: IconButton(
-          tooltip: l10n.addAttachment,
-          padding: EdgeInsets.zero,
-          onPressed: onPressed,
-          icon: AppSvgIcon.asset(
-            'home_composer_attachment',
-            size: 18,
-            color: color,
-          ),
+    return SizedBox.square(
+      dimension: 40,
+      child: IconButton(
+        tooltip: l10n.addAttachment,
+        style: IconButton.styleFrom(
+          backgroundColor: color.withValues(alpha: .05),
+          shape: const CircleBorder(),
+        ),
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: SvgPicture.asset(
+          'assets/icons/home_composer_add.svg',
+          width: 16,
+          height: 16,
         ),
       ),
     );

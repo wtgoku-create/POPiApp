@@ -9,7 +9,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
-import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/point_package_repository.dart';
@@ -285,64 +285,14 @@ class ProfilePage extends ConsumerWidget {
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await AppSheet.show<bool>(
+    final confirmed = await AppDialog.confirm(
       context: context,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.logout,
-              style: TextStyle(
-                color: Theme.of(sheetContext).colorScheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              l10n.logoutDescription,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton.icon(
-                key: const Key('confirm-logout-button'),
-                onPressed: () => Navigator.of(sheetContext).pop(true),
-                icon: const Icon(Icons.logout),
-                label: Text(l10n.confirmLogout),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFD92D20),
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: TextButton(
-                onPressed: () => Navigator.of(sheetContext).pop(false),
-                style: TextButton.styleFrom(
-                  backgroundColor: Theme.of(sheetContext)
-                      .colorScheme
-                      .surfaceContainerHighest,
-                  foregroundColor: Theme.of(sheetContext).colorScheme.onSurface,
-                  shape: const StadiumBorder(),
-                ),
-                child: Text(l10n.cancel),
-              ),
-            ),
-          ],
-        ),
-      ),
+      title: l10n.logoutConfirmationTitle,
+      description: l10n.logoutDescription,
+      cancelLabel: l10n.cancel,
+      confirmLabel: l10n.confirmLogout,
+      confirmKey: const Key('confirm-logout-button'),
+      destructive: true,
     );
 
     if (confirmed != true || !context.mounted) return;

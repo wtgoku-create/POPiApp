@@ -69,6 +69,31 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(logoutMenu);
     await tester.pumpAndSettle();
+    final dialog = find.byType(Dialog);
+    expect(dialog, findsOneWidget);
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('确认退出登录？'), findsOneWidget);
+    expect(find.text('退出登录不会丢失任何数据\n你仍可以登录此账号'), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsNothing);
+    expect(
+        tester
+            .getSize(find
+                .descendant(of: dialog, matching: find.byType(SizedBox))
+                .first)
+            .width,
+        330);
+    final shape = tester.widget<Dialog>(dialog).shape as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(26));
+    final cancel = find.widgetWithText(TextButton, '取消');
+    final confirm = find.byKey(const Key('confirm-logout-button'));
+    expect(tester.getTopLeft(cancel).dy, tester.getTopLeft(confirm).dy);
+    expect(tester.getSize(confirm), const Size(130, 50));
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(api.logoutCalls, 0);
+    expect(tokenStorage.token, 'access-token');
+    await tester.tap(logoutMenu);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('confirm-logout-button')));
     await tester.pumpAndSettle();
 
@@ -80,6 +105,13 @@ void main() {
 }
 
 class _FakeAuthApi implements AuthApi {
+  @override
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  }) =>
+      throw UnimplementedError();
+
   int logoutCalls = 0;
 
   @override
@@ -88,7 +120,12 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
-  Future<CaptchaChallenge> createCaptcha() => throw UnimplementedError();
+  Future<CaptchaChallenge> createCaptcha({required String phone}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification) async =>
+      'captcha-token';
 
   @override
   Future<User> currentUser() => throw UnimplementedError();
@@ -117,8 +154,7 @@ class _FakeAuthApi implements AuthApi {
   @override
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   }) =>
       throw UnimplementedError();
 

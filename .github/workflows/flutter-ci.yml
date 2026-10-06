@@ -42,7 +42,7 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test --coverage
+        run: dart run tool/flutter_env.dart development test --coverage
 
       - name: Upload coverage
         if: always()

@@ -42,12 +42,14 @@ class ProfileAvatar extends StatelessWidget {
     this.size = 84,
     this.editable = false,
     this.imageUrl,
+    this.imageProvider,
     super.key,
   });
 
   final double size;
   final bool editable;
   final String? imageUrl;
+  final ImageProvider? imageProvider;
 
   @override
   Widget build(BuildContext context) {
@@ -55,45 +57,42 @@ class ProfileAvatar extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         ClipOval(
-          child: imageUrl == null || imageUrl!.isEmpty
-              ? Image.asset(
-                  'assets/icons/common_user_avatar.png',
+          child: imageProvider != null
+              ? Image(
+                  image: imageProvider!,
                   width: size,
                   height: size,
-                  fit: BoxFit.cover,
-                )
-              : Image.network(
-                  imageUrl!,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Image.asset(
-                    'assets/icons/common_user_avatar.png',
-                    width: size,
-                    height: size,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                  fit: BoxFit.cover)
+              : imageUrl == null || imageUrl!.isEmpty
+                  ? Image.asset(
+                      'assets/icons/common_user_avatar.png',
+                      width: size,
+                      height: size,
+                      fit: BoxFit.cover,
+                    )
+                  : Image.network(
+                      imageUrl!,
+                      width: size,
+                      height: size,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/icons/common_user_avatar.png',
+                        width: size,
+                        height: size,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
         ),
         if (editable)
-          Builder(
-            builder: (context) {
-              final colorScheme = Theme.of(context).colorScheme;
-              return Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: colorScheme.surface.withValues(alpha: 0.8),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.add_a_photo_outlined,
-                  size: 21,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              );
-            },
-          ),
+          Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  shape: BoxShape.circle)),
+        if (editable)
+          Image.asset('assets/icons/profile_avatar_edit.png',
+              width: 50, height: 50),
       ],
     );
   }

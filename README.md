@@ -22,7 +22,7 @@
 ```bash
 flutter create .
 flutter pub get
-flutter run
+dart run tool/flutter_env.dart development run
 ```
 
 `flutter create .` 会补齐 Android、iOS、Web 等平台目录，不会覆盖 `lib/` 和 `pubspec.yaml`。
@@ -50,9 +50,52 @@ lib/
 
 ## 网络请求
 
-通过 `ref.read(dioProvider)` 获取 Dio 实例。默认 API 地址为
-`https://www.popi.art`，可在运行或构建时通过
-`--dart-define=API_BASE_URL=https://your-api.example.com` 覆盖。
+通过 `ref.read(dioProvider)` 获取 Dio 实例。开发环境 API 地址为
+`https://wwwtest.popi.art`，生产环境为 `https://www.popi.art`。
+
+## 环境配置
+
+统一配置文件位于 `config/env/development.json` 和 `config/env/production.json`，
+Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
+
+| 配置项 | 用途 |
+| --- | --- |
+| `APP_ENV` | 环境名称 |
+| `API_BASE_URL` | 后端根地址，接口路径自身包含 `/api_client` |
+| `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
+| `WECHAT_APP_ID` | 微信开放平台 App ID |
+| `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，需使用 HTTPS 域名 |
+| `USER_AGREEMENT_URL` | 用户协议地址 |
+| `PRIVACY_POLICY_URL` | 隐私政策地址 |
+
+```bash
+# 开发启动
+dart run tool/flutter_env.dart development run
+
+# 生产构建
+dart run tool/flutter_env.dart production build apk --release
+dart run tool/flutter_env.dart production build ios --release
+
+# 使用指定环境运行测试
+dart run tool/flutter_env.dart development test
+
+# 自定义本机配置（*.local.json 不提交 Git）
+dart run tool/flutter_env.dart config/env/development.local.json run
+```
+
+脚本将 JSON 传给 Flutter 原生 `--dart-define-from-file`，并自动生成
+`ios/Flutter/Environment.xcconfig`，同步微信 URL Scheme 和 Associated Domains。
+新域名仍需在微信开放平台和域名服务器配置对应的 Universal Link/AASA。
+使用 Xcode 启动前先运行：
+
+```bash
+dart run tool/flutter_env.dart development prepare
+flutter build ios --config-only --dart-define-from-file=config/env/development.json
+```
+
+直接运行 `flutter run` 时 Dart 使用开发默认值，iOS 则可能保留上次生成的原生配置；
+日常运行和构建应使用上面的脚本。环境配置在构建时生效，切换后需要重新构建。
+客户端环境文件只放公开配置，不存放 App Secret、私钥或服务端密钥。
 
 认证相关代码位于 `lib/features/auth/data/`：
 

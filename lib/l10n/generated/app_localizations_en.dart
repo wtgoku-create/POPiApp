@@ -12,6 +12,155 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get officialRoles => 'Official roles';
+
+  @override
+  String get roleDetails => 'Role details';
+
+  @override
+  String get roleArchive => 'Role profile';
+
+  @override
+  String get rolePositioning => 'Character positioning';
+
+  @override
+  String get roleStyle => 'Personality and expression style';
+
+  @override
+  String get roleAudience => 'Target audience';
+
+  @override
+  String get roleTags => 'Content tags';
+
+  @override
+  String get roleBoundaries => 'Expression boundaries';
+
+  @override
+  String get roleAppearance => 'Appearance';
+
+  @override
+  String get roleFieldPending => 'To be completed';
+
+  @override
+  String get roleCertified => 'Certified';
+
+  @override
+  String get roleUncertified => 'Uncertified';
+
+  @override
+  String get roleProfileReady => 'Profile ready / Keep enriching it';
+
+  @override
+  String get roleProfilePending => 'Profile needs more details';
+
+  @override
+  String get roleStoryTitle => 'Give your character a richer story';
+
+  @override
+  String get roleStoryDescription =>
+      'Talk with the Agent about personality, expression or a new creative direction. Confirm the details for your next topic.';
+
+  @override
+  String get improveRole => 'Enrich role profile';
+
+  @override
+  String get createWithRole => 'Create with this role';
+
+  @override
+  String get deleteRoleTitle => 'Delete this role?';
+
+  @override
+  String get deleteRoleDescription =>
+      'This role will be removed from your personal and community libraries. This cannot be undone.';
+
+  @override
+  String get roleDeleteUnavailable => 'This role cannot be deleted';
+
+  @override
+  String improveRolePrompt(String title) {
+    return 'Help enrich the personality, expression and creative direction of $title.';
+  }
+
+  @override
+  String createRolePrompt(String title) {
+    return 'Recommend creative topics featuring $title.';
+  }
+
+  @override
+  String get roleDescription => 'About this role';
+
+  @override
+  String get noRoleDescription => 'No description yet';
+
+  @override
+  String get myRoles => 'My roles';
+
+  @override
+  String get noOfficialRoles => 'No official roles yet';
+
+  @override
+  String get noMyRoles => 'No roles of your own yet';
+
+  @override
+  String get myRolesEmptyDescription =>
+      'Create characters to enrich your videos';
+
+  @override
+  String get createNewRole => 'Create a role';
+
+  @override
+  String get createNewRolePrompt =>
+      'Help me create a new character. Let\'s start with positioning, personality and expression style.';
+
+  @override
+  String get noMoreRoles => 'All roles loaded';
+
+  @override
+  String get retryLoadingRoles => 'Could not load roles. Retry';
+
+  @override
+  String get selectAssets => 'Select assets';
+
+  @override
+  String get assetPreview => 'Image preview';
+
+  @override
+  String get videoCoverPreview => 'Video cover preview';
+
+  @override
+  String get assetDownloadUnavailable =>
+      'No source file is available to download';
+
+  @override
+  String get deleteAssetsTitle => 'Delete assets?';
+
+  @override
+  String deleteAssetsDescription(int count) {
+    return 'Delete $count selected assets? This cannot be undone.';
+  }
+
+  @override
+  String selectedAssets(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get myIpAccounts => 'My IP accounts';
+
+  @override
+  String get ipAccountsPending => 'IP accounts are not available yet';
+
+  @override
+  String get newConversation => 'New conversation';
+
+  @override
+  String get changeAvatar => 'Change avatar';
+
+  @override
+  String get avatarSelectionFailed =>
+      'Could not read the image. Try again or check photo permissions.';
+
+  @override
   String get home => 'Home';
 
   @override
@@ -78,7 +227,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get phoneNumberHint => 'Enter your phone number';
 
   @override
-  String get graphicalCaptcha => 'Image verification';
+  String get passwordLogin => 'Password sign-in';
+
+  @override
+  String get codeLogin => 'SMS sign-in';
+
+  @override
+  String get passwordHint => 'Enter your password';
+
+  @override
+  String get invalidPassword => 'Enter a password with at least 6 characters';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get graphicalCaptcha => 'Security verification';
+
+  @override
+  String get captchaSliderHint => 'Drag the slider to complete the puzzle';
+
+  @override
+  String get captchaSliderMoving => 'Release to verify';
+
+  @override
+  String get captchaVerifying => 'Verifying…';
+
+  @override
+  String get captchaLoadFailed => 'Could not load captcha. Refresh to retry';
+
+  @override
+  String get captchaVerificationFailed => 'Verification failed. Try again';
+
+  @override
+  String get captchaTooManyErrors => 'Too many attempts. Refresh to retry';
 
   @override
   String get graphicalCaptchaHint => 'Enter the characters';
@@ -121,6 +306,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get wechatLogin => 'Continue with WeChat';
+
+  @override
+  String get douyinLogin => 'Douyin sign-in';
+
+  @override
+  String get douyinLoginCanceled => 'Douyin sign-in was canceled';
+
+  @override
+  String get douyinLoginUnavailable =>
+      'Douyin sign-in is not available yet. Use your phone number or WeChat.';
+
+  @override
+  String get douyinLoginFailed => 'Douyin sign-in failed. Please try again.';
+
+  @override
+  String get douyinPhoneBindingRequired =>
+      'Bind your phone number to complete Douyin sign-in.';
 
   @override
   String get loginAgreement =>
@@ -419,8 +621,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get logout => 'Sign out';
 
   @override
+  String get logoutConfirmationTitle => 'Sign out?';
+
+  @override
   String get logoutDescription =>
-      'You\'ll need to sign in again to continue using POPi';
+      'Signing out won\'t delete any data.\nYou can sign in to this account again.';
 
   @override
   String get confirmLogout => 'Confirm sign out';
@@ -600,7 +805,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rechargeMembershipNotice =>
-      'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year. If you have any questions, please contact customer service.';
+      'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year.';
 
   @override
   String get customerServiceContact => 'Customer service: 13100671900';

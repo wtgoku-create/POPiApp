@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'app_toast.dart';
+import '../../core/config/app_config.dart';
 
-const userAgreementUrl =
-    'https://tcnshqo5yu6i.feishu.cn/wiki/BmCNwr8o0ii19dkcTYAcaW9Jnhc';
-const privacyPolicyUrl =
-    'https://tcnshqo5yu6i.feishu.cn/wiki/Wu8mwLqOYi2nZjkur3rc18wFnbg';
+const userAgreementUrl = AppConfig.userAgreementUrl;
+const privacyPolicyUrl = AppConfig.privacyPolicyUrl;
 
 typedef LegalUrlLauncher = Future<bool> Function(Uri uri);
 

@@ -6,12 +6,13 @@ import '../domain/user_points.dart';
 import '../domain/wechat_app_login.dart';
 
 abstract interface class AuthApi {
-  Future<CaptchaChallenge> createCaptcha();
+  Future<CaptchaChallenge> createCaptcha({required String phone});
+
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification);
 
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   });
 
   Future<AuthSession> loginByCode({
@@ -21,6 +22,11 @@ abstract interface class AuthApi {
   });
 
   Future<WechatAppLoginResponse> loginByWechatApp({required String code});
+
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  });
 
   Future<AuthSession> registerWechatAppByPhone({
     required String registerToken,
@@ -48,20 +54,23 @@ class DefaultAuthApi implements AuthApi {
   final NetworkApi networkApi;
 
   @override
-  Future<CaptchaChallenge> createCaptcha() async {
-    return CaptchaChallenge.fromJson(await networkApi.createCaptcha());
+  Future<CaptchaChallenge> createCaptcha({required String phone}) async {
+    return CaptchaChallenge.fromJson(
+        await networkApi.createCaptcha(phone: phone));
   }
+
+  @override
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification) =>
+      networkApi.verifyCaptcha(verification);
 
   @override
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   }) async {
     await networkApi.sendLoginCode(
       phone: phone,
-      captchaId: captchaId,
-      captchaValue: captchaValue,
+      captchaToken: captchaToken,
     );
   }
 
@@ -77,6 +86,17 @@ class DefaultAuthApi implements AuthApi {
       inviteCode: inviteCode,
     );
     return AuthSession.fromJson(data);
+  }
+
+  @override
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  }) async {
+    return AuthSession.fromJson(await networkApi.loginByPassword(
+      username: username,
+      password: password,
+    ));
   }
 
   @override

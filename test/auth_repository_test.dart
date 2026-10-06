@@ -40,6 +40,37 @@ void main() {
     expect(storage.token, isNull);
   });
 
+  test('initializes the current user after saving the password login token',
+      () async {
+    final events = <String>[];
+    final storage = _EventTokenStorage(events);
+    final repository = AuthRepository(
+      api: _FakeAuthApi(events),
+      secureStorage: storage,
+    );
+    final user = await repository.loginWithPassword(
+      phone: '13800138000',
+      password: 'password',
+    );
+    expect(user.name, '初始化用户');
+    expect(storage.token, 'token-from-password');
+    expect(events, ['password-login', 'save-token', 'current-user']);
+  });
+
+  test('clears the password login token when user initialization fails',
+      () async {
+    final storage = _EventTokenStorage([]);
+    final repository = AuthRepository(
+      api: _FakeAuthApi([], failCurrentUser: true),
+      secureStorage: storage,
+    );
+    await expectLater(
+      repository.loginWithPassword(phone: '13800138000', password: 'password'),
+      throwsStateError,
+    );
+    expect(storage.token, isNull);
+  });
+
   test('initializes the current user after WeChat authorization', () async {
     final events = <String>[];
     final storage = _EventTokenStorage(events);
@@ -65,9 +96,13 @@ class _FakeAuthApi implements AuthApi {
   final bool failCurrentUser;
 
   @override
-  Future<CaptchaChallenge> createCaptcha() {
+  Future<CaptchaChallenge> createCaptcha({required String phone}) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<String> verifyCaptcha(SliderCaptchaVerification verification) async =>
+      'captcha-token';
 
   @override
   Future<User> currentUser() async {
@@ -85,6 +120,18 @@ class _FakeAuthApi implements AuthApi {
     events.add('login');
     return const AuthSession(
       accessToken: 'token-from-login',
+      user: User(id: '2', name: '登录响应用户', email: ''),
+    );
+  }
+
+  @override
+  Future<AuthSession> loginByPassword({
+    required String username,
+    required String password,
+  }) async {
+    events.add('password-login');
+    return const AuthSession(
+      accessToken: 'token-from-password',
       user: User(id: '2', name: '登录响应用户', email: ''),
     );
   }
@@ -117,8 +164,7 @@ class _FakeAuthApi implements AuthApi {
   @override
   Future<void> sendLoginCode({
     required String phone,
-    required String captchaId,
-    required String captchaValue,
+    required String captchaToken,
   }) {
     throw UnimplementedError();
   }

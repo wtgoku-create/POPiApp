@@ -7,18 +7,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lottie/lottie.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
-import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/wechat_login_service.dart';
-import '../domain/captcha_challenge.dart';
+import '../data/douyin_auth_api.dart';
+import '../data/douyin_login_service.dart';
+import 'slider_captcha_sheet.dart';
 import '../domain/wechat_app_login.dart';
+import '../domain/douyin_app_login.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({
@@ -36,23 +39,23 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _phoneController = TextEditingController();
-  final _captchaController = TextEditingController();
   final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
   Timer? _countdownTimer;
-  CaptchaChallenge? _captcha;
   int _countdown = 0;
   bool _agreed = false;
-  bool _isCaptchaLoading = false;
   bool _isSendingCode = false;
   bool _isLoggingIn = false;
+  bool _passwordLogin = false;
+  bool _passwordVisible = false;
   bool _isWechatLoggingIn = false;
-  bool _showPhoneLogin = false;
+  bool _isDouyinLoggingIn = false;
   String? _wechatRegisterToken;
+  String? _douyinRegisterToken;
 
   @override
   void initState() {
     super.initState();
-    Future<void>.microtask(_loadCaptcha);
     final wechatAuthorizationCode = widget.wechatAuthorizationCode?.trim();
     if (wechatAuthorizationCode != null && wechatAuthorizationCode.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,8 +68,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void dispose() {
     _countdownTimer?.cancel();
     _phoneController.dispose();
-    _captchaController.dispose();
     _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -76,10 +79,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return PopScope(
-      canPop: !_showPhoneLogin,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _showPhoneLogin) _showWelcomeLogin();
-      },
+      canPop: true,
       child: Scaffold(
         backgroundColor: colorScheme.surface,
         resizeToAvoidBottomInset: true,
@@ -93,60 +93,48 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               _LoginDesignViewport(
                 keyboardInset: keyboardInset,
                 child: Stack(
+                  clipBehavior: Clip.hardEdge,
                   children: [
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: colorScheme.brightness == Brightness.light
+                              ? const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color(0xFFEDE9FD),
+                                    Color(0xFFF8F8F8)
+                                  ],
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
                     const _LoginIllustration(),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 420),
-                      reverseDuration: const Duration(milliseconds: 340),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) {
-                        final phoneDesign =
-                            child.key == const ValueKey('phone-login-design');
-                        final curved = CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                          reverseCurve: Curves.easeInCubic,
-                        );
-                        return FadeTransition(
-                          opacity: curved,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: Offset(0, phoneDesign ? .055 : -.035),
-                              end: Offset.zero,
-                            ).animate(curved),
-                            child: ScaleTransition(
-                              scale: Tween<double>(begin: .985, end: 1)
-                                  .animate(curved),
-                              child: child,
-                            ),
-                          ),
-                        );
-                      },
-                      child: _showPhoneLogin
-                          ? _PhoneLoginDesign(
-                              key: const ValueKey('phone-login-design'),
-                              phoneController: _phoneController,
-                              codeController: _codeController,
-                              agreed: _agreed,
-                              countdown: _countdown,
-                              sendingCode: _isSendingCode,
-                              loggingIn: _isLoggingIn,
-                              wechatPhoneBinding: _wechatRegisterToken != null,
-                              onBack: _showWelcomeLogin,
-                              onAgreementChanged: _toggleAgreement,
-                              onSendCode: _showCaptchaSheet,
-                              onLogin: _loginWithPhone,
-                            )
-                          : _WelcomeLoginDesign(
-                              key: const ValueKey('welcome-login-design'),
-                              agreed: _agreed,
-                              wechatLoggingIn: _isWechatLoggingIn,
-                              onBack: _closePage,
-                              onAgreementChanged: _toggleAgreement,
-                              onPhoneLogin: _openPhoneLogin,
-                              onWechatLogin: _loginWithWechat,
-                            ),
+                    _PhoneLoginDesign(
+                      phoneController: _phoneController,
+                      codeController: _codeController,
+                      passwordController: _passwordController,
+                      passwordLogin: _passwordLogin,
+                      passwordVisible: _passwordVisible,
+                      onToggleLoginMode: _toggleLoginMode,
+                      onTogglePasswordVisibility: () =>
+                          setState(() => _passwordVisible = !_passwordVisible),
+                      agreed: _agreed,
+                      countdown: _countdown,
+                      sendingCode: _isSendingCode,
+                      loggingIn: _isLoggingIn,
+                      phoneBindingRequired: _wechatRegisterToken != null ||
+                          _douyinRegisterToken != null,
+                      wechatLoggingIn: _isWechatLoggingIn,
+                      douyinLoggingIn: _isDouyinLoggingIn,
+                      onWechatLogin: _loginWithWechat,
+                      onDouyinLogin: _loginWithDouyin,
+                      onBack: _closePage,
+                      onAgreementChanged: _toggleAgreement,
+                      onSendCode: _showCaptchaSheet,
+                      onLogin: _loginWithPhone,
                     ),
                   ],
                 ),
@@ -158,7 +146,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   width: 40,
                   height: 40,
                   child: _LoginKeyboardBackButton(
-                    onPressed: _showPhoneLogin ? _showWelcomeLogin : _closePage,
+                    onPressed: () =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
                   ),
                 ),
             ],
@@ -170,6 +159,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   void _toggleAgreement() => setState(() => _agreed = !_agreed);
 
+  void _toggleLoginMode() {
+    if (!AppConfig.passwordLoginEnabled ||
+        _isLoggingIn ||
+        _isWechatLoggingIn ||
+        _isDouyinLoggingIn ||
+        _isSendingCode ||
+        _wechatRegisterToken != null ||
+        _douyinRegisterToken != null) {
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _passwordLogin = !_passwordLogin;
+      _passwordVisible = false;
+      _passwordController.clear();
+      _codeController.clear();
+    });
+  }
+
   void _closePage() {
     FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context);
@@ -177,24 +185,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       navigator.pop();
     } else {
       SystemNavigator.pop();
-    }
-  }
-
-  void _openPhoneLogin() {
-    FocusManager.instance.primaryFocus?.unfocus();
-    setState(() {
-      _wechatRegisterToken = null;
-      _showPhoneLogin = true;
-    });
-  }
-
-  void _showWelcomeLogin() {
-    FocusManager.instance.primaryFocus?.unfocus();
-    if (_showPhoneLogin) {
-      setState(() {
-        _wechatRegisterToken = null;
-        _showPhoneLogin = false;
-      });
     }
   }
 
@@ -207,92 +197,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
     if (!_ensureAgreement(l10n)) return;
     if (_countdown > 0 || _isSendingCode) return;
-    if (_captcha == null && !_isCaptchaLoading) await _loadCaptcha();
-    if (!mounted) return;
-
-    await AppSheet.show<void>(
+    final phone = _phoneController.text.trim();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await AppDialog.show<void>(
       context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          Future<void> refreshCaptcha() async {
-            await _loadCaptcha();
-            if (sheetContext.mounted) setSheetState(() {});
-          }
-
-          Future<void> confirm() async {
-            final sent = await _sendCode();
-            if (sent && sheetContext.mounted) {
-              Navigator.of(sheetContext).pop();
-            } else if (sheetContext.mounted) {
-              setSheetState(() {});
-            }
-          }
-
-          final colorScheme = Theme.of(context).colorScheme;
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-              24,
-              4,
-              24,
-              24 + MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.graphicalCaptcha,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        key: const Key('login-captcha-field'),
-                        controller: _captchaController,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          hintText: l10n.graphicalCaptchaHint,
-                        ),
-                        onSubmitted: (_) => confirm(),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    _CaptchaPreview(
-                      challenge: _captcha,
-                      loading: _isCaptchaLoading,
-                      refreshTooltip: l10n.refreshCaptcha,
-                      onRefresh: _isCaptchaLoading ? null : refreshCaptcha,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton(
-                    key: const Key('confirm-send-code-button'),
-                    onPressed: _isSendingCode ? null : confirm,
-                    child: _isSendingCode
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(l10n.sendVerificationCode),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      builder: (dialogContext) => AppDialog(
+        width: 360,
+        padding: EdgeInsets.zero,
+        child: SliderCaptchaSheet(
+          phone: phone,
+          repository: ref.read(authRepositoryProvider),
+          onVerified: (token) async {
+            final sent = await _sendCode(phone, token);
+            if (!sent) throw const ApiException();
+            if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+          },
+        ),
       ),
     );
   }
@@ -304,45 +224,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return null;
   }
 
-  Future<void> _loadCaptcha() async {
-    if (_isCaptchaLoading) return;
-    setState(() => _isCaptchaLoading = true);
-    try {
-      final captcha = await ref.read(authRepositoryProvider).createCaptcha();
-      if (!mounted) return;
-      setState(() {
-        _captcha = captcha;
-        _captchaController.clear();
-      });
-    } catch (error) {
-      if (!mounted) return;
-      AppToast.error(context, _errorMessage(error));
-    } finally {
-      if (mounted) setState(() => _isCaptchaLoading = false);
-    }
-  }
-
-  Future<bool> _sendCode() async {
+  Future<bool> _sendCode(String phone, String captchaToken) async {
     final l10n = AppLocalizations.of(context)!;
-    final phoneError = _validatePhone(_phoneController.text, l10n);
-    if (phoneError != null) {
-      AppToast.error(context, phoneError);
-      return false;
-    }
-    if (!_ensureAgreement(l10n)) return false;
-    final captcha = _captcha;
-    final captchaValue = _captchaController.text.trim();
-    if (captcha == null || captchaValue.isEmpty) {
-      AppToast.error(context, l10n.graphicalCaptchaRequired);
-      return false;
-    }
-
+    if (_isSendingCode || _countdown > 0) return false;
     setState(() => _isSendingCode = true);
     try {
       await ref.read(authRepositoryProvider).sendLoginCode(
-            phone: _phoneController.text.trim(),
-            captchaId: captcha.id,
-            captchaValue: captchaValue,
+            phone: phone,
+            captchaToken: captchaToken,
           );
       if (!mounted) return false;
       _startCountdown();
@@ -351,7 +240,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } catch (error) {
       if (!mounted) return false;
       AppToast.error(context, _errorMessage(error));
-      await _loadCaptcha();
       return false;
     } finally {
       if (mounted) setState(() => _isSendingCode = false);
@@ -359,6 +247,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _loginWithPhone() async {
+    if (_isLoggingIn || _isWechatLoggingIn || _isDouyinLoggingIn) return;
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
     final phoneError = _validatePhone(_phoneController.text, l10n);
@@ -366,15 +255,35 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       AppToast.error(context, phoneError);
       return;
     }
-    if (!RegExp(r'^\d{6}$').hasMatch(_codeController.text.trim())) {
-      AppToast.error(context, l10n.invalidVerificationCode);
-      return;
+    if (_passwordLogin) {
+      if (!AppConfig.passwordLoginEnabled) return;
+      if (_passwordController.text.trim().length < 6) {
+        AppToast.error(context, l10n.invalidPassword);
+        return;
+      }
+    } else {
+      if (!RegExp(r'^\d{6}$').hasMatch(_codeController.text.trim())) {
+        AppToast.error(context, l10n.invalidVerificationCode);
+        return;
+      }
     }
 
     setState(() => _isLoggingIn = true);
     try {
       final registerToken = _wechatRegisterToken;
-      if (registerToken == null) {
+      final douyinRegisterToken = _douyinRegisterToken;
+      if (_passwordLogin) {
+        await ref.read(userProvider.notifier).signInWithPassword(
+              phone: _phoneController.text.trim(),
+              password: _passwordController.text,
+            );
+      } else if (douyinRegisterToken != null) {
+        await ref.read(userProvider.notifier).registerDouyinAppByPhone(
+              registerToken: douyinRegisterToken,
+              phone: _phoneController.text.trim(),
+              code: _codeController.text.trim(),
+            );
+      } else if (registerToken == null) {
         await ref.read(userProvider.notifier).signInWithCode(
               phone: _phoneController.text.trim(),
               code: _codeController.text.trim(),
@@ -405,7 +314,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _loginWithWechat() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
-    if (_isWechatLoggingIn) return;
+    if (_isLoggingIn || _isWechatLoggingIn || _isDouyinLoggingIn) return;
 
     setState(() => _isWechatLoggingIn = true);
     try {
@@ -454,7 +363,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           )) {
         setState(() {
           _wechatRegisterToken = registerToken;
-          _showPhoneLogin = true;
+          _douyinRegisterToken = null;
+          _passwordLogin = false;
+          _passwordVisible = false;
+          _passwordController.clear();
         });
         AppToast.info(
             context, AppLocalizations.of(context)!.wechatPhoneBindingRequired);
@@ -480,6 +392,88 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Future<void> _loginWithDouyin() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!_ensureAgreement(l10n)) return;
+    if (_isLoggingIn || _isWechatLoggingIn || _isDouyinLoggingIn) return;
+
+    setState(() => _isDouyinLoggingIn = true);
+    try {
+      final authorization =
+          await ref.read(douyinLoginServiceProvider).authorize();
+      if (!mounted) return;
+      switch (authorization.status) {
+        case DouyinAuthorizationStatus.authorized:
+          setState(() => _isDouyinLoggingIn = false);
+          await _completeDouyinLogin(authorization.code!);
+          return;
+        case DouyinAuthorizationStatus.canceled:
+          AppToast.info(context, l10n.douyinLoginCanceled);
+          return;
+        case DouyinAuthorizationStatus.unavailable:
+          AppToast.error(context, l10n.douyinLoginUnavailable);
+          return;
+        case DouyinAuthorizationStatus.failed:
+          AppToast.error(context, l10n.douyinLoginFailed);
+          return;
+      }
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'Douyin authorization failed: '
+          '${error.runtimeType}: $error\n$stackTrace',
+        );
+      }
+      if (mounted) AppToast.error(context, _errorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isDouyinLoggingIn = false);
+    }
+  }
+
+  Future<void> _completeDouyinLogin(String code) async {
+    if (_isDouyinLoggingIn) return;
+
+    setState(() => _isDouyinLoggingIn = true);
+    try {
+      final result = await ref.read(userProvider.notifier).signInWithDouyinApp(
+            code: code,
+          );
+      if (!mounted) return;
+      if (result
+          case DouyinAppSignInPhoneBindingRequired(
+            registerToken: final registerToken,
+          )) {
+        setState(() {
+          _douyinRegisterToken = registerToken;
+          _wechatRegisterToken = null;
+          _passwordLogin = false;
+          _passwordVisible = false;
+          _passwordController.clear();
+        });
+        AppToast.info(
+            context, AppLocalizations.of(context)!.douyinPhoneBindingRequired);
+        return;
+      }
+      AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
+      final onLoginSuccess = widget.onLoginSuccess;
+      if (onLoginSuccess != null) {
+        onLoginSuccess();
+      } else {
+        context.go('/');
+      }
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'Douyin app login completion failed: '
+          '${error.runtimeType}: $error\n$stackTrace',
+        );
+      }
+      if (mounted) AppToast.error(context, _errorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isDouyinLoggingIn = false);
+    }
+  }
+
   bool _ensureAgreement(AppLocalizations l10n) {
     if (_agreed) return true;
     AppToast.error(context, l10n.agreementRequired);
@@ -499,6 +493,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   String _errorMessage(Object error) {
+    if (error is DouyinLoginUnavailableException) {
+      return AppLocalizations.of(context)!.douyinLoginUnavailable;
+    }
     if (error case ApiException(message: final String message)
         when message.trim().isNotEmpty) {
       return message;
@@ -556,6 +553,8 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
         );
         final scaledSize = _LoginDesignViewport.designSize * scale;
         final keyboardOpen = widget.keyboardInset > 0;
+        final needsScrolling =
+            keyboardOpen || scaledSize.height > constraints.maxHeight;
         final canvas = SizedBox(
           width: scaledSize.width,
           height: scaledSize.height,
@@ -572,14 +571,14 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
           key: const Key('login-design-scroll-view'),
           controller: _scrollController,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          physics: keyboardOpen
+          physics: needsScrolling
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Align(
               alignment:
-                  keyboardOpen ? Alignment.topCenter : Alignment.bottomCenter,
+                  needsScrolling ? Alignment.topCenter : Alignment.bottomCenter,
               child: canvas,
             ),
           ),
@@ -589,102 +588,46 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
   }
 }
 
-class _WelcomeLoginDesign extends StatelessWidget {
-  const _WelcomeLoginDesign({
-    required this.agreed,
-    required this.wechatLoggingIn,
-    required this.onBack,
-    required this.onAgreementChanged,
-    required this.onPhoneLogin,
-    required this.onWechatLogin,
-    super.key,
-  });
-
-  final bool agreed;
-  final bool wechatLoggingIn;
-  final VoidCallback onBack;
-  final VoidCallback onAgreementChanged;
-  final VoidCallback onPhoneLogin;
-  final VoidCallback onWechatLogin;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-    return Stack(
-      children: [
-        _LoginBackButton(onPressed: onBack),
-        const Positioned(
-          left: 26,
-          top: 678,
-          width: 388,
-          child: _LoginBrandCopy(),
-        ),
-        Positioned(
-          left: 57,
-          top: 768,
-          width: 326,
-          child: Column(
-            children: [
-              _LoginActionButton(
-                key: const Key('login-phone-entry-button'),
-                label: l10n.phoneLogin,
-                onPressed: onPhoneLogin,
-              ),
-              const SizedBox(height: 10),
-              _LoginActionButton(
-                key: const Key('wechat-login-button'),
-                label: l10n.wechatLogin,
-                onPressed: wechatLoggingIn ? null : onWechatLogin,
-                loading: wechatLoggingIn,
-                backgroundColor: colorScheme.brightness == Brightness.light
-                    ? const Color(0xFFF0F4F9)
-                    : colorScheme.surfaceContainerHighest,
-                foregroundColor: colorScheme.onSurface,
-                borderColor: colorScheme.brightness == Brightness.light
-                    ? const Color(0xFFDAD6E5)
-                    : colorScheme.outline,
-              ),
-            ],
-          ),
-        ),
-        Positioned(
-          left: 26,
-          top: 918,
-          width: 388,
-          child: _LoginAgreement(
-            agreed: agreed,
-            onChanged: onAgreementChanged,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _PhoneLoginDesign extends StatelessWidget {
   const _PhoneLoginDesign({
     required this.phoneController,
     required this.codeController,
+    required this.passwordController,
+    required this.passwordLogin,
+    required this.passwordVisible,
+    required this.onToggleLoginMode,
+    required this.onTogglePasswordVisibility,
     required this.agreed,
     required this.countdown,
     required this.sendingCode,
     required this.loggingIn,
-    required this.wechatPhoneBinding,
+    required this.phoneBindingRequired,
+    required this.wechatLoggingIn,
+    required this.douyinLoggingIn,
+    required this.onWechatLogin,
+    required this.onDouyinLogin,
     required this.onBack,
     required this.onAgreementChanged,
     required this.onSendCode,
     required this.onLogin,
-    super.key,
   });
 
   final TextEditingController phoneController;
   final TextEditingController codeController;
+  final TextEditingController passwordController;
+  final bool passwordLogin;
+  final bool passwordVisible;
+  final VoidCallback onToggleLoginMode;
+  final VoidCallback onTogglePasswordVisibility;
   final bool agreed;
   final int countdown;
   final bool sendingCode;
   final bool loggingIn;
-  final bool wechatPhoneBinding;
+  final bool phoneBindingRequired;
+  final bool wechatLoggingIn;
+  final bool douyinLoggingIn;
+  final VoidCallback onWechatLogin;
+  final VoidCallback onDouyinLogin;
   final VoidCallback onBack;
   final VoidCallback onAgreementChanged;
   final VoidCallback onSendCode;
@@ -706,16 +649,23 @@ class _PhoneLoginDesign extends StatelessWidget {
     return Stack(
       children: [
         _LoginBackButton(onPressed: onBack),
-        const Positioned(
-          left: 26,
-          top: 613,
-          width: 388,
-          child: _LoginBrandCopy(),
+        Positioned(
+          left: 0,
+          top: 351,
+          width: 440,
+          height: 605,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(45)),
+            ),
+          ),
         ),
         Positioned(
-          left: 57,
-          top: 703,
-          width: 326,
+          left: 40,
+          top: 391,
+          width: 360,
           child: Column(
             children: [
               _LoginFieldShell(
@@ -741,68 +691,201 @@ class _PhoneLoginDesign extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               _LoginFieldShell(
                 color: fieldColor,
+                padding: const EdgeInsets.only(left: 20, right: 10),
                 child: Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        key: const Key('login-code-field'),
-                        controller: codeController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.oneTimeCode],
-                        maxLength: 6,
-                        style: textStyle,
-                        decoration: _fieldDecoration(l10n.verificationCodeHint),
-                        onSubmitted: (_) => onLogin(),
-                      ),
+                      child: passwordLogin
+                          ? TextField(
+                              key: const Key('login-password-field'),
+                              controller: passwordController,
+                              obscureText: !passwordVisible,
+                              enableSuggestions: false,
+                              autocorrect: false,
+                              keyboardType: TextInputType.visiblePassword,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              style: textStyle,
+                              decoration: _fieldDecoration(l10n.passwordHint),
+                              onSubmitted: (_) => onLogin(),
+                            )
+                          : TextField(
+                              key: const Key('login-code-field'),
+                              controller: codeController,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.oneTimeCode],
+                              maxLength: 6,
+                              style: textStyle,
+                              decoration:
+                                  _fieldDecoration(l10n.verificationCodeHint),
+                              onSubmitted: (_) => onLogin(),
+                            ),
                     ),
                     const SizedBox(width: 8),
-                    const _LoginFieldDivider(),
-                    const SizedBox(width: 14),
-                    TextButton(
-                      key: const Key('send-code-button'),
-                      onPressed:
-                          countdown > 0 || sendingCode ? null : onSendCode,
-                      style: TextButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding: EdgeInsets.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: colorScheme.onSurface,
-                        disabledForegroundColor: colorScheme.onSurfaceVariant,
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                    if (passwordLogin)
+                      IconButton(
+                        key: const Key('login-password-visibility'),
+                        tooltip: passwordVisible
+                            ? l10n.hidePassword
+                            : l10n.showPassword,
+                        onPressed: onTogglePasswordVisibility,
+                        icon: Icon(passwordVisible
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined),
+                      )
+                    else
+                      TextButton(
+                        key: const Key('send-code-button'),
+                        onPressed:
+                            countdown > 0 || sendingCode ? null : onSendCode,
+                        style: TextButton.styleFrom(
+                          fixedSize: const Size(116, 40),
+                          minimumSize: const Size(116, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          backgroundColor: colorScheme.surface,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: AppColors.brand,
+                          disabledForegroundColor: colorScheme.onSurfaceVariant,
+                          textStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            sendingCode
+                                ? l10n.sendingVerificationCode
+                                : countdown > 0
+                                    ? l10n.resendCountdown(countdown)
+                                    : l10n.sendVerificationCode,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        sendingCode
-                            ? l10n.sendingVerificationCode
-                            : countdown > 0
-                                ? l10n.resendCountdown(countdown)
-                                : l10n.sendVerificationCode,
-                      ),
-                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               _LoginActionButton(
                 key: const Key('phone-login-button'),
-                label:
-                    wechatPhoneBinding ? l10n.bindPhone : l10n.loginOrRegister,
-                onPressed: loggingIn ? null : onLogin,
+                label: phoneBindingRequired
+                    ? l10n.bindPhone
+                    : passwordLogin
+                        ? l10n.passwordLogin
+                        : l10n.loginOrRegister,
+                onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+                    ? null
+                    : onLogin,
                 loading: loggingIn,
+              ),
+              if (AppConfig.passwordLoginEnabled && !phoneBindingRequired) ...[
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const Key('login-mode-switch'),
+                  onPressed: loggingIn ||
+                          wechatLoggingIn ||
+                          douyinLoggingIn ||
+                          sendingCode
+                      ? null
+                      : onToggleLoginMode,
+                  child: Text(
+                    passwordLogin ? l10n.codeLogin : l10n.passwordLogin,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        Positioned(
+          left: 100,
+          top: 838,
+          width: 240,
+          child: Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  key: const Key('wechat-login-button'),
+                  onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+                      ? null
+                      : onWechatLogin,
+                  style: TextButton.styleFrom(
+                    fixedSize: const Size(115, 38),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  ),
+                  child: Row(
+                    children: [
+                      if (wechatLoggingIn)
+                        const SizedBox.square(
+                          dimension: 30,
+                          child: Padding(
+                            padding: EdgeInsets.all(5),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else
+                        Image.asset('assets/images/login_wechat.png',
+                            width: 30, height: 30),
+                      const SizedBox(width: 9),
+                      Expanded(
+                          child: Text(l10n.wechatLogin,
+                              style: TextStyle(
+                                  color: colorScheme.onSurface, fontSize: 14))),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextButton(
+                  key: const Key('douyin-login-button'),
+                  onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+                      ? null
+                      : onDouyinLogin,
+                  style: TextButton.styleFrom(
+                    fixedSize: const Size(115, 38),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                  ),
+                  child: Row(
+                    children: [
+                      if (douyinLoggingIn)
+                        const SizedBox.square(
+                          dimension: 30,
+                          child: Padding(
+                            padding: EdgeInsets.all(5),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      else
+                        Image.asset('assets/images/login_douyin.png',
+                            width: 30, height: 30),
+                      const SizedBox(width: 9),
+                      Expanded(
+                          child: Text(l10n.douyinLogin,
+                              style: TextStyle(
+                                  color: colorScheme.onSurface, fontSize: 14))),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
         ),
         Positioned(
-          left: 26,
-          top: 918,
-          width: 388,
+          left: 93,
+          top: 896,
+          width: 279,
           child: _LoginAgreement(
             agreed: agreed,
             onChanged: onAgreementChanged,
@@ -837,8 +920,8 @@ class _LoginBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: 20,
-      top: 76,
+      left: 15,
+      top: 60,
       width: 40,
       height: 40,
       child: IconButton(
@@ -847,7 +930,7 @@ class _LoginBackButton extends StatelessWidget {
         padding: EdgeInsets.zero,
         onPressed: onPressed,
         color: Theme.of(context).colorScheme.onSurface,
-        icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
       ),
     );
   }
@@ -876,54 +959,68 @@ class _LoginIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: 6.5,
-      top: 170,
-      width: 427,
-      height: 427,
-      child: Lottie.asset(
-        'assets/images/login_welcome_animation.json',
-        key: const Key('login-welcome-illustration'),
-        fit: BoxFit.cover,
-        repeat: true,
-        animate: !MediaQuery.disableAnimationsOf(context),
-      ),
-    );
-  }
-}
-
-class _LoginBrandCopy extends StatelessWidget {
-  const _LoginBrandCopy();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Text(
-      'POPi\n${l10n.splashTagline}',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: 25,
-        fontWeight: FontWeight.w700,
-        height: 1.2,
-        letterSpacing: .25,
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          key: const Key('login-welcome-illustration'),
+          clipBehavior: Clip.hardEdge,
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              width: 440,
+              height: 610,
+              child: Image.asset('assets/images/login_illustration_glow.png',
+                  fit: BoxFit.fill),
+            ),
+            Positioned(
+              left: 93,
+              top: 108,
+              width: 254,
+              height: 250,
+              child: Image.asset('assets/images/login_character.png',
+                  fit: BoxFit.fill),
+            ),
+            Positioned(
+              left: 236.54,
+              top: 152.42,
+              width: 175,
+              height: 112,
+              child: Image.asset('assets/images/login_brand_bubble.png',
+                  fit: BoxFit.fill),
+            ),
+            Positioned(
+              left: 21.99,
+              top: 81,
+              width: 419,
+              height: 276,
+              child: Image.asset('assets/images/login_topic_bubbles.png',
+                  fit: BoxFit.fill),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _LoginFieldShell extends StatelessWidget {
-  const _LoginFieldShell({required this.color, required this.child});
+  const _LoginFieldShell({
+    required this.color,
+    required this.child,
+    this.padding = const EdgeInsets.symmetric(horizontal: 20),
+  });
 
   final Color color;
   final Widget child;
+  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 326,
-      height: 55,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      width: 360,
+      height: 60,
+      padding: padding,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -957,37 +1054,28 @@ class _LoginActionButton extends StatelessWidget {
   const _LoginActionButton({
     required this.label,
     required this.onPressed,
-    this.backgroundColor = AppColors.brand,
-    this.foregroundColor = Colors.white,
-    this.borderColor,
     this.loading = false,
     super.key,
   });
 
   final String label;
   final VoidCallback? onPressed;
-  final Color backgroundColor;
-  final Color foregroundColor;
-  final Color? borderColor;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 326,
-      height: 55,
+      width: 360,
+      height: 60,
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
           elevation: 0,
-          backgroundColor: backgroundColor,
-          foregroundColor: foregroundColor,
-          disabledBackgroundColor: backgroundColor.withValues(alpha: .55),
+          backgroundColor: AppColors.brand,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.brand.withValues(alpha: .55),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.pill),
-            side: borderColor == null
-                ? BorderSide.none
-                : BorderSide(color: borderColor!),
           ),
           textStyle: const TextStyle(
             fontSize: 18,
@@ -1030,8 +1118,8 @@ class _LoginAgreement extends StatelessWidget {
             onTap: onChanged,
             radius: 22,
             child: Container(
-              width: 15,
-              height: 15,
+              width: 20,
+              height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
@@ -1042,8 +1130,8 @@ class _LoginAgreement extends StatelessWidget {
               child: agreed
                   ? SvgPicture.asset(
                       'assets/icons/login_checkbox_check.svg',
-                      width: 15,
-                      height: 15,
+                      width: 20,
+                      height: 20,
                     )
                   : null,
             ),
@@ -1059,71 +1147,17 @@ class _LoginAgreement extends StatelessWidget {
             openFailedMessage: l10n.networkRequestFailed,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
-              fontSize: 10,
-              height: 1.5,
+              fontSize: 12,
+              height: 22 / 12,
             ),
-            linkStyle: const TextStyle(
-              color: AppColors.brand,
-              fontSize: 10,
-              height: 1.5,
+            linkStyle: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 12,
+              height: 22 / 12,
             ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _CaptchaPreview extends StatelessWidget {
-  const _CaptchaPreview({
-    required this.challenge,
-    required this.loading,
-    required this.refreshTooltip,
-    required this.onRefresh,
-  });
-
-  final CaptchaChallenge? challenge;
-  final bool loading;
-  final String refreshTooltip;
-  final VoidCallback? onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: refreshTooltip,
-      child: Material(
-        color: colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: Theme.of(context).colorScheme.outline),
-          borderRadius: BorderRadius.circular(AppRadii.medium),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const Key('refresh-captcha-button'),
-          onTap: onRefresh,
-          child: SizedBox(
-            width: 104,
-            height: 56,
-            child: Center(
-              child: loading
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : challenge == null || challenge!.imageBase64.isEmpty
-                      ? const Icon(Icons.image_not_supported_outlined)
-                      : Image.memory(
-                          challenge!.imageBytes,
-                          key: const Key('captcha-image'),
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.broken_image_outlined),
-                        ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

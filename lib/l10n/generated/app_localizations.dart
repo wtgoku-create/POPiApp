@@ -104,6 +104,276 @@ abstract class AppLocalizations {
   /// **'POPi'**
   String get appTitle;
 
+  /// No description provided for @officialRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Official roles'**
+  String get officialRoles;
+
+  /// No description provided for @roleDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Role details'**
+  String get roleDetails;
+
+  /// No description provided for @roleArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Role profile'**
+  String get roleArchive;
+
+  /// No description provided for @rolePositioning.
+  ///
+  /// In en, this message translates to:
+  /// **'Character positioning'**
+  String get rolePositioning;
+
+  /// No description provided for @roleStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personality and expression style'**
+  String get roleStyle;
+
+  /// No description provided for @roleAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Target audience'**
+  String get roleAudience;
+
+  /// No description provided for @roleTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Content tags'**
+  String get roleTags;
+
+  /// No description provided for @roleBoundaries.
+  ///
+  /// In en, this message translates to:
+  /// **'Expression boundaries'**
+  String get roleBoundaries;
+
+  /// No description provided for @roleAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get roleAppearance;
+
+  /// No description provided for @roleFieldPending.
+  ///
+  /// In en, this message translates to:
+  /// **'To be completed'**
+  String get roleFieldPending;
+
+  /// No description provided for @roleCertified.
+  ///
+  /// In en, this message translates to:
+  /// **'Certified'**
+  String get roleCertified;
+
+  /// No description provided for @roleUncertified.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncertified'**
+  String get roleUncertified;
+
+  /// No description provided for @roleProfileReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile ready / Keep enriching it'**
+  String get roleProfileReady;
+
+  /// No description provided for @roleProfilePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile needs more details'**
+  String get roleProfilePending;
+
+  /// No description provided for @roleStoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your character a richer story'**
+  String get roleStoryTitle;
+
+  /// No description provided for @roleStoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk with the Agent about personality, expression or a new creative direction. Confirm the details for your next topic.'**
+  String get roleStoryDescription;
+
+  /// No description provided for @improveRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Enrich role profile'**
+  String get improveRole;
+
+  /// No description provided for @createWithRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create with this role'**
+  String get createWithRole;
+
+  /// No description provided for @deleteRoleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this role?'**
+  String get deleteRoleTitle;
+
+  /// No description provided for @deleteRoleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This role will be removed from your personal and community libraries. This cannot be undone.'**
+  String get deleteRoleDescription;
+
+  /// No description provided for @roleDeleteUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This role cannot be deleted'**
+  String get roleDeleteUnavailable;
+
+  /// No description provided for @improveRolePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help enrich the personality, expression and creative direction of {title}.'**
+  String improveRolePrompt(String title);
+
+  /// No description provided for @createRolePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend creative topics featuring {title}.'**
+  String createRolePrompt(String title);
+
+  /// No description provided for @roleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'About this role'**
+  String get roleDescription;
+
+  /// No description provided for @noRoleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description yet'**
+  String get noRoleDescription;
+
+  /// No description provided for @myRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'My roles'**
+  String get myRoles;
+
+  /// No description provided for @noOfficialRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'No official roles yet'**
+  String get noOfficialRoles;
+
+  /// No description provided for @noMyRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'No roles of your own yet'**
+  String get noMyRoles;
+
+  /// No description provided for @myRolesEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create characters to enrich your videos'**
+  String get myRolesEmptyDescription;
+
+  /// No description provided for @createNewRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a role'**
+  String get createNewRole;
+
+  /// No description provided for @createNewRolePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me create a new character. Let\'s start with positioning, personality and expression style.'**
+  String get createNewRolePrompt;
+
+  /// No description provided for @noMoreRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'All roles loaded'**
+  String get noMoreRoles;
+
+  /// No description provided for @retryLoadingRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load roles. Retry'**
+  String get retryLoadingRoles;
+
+  /// No description provided for @selectAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Select assets'**
+  String get selectAssets;
+
+  /// No description provided for @assetPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Image preview'**
+  String get assetPreview;
+
+  /// No description provided for @videoCoverPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Video cover preview'**
+  String get videoCoverPreview;
+
+  /// No description provided for @assetDownloadUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No source file is available to download'**
+  String get assetDownloadUnavailable;
+
+  /// No description provided for @deleteAssetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete assets?'**
+  String get deleteAssetsTitle;
+
+  /// No description provided for @deleteAssetsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} selected assets? This cannot be undone.'**
+  String deleteAssetsDescription(int count);
+
+  /// No description provided for @selectedAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedAssets(int count);
+
+  /// No description provided for @myIpAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'My IP accounts'**
+  String get myIpAccounts;
+
+  /// No description provided for @ipAccountsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'IP accounts are not available yet'**
+  String get ipAccountsPending;
+
+  /// No description provided for @newConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get newConversation;
+
+  /// No description provided for @changeAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Change avatar'**
+  String get changeAvatar;
+
+  /// No description provided for @avatarSelectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the image. Try again or check photo permissions.'**
+  String get avatarSelectionFailed;
+
   /// No description provided for @home.
   ///
   /// In en, this message translates to:
@@ -236,11 +506,83 @@ abstract class AppLocalizations {
   /// **'Enter your phone number'**
   String get phoneNumberHint;
 
+  /// No description provided for @passwordLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Password sign-in'**
+  String get passwordLogin;
+
+  /// No description provided for @codeLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'SMS sign-in'**
+  String get codeLogin;
+
+  /// No description provided for @passwordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get passwordHint;
+
+  /// No description provided for @invalidPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a password with at least 6 characters'**
+  String get invalidPassword;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
   /// No description provided for @graphicalCaptcha.
   ///
   /// In en, this message translates to:
-  /// **'Image verification'**
+  /// **'Security verification'**
   String get graphicalCaptcha;
+
+  /// No description provided for @captchaSliderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag the slider to complete the puzzle'**
+  String get captchaSliderHint;
+
+  /// No description provided for @captchaSliderMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Release to verify'**
+  String get captchaSliderMoving;
+
+  /// No description provided for @captchaVerifying.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying…'**
+  String get captchaVerifying;
+
+  /// No description provided for @captchaLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load captcha. Refresh to retry'**
+  String get captchaLoadFailed;
+
+  /// No description provided for @captchaVerificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification failed. Try again'**
+  String get captchaVerificationFailed;
+
+  /// No description provided for @captchaTooManyErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Refresh to retry'**
+  String get captchaTooManyErrors;
 
   /// No description provided for @graphicalCaptchaHint.
   ///
@@ -319,6 +661,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue with WeChat'**
   String get wechatLogin;
+
+  /// No description provided for @douyinLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Douyin sign-in'**
+  String get douyinLogin;
+
+  /// No description provided for @douyinLoginCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Douyin sign-in was canceled'**
+  String get douyinLoginCanceled;
+
+  /// No description provided for @douyinLoginUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Douyin sign-in is not available yet. Use your phone number or WeChat.'**
+  String get douyinLoginUnavailable;
+
+  /// No description provided for @douyinLoginFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Douyin sign-in failed. Please try again.'**
+  String get douyinLoginFailed;
+
+  /// No description provided for @douyinPhoneBindingRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Bind your phone number to complete Douyin sign-in.'**
+  String get douyinPhoneBindingRequired;
 
   /// No description provided for @loginAgreement.
   ///
@@ -872,10 +1244,16 @@ abstract class AppLocalizations {
   /// **'Sign out'**
   String get logout;
 
+  /// No description provided for @logoutConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out?'**
+  String get logoutConfirmationTitle;
+
   /// No description provided for @logoutDescription.
   ///
   /// In en, this message translates to:
-  /// **'You\'ll need to sign in again to continue using POPi'**
+  /// **'Signing out won\'t delete any data.\nYou can sign in to this account again.'**
   String get logoutDescription;
 
   /// No description provided for @confirmLogout.
@@ -1205,7 +1583,7 @@ abstract class AppLocalizations {
   /// No description provided for @rechargeMembershipNotice.
   ///
   /// In en, this message translates to:
-  /// **'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year. If you have any questions, please contact customer service.'**
+  /// **'Note: Membership is required for member characters, watermark-free images and videos, and other benefits. Buying points alone does not include these benefits. Purchased points are valid for one year.'**
   String get rechargeMembershipNotice;
 
   /// No description provided for @customerServiceContact.

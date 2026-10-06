@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
+import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
+import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -67,6 +71,11 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
+          rolePageLoaderProvider.overrideWithValue((
+                  {required category,
+                  required page,
+                  required pageSize}) async =>
+              LibraryRolePage(items: const [], page: page, pageCount: 0)),
         ],
         child: MaterialApp.router(
           theme: theme ?? AppTheme.light,
@@ -81,21 +90,21 @@ void main() {
     expect(tester.takeException(), isNull);
   }
 
-  testWidgets('renders creation history assets design', (tester) async {
+  testWidgets('shows only assets and roles sections', (tester) async {
     await pumpPage(tester, const AssetsPage());
 
     expect(find.text('角色库'), findsOneWidget);
     expect(find.text('资产库'), findsOneWidget);
-    expect(find.text('创作历史'), findsOneWidget);
+    expect(find.text('创作历史'), findsNothing);
     expect(find.byKey(const Key('assets-history-filters')), findsOneWidget);
-    expect(find.text('暂无历史'), findsOneWidget);
+    expect(find.text('暂无作品'), findsOneWidget);
     expect(find.byKey(const Key('assets-go-generate')), findsOneWidget);
   });
 
-  testWidgets('switches creation history filter', (tester) async {
+  testWidgets('switches asset type filter', (tester) async {
     await pumpPage(tester, const AssetsPage());
 
-    await tester.tap(find.text('Vlog'));
+    await tester.tap(find.text('视频'));
     await tester.pumpAndSettle();
 
     final filter = tester.widget<AnimatedContainer>(
@@ -112,8 +121,8 @@ void main() {
       (tester) async {
     await pumpPage(tester, const AssetsPage.sample());
 
-    expect(find.byKey(const Key('assets-history-list')), findsOneWidget);
-    expect(find.text('继续任务'), findsOneWidget);
+    expect(find.byKey(const Key('assets-history-list')), findsNothing);
+    expect(find.text('创作历史'), findsNothing);
 
     await tester.tap(find.byKey(const Key('assets-section-资产库')));
     await tester.pumpAndSettle();
@@ -132,21 +141,62 @@ void main() {
     await tester.tap(find.byKey(const Key('assets-section-角色库')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('assets-roles-grid')), findsOneWidget);
-    expect(find.text('AI真人'), findsOneWidget);
-    expect(find.text('二次元'), findsOneWidget);
-    expect(find.text('夏禾'), findsOneWidget);
-    expect(find.text('金发王子'), findsOneWidget);
-    expect(find.text('莓莓'), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const Key('assets-role-1'))),
-      const Size(400, 100),
-    );
-
-    await tester.tap(find.text('AI真人'));
+    expect(find.text('官方角色'), findsOneWidget);
+    expect(find.text('我的角色'), findsOneWidget);
+    expect(find.text('暂无官方角色'), findsOneWidget);
+    await tester.tap(find.text('我的角色'));
     await tester.pumpAndSettle();
-    expect(find.text('夏禾'), findsNothing);
-    expect(find.text('金发王子'), findsOneWidget);
-    expect(find.text('莓莓'), findsNothing);
+    expect(find.byKey(const Key('my-roles-empty-state')), findsOneWidget);
+    expect(find.text('暂无角色'), findsOneWidget);
+    expect(find.text('创建角色作为人物资产丰富视频'), findsOneWidget);
+  });
+
+  testWidgets('filters assets, previews and confirms batch deletion',
+      (tester) async {
+    await pumpPage(tester,
+        const AssetsPage.sample(initialSection: AssetLibrarySection.works));
+    await tester.tap(find.text('图片'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-work-0')), findsOneWidget);
+    expect(find.byKey(const Key('assets-work-3')), findsNothing);
+    await tester.tap(find.text('视频'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-work-0')), findsNothing);
+    expect(find.byKey(const Key('assets-work-3')), findsOneWidget);
+    await tester.tap(find.text('全部'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('assets-work-0')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('asset-preview-image')), findsOneWidget);
+    expect(find.byKey(const Key('asset-preview-page')), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    await tester.tap(find.byKey(const Key('asset-preview-back')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('assets-work-3')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('asset-preview-page')), findsOneWidget);
+    expect(find.text('视频封面预览'), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('assets-toggle-selection')));
+    await tester.pumpAndSettle();
+    expect(find.text('已选择 0 项'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('assets-work-0')));
+    await tester.pumpAndSettle();
+    expect(find.text('已选择 1 项'), findsOneWidget);
+    await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+    expect(find.text('确认删除资产？'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-delete-assets')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-selection-actions')), findsNothing);
+    final first = tester.widget<Image>(find.descendant(
+        of: find.byKey(const Key('assets-work-0')),
+        matching: find.byType(Image)));
+    expect((first.image as AssetImage).assetName,
+        'assets/images/assets_works_gallery_02.png');
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders works and role empty states', (tester) async {
@@ -160,8 +210,7 @@ void main() {
       tester,
       const AssetsPage(initialSection: AssetLibrarySection.roles),
     );
-    expect(find.text('暂无角色'), findsOneWidget);
-    expect(find.text('创建角色为你的视频增添人物资产'), findsOneWidget);
+    expect(find.text('暂无官方角色'), findsOneWidget);
   });
 
   testWidgets('asset library back button returns to the previous page',
@@ -409,15 +458,16 @@ void main() {
         final isEntryPlan = coins == 5700;
         expect(find.text(isEntryPlan ? '299' : '599'), findsOneWidget);
         expect(
-          find.text(isEntryPlan
-              ? '包含：5500/套餐积分+200/赠送积分'
-              : '包含：14400/套餐积分+300/赠送积分'),
+          find.text(
+              isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分'),
           findsOneWidget,
         );
         expect(
-          tester.widget<MarkdownBody>(
-            find.byKey(const Key('membership-description-markdown')),
-          ).data,
+          tester
+              .widget<MarkdownBody>(
+                find.byKey(const Key('membership-description-markdown')),
+              )
+              .data,
           contains('Plus ${isEntryPlan ? 5500 : 14400} 专属权益'),
         );
       }
@@ -691,12 +741,31 @@ void main() {
     await tester.tap(logoutMenu);
     await tester.pumpAndSettle();
 
-    expect(find.text('退出后需要重新登录才能继续使用'), findsOneWidget);
+    expect(find.text('退出登录不会丢失任何数据\n你仍可以登录此账号'), findsOneWidget);
     expect(find.byKey(const Key('confirm-logout-button')), findsOneWidget);
 
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
-    expect(find.text('退出后需要重新登录才能继续使用'), findsNothing);
+    expect(find.text('退出登录不会丢失任何数据\n你仍可以登录此账号'), findsNothing);
+  });
+
+  testWidgets('tapping avatar previews a selected image before saving',
+      (tester) async {
+    var picks = 0;
+    final bytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+    await pumpPage(tester, EditProfilePage(pickAvatar: () async {
+      picks++;
+      return XFile.fromData(bytes, name: 'avatar.png', mimeType: 'image/png');
+    }));
+    await tester.tap(find.byKey(const Key('edit-profile-avatar')));
+    await tester.pumpAndSettle();
+    expect(picks, 1);
+    expect(
+        find.byWidgetPredicate(
+            (widget) => widget is Image && widget.image is MemoryImage),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders editable profile design', (tester) async {
@@ -760,7 +829,10 @@ void main() {
     );
     expect(legalLinks.style.fontSize, 12);
     expect(legalLinks.style.height, 1.5);
-    expect(tester.getSize(sheet).height, 600);
+    expect(tester.getSize(sheet).height, lessThan(600));
+    final confirm = find.byKey(const Key('points-recharge-confirm'));
+    expect(tester.getBottomRight(sheet).dy - tester.getBottomRight(confirm).dy,
+        closeTo(16, 1));
     expect(find.byKey(const Key('points-package-600')), findsOneWidget);
     expect(find.byKey(const Key('points-package-20000')), findsOneWidget);
     expect(find.byKey(const Key('points-package-selected')), findsOneWidget);

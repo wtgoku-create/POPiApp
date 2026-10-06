@@ -1,0 +1,9 @@
+{
+  "APP_ENV": "production",
+  "API_BASE_URL": "https://www.popi.art",
+  "API_ENABLE_LOGGING": false,
+  "WECHAT_APP_ID": "wxf99ad5d5c7b4fe37",
+  "WECHAT_UNIVERSAL_LINK": "https://app.popi.art/WeChat/",
+  "USER_AGREEMENT_URL": "https://tcnshqo5yu6i.feishu.cn/wiki/BmCNwr8o0ii19dkcTYAcaW9Jnhc",
+  "PRIVACY_POLICY_URL": "https://tcnshqo5yu6i.feishu.cn/wiki/Wu8mwLqOYi2nZjkur3rc18wFnbg"
+}

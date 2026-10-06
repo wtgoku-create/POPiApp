@@ -19,9 +19,10 @@ import 'widgets/popi_message_composer.dart';
 import 'widgets/popi_navigation_drawer.dart';
 
 class HomePage extends ConsumerStatefulWidget {
-  const HomePage({this.pickImages, super.key});
+  const HomePage({this.pickImages, this.initialPrompt, super.key});
 
   final Future<List<XFile>> Function()? pickImages;
+  final String? initialPrompt;
 
   @override
   ConsumerState<HomePage> createState() => _HomePageState();
@@ -40,6 +41,16 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   static const _maxImageCount = 5;
   static const _maxImageBytes = 6 * 1024 * 1024;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialPrompt != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _selectPrompt(widget.initialPrompt!);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -86,151 +97,163 @@ class _HomePageState extends ConsumerState<HomePage> {
     final isLoggedIn = user != null;
     final pointsBalance = user?.allCoins ?? 0;
 
-    return GestureDetector(
-      key: const Key('popi-home-dismiss-keyboard'),
-      behavior: HitTestBehavior.translucent,
-      onTap: _messageController.dismissKeyboard,
-      child: Scaffold(
-        key: _scaffoldKey,
-        resizeToAvoidBottomInset: false,
-        drawer: const PopiNavigationDrawer(),
-        drawerScrimColor: const Color(0x33333333),
-        onDrawerChanged: (isOpened) {
-          if (_drawerOpen != isOpened) {
-            setState(() => _drawerOpen = isOpened);
-          }
-        },
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(safeArea.top + 56),
-          child: Padding(
-            padding: EdgeInsets.only(top: safeArea.top),
-            child: SizedBox(
-              key: const Key('popi-home-app-bar'),
-              height: 56,
-              child: _blurBehindDrawer(
-                AppBar(
-                  primary: false,
-                  toolbarHeight: 56,
-                  leadingWidth: 80,
-                  leading: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 20),
-                      child: SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          key: const Key('popi-open-navigation'),
-                          tooltip: l10n.openNavigation,
-                          padding: const EdgeInsets.all(5),
-                          onPressed: () =>
-                              _scaffoldKey.currentState?.openDrawer(),
-                          icon: AppSvgIcon.asset(
-                            'common_navigation_menu',
-                            size: 30,
-                            color: colorScheme.onSurface,
-                            semanticsLabel: l10n.openNavigation,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    Center(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? null
+            : const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFEDE9FD), Colors.white],
+              ),
+        color: isDark ? colorScheme.surface : null,
+      ),
+      child: GestureDetector(
+        key: const Key('popi-home-dismiss-keyboard'),
+        behavior: HitTestBehavior.translucent,
+        onTap: _messageController.dismissKeyboard,
+        child: Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          drawer: const PopiNavigationDrawer(),
+          drawerScrimColor: const Color(0x33333333),
+          onDrawerChanged: (isOpened) {
+            if (_drawerOpen != isOpened) {
+              setState(() => _drawerOpen = isOpened);
+            }
+          },
+          appBar: PreferredSize(
+            preferredSize: Size.fromHeight(safeArea.top + 56),
+            child: Padding(
+              padding: EdgeInsets.only(top: safeArea.top),
+              child: SizedBox(
+                key: const Key('popi-home-app-bar'),
+                height: 56,
+                child: _blurBehindDrawer(
+                  AppBar(
+                    primary: false,
+                    backgroundColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    toolbarHeight: 56,
+                    leadingWidth: 80,
+                    leading: Align(
+                      alignment: Alignment.centerLeft,
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 20),
-                        child: _MembershipEntry(
-                          points: pointsBalance,
-                          showPoints: isLoggedIn,
-                          label: isLoggedIn
-                              ? l10n.upgradeMembership
-                              : l10n.goToLogin,
-                          onTap: () => context.push(
-                            isLoggedIn ? '/profile/membership' : '/login',
+                        padding: const EdgeInsets.only(left: 15),
+                        child: SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('popi-open-navigation'),
+                            tooltip: l10n.openNavigation,
+                            padding: const EdgeInsets.all(5),
+                            onPressed: () =>
+                                _scaffoldKey.currentState?.openDrawer(),
+                            icon: AppSvgIcon.asset(
+                              'common_navigation_menu',
+                              size: 30,
+                              color: colorScheme.onSurface,
+                              semanticsLabel: l10n.openNavigation,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ],
+                    actions: [
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 20),
+                          child: _MembershipEntry(
+                            points: pointsBalance,
+                            showPoints: isLoggedIn,
+                            label: isLoggedIn
+                                ? l10n.upgradeMembership
+                                : l10n.goToLogin,
+                            onTap: () => context.push(
+                              isLoggedIn ? '/profile/membership' : '/login',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        body: _blurBehindDrawer(
-          Stack(
-            fit: StackFit.expand,
-            children: [
-              SingleChildScrollView(
-                key: const Key('popi-home-scroll'),
-                controller: _bodyScrollController,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                padding: EdgeInsets.fromLTRB(20, 10, 20, contentBottomPadding),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Column(
-                      children: [
-                        SvgPicture.asset(
-                          'assets/icons/home_welcome_logo.svg',
-                          key: const Key('popi-wordmark'),
-                          width: 80,
-                          height: 53,
-                          semanticsLabel: 'POPi',
-                        ),
-                        const SizedBox(height: 32),
-                        _WelcomeCards(
-                          prompts: [
-                            (l10n.homePromptCreateIp, const Color(0xFFF3EFFF)),
-                            (
-                              l10n.homePromptImproveAccount,
-                              AppColors.surfaceTint
-                            ),
-                            (
-                              l10n.homePromptHasReference,
-                              const Color(0xFFF0F4F9)
-                            ),
-                            (l10n.homePromptUnsure, AppColors.pageBackground),
-                          ],
-                          onPromptSelected: _selectPrompt,
-                        ),
-                      ],
+          body: _blurBehindDrawer(
+            Stack(
+              fit: StackFit.expand,
+              children: [
+                SingleChildScrollView(
+                  key: const Key('popi-home-scroll'),
+                  controller: _bodyScrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding:
+                      EdgeInsets.fromLTRB(20, 50, 20, contentBottomPadding),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Column(
+                        children: [
+                          _WelcomeCards(
+                            prompts: [
+                              (
+                                l10n.homePromptCreateIp,
+                                const Color(0xFFEDE7FD)
+                              ),
+                              (
+                                l10n.homePromptImproveAccount,
+                                const Color(0xFFFEF4E8)
+                              ),
+                              (
+                                l10n.homePromptHasReference,
+                                const Color(0xFFFEEEF6)
+                              ),
+                              (l10n.homePromptUnsure, const Color(0xFFE5FBFA)),
+                            ],
+                            onPromptSelected: _selectPrompt,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: composerInset - 1,
-                height: 32,
-                child: IgnorePointer(
-                  child: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, Colors.white],
-                    ).createShader(bounds),
-                    blendMode: BlendMode.dstIn,
-                    child: ClipRect(
-                      child: BackdropFilter(
-                        key: const Key('popi-composer-region-feather'),
-                        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                colorScheme.surface.withValues(
-                                  alpha: isDark ? .05 : .02,
-                                ),
-                                colorScheme.surface.withValues(
-                                  alpha: isDark ? .14 : .06,
-                                ),
-                              ],
-                              stops: const [0, .55, 1],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: composerInset - 1,
+                  height: 32,
+                  child: IgnorePointer(
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.white],
+                      ).createShader(bounds),
+                      blendMode: BlendMode.dstIn,
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          key: const Key('popi-composer-region-feather'),
+                          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  colorScheme.surface.withValues(
+                                    alpha: isDark ? .05 : .02,
+                                  ),
+                                  colorScheme.surface.withValues(
+                                    alpha: isDark ? .14 : .06,
+                                  ),
+                                ],
+                                stops: const [0, .55, 1],
+                              ),
                             ),
                           ),
                         ),
@@ -238,37 +261,37 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: ClipRect(
-                  child: BackdropFilter(
-                    key: const Key('popi-composer-region-blur'),
-                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                    child: ColoredBox(
-                      key: const Key('popi-composer-region-surface'),
-                      color: colorScheme.surface.withValues(
-                        alpha: isDark ? .14 : .06,
-                      ),
-                      child: Center(
-                        heightFactor: 1,
-                        child: PopiMessageComposer(
-                          controller: _messageController,
-                          selectedImages: _selectedImages,
-                          onAttachment: _showAttachmentSheet,
-                          onRemoveImage: _removeSelectedImage,
-                          onHeightChanged: _handleComposerHeightChanged,
-                          onSubmitted: _openConversation,
-                          onMentionRequested: _showMentionSheet,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      key: const Key('popi-composer-region-blur'),
+                      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                      child: ColoredBox(
+                        key: const Key('popi-composer-region-surface'),
+                        color: colorScheme.surface.withValues(
+                          alpha: isDark ? .14 : .06,
+                        ),
+                        child: Center(
+                          heightFactor: 1,
+                          child: PopiMessageComposer(
+                            controller: _messageController,
+                            selectedImages: _selectedImages,
+                            onAttachment: _showAttachmentSheet,
+                            onRemoveImage: _removeSelectedImage,
+                            onHeightChanged: _handleComposerHeightChanged,
+                            onSubmitted: _openConversation,
+                            onMentionRequested: _showMentionSheet,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -581,141 +604,109 @@ class _WelcomeCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      height: 541,
-      child: Stack(
-        children: [
-          Container(
-            height: 271,
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AppRadii.card),
-              border: isDark
-                  ? Border.all(
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-                    )
-                  : null,
-            ),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: 30,
-                  top: 57,
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return AspectRatio(
+      aspectRatio: 400 / 509,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: SizedBox(
+          width: 400,
+          height: 509,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 15,
+                top: 0,
+                width: 370,
+                child: Text(
+                  l10n.homeGreetingTitle.trim(),
+                  key: const Key('popi-wordmark'),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 40,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 15,
+                top: 66,
+                width: 200,
+                height: 120,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
                   child: SizedBox(
-                    width: 180,
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: l10n.homeGreetingTitle,
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          TextSpan(
-                            text: l10n.homeGreetingBody,
-                            style: TextStyle(fontSize: 18),
-                          ),
-                        ],
-                      ),
+                    width: 200,
+                    child: Text(
+                      '${l10n.homeGreetingBody}\n${l10n.homePromptIntro}\n${l10n.homePromptQuestion}',
                       style: TextStyle(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
+                        color: colors.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         height: 1.4,
                       ),
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 196.5,
-                  top: 30,
-                  child: Image.asset(
-                    'assets/icons/home_welcome_banner.png',
-                    key: const Key('popi-welcome-mascot'),
-                    width: 173,
-                    height: 211,
-                    fit: BoxFit.contain,
+              ),
+              Positioned(
+                left: 208,
+                top: 58,
+                width: 184,
+                height: 222,
+                child: Image.asset(
+                  'assets/images/home_welcome_character.png',
+                  key: const Key('popi-welcome-mascot'),
+                  fit: BoxFit.fill,
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 199,
+                height: 310,
+                child: Container(
+                  key: const Key('home-welcome-panel'),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: dark ? colors.surfaceContainerLow : Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (!dark)
+                        Image.asset(
+                          'assets/images/home_prompt_background.png',
+                          fit: BoxFit.fill,
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < prompts.length; i++) ...[
+                              _PromptTile(
+                                index: i,
+                                label: prompts[i].$1,
+                                iconColor: prompts[i].$2,
+                                onTap: () => onPromptSelected(prompts[i].$1),
+                              ),
+                              if (i < prompts.length - 1)
+                                const SizedBox(height: 10),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            top: isDark ? 160 : 166,
-            child: Container(
-              key: const Key('home-welcome-panel'),
-              height: isDark ? 381 : 375,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? colorScheme.surfaceContainerLow
-                    : colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppRadii.card),
-                border: isDark
-                    ? Border.all(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.45),
-                      )
-                    : null,
-                boxShadow: isDark
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.16),
-                          blurRadius: 14,
-                          offset: const Offset(0, 5),
-                        ),
-                      ]
-                    : null,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    height: 20,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.homePromptIntro,
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 14,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  SizedBox(
-                    height: 20,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        l10n.homePromptQuestion,
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  for (var index = 0; index < prompts.length; index++) ...[
-                    _PromptTile(
-                      label: prompts[index].$1,
-                      endColor: prompts[index].$2,
-                      onTap: () => onPromptSelected(prompts[index].$1),
-                    ),
-                    if (index != prompts.length - 1) const SizedBox(height: 10),
-                  ],
-                ],
-              ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -723,59 +714,75 @@ class _WelcomeCards extends StatelessWidget {
 
 class _PromptTile extends StatelessWidget {
   const _PromptTile({
+    required this.index,
     required this.label,
-    required this.endColor,
+    required this.iconColor,
     required this.onTap,
   });
 
+  final int index;
   final String label;
-  final Color endColor;
+  final Color iconColor;
   final VoidCallback onTap;
+
+  static const _icons = [
+    'new_ip',
+    'improve_account',
+    'reference_account',
+    'explore_direction',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final end = Theme.of(context).brightness == Brightness.dark
-        ? colorScheme.surfaceContainerHighest
-        : endColor;
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: Colors.transparent,
-      child: Ink(
-        height: 60,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [colorScheme.surfaceContainerHigh, end],
-          ),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AppRadii.pill),
+      color: dark
+          ? colors.surfaceContainerHigh
+          : Colors.white.withValues(alpha: .5),
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+      child: InkWell(
+        key: Key('home-prompt-$index'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+        child: SizedBox(
+          height: 60,
           child: Padding(
-            padding: const EdgeInsets.only(left: 20, right: 10),
+            padding: const EdgeInsets.all(10),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: colorScheme.surface,
+                    color: iconColor,
                     shape: BoxShape.circle,
                   ),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset(
+                    'assets/icons/home_prompt_${_icons[index]}.svg',
+                    width: 20,
+                    height: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  height: 40,
                   child: Center(
                     child: AppSvgIcon.asset(
                       'home_welcome_chevron',
-                      color: colorScheme.onSurfaceVariant,
+                      color: colors.onSurface,
                       semanticsLabel:
                           AppLocalizations.of(context)!.selectAction,
                     ),
