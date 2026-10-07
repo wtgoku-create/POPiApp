@@ -46,7 +46,8 @@ class AppToast {
     required IconData icon,
     required Color accentColor,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return toastification.show(
       context: context,
@@ -90,20 +91,22 @@ class AppToast {
       ],
       closeButton: ToastCloseButton(
         showType: CloseButtonShowType.always,
-        buttonBuilder: (context, onClose) => Tooltip(
-          message: MaterialLocalizations.of(context).closeButtonTooltip,
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onClose,
-              borderRadius: BorderRadius.circular(AppRadii.small),
-              child: SizedBox.square(
-                dimension: 30,
-                child: Icon(
-                  Icons.close,
-                  size: 18,
-                  color: colorScheme.onSurfaceVariant,
-                ),
+        buttonBuilder: (context, onClose) => Theme(
+          data: theme,
+          child: SizedBox.square(
+            dimension: 30,
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              padding: EdgeInsets.zero,
+              style: IconButton.styleFrom(
+                minimumSize: const Size.square(30),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: onClose,
+              icon: Icon(
+                Icons.close,
+                size: 18,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),

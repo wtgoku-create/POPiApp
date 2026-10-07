@@ -19,8 +19,9 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 void main() {
-  testWidgets('confirming profile logout clears session and opens login page',
-      (tester) async {
+  testWidgets('confirming profile logout clears session and opens login page', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final api = _FakeAuthApi();
@@ -28,10 +29,7 @@ void main() {
     final router = GoRouter(
       initialLocation: '/profile',
       routes: [
-        GoRoute(
-          path: '/profile',
-          builder: (_, __) => const ProfilePage(),
-        ),
+        GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
         GoRoute(
           path: '/login',
           builder: (_, __) => const Scaffold(body: Text('登录页面')),
@@ -76,12 +74,13 @@ void main() {
     expect(find.text('退出登录不会丢失任何数据\n你仍可以登录此账号'), findsOneWidget);
     expect(find.byIcon(Icons.close), findsNothing);
     expect(
-        tester
-            .getSize(find
-                .descendant(of: dialog, matching: find.byType(SizedBox))
-                .first)
-            .width,
-        330);
+      tester
+          .getSize(
+            find.descendant(of: dialog, matching: find.byType(SizedBox)).first,
+          )
+          .width,
+      330,
+    );
     final shape = tester.widget<Dialog>(dialog).shape as RoundedRectangleBorder;
     expect(shape.borderRadius, BorderRadius.circular(26));
     final cancel = find.widgetWithText(TextButton, '取消');
@@ -109,8 +108,7 @@ class _FakeAuthApi implements AuthApi {
   Future<AuthSession> loginByPassword({
     required String username,
     required String password,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   int logoutCalls = 0;
 
@@ -135,8 +133,7 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<WechatAppLoginResponse> loginByWechatApp({required String code}) =>
@@ -148,23 +145,20 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<User> updateUser({
     required String avatar,
     required String name,
     required String signature,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<UserPoints> userPoints() => throw UnimplementedError();

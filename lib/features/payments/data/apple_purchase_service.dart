@@ -14,11 +14,9 @@ enum StorePurchaseOutcome {
 }
 
 class ApplePurchaseService {
-  ApplePurchaseService({
-    required NetworkApi networkApi,
-    InAppPurchase? store,
-  })  : _networkApi = networkApi,
-        _store = store ?? InAppPurchase.instance {
+  ApplePurchaseService({required NetworkApi networkApi, InAppPurchase? store})
+    : _networkApi = networkApi,
+      _store = store ?? InAppPurchase.instance {
     if (isSupported) {
       _subscription = _store.purchaseStream.listen(
         _handlePurchaseUpdates,
@@ -45,10 +43,12 @@ class ApplePurchaseService {
     required bool consumable,
   }) async {
     debugPrint(
-        'purchase() called: productId=$productId, isSupported=$isSupported');
+      'purchase() called: productId=$productId, isSupported=$isSupported',
+    );
     if (!isSupported) {
       debugPrint(
-          'purchase: platform not supported (kIsWeb=$kIsWeb, platform=$defaultTargetPlatform)');
+        'purchase: platform not supported (kIsWeb=$kIsWeb, platform=$defaultTargetPlatform)',
+      );
       return StorePurchaseOutcome.unavailable;
     }
     final available = await _store.isAvailable();
@@ -99,9 +99,7 @@ class ApplePurchaseService {
     return completer.future;
   }
 
-  Future<void> _handlePurchaseUpdates(
-    List<PurchaseDetails> purchases,
-  ) async {
+  Future<void> _handlePurchaseUpdates(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       switch (purchase.status) {
         case PurchaseStatus.pending:

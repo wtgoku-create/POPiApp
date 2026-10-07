@@ -8,8 +8,9 @@ class ApiException implements Exception {
 
   factory ApiException.fromDioException(DioException exception) {
     final data = exception.response?.data;
-    final responseMessage =
-        data is Map<String, dynamic> ? data['message']?.toString() : null;
+    final responseMessage = data is Map<String, dynamic>
+        ? data['message']?.toString()
+        : null;
     return ApiException(
       message: responseMessage,
       statusCode: exception.response?.statusCode,

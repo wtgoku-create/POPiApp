@@ -15,28 +15,40 @@ void main() {
     duration: 850,
     trail: [
       [10, 20],
-      [124, 22]
+      [124, 22],
     ],
   );
 
   test('uses web slider challenge, verification and SMS contracts', () async {
     final requests = <RequestOptions>[];
     final dio = Dio();
-    dio.interceptors.add(InterceptorsWrapper(onRequest: (request, handler) {
-      requests.add(request);
-      handler.resolve(Response(requestOptions: request, data: {
-        'status': '0000',
-        'data': switch (request.path) {
-          '/api_client/captcha/gen' => {
-              'id': 'challenge',
-              'bgUrl': 'https://example.com/bg.png',
-              'puzzleUrl': 'https://example.com/puzzle.png',
-            },
-          '/api_client/captcha/verify' => {'err': 0, 'token': 'one-use-token'},
-          _ => <String, dynamic>{},
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (request, handler) {
+          requests.add(request);
+          handler.resolve(
+            Response(
+              requestOptions: request,
+              data: {
+                'status': '0000',
+                'data': switch (request.path) {
+                  '/api_client/captcha/gen' => {
+                    'id': 'challenge',
+                    'bgUrl': 'https://example.com/bg.png',
+                    'puzzleUrl': 'https://example.com/puzzle.png',
+                  },
+                  '/api_client/captcha/verify' => {
+                    'err': 0,
+                    'token': 'one-use-token',
+                  },
+                  _ => <String, dynamic>{},
+                },
+              },
+            ),
+          );
         },
-      }));
-    }));
+      ),
+    );
     final api = DefaultAuthApi(NetworkApi(dio));
     final challenge = await api.createCaptcha(phone: verification.phone);
     expect(challenge.id, 'challenge');
@@ -59,7 +71,7 @@ void main() {
       'duration': 850,
       'trail': [
         [10.0, 20.0],
-        [124.0, 22.0]
+        [124.0, 22.0],
       ],
       'targetType': 'button',
     });
@@ -74,15 +86,25 @@ void main() {
     for (final result in [
       {'err': 1, 'token': 'invalid'},
       {'err': 0},
-      {'err': 0, 'token': ''}
+      {'err': 0, 'token': ''},
     ]) {
       final dio = Dio();
-      dio.interceptors.add(InterceptorsWrapper(onRequest: (request, handler) {
-        handler.resolve(Response(
-            requestOptions: request, data: {'status': '0000', 'data': result}));
-      }));
-      await expectLater(NetworkApi(dio).verifyCaptcha(verification),
-          throwsA(isA<ApiException>()));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            handler.resolve(
+              Response(
+                requestOptions: request,
+                data: {'status': '0000', 'data': result},
+              ),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        NetworkApi(dio).verifyCaptcha(verification),
+        throwsA(isA<ApiException>()),
+      );
     }
   });
 }

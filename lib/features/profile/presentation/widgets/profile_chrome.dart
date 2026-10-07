@@ -62,37 +62,43 @@ class ProfileAvatar extends StatelessWidget {
                   image: imageProvider!,
                   width: size,
                   height: size,
-                  fit: BoxFit.cover)
+                  fit: BoxFit.cover,
+                )
               : imageUrl == null || imageUrl!.isEmpty
-                  ? Image.asset(
-                      'assets/icons/common_user_avatar.png',
-                      width: size,
-                      height: size,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.network(
-                      imageUrl!,
-                      width: size,
-                      height: size,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.asset(
-                        'assets/icons/common_user_avatar.png',
-                        width: size,
-                        height: size,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+              ? Image.asset(
+                  'assets/icons/common_user_avatar.png',
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                )
+              : Image.network(
+                  imageUrl!,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/icons/common_user_avatar.png',
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
+                ),
         ),
         if (editable)
           Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  shape: BoxShape.circle)),
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+          ),
         if (editable)
-          Image.asset('assets/icons/profile_avatar_edit.png',
-              width: 50, height: 50),
+          Image.asset(
+            'assets/icons/profile_avatar_edit.png',
+            width: 50,
+            height: 50,
+          ),
       ],
     );
   }

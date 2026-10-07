@@ -116,18 +116,14 @@ class _RouterApp extends StatelessWidget {
         ...AppLocalizations.localizationsDelegates,
       ],
       routerConfig: router,
-      builder: (context, child) => SafeAreaStoreSync(
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) =>
+          SafeAreaStoreSync(child: child ?? const SizedBox.shrink()),
     );
   }
 }
 
 class _StartupApp extends StatelessWidget {
-  const _StartupApp({
-    required this.themeMode,
-    required this.locale,
-  });
+  const _StartupApp({required this.themeMode, required this.locale});
 
   final ThemeMode themeMode;
   final Locale? locale;

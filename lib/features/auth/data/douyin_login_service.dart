@@ -6,16 +6,16 @@ class DouyinAuthorizationResult {
   const DouyinAuthorizationResult._(this.status, {this.code});
 
   const DouyinAuthorizationResult.authorized(String code)
-      : this._(DouyinAuthorizationStatus.authorized, code: code);
+    : this._(DouyinAuthorizationStatus.authorized, code: code);
 
   const DouyinAuthorizationResult.canceled()
-      : this._(DouyinAuthorizationStatus.canceled);
+    : this._(DouyinAuthorizationStatus.canceled);
 
   const DouyinAuthorizationResult.unavailable()
-      : this._(DouyinAuthorizationStatus.unavailable);
+    : this._(DouyinAuthorizationStatus.unavailable);
 
   const DouyinAuthorizationResult.failed()
-      : this._(DouyinAuthorizationStatus.failed);
+    : this._(DouyinAuthorizationStatus.failed);
 
   final DouyinAuthorizationStatus status;
   final String? code;

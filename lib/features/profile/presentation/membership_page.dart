@@ -54,13 +54,15 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final topPadding =
-        math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final topPadding = math
+        .max(MediaQuery.paddingOf(context).top, 52)
+        .toDouble();
     final plans = _productPlans == null ? null : _groupPlans(_productPlans!);
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedLevel =
-        plans != null && plans.isNotEmpty ? plans[_selectedPlan].level : 1;
+    final selectedLevel = plans != null && plans.isNotEmpty
+        ? plans[_selectedPlan].level
+        : 1;
     final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 20.0);
 
     return Scaffold(
@@ -141,15 +143,16 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             style: FilledButton.styleFrom(
                               backgroundColor: colorScheme.onSurface,
                               foregroundColor: colorScheme.surface,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 20),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
                             ),
                             onPressed: _isPurchasing
                                 ? null
                                 : () => _purchaseMembership(
-                                      plans[_selectedPlan]
-                                          .variants[_selectedVariant],
-                                    ),
+                                    plans[_selectedPlan]
+                                        .variants[_selectedVariant],
+                                  ),
                             child: _isPurchasing
                                 ? const SizedBox.square(
                                     key: Key('membership-purchase-loading'),
@@ -184,7 +187,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   Future<void> _loadPlans() async {
     try {
-      final loader = widget.planLoader ??
+      final loader =
+          widget.planLoader ??
           ProductPlanRepository(NetworkApi(ref.read(dioProvider))).fetchAll;
       final plans = await loader();
       if (!mounted) return;
@@ -208,7 +212,9 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   Future<void> _purchaseMembership(_MembershipPlan plan) async {
     setState(() => _isPurchasing = true);
-    final outcome = await ref.read(applePurchaseServiceProvider).purchase(
+    final outcome = await ref
+        .read(applePurchaseServiceProvider)
+        .purchase(
           productId: resolveAppleProductId(plan.appleProductId),
           businessProductId: plan.id.toString(),
           businessProductType: appleTestProductType,
@@ -333,8 +339,9 @@ class _PlanTabsState extends State<_PlanTabs> {
       builder: (context, constraints) {
         if (_viewportWidth != constraints.maxWidth) {
           _viewportWidth = constraints.maxWidth;
-          WidgetsBinding.instance
-              .addPostFrameCallback((_) => _alignSelected(false));
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _alignSelected(false),
+          );
         }
         final trailingPadding = math.max(
           20.0,
@@ -366,8 +373,8 @@ class _PlanTabsState extends State<_PlanTabs> {
                     decoration: BoxDecoration(
                       color: active
                           ? isDark
-                              ? colorScheme.surfaceContainerHighest
-                              : Colors.white.withValues(alpha: .5)
+                                ? colorScheme.surfaceContainerHighest
+                                : Colors.white.withValues(alpha: .5)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       border: active
@@ -407,8 +414,10 @@ class _PlanTabsState extends State<_PlanTabs> {
 
     final tabLeft = tabBox.localToGlobal(Offset.zero).dx;
     final viewportLeft = viewportBox.localToGlobal(Offset.zero).dx;
-    final target = (_controller.offset + tabLeft - viewportLeft - 20)
-        .clamp(0.0, _controller.position.maxScrollExtent);
+    final target = (_controller.offset + tabLeft - viewportLeft - 20).clamp(
+      0.0,
+      _controller.position.maxScrollExtent,
+    );
     if ((target - _controller.offset).abs() < .5) return;
     if (animate) {
       _controller.animateTo(
@@ -627,8 +636,8 @@ class _PlanPointsSelector extends StatelessWidget {
                 child: Container(
                   width: multiple
                       ? plans[index].points.toString().length > 4
-                          ? 125
-                          : 111
+                            ? 125
+                            : 111
                       : null,
                   height: multiple ? 41 : 31,
                   padding: EdgeInsets.symmetric(horizontal: multiple ? 10 : 0),
@@ -685,10 +694,7 @@ class _PlanPointsSelector extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               AppLocalizations.of(context)!.pointsPerMonth,
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
             ),
           ],
         ),
@@ -758,11 +764,8 @@ class _BenefitsPanel extends StatelessWidget {
             child: MarkdownBody(
               key: const Key('membership-description-markdown'),
               data: _normalizeDescriptionMarkdown(plan.description),
-              checkboxBuilder: (_) => Icon(
-                Icons.check,
-                size: 12,
-                color: colorScheme.primary,
-              ),
+              checkboxBuilder: (_) =>
+                  Icon(Icons.check, size: 12, color: colorScheme.primary),
               listItemCrossAxisAlignment:
                   MarkdownListItemCrossAxisAlignment.start,
               styleSheet: MarkdownStyleSheet(
@@ -907,30 +910,26 @@ LinearGradient _membershipBackgroundGradient({
 
   return switch (level) {
     1 => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFF1EEFA), Color(0xFFF8F8F8)],
-      ),
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFF1EEFA), Color(0xFFF8F8F8)],
+    ),
     2 => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFF9E9FF), Color(0xFFF8F8F8)],
-      ),
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFF9E9FF), Color(0xFFF8F8F8)],
+    ),
     3 => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFD9CDFF), Color(0xFFF8F8F8)],
-      ),
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFD9CDFF), Color(0xFFF8F8F8)],
+    ),
     _ => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFFFFD8B2),
-          Color(0xFFE2D9FF),
-          Color(0xFFF8F8F8),
-        ],
-        stops: [0, .2073, 1],
-      ),
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [Color(0xFFFFD8B2), Color(0xFFE2D9FF), Color(0xFFF8F8F8)],
+      stops: [0, .2073, 1],
+    ),
   };
 }
 

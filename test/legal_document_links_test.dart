@@ -5,8 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
 
 void main() {
-  testWidgets('opens the user agreement and privacy policy URLs',
-      (tester) async {
+  testWidgets('opens the user agreement and privacy policy URLs', (
+    tester,
+  ) async {
     final opened = <Uri>[];
     await tester.pumpWidget(
       MaterialApp(

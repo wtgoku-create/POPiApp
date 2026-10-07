@@ -51,10 +51,9 @@ void main() {
       ),
     );
 
-    final result = await UserPointsLogRepository(NetworkApi(dio)).fetchPage(
-      page: 1,
-      pageSize: 20,
-    );
+    final result = await UserPointsLogRepository(
+      NetworkApi(dio),
+    ).fetchPage(page: 1, pageSize: 20);
 
     expect(request.path, '/api_client/users/userPointsLog/list');
     expect(request.queryParameters, {'page': 1, 'pageSize': 20});

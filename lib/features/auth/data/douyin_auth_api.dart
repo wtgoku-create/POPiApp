@@ -19,11 +19,11 @@ class DefaultDouyinAuthApi implements DouyinAuthApi {
   final NetworkApi networkApi;
 
   @override
-  Future<DouyinAppLoginResponse> loginByDouyinApp(
-          {required String code}) async =>
-      DouyinAppLoginResponse.fromJson(
-        await networkApi.loginByDouyinApp(code: code),
-      );
+  Future<DouyinAppLoginResponse> loginByDouyinApp({
+    required String code,
+  }) async => DouyinAppLoginResponse.fromJson(
+    await networkApi.loginByDouyinApp(code: code),
+  );
 
   @override
   Future<AuthSession> registerDouyinAppByPhone({
@@ -31,15 +31,14 @@ class DefaultDouyinAuthApi implements DouyinAuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) async =>
-      AuthSession.fromJson(
-        await networkApi.registerDouyinAppByPhone(
-          registerToken: registerToken,
-          phone: phone,
-          code: code,
-          inviteCode: inviteCode,
-        ),
-      );
+  }) async => AuthSession.fromJson(
+    await networkApi.registerDouyinAppByPhone(
+      registerToken: registerToken,
+      phone: phone,
+      code: code,
+      inviteCode: inviteCode,
+    ),
+  );
 }
 
 class DouyinLoginUnavailableException implements Exception {
@@ -50,8 +49,9 @@ class UnavailableDouyinAuthApi implements DouyinAuthApi {
   const UnavailableDouyinAuthApi();
 
   @override
-  Future<DouyinAppLoginResponse> loginByDouyinApp(
-      {required String code}) async {
+  Future<DouyinAppLoginResponse> loginByDouyinApp({
+    required String code,
+  }) async {
     throw const DouyinLoginUnavailableException();
   }
 

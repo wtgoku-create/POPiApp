@@ -5,8 +5,7 @@ import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
 
 void main() {
-  test('loads and parses the current user from the user info endpoint',
-      () async {
+  test('loads and parses the current user from the user info endpoint', () async {
     late String requestedPath;
     final dio = Dio();
     dio.interceptors.add(

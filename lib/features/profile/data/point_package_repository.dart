@@ -9,9 +9,7 @@ class PointPackageRepository {
   Future<List<PointPackage>> fetchAll() async {
     final packages = (await networkApi.pointPackages())
         .whereType<Map>()
-        .map(
-          (item) => PointPackage.fromJson(Map<String, dynamic>.from(item)),
-        )
+        .map((item) => PointPackage.fromJson(Map<String, dynamic>.from(item)))
         .where((package) => package.enabled)
         .toList();
     packages.sort((left, right) {

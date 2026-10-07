@@ -93,10 +93,11 @@ class ProductPlan {
       updateTime: _dateTime(json['updateTime']),
       deleted: _boolean(json['deleted']),
       deleteTime: _dateTime(json['deleteTime']),
-      appleProductId: _firstString(
-        json,
-        const ['apple_product_id', 'appleProductId', 'ios_product_id'],
-      ),
+      appleProductId: _firstString(json, const [
+        'apple_product_id',
+        'appleProductId',
+        'ios_product_id',
+      ]),
     );
   }
 }

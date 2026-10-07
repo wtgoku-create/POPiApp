@@ -34,8 +34,10 @@ void main() {
     WidgetTester tester,
     Widget page, {
     ThemeData? theme,
+    Size size = const Size(440, 956),
+    Locale locale = const Locale('zh'),
   }) async {
-    tester.view.physicalSize = const Size(440, 956);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -44,6 +46,7 @@ void main() {
       initialLocation: '/',
       routes: [
         GoRoute(path: '/', builder: (_, __) => page),
+        GoRoute(path: '/assets', builder: (_, __) => const AssetsPage()),
         GoRoute(path: '/profile', builder: (_, __) => const ProfilePage()),
         GoRoute(
           path: '/profile/edit',
@@ -71,15 +74,14 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
-          rolePageLoaderProvider.overrideWithValue((
-                  {required category,
-                  required page,
-                  required pageSize}) async =>
-              LibraryRolePage(items: const [], page: page, pageCount: 0)),
+          rolePageLoaderProvider.overrideWithValue(
+            ({required category, required page, required pageSize}) async =>
+                LibraryRolePage(items: const [], page: page, pageCount: 0),
+          ),
         ],
         child: MaterialApp.router(
           theme: theme ?? AppTheme.light,
-          locale: const Locale('zh'),
+          locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           routerConfig: router,
@@ -99,6 +101,64 @@ void main() {
     expect(find.byKey(const Key('assets-history-filters')), findsOneWidget);
     expect(find.text('暂无作品'), findsOneWidget);
     expect(find.byKey(const Key('assets-go-generate')), findsOneWidget);
+    expect(find.byKey(const Key('assets-toggle-selection')), findsNothing);
+  });
+
+  testWidgets('empty assets generation action returns to home', (tester) async {
+    await pumpPage(tester, const Scaffold(body: Text('创作首页')));
+    GoRouter.of(tester.element(find.text('创作首页'))).go('/assets');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('assets-go-generate')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('创作首页'), findsOneWidget);
+    expect(find.byKey(const Key('assets-works-empty-state')), findsNothing);
+  });
+
+  testWidgets('empty assets remain usable on a compact English screen', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      const AssetsPage(),
+      size: const Size(320, 400),
+      locale: const Locale('en'),
+    );
+
+    final action = find.byKey(const Key('assets-go-generate'));
+    await tester.ensureVisible(action);
+    await tester.pumpAndSettle();
+    expect(action.hitTestable(), findsOneWidget);
+    expect(find.text('Create now'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('deleting the last filtered assets shows the empty state', (
+    tester,
+  ) async {
+    await pumpPage(tester, const AssetsPage.sample());
+    await tester.tap(find.text('视频'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('assets-toggle-selection')));
+    await tester.pumpAndSettle();
+    for (final index in [3, 8, 9]) {
+      await tester.tap(find.byKey(Key('assets-work-$index')));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirm-delete-assets')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('assets-works-empty-state')), findsOneWidget);
+    expect(find.byKey(const Key('assets-selection-actions')), findsNothing);
+    expect(find.byKey(const Key('assets-toggle-selection')), findsNothing);
+
+    await tester.tap(find.text('全部'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('assets-works-grid')), findsOneWidget);
+    expect(find.byKey(const Key('assets-works-empty-state')), findsNothing);
   });
 
   testWidgets('switches asset type filter', (tester) async {
@@ -117,8 +177,9 @@ void main() {
     expect(decoration.color, AppColors.surfaceTint);
   });
 
-  testWidgets('renders populated asset center and selection controls',
-      (tester) async {
+  testWidgets('renders populated asset center and selection controls', (
+    tester,
+  ) async {
     await pumpPage(tester, const AssetsPage.sample());
 
     expect(find.byKey(const Key('assets-history-list')), findsNothing);
@@ -151,10 +212,13 @@ void main() {
     expect(find.text('创建角色作为人物资产丰富视频'), findsOneWidget);
   });
 
-  testWidgets('filters assets, previews and confirms batch deletion',
-      (tester) async {
-    await pumpPage(tester,
-        const AssetsPage.sample(initialSection: AssetLibrarySection.works));
+  testWidgets('filters assets, previews and confirms batch deletion', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      const AssetsPage.sample(initialSection: AssetLibrarySection.works),
+    );
     await tester.tap(find.text('图片'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('assets-work-0')), findsOneWidget);
@@ -191,11 +255,16 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-delete-assets')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('assets-selection-actions')), findsNothing);
-    final first = tester.widget<Image>(find.descendant(
+    final first = tester.widget<Image>(
+      find.descendant(
         of: find.byKey(const Key('assets-work-0')),
-        matching: find.byType(Image)));
-    expect((first.image as AssetImage).assetName,
-        'assets/images/assets_works_gallery_02.png');
+        matching: find.byType(Image),
+      ),
+    );
+    expect(
+      (first.image as AssetImage).assetName,
+      'assets/images/assets_works_gallery_02.png',
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -213,12 +282,10 @@ void main() {
     expect(find.text('暂无官方角色'), findsOneWidget);
   });
 
-  testWidgets('asset library back button returns to the previous page',
-      (tester) async {
-    await pumpPage(
-      tester,
-      const Scaffold(body: Center(child: Text('上一页'))),
-    );
+  testWidgets('asset library back button returns to the previous page', (
+    tester,
+  ) async {
+    await pumpPage(tester, const Scaffold(body: Center(child: Text('上一页'))));
 
     final navigator = Navigator.of(tester.element(find.text('上一页')));
     final routeClosed = navigator.push(
@@ -254,10 +321,7 @@ void main() {
   testWidgets('renders and switches membership plans', (tester) async {
     await pumpPage(
       tester,
-      MembershipPage(
-        initialPlans: _membershipPlans,
-        loadPlansOnOpen: false,
-      ),
+      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
     );
 
     expect(find.text('积分详情'), findsNothing);
@@ -319,25 +383,25 @@ void main() {
           as LinearGradient;
     }
 
-    expect(
-      membershipGradient().colors,
-      const [Color(0xFFF1EEFA), Color(0xFFF8F8F8)],
-    );
+    expect(membershipGradient().colors, const [
+      Color(0xFFF1EEFA),
+      Color(0xFFF8F8F8),
+    ]);
 
     await tester.tap(find.byKey(const Key('membership-plan-tab-1')));
     await tester.pumpAndSettle();
     expect(find.text('Plus-小有成就'), findsOneWidget);
-    expect(
-      membershipGradient().colors,
-      const [Color(0xFFF9E9FF), Color(0xFFF8F8F8)],
-    );
+    expect(membershipGradient().colors, const [
+      Color(0xFFF9E9FF),
+      Color(0xFFF8F8F8),
+    ]);
 
     await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
-    expect(
-      membershipGradient().colors,
-      const [Color(0xFFD9CDFF), Color(0xFFF8F8F8)],
-    );
+    expect(membershipGradient().colors, const [
+      Color(0xFFD9CDFF),
+      Color(0xFFF8F8F8),
+    ]);
 
     await tester.drag(
       find.byKey(const Key('membership-plan-tabs')),
@@ -347,14 +411,11 @@ void main() {
     await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
     await tester.pumpAndSettle();
     expect(find.text('50000'), findsOneWidget);
-    expect(
-      membershipGradient().colors,
-      const [
-        Color(0xFFFFD8B2),
-        Color(0xFFE2D9FF),
-        Color(0xFFF8F8F8),
-      ],
-    );
+    expect(membershipGradient().colors, const [
+      Color(0xFFFFD8B2),
+      Color(0xFFE2D9FF),
+      Color(0xFFF8F8F8),
+    ]);
     expect(membershipGradient().stops, const [0, .2073, 1]);
     final markdown = tester.widget<MarkdownBody>(
       find.byKey(const Key('membership-description-markdown')),
@@ -362,14 +423,12 @@ void main() {
     expect(markdown.data, contains('Max 50000 专属权益'));
   });
 
-  testWidgets('reverses plans and groups both Plus point options',
-      (tester) async {
+  testWidgets('reverses plans and groups both Plus point options', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
-      MembershipPage(
-        initialPlans: _membershipPlans,
-        loadPlansOnOpen: false,
-      ),
+      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
     );
 
     expect(
@@ -415,8 +474,9 @@ void main() {
   });
 
   for (final reverseOrder in [false, true]) {
-    testWidgets('hides Core by ID with reversed input: $reverseOrder',
-        (tester) async {
+    testWidgets('hides Core by ID with reversed input: $reverseOrder', (
+      tester,
+    ) async {
       final plans = [
         for (final values in [
           (9, 'Core-高效创作', 66000, 0, 251900),
@@ -459,7 +519,8 @@ void main() {
         expect(find.text(isEntryPlan ? '299' : '599'), findsOneWidget);
         expect(
           find.text(
-              isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分'),
+            isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分',
+          ),
           findsOneWidget,
         );
         expect(
@@ -475,31 +536,29 @@ void main() {
     });
   }
 
-  testWidgets('keeps spacing between the membership card and bottom button',
-      (tester) async {
+  testWidgets('keeps spacing between the membership card and bottom button', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
-      MembershipPage(
-        initialPlans: _membershipPlans,
-        loadPlansOnOpen: false,
-      ),
+      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
     );
 
-    final cardBottom =
-        tester.getBottomLeft(find.byKey(const Key('membership-plan-card'))).dy;
-    final buttonTop =
-        tester.getTopLeft(find.byKey(const Key('membership-open-button'))).dy;
+    final cardBottom = tester
+        .getBottomLeft(find.byKey(const Key('membership-plan-card')))
+        .dy;
+    final buttonTop = tester
+        .getTopLeft(find.byKey(const Key('membership-open-button')))
+        .dy;
     expect(buttonTop - cardBottom, closeTo(12, .5));
   });
 
-  testWidgets('aligns the selected membership tab to the content margin',
-      (tester) async {
+  testWidgets('aligns the selected membership tab to the content margin', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
-      MembershipPage(
-        initialPlans: _membershipPlans,
-        loadPlansOnOpen: false,
-      ),
+      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
     );
 
     expect(
@@ -533,14 +592,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('renders the membership page with dark theme surfaces',
-      (tester) async {
+  testWidgets('renders the membership page with dark theme surfaces', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
-      MembershipPage(
-        initialPlans: _membershipPlans,
-        loadPlansOnOpen: false,
-      ),
+      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
       theme: AppTheme.dark,
     );
 
@@ -592,7 +649,9 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(HomePage)),
     );
-    await container.read(userProvider.notifier).setUser(
+    await container
+        .read(userProvider.notifier)
+        .setUser(
           const User(
             id: '10561',
             name: '当前用户',
@@ -609,8 +668,9 @@ void main() {
     expect(find.text('立即购买'), findsOneWidget);
   });
 
-  testWidgets('loads membership plan values from the repository',
-      (tester) async {
+  testWidgets('loads membership plan values from the repository', (
+    tester,
+  ) async {
     final product = ProductPlan.fromJson({
       'id': 3,
       'type': 1,
@@ -628,10 +688,7 @@ void main() {
       },
     });
 
-    await pumpPage(
-      tester,
-      MembershipPage(planLoader: () async => [product]),
-    );
+    await pumpPage(tester, MembershipPage(planLoader: () async => [product]));
 
     expect(find.text('34000'), findsOneWidget);
     expect(find.text('8900'), findsNothing);
@@ -641,8 +698,9 @@ void main() {
     expect(find.text('立即购买'), findsOneWidget);
   });
 
-  testWidgets('uses zero bonus points returned by the membership API',
-      (tester) async {
+  testWidgets('uses zero bonus points returned by the membership API', (
+    tester,
+  ) async {
     final product = ProductPlan.fromJson({
       'id': 2,
       'type': 1,
@@ -660,10 +718,7 @@ void main() {
       },
     });
 
-    await pumpPage(
-      tester,
-      MembershipPage(planLoader: () async => [product]),
-    );
+    await pumpPage(tester, MembershipPage(planLoader: () async => [product]));
 
     expect(find.text('Starter 灵感初启'), findsNWidgets(2));
     expect(find.text('79'), findsOneWidget);
@@ -672,18 +727,16 @@ void main() {
     expect(find.text('限时活动 8折'), findsOneWidget);
     expect(find.text('每100积分≈￥4.5元'), findsOneWidget);
     expect(find.text('立即购买'), findsOneWidget);
-    final discountBadgeSize =
-        tester.getSize(find.byKey(const Key('membership-discount-badge')));
+    final discountBadgeSize = tester.getSize(
+      find.byKey(const Key('membership-discount-badge')),
+    );
     expect(discountBadgeSize.height, 36);
     expect(discountBadgeSize.width, greaterThan(97));
     expect(find.text('包含：1750/套餐积分+0/赠送积分'), findsOneWidget);
   });
 
   testWidgets('does not render local membership plan defaults', (tester) async {
-    await pumpPage(
-      tester,
-      const MembershipPage(loadPlansOnOpen: false),
-    );
+    await pumpPage(tester, const MembershipPage(loadPlansOnOpen: false));
 
     expect(find.byKey(const Key('membership-plans-empty')), findsOneWidget);
     expect(find.text('暂无可用会员方案'), findsOneWidget);
@@ -691,8 +744,9 @@ void main() {
     expect(find.byKey(const Key('membership-plan-tabs')), findsNothing);
   });
 
-  testWidgets('renders profile settings with theme-aware icons in dark mode',
-      (tester) async {
+  testWidgets('renders profile settings with theme-aware icons in dark mode', (
+    tester,
+  ) async {
     await pumpPage(tester, const ProfilePage(), theme: AppTheme.dark);
 
     expect(find.text('语言'), findsOneWidget);
@@ -708,10 +762,7 @@ void main() {
           .first,
     );
     final decoration = preferencesSurface.decoration! as BoxDecoration;
-    expect(
-      decoration.color,
-      AppTheme.dark.colorScheme.surfaceContainerLow,
-    );
+    expect(decoration.color, AppTheme.dark.colorScheme.surfaceContainerLow);
   });
 
   testWidgets('expands language and theme selection trees', (tester) async {
@@ -749,22 +800,35 @@ void main() {
     expect(find.text('退出登录不会丢失任何数据\n你仍可以登录此账号'), findsNothing);
   });
 
-  testWidgets('tapping avatar previews a selected image before saving',
-      (tester) async {
+  testWidgets('tapping avatar previews a selected image before saving', (
+    tester,
+  ) async {
     var picks = 0;
     final bytes = base64Decode(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
-    await pumpPage(tester, EditProfilePage(pickAvatar: () async {
-      picks++;
-      return XFile.fromData(bytes, name: 'avatar.png', mimeType: 'image/png');
-    }));
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    await pumpPage(
+      tester,
+      EditProfilePage(
+        pickAvatar: () async {
+          picks++;
+          return XFile.fromData(
+            bytes,
+            name: 'avatar.png',
+            mimeType: 'image/png',
+          );
+        },
+      ),
+    );
     await tester.tap(find.byKey(const Key('edit-profile-avatar')));
     await tester.pumpAndSettle();
     expect(picks, 1);
     expect(
-        find.byWidgetPredicate(
-            (widget) => widget is Image && widget.image is MemoryImage),
-        findsOneWidget);
+      find.byWidgetPredicate(
+        (widget) => widget is Image && widget.image is MemoryImage,
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -780,10 +844,7 @@ void main() {
   testWidgets('renders points details design', (tester) async {
     await pumpPage(
       tester,
-      const PointsDetailsPage(
-        refreshOnOpen: false,
-        loadPointsLogOnOpen: false,
-      ),
+      const PointsDetailsPage(refreshOnOpen: false, loadPointsLogOnOpen: false),
     );
 
     expect(find.text('积分详情'), findsNWidgets(2));
@@ -831,8 +892,10 @@ void main() {
     expect(legalLinks.style.height, 1.5);
     expect(tester.getSize(sheet).height, lessThan(600));
     final confirm = find.byKey(const Key('points-recharge-confirm'));
-    expect(tester.getBottomRight(sheet).dy - tester.getBottomRight(confirm).dy,
-        closeTo(16, 1));
+    expect(
+      tester.getBottomRight(sheet).dy - tester.getBottomRight(confirm).dy,
+      closeTo(16, 1),
+    );
     expect(find.byKey(const Key('points-package-600')), findsOneWidget);
     expect(find.byKey(const Key('points-package-20000')), findsOneWidget);
     expect(find.byKey(const Key('points-package-selected')), findsOneWidget);
@@ -874,10 +937,7 @@ void main() {
 
     await pumpPage(
       tester,
-      PointsDetailsPage(
-        refreshOnOpen: false,
-        pointsLogPageLoader: loadPage,
-      ),
+      PointsDetailsPage(refreshOnOpen: false, pointsLogPageLoader: loadPage),
     );
 
     expect(requests, [(1, 20)]);
@@ -900,14 +960,12 @@ void main() {
     expect(requests, [(1, 20), (2, 20)]);
   });
 
-  testWidgets('separates points cards from the page in dark mode',
-      (tester) async {
+  testWidgets('separates points cards from the page in dark mode', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
-      const PointsDetailsPage(
-        refreshOnOpen: false,
-        loadPointsLogOnOpen: false,
-      ),
+      const PointsDetailsPage(refreshOnOpen: false, loadPointsLogOnOpen: false),
       theme: AppTheme.dark,
     );
 
@@ -923,8 +981,9 @@ void main() {
     }
   });
 
-  testWidgets('layers the recharge sheet and packages in dark mode',
-      (tester) async {
+  testWidgets('layers the recharge sheet and packages in dark mode', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
       PointsDetailsPage(
@@ -1102,7 +1161,8 @@ ProductPlan _membershipPlan({
     'id': id,
     'type': 1,
     'title': title,
-    'description': '<mark>${title.split(' ').first} $coins 专属权益</mark>\n\n'
+    'description':
+        '<mark>${title.split(' ').first} $coins 专属权益</mark>\n\n'
         '<title>创作能力</title>\n\n'
         '同时排队 ×$concurrentTasks\n\n会员存储空间限制 ${storageMb}mb',
     'level': level,

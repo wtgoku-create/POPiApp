@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final safeAreaInsetsProvider =
     NotifierProvider<SafeAreaInsetsController, EdgeInsets>(
-  SafeAreaInsetsController.new,
-);
+      SafeAreaInsetsController.new,
+    );
 
 class SafeAreaInsetsController extends Notifier<EdgeInsets> {
   @override

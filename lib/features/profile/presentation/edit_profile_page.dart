@@ -42,8 +42,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final colorScheme = Theme.of(context).colorScheme;
-    final displayId =
-        user?.code.isNotEmpty == true ? user!.code : user?.id ?? '--';
+    final displayId = user?.code.isNotEmpty == true
+        ? user!.code
+        : user?.id ?? '--';
     final l10n = AppLocalizations.of(context)!;
     if (user != null && _hydratedUserId != user.id) {
       _nameController.text = user.name;
@@ -174,8 +175,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         height: 50,
                         child: FilledButton(
                           key: const Key('save-profile-button'),
-                          onPressed:
-                              _isSaving || _isPicking ? null : _saveProfile,
+                          onPressed: _isSaving || _isPicking
+                              ? null
+                              : _saveProfile,
                           child: _isSaving
                               ? const SizedBox.square(
                                   dimension: 20,
@@ -204,9 +206,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   }
 
   OutlineInputBorder get _border => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        borderSide: BorderSide.none,
-      );
+    borderRadius: BorderRadius.circular(AppRadii.pill),
+    borderSide: BorderSide.none,
+  );
 
   Future<void> _saveProfile() async {
     if (_isSaving || _isPicking || ref.read(userProvider) == null) return;
@@ -221,11 +223,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     FocusManager.instance.primaryFocus?.unfocus();
     try {
       if (_avatarBytes != null && _uploadedAvatarUrl == null) {
-        _uploadedAvatarUrl =
-            await NetworkApi(ref.read(dioProvider)).uploadAvatar(
-          bytes: _avatarBytes!,
-          filename: _avatarFilename!,
-        );
+        _uploadedAvatarUrl = await NetworkApi(
+          ref.read(dioProvider),
+        ).uploadAvatar(bytes: _avatarBytes!, filename: _avatarFilename!);
       }
       if (!mounted) return;
       await ref
@@ -246,12 +246,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _isPicking = true);
     FocusManager.instance.primaryFocus?.unfocus();
     try {
-      final file = await (widget.pickAvatar?.call() ??
-          ImagePicker().pickImage(
-              source: ImageSource.gallery,
-              maxWidth: 1024,
-              maxHeight: 1024,
-              imageQuality: 90));
+      final file =
+          await (widget.pickAvatar?.call() ??
+              ImagePicker().pickImage(
+                source: ImageSource.gallery,
+                maxWidth: 1024,
+                maxHeight: 1024,
+                imageQuality: 90,
+              ));
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
       final codec = await instantiateImageCodec(bytes);
@@ -266,7 +268,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     } catch (_) {
       if (mounted) {
         AppToast.error(
-            context, AppLocalizations.of(context)!.avatarSelectionFailed);
+          context,
+          AppLocalizations.of(context)!.avatarSelectionFailed,
+        );
       }
     } finally {
       if (mounted) setState(() => _isPicking = false);

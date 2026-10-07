@@ -104,8 +104,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surface,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.control),
           borderSide: BorderSide(color: colorScheme.outline),
@@ -138,6 +140,34 @@ class AppTheme {
         backgroundColor: colorScheme.primaryContainer,
         side: BorderSide.none,
         shape: controlShape,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          shape: const WidgetStatePropertyAll(CircleBorder()),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.transparent;
+            }
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused)) {
+              return colorScheme.onSurface.withValues(alpha: .06);
+            }
+            return Colors.transparent;
+          }),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return Colors.transparent;
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return colorScheme.onSurface.withValues(alpha: .12);
+            }
+            if (states.contains(WidgetState.hovered) ||
+                states.contains(WidgetState.focused)) {
+              return colorScheme.onSurface.withValues(alpha: .06);
+            }
+            return Colors.transparent;
+          }),
+        ),
       ),
     );
   }

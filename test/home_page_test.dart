@@ -15,6 +15,9 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
+import 'package:popi_ai_app/shared/providers/project_provider.dart';
+
+import 'support/project_fixtures.dart';
 
 void main() {
   test('message composer controller exports markdown', () async {
@@ -31,8 +34,9 @@ void main() {
   test('message composer controller keeps a valid selection on dismiss', () {
     final controller = PopiMessageComposerController(initialText: '输入内容');
     addTearDown(controller.dispose);
-    controller.textController.selection =
-        const TextSelection.collapsed(offset: 2);
+    controller.textController.selection = const TextSelection.collapsed(
+      offset: 2,
+    );
 
     controller.dismissKeyboard();
 
@@ -46,12 +50,18 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetViewInsets);
 
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [
+        projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
+      ],
+    );
     addTearDown(container.dispose);
     container
         .read(safeAreaInsetsProvider.notifier)
         .update(const EdgeInsets.fromLTRB(24, 24, 28, 34));
-    await container.read(userProvider.notifier).setUser(
+    await container
+        .read(userProvider.notifier)
+        .setUser(
           const User(
             id: '10561',
             code: 'u10561',
@@ -64,10 +74,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: _LocalizedTestApp(
-          theme: AppTheme.light,
-          home: const HomePage(),
-        ),
+        child: _LocalizedTestApp(theme: AppTheme.light, home: const HomePage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -83,9 +90,7 @@ void main() {
     );
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
     final collapsedComposerHeight = tester
-        .getSize(
-          find.byType(PopiMessageComposer),
-        )
+        .getSize(find.byType(PopiMessageComposer))
         .height;
     final collapsedScrollView = tester.widget<SingleChildScrollView>(
       find.byKey(const Key('popi-home-scroll')),
@@ -130,18 +135,17 @@ void main() {
       tester.getTopLeft(find.byKey(const Key('popi-home-app-bar'))).dy,
       24,
     );
-    expect(
-      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
-      956 - 34,
-    );
-    final wordmarkTop =
-        tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy;
+    expect(tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy, 956 - 34);
+    final wordmarkTop = tester
+        .getTopLeft(find.byKey(const Key('popi-wordmark')))
+        .dy;
 
     await tester.tap(find.byKey(const Key('popi-message-input')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 110));
-    final animatingComposerHeight =
-        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    final animatingComposerHeight = tester
+        .getSize(find.byKey(const Key('popi-message-composer')))
+        .height;
     expect(animatingComposerHeight, greaterThan(60));
     expect(animatingComposerHeight, lessThan(112));
     await tester.pump(const Duration(milliseconds: 120));
@@ -157,8 +161,9 @@ void main() {
     tester.testTextInput.enterText('第一行\n第二行\n第三行\n第四行\n第五行');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 90));
-    final growingHeight =
-        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    final growingHeight = tester
+        .getSize(find.byKey(const Key('popi-message-composer')))
+        .height;
     expect(growingHeight, greaterThan(112));
     expect(growingHeight, lessThan(154));
     await tester.pumpAndSettle();
@@ -173,8 +178,9 @@ void main() {
     tester.testTextInput.enterText('');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 90));
-    final shrinkingHeight =
-        tester.getSize(find.byKey(const Key('popi-message-composer'))).height;
+    final shrinkingHeight = tester
+        .getSize(find.byKey(const Key('popi-message-composer')))
+        .height;
     expect(shrinkingHeight, greaterThan(112));
     expect(shrinkingHeight, lessThan(154));
     await tester.pumpAndSettle();
@@ -183,9 +189,7 @@ void main() {
       112,
     );
     final expandedComposerHeight = tester
-        .getSize(
-          find.byType(PopiMessageComposer),
-        )
+        .getSize(find.byType(PopiMessageComposer))
         .height;
     final expandedScrollView = tester.widget<SingleChildScrollView>(
       find.byKey(const Key('popi-home-scroll')),
@@ -195,8 +199,9 @@ void main() {
       (expandedScrollView.padding! as EdgeInsets).bottom,
       closeTo(expandedComposerHeight + 20, .5),
     );
-    final expandedComposerRect =
-        tester.getRect(find.byKey(const Key('popi-message-composer')));
+    final expandedComposerRect = tester.getRect(
+      find.byKey(const Key('popi-message-composer')),
+    );
     await tester.tapAt(
       Offset(expandedComposerRect.center.dx, expandedComposerRect.top + 70),
     );
@@ -235,8 +240,9 @@ void main() {
 
     tester.view.viewInsets = const FakeViewPadding(bottom: 1);
     await tester.pumpAndSettle();
-    final composerBottomNearKeyboardClose =
-        tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy;
+    final composerBottomNearKeyboardClose = tester
+        .getBottomRight(find.text('AI生成结果可能有误，仅供参考'))
+        .dy;
     tester.view.resetViewInsets();
     await tester.pumpAndSettle();
     expect(
@@ -251,59 +257,40 @@ void main() {
     await tester.tap(find.text('做一个新IP'));
     await tester.pumpAndSettle();
     expect(find.text('做一个新IP'), findsWidgets);
-    expect(
-      find.byKey(const Key('popi-message-placeholder')),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('popi-message-placeholder')), findsNothing);
 
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    expect(find.text('搜索对话'), findsOneWidget);
-    expect(find.text('POPi对话'), findsOneWidget);
+    expect(find.text('新建IP项目'), findsOneWidget);
+    expect(find.text('搜索对话'), findsNothing);
+    expect(find.text('POPi对话'), findsNothing);
     expect(find.text('当前用户'), findsOneWidget);
     expect(find.text('u10561'), findsOneWidget);
     expect(
       tester.getSize(find.byKey(const Key('drawer-user-summary'))).width,
       greaterThan(81),
     );
-    expect(find.text('任务'), findsOneWidget);
+    expect(find.text('项目(5)'), findsOneWidget);
+    expect(find.text('爱丽丝'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.byKey(const Key('popi-drawer-search'))).dy,
+      tester.getTopLeft(find.byKey(const Key('drawer-new-project'))).dy,
       53,
     );
-    final searchBackground = tester.widget<DecoratedBox>(
-      find
-          .descendant(
-            of: find.byKey(const Key('popi-drawer-search')),
-            matching: find.byType(DecoratedBox),
-          )
-          .first,
+    expect(
+      tester.getSize(find.byKey(const Key('drawer-new-project'))),
+      const Size(320, 50),
     );
-    final searchDecoration = searchBackground.decoration as BoxDecoration;
-    expect(searchDecoration.color, AppTheme.light.colorScheme.surface);
-    expect(searchDecoration.border, isA<Border>());
-    expect(searchDecoration.boxShadow, isNull);
-    final searchField = tester.widget<TextField>(find.descendant(
-        of: find.byKey(const Key('popi-drawer-search')),
-        matching: find.byType(TextField)));
-    expect(searchField.decoration!.isCollapsed, isTrue);
-    expect(searchField.decoration!.contentPadding,
-        const EdgeInsets.fromLTRB(40, 10, 12, 10));
-    expect(find.byTooltip('新建对话'), findsOneWidget);
     expect(find.text('我的IP账号'), findsNothing);
     expect(find.text('灵感库'), findsNothing);
     expect(find.text('Skill'), findsNothing);
 
     final navigationInkWell = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('角色'),
-        matching: find.byType(InkWell),
-      ),
+      find.ancestor(of: find.text('角色'), matching: find.byType(InkWell)),
     );
-    final taskInkWell = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('生活剧情Vlog'),
+    final projectInkWell = tester.widget<InkWell>(
+      find.descendant(
+        of: find.byKey(const Key('drawer-project-0')),
         matching: find.byType(InkWell),
       ),
     );
@@ -313,24 +300,23 @@ void main() {
       AppColors.brand.withValues(alpha: .12),
     );
     expect(
-      taskInkWell.overlayColor?.resolve(pressedStates),
+      projectInkWell.overlayColor?.resolve(pressedStates),
       AppColors.brand.withValues(alpha: .12),
     );
-    final drawer = tester
-        .widget<Container>(find.byKey(const Key('popi-navigation-drawer')));
-    expect((drawer.decoration as BoxDecoration).borderRadius,
-        const BorderRadius.horizontal(right: Radius.circular(30)));
+    final drawer = tester.widget<Container>(
+      find.byKey(const Key('popi-navigation-drawer')),
+    );
+    expect(
+      (drawer.decoration as BoxDecoration).borderRadius,
+      const BorderRadius.horizontal(right: Radius.circular(30)),
+    );
     expect(drawer.clipBehavior, Clip.antiAlias);
-    final search = find.descendant(
-        of: find.byKey(const Key('popi-drawer-search')),
-        matching: find.byType(TextField));
-    await tester.enterText(search, '角色介绍');
+    await tester.tap(find.byKey(const Key('drawer-project-0')));
     await tester.pumpAndSettle();
-    expect(find.text('角色介绍撰写'), findsOneWidget);
-    expect(find.text('生活剧情Vlog'), findsNothing);
-    await tester.enterText(search, '');
+    expect(find.text('校园野餐vlog'), findsNothing);
+    await tester.tap(find.byKey(const Key('drawer-project-0')));
     await tester.pumpAndSettle();
-    expect(find.text('生活剧情Vlog'), findsOneWidget);
+    expect(find.text('校园野餐vlog'), findsOneWidget);
   });
 
   testWidgets('renders home content in English', (tester) async {
@@ -354,14 +340,12 @@ void main() {
     expect(find.byTooltip('Open navigation'), findsOneWidget);
   });
 
-  testWidgets('collapsing the focused editor does not read dirty text layout',
-      (tester) async {
+  testWidgets('collapsing the focused editor does not read dirty text layout', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
-        child: _LocalizedTestApp(
-          theme: AppTheme.light,
-          home: const HomePage(),
-        ),
+        child: _LocalizedTestApp(theme: AppTheme.light, home: const HomePage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -381,8 +365,9 @@ void main() {
     );
   });
 
-  testWidgets('picks at most five images inside the composer and removes one',
-      (tester) async {
+  testWidgets('picks at most five images inside the composer and removes one', (
+    tester,
+  ) async {
     final imageBytes = Uint8List.fromList(
       base64Decode(
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -432,8 +417,9 @@ void main() {
     );
 
     final firstImage = find.byKey(const Key('popi-selected-image-0'));
-    final firstRemoveButton =
-        find.byKey(const Key('popi-remove-selected-image-0'));
+    final firstRemoveButton = find.byKey(
+      const Key('popi-remove-selected-image-0'),
+    );
     expect(tester.getSize(firstImage), const Size.square(28));
     expect(firstRemoveButton, findsNothing);
 
@@ -445,10 +431,7 @@ void main() {
     );
     final expandedImageRect = tester.getRect(firstImage);
     final expandedRemoveButtonRect = tester.getRect(firstRemoveButton);
-    expect(
-      expandedImageRect.contains(expandedRemoveButtonRect.center),
-      isTrue,
-    );
+    expect(expandedImageRect.contains(expandedRemoveButtonRect.center), isTrue);
     expect(expandedRemoveButtonRect.top, expandedImageRect.top + 3);
     expect(expandedRemoveButtonRect.right, expandedImageRect.right - 3);
 
@@ -547,10 +530,18 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
   });
 
-  testWidgets('uses dark theme colors on the home page and drawer',
-      (tester) async {
-    final container = ProviderContainer();
+  testWidgets('uses dark theme colors on the home page and drawer', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
+      ],
+    );
     addTearDown(container.dispose);
+    await container
+        .read(userProvider.notifier)
+        .setUser(const User(id: '1', name: '当前用户', email: ''));
     container
         .read(safeAreaInsetsProvider.notifier)
         .update(const EdgeInsets.fromLTRB(24, 24, 28, 34));
@@ -558,10 +549,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: _LocalizedTestApp(
-          theme: AppTheme.dark,
-          home: const HomePage(),
-        ),
+        child: _LocalizedTestApp(theme: AppTheme.dark, home: const HomePage()),
       ),
     );
     await tester.pumpAndSettle();
@@ -581,10 +569,7 @@ void main() {
       (composer.decoration! as BoxDecoration).color,
       AppTheme.dark.colorScheme.surfaceContainerHigh,
     );
-    expect(
-      find.byKey(const Key('popi-composer-region-blur')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('popi-composer-region-blur')), findsOneWidget);
     expect(
       find.byKey(const Key('popi-composer-region-feather')),
       findsOneWidget,
@@ -608,29 +593,14 @@ void main() {
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    final firstTaskIcon = tester
-        .widgetList<AppSvgIcon>(
-          find.byType(AppSvgIcon),
-        )
-        .firstWhere(
-          (icon) => icon.assetName == 'home_drawer_task-red',
-        );
-    expect(firstTaskIcon.color, isNull);
-
-    await tester.drag(find.byType(ListView), const Offset(0, -120));
-    await tester.pumpAndSettle();
-
-    final neutralTaskIcon = tester
-        .widgetList<AppSvgIcon>(
-          find.byType(AppSvgIcon),
-        )
-        .firstWhere(
-          (icon) => icon.assetName == 'home_drawer_task-neutral',
-        );
-    expect(neutralTaskIcon.colorMapper, isNotNull);
-
-    final navigationLabel = tester.widget<Text>(find.text('POPi对话'));
-    expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.primary);
+    final projectIcon = tester
+        .widgetList<AppSvgIcon>(find.byType(AppSvgIcon))
+        .firstWhere((icon) => icon.assetName == 'home_drawer_project');
+    expect(projectIcon.color, AppTheme.dark.colorScheme.primary);
+    final projectLabel = tester.widget<Text>(find.text('爱丽丝'));
+    expect(projectLabel.style?.color, AppTheme.dark.colorScheme.primary);
+    final navigationLabel = tester.widget<Text>(find.text('角色'));
+    expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     expect(tester.takeException(), isNull);
   });
 }

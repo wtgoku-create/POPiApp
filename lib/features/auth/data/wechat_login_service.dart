@@ -10,16 +10,16 @@ class WechatAuthorizationResult {
   const WechatAuthorizationResult._(this.status, {this.code});
 
   const WechatAuthorizationResult.authorized(String code)
-      : this._(WechatAuthorizationStatus.authorized, code: code);
+    : this._(WechatAuthorizationStatus.authorized, code: code);
 
   const WechatAuthorizationResult.canceled()
-      : this._(WechatAuthorizationStatus.canceled);
+    : this._(WechatAuthorizationStatus.canceled);
 
   const WechatAuthorizationResult.unavailable()
-      : this._(WechatAuthorizationStatus.unavailable);
+    : this._(WechatAuthorizationStatus.unavailable);
 
   const WechatAuthorizationResult.failed()
-      : this._(WechatAuthorizationStatus.failed);
+    : this._(WechatAuthorizationStatus.failed);
 
   final WechatAuthorizationStatus status;
   final String? code;

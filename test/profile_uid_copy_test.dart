@@ -16,12 +16,12 @@ void main() {
     String? clipboardText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') {
-        clipboardText =
-            (call.arguments as Map<Object?, Object?>)['text'] as String?;
-      }
-      return null;
-    });
+          if (call.method == 'Clipboard.setData') {
+            clipboardText =
+                (call.arguments as Map<Object?, Object?>)['text'] as String?;
+          }
+          return null;
+        });
     addTearDown(() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(SystemChannels.platform, null);
@@ -30,12 +30,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
     );
     addTearDown(container.dispose);
-    await container.read(userProvider.notifier).setUser(
+    await container
+        .read(userProvider.notifier)
+        .setUser(
           const User(
             id: '10561',
             code: 'u10561',

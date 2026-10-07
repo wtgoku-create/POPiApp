@@ -110,8 +110,12 @@ flutter gen-l10n
 - 不在 UI 层保存 Token 或处理 JSON 解析。
 - 不把网络请求、持久化和业务规则写进 Widget。
 - SVG 图标统一通过 `AppSvgIcon` 加载，不要在页面中散落资源路径。
+- 独立图标按钮使用 `IconButton`，通过 `AppTheme` 中的 `IconButtonTheme` 统一显示圆形中性灰 hover/聚焦热区；保持既定按钮尺寸，禁用时不显示热区，不在业务页面关闭 hover 反馈。
 - Toast 统一通过 `AppToast` 调用，不要在业务页面直接使用第三方 Toast API。
 - Bottom Sheet 统一通过 `AppSheet` 调用，不要在业务页面直接调用 Flutter Sheet API。
+- 弹出菜单统一使用 `lib/shared/widgets/app_menu.dart` 的 `AppMenuButton`；长按内容预览菜单使用 `AppContextMenu`，第三方 `cupertino_context_menu_plus` 仅在共享组件内使用。菜单项使用 `AppMenuItem`，二级菜单使用 `AppSubmenu`，分隔线使用 `AppMenuDivider`。业务页面不直接使用 `PopupMenuButton`、`showMenu`、`MenuAnchor`、`MenuItemButton` 或 `SubmenuButton`，不要自行覆盖菜单样式。
+- 菜单和二级菜单外层统一使用 20px 大圆角，内部菜单项使用两端半圆的胶囊矩形（StadiumBorder）；浅色主题为白底，深色主题跟随 surface，选中和悬停使用中性灰背景。
+- 菜单参考苹果系统的排版：44px 最小行高、16px 文案、右侧操作图标、左侧选中勾选及细分隔线。菜单面板使用不透明背景，不添加悬停渐变或点击波纹动画。普通菜单和二级菜单即时展开；长按内容预览菜单保留按压放大、展开和收起动画，遵循系统减少动态效果设置。长按菜单与居中弹窗共用 `AppModalBackdrop` 的背景模糊和轻度暗色遮罩，内容本身保持清晰。
 - 本地 SVG 放在 `assets/icons/`，资源目录在 `pubspec.yaml` 中统一声明。
 - 新增公共类和复杂逻辑时添加简短注释，避免无意义注释。
 - 保持空安全，不使用没有必要的 `dynamic`。
@@ -161,3 +165,5 @@ flutter build macos --debug
 - Reuse `lib/shared/widgets/app_dialog.dart`. Use a surface background, 26px corners, centered confirmation copy, and horizontal pill action buttons. Confirmation dialogs default to 330px width and 30px padding; destructive confirmation uses #D63D43.
 - Do not add a top-right close icon. Allow dismissal through cancel, the barrier, and platform back navigation where appropriate.
 - Bottom sheets used for content selection remain separate from centered dialogs.
+- Centered dialogs opened through `AppDialog.show` use a full-screen blurred backdrop with the shared `AppModalBackdrop` settings; keep the dialog surface opaque.
+- Dialog transitions use the shared menu timing (260ms enter, 180ms exit), a subtle scale and fade, and animated backdrop intensity. Disable transitions when the system requests reduced motion.

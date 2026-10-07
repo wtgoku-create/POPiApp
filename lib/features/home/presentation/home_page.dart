@@ -85,11 +85,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final composerBottomPadding =
-        math.max(safeArea.bottom, keyboardHeight + 20).toDouble();
+    final composerBottomPadding = math
+        .max(safeArea.bottom, keyboardHeight + 20)
+        .toDouble();
     final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
-    final composerInset =
-        _composerHeight > 0 ? _composerHeight : fallbackComposerHeight;
+    final composerInset = _composerHeight > 0
+        ? _composerHeight
+        : fallbackComposerHeight;
     final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -116,7 +118,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           key: _scaffoldKey,
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
-          drawer: const PopiNavigationDrawer(),
+          drawer: PopiNavigationDrawer(
+            onNewProject: () => _selectPrompt(l10n.homePromptCreateIp),
+            onOpenConversation: (selection) =>
+                _openConversation(selection.session.id),
+          ),
           drawerScrimColor: const Color(0x33333333),
           onDrawerChanged: (isOpened) {
             if (_drawerOpen != isOpened) {
@@ -191,8 +197,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                   controller: _bodyScrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding:
-                      EdgeInsets.fromLTRB(20, 50, 20, contentBottomPadding),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    50,
+                    20,
+                    contentBottomPadding,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 400),
@@ -202,15 +212,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                             prompts: [
                               (
                                 l10n.homePromptCreateIp,
-                                const Color(0xFFEDE7FD)
+                                const Color(0xFFEDE7FD),
                               ),
                               (
                                 l10n.homePromptImproveAccount,
-                                const Color(0xFFFEF4E8)
+                                const Color(0xFFFEF4E8),
                               ),
                               (
                                 l10n.homePromptHasReference,
-                                const Color(0xFFFEEEF6)
+                                const Color(0xFFFEEEF6),
                               ),
                               (l10n.homePromptUnsure, const Color(0xFFE5FBFA)),
                             ],
@@ -329,12 +339,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     try {
-      final images = await (widget.pickImages?.call() ??
-          ImagePicker().pickMultiImage(
-            imageQuality: 85,
-            maxWidth: 1920,
-            limit: remaining,
-          ));
+      final images =
+          await (widget.pickImages?.call() ??
+              ImagePicker().pickMultiImage(
+                imageQuality: 85,
+                maxWidth: 1920,
+                limit: remaining,
+              ));
       if (images.isEmpty) return;
 
       final selected = <PopiComposerImage>[];
@@ -593,10 +604,7 @@ class _MembershipEntry extends StatelessWidget {
 }
 
 class _WelcomeCards extends StatelessWidget {
-  const _WelcomeCards({
-    required this.prompts,
-    required this.onPromptSelected,
-  });
+  const _WelcomeCards({required this.prompts, required this.onPromptSelected});
 
   final List<(String, Color)> prompts;
   final ValueChanged<String> onPromptSelected;
@@ -783,8 +791,9 @@ class _PromptTile extends StatelessWidget {
                     child: AppSvgIcon.asset(
                       'home_welcome_chevron',
                       color: colors.onSurface,
-                      semanticsLabel:
-                          AppLocalizations.of(context)!.selectAction,
+                      semanticsLabel: AppLocalizations.of(
+                        context,
+                      )!.selectAction,
                     ),
                   ),
                 ),

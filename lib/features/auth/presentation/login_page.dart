@@ -104,7 +104,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   end: Alignment.bottomCenter,
                                   colors: [
                                     Color(0xFFEDE9FD),
-                                    Color(0xFFF8F8F8)
+                                    Color(0xFFF8F8F8),
                                   ],
                                 )
                               : null,
@@ -125,7 +125,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       countdown: _countdown,
                       sendingCode: _isSendingCode,
                       loggingIn: _isLoggingIn,
-                      phoneBindingRequired: _wechatRegisterToken != null ||
+                      phoneBindingRequired:
+                          _wechatRegisterToken != null ||
                           _douyinRegisterToken != null,
                       wechatLoggingIn: _isWechatLoggingIn,
                       douyinLoggingIn: _isDouyinLoggingIn,
@@ -229,10 +230,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_isSendingCode || _countdown > 0) return false;
     setState(() => _isSendingCode = true);
     try {
-      await ref.read(authRepositoryProvider).sendLoginCode(
-            phone: phone,
-            captchaToken: captchaToken,
-          );
+      await ref
+          .read(authRepositoryProvider)
+          .sendLoginCode(phone: phone, captchaToken: captchaToken);
       if (!mounted) return false;
       _startCountdown();
       AppToast.success(context, l10n.verificationCodeSent);
@@ -273,23 +273,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       final registerToken = _wechatRegisterToken;
       final douyinRegisterToken = _douyinRegisterToken;
       if (_passwordLogin) {
-        await ref.read(userProvider.notifier).signInWithPassword(
+        await ref
+            .read(userProvider.notifier)
+            .signInWithPassword(
               phone: _phoneController.text.trim(),
               password: _passwordController.text,
             );
       } else if (douyinRegisterToken != null) {
-        await ref.read(userProvider.notifier).registerDouyinAppByPhone(
+        await ref
+            .read(userProvider.notifier)
+            .registerDouyinAppByPhone(
               registerToken: douyinRegisterToken,
               phone: _phoneController.text.trim(),
               code: _codeController.text.trim(),
             );
       } else if (registerToken == null) {
-        await ref.read(userProvider.notifier).signInWithCode(
+        await ref
+            .read(userProvider.notifier)
+            .signInWithCode(
               phone: _phoneController.text.trim(),
               code: _codeController.text.trim(),
             );
       } else {
-        await ref.read(userProvider.notifier).registerWechatAppByPhone(
+        await ref
+            .read(userProvider.notifier)
+            .registerWechatAppByPhone(
               registerToken: registerToken,
               phone: _phoneController.text.trim(),
               code: _codeController.text.trim(),
@@ -353,14 +361,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     setState(() => _isWechatLoggingIn = true);
     try {
-      final result = await ref.read(userProvider.notifier).signInWithWechatApp(
-            code: code,
-          );
+      final result = await ref
+          .read(userProvider.notifier)
+          .signInWithWechatApp(code: code);
       if (!mounted) return;
-      if (result
-          case WechatAppSignInPhoneBindingRequired(
-            registerToken: final registerToken,
-          )) {
+      if (result case WechatAppSignInPhoneBindingRequired(
+        registerToken: final registerToken,
+      )) {
         setState(() {
           _wechatRegisterToken = registerToken;
           _douyinRegisterToken = null;
@@ -369,7 +376,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordController.clear();
         });
         AppToast.info(
-            context, AppLocalizations.of(context)!.wechatPhoneBindingRequired);
+          context,
+          AppLocalizations.of(context)!.wechatPhoneBindingRequired,
+        );
         return;
       }
       AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
@@ -399,8 +408,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     setState(() => _isDouyinLoggingIn = true);
     try {
-      final authorization =
-          await ref.read(douyinLoginServiceProvider).authorize();
+      final authorization = await ref
+          .read(douyinLoginServiceProvider)
+          .authorize();
       if (!mounted) return;
       switch (authorization.status) {
         case DouyinAuthorizationStatus.authorized:
@@ -435,14 +445,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     setState(() => _isDouyinLoggingIn = true);
     try {
-      final result = await ref.read(userProvider.notifier).signInWithDouyinApp(
-            code: code,
-          );
+      final result = await ref
+          .read(userProvider.notifier)
+          .signInWithDouyinApp(code: code);
       if (!mounted) return;
-      if (result
-          case DouyinAppSignInPhoneBindingRequired(
-            registerToken: final registerToken,
-          )) {
+      if (result case DouyinAppSignInPhoneBindingRequired(
+        registerToken: final registerToken,
+      )) {
         setState(() {
           _douyinRegisterToken = registerToken;
           _wechatRegisterToken = null;
@@ -451,7 +460,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordController.clear();
         });
         AppToast.info(
-            context, AppLocalizations.of(context)!.douyinPhoneBindingRequired);
+          context,
+          AppLocalizations.of(context)!.douyinPhoneBindingRequired,
+        );
         return;
       }
       AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
@@ -496,8 +507,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (error is DouyinLoginUnavailableException) {
       return AppLocalizations.of(context)!.douyinLoginUnavailable;
     }
-    if (error case ApiException(message: final String message)
-        when message.trim().isNotEmpty) {
+    if (error case ApiException(
+      message: final String message,
+    ) when message.trim().isNotEmpty) {
       return message;
     }
     return AppLocalizations.of(context)!.networkRequestFailed;
@@ -577,8 +589,9 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Align(
-              alignment:
-                  needsScrolling ? Alignment.topCenter : Alignment.bottomCenter,
+              alignment: needsScrolling
+                  ? Alignment.topCenter
+                  : Alignment.bottomCenter,
               child: canvas,
             ),
           ),
@@ -657,8 +670,9 @@ class _PhoneLoginDesign extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(45)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(45),
+              ),
             ),
           ),
         ),
@@ -720,8 +734,9 @@ class _PhoneLoginDesign extends StatelessWidget {
                               autofillHints: const [AutofillHints.oneTimeCode],
                               maxLength: 6,
                               style: textStyle,
-                              decoration:
-                                  _fieldDecoration(l10n.verificationCodeHint),
+                              decoration: _fieldDecoration(
+                                l10n.verificationCodeHint,
+                              ),
                               onSubmitted: (_) => onLogin(),
                             ),
                     ),
@@ -733,15 +748,18 @@ class _PhoneLoginDesign extends StatelessWidget {
                             ? l10n.hidePassword
                             : l10n.showPassword,
                         onPressed: onTogglePasswordVisibility,
-                        icon: Icon(passwordVisible
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined),
+                        icon: Icon(
+                          passwordVisible
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
                       )
                     else
                       TextButton(
                         key: const Key('send-code-button'),
-                        onPressed:
-                            countdown > 0 || sendingCode ? null : onSendCode,
+                        onPressed: countdown > 0 || sendingCode
+                            ? null
+                            : onSendCode,
                         style: TextButton.styleFrom(
                           fixedSize: const Size(116, 40),
                           minimumSize: const Size(116, 40),
@@ -761,8 +779,8 @@ class _PhoneLoginDesign extends StatelessWidget {
                             sendingCode
                                 ? l10n.sendingVerificationCode
                                 : countdown > 0
-                                    ? l10n.resendCountdown(countdown)
-                                    : l10n.sendVerificationCode,
+                                ? l10n.resendCountdown(countdown)
+                                : l10n.sendVerificationCode,
                             maxLines: 1,
                             softWrap: false,
                           ),
@@ -777,8 +795,8 @@ class _PhoneLoginDesign extends StatelessWidget {
                 label: phoneBindingRequired
                     ? l10n.bindPhone
                     : passwordLogin
-                        ? l10n.passwordLogin
-                        : l10n.loginOrRegister,
+                    ? l10n.passwordLogin
+                    : l10n.loginOrRegister,
                 onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
                     ? null
                     : onLogin,
@@ -788,7 +806,8 @@ class _PhoneLoginDesign extends StatelessWidget {
                 const SizedBox(height: 8),
                 TextButton(
                   key: const Key('login-mode-switch'),
-                  onPressed: loggingIn ||
+                  onPressed:
+                      loggingIn ||
                           wechatLoggingIn ||
                           douyinLoggingIn ||
                           sendingCode
@@ -818,8 +837,10 @@ class _PhoneLoginDesign extends StatelessWidget {
                     fixedSize: const Size(115, 38),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -832,13 +853,21 @@ class _PhoneLoginDesign extends StatelessWidget {
                           ),
                         )
                       else
-                        Image.asset('assets/images/login_wechat.png',
-                            width: 30, height: 30),
+                        Image.asset(
+                          'assets/images/login_wechat.png',
+                          width: 30,
+                          height: 30,
+                        ),
                       const SizedBox(width: 9),
                       Expanded(
-                          child: Text(l10n.wechatLogin,
-                              style: TextStyle(
-                                  color: colorScheme.onSurface, fontSize: 14))),
+                        child: Text(
+                          l10n.wechatLogin,
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -854,8 +883,10 @@ class _PhoneLoginDesign extends StatelessWidget {
                     fixedSize: const Size(115, 38),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 4,
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -868,13 +899,21 @@ class _PhoneLoginDesign extends StatelessWidget {
                           ),
                         )
                       else
-                        Image.asset('assets/images/login_douyin.png',
-                            width: 30, height: 30),
+                        Image.asset(
+                          'assets/images/login_douyin.png',
+                          width: 30,
+                          height: 30,
+                        ),
                       const SizedBox(width: 9),
                       Expanded(
-                          child: Text(l10n.douyinLogin,
-                              style: TextStyle(
-                                  color: colorScheme.onSurface, fontSize: 14))),
+                        child: Text(
+                          l10n.douyinLogin,
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -886,30 +925,27 @@ class _PhoneLoginDesign extends StatelessWidget {
           left: 93,
           top: 896,
           width: 279,
-          child: _LoginAgreement(
-            agreed: agreed,
-            onChanged: onAgreementChanged,
-          ),
+          child: _LoginAgreement(agreed: agreed, onChanged: onAgreementChanged),
         ),
       ],
     );
   }
 
   static InputDecoration _fieldDecoration(String hintText) => InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          color: Color(0xFF999999),
-          fontSize: 18,
-          height: 24 / 18,
-        ),
-        counterText: '',
-        isCollapsed: true,
-        filled: false,
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-      );
+    hintText: hintText,
+    hintStyle: const TextStyle(
+      color: Color(0xFF999999),
+      fontSize: 18,
+      height: 24 / 18,
+    ),
+    counterText: '',
+    isCollapsed: true,
+    filled: false,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    contentPadding: EdgeInsets.zero,
+  );
 }
 
 class _LoginBackButton extends StatelessWidget {
@@ -970,32 +1006,40 @@ class _LoginIllustration extends StatelessWidget {
               top: 0,
               width: 440,
               height: 610,
-              child: Image.asset('assets/images/login_illustration_glow.png',
-                  fit: BoxFit.fill),
+              child: Image.asset(
+                'assets/images/login_illustration_glow.png',
+                fit: BoxFit.fill,
+              ),
             ),
             Positioned(
               left: 93,
               top: 108,
               width: 254,
               height: 250,
-              child: Image.asset('assets/images/login_character.png',
-                  fit: BoxFit.fill),
+              child: Image.asset(
+                'assets/images/login_character.png',
+                fit: BoxFit.fill,
+              ),
             ),
             Positioned(
               left: 236.54,
               top: 152.42,
               width: 175,
               height: 112,
-              child: Image.asset('assets/images/login_brand_bubble.png',
-                  fit: BoxFit.fill),
+              child: Image.asset(
+                'assets/images/login_brand_bubble.png',
+                fit: BoxFit.fill,
+              ),
             ),
             Positioned(
               left: 21.99,
               top: 81,
               width: 419,
               height: 276,
-              child: Image.asset('assets/images/login_topic_bubbles.png',
-                  fit: BoxFit.fill),
+              child: Image.asset(
+                'assets/images/login_topic_bubbles.png',
+                fit: BoxFit.fill,
+              ),
             ),
           ],
         ),
@@ -1077,10 +1121,7 @@ class _LoginActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.pill),
           ),
-          textStyle: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w400,
-          ),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w400),
         ),
         child: loading
             ? const SizedBox.square(

@@ -32,13 +32,13 @@ class UserPointsLogPage {
       total: number('total'),
       items: list is List
           ? list
-              .whereType<Map>()
-              .map(
-                (item) => UserPointsLogEntry.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(growable: false)
+                .whereType<Map>()
+                .map(
+                  (item) => UserPointsLogEntry.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
           : const [],
     );
   }

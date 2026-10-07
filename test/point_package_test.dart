@@ -65,9 +65,7 @@ void main() {
       ),
     );
 
-    final packages = await PointPackageRepository(
-      NetworkApi(dio),
-    ).fetchAll();
+    final packages = await PointPackageRepository(NetworkApi(dio)).fetchAll();
 
     expect(request.path, '/api_client/users/pointPackage/list');
     expect(packages.map((item) => item.id), [1, 3]);

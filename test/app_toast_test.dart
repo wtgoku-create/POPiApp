@@ -40,14 +40,12 @@ void main() {
     expect(find.byIcon(Icons.info_rounded), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
 
-    final toastFinder = find.byWidgetPredicate(
-      (widget) {
-        if (widget is! Container) return false;
-        final decoration = widget.decoration;
-        return decoration is BoxDecoration &&
-            decoration.borderRadius == BorderRadius.circular(AppRadii.small);
-      },
-    );
+    final toastFinder = find.byWidgetPredicate((widget) {
+      if (widget is! Container) return false;
+      final decoration = widget.decoration;
+      return decoration is BoxDecoration &&
+          decoration.borderRadius == BorderRadius.circular(AppRadii.small);
+    });
     final toastContainer = tester.widget<Container>(toastFinder);
     final decoration = toastContainer.decoration! as BoxDecoration;
     expect(decoration.color?.toARGB32(), AppColors.surface.toARGB32());
@@ -63,7 +61,8 @@ void main() {
 
     expect(find.text('Hi'), findsNothing);
 
-    message = 'A long toast message that wraps while keeping the existing '
+    message =
+        'A long toast message that wraps while keeping the existing '
         'maximum width and close button visible.';
     await tester.tap(find.text('Show toast'));
     await tester.pumpAndSettle();

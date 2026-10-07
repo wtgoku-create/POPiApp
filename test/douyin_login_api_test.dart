@@ -16,14 +16,20 @@ void main() {
       'expired': 200000,
     };
     final dio = Dio();
-    dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
-      request = options;
-      handler.resolve(Response<Map<String, dynamic>>(
-        requestOptions: options,
-        statusCode: 200,
-        data: response,
-      ));
-    }));
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          request = options;
+          handler.resolve(
+            Response<Map<String, dynamic>>(
+              requestOptions: options,
+              statusCode: 200,
+              data: response,
+            ),
+          );
+        },
+      ),
+    );
     api = DefaultDouyinAuthApi(NetworkApi(dio));
   });
 
@@ -45,21 +51,29 @@ void main() {
       'expired': 0,
     };
     final result = await api.loginByDouyinApp(code: 'new-user-code');
-    expect((result as DouyinAppPhoneBindingRequired).registerToken,
-        'register-token');
+    expect(
+      (result as DouyinAppPhoneBindingRequired).registerToken,
+      'register-token',
+    );
   });
 
-  test('false needBindPhone takes precedence over registration token',
-      () async {
-    response.addAll({'needBindPhone': false, 'registerToken': 'stale-token'});
-    expect(await api.loginByDouyinApp(code: 'code'),
-        isA<DouyinAppLoginSucceeded>());
-  });
+  test(
+    'false needBindPhone takes precedence over registration token',
+    () async {
+      response.addAll({'needBindPhone': false, 'registerToken': 'stale-token'});
+      expect(
+        await api.loginByDouyinApp(code: 'code'),
+        isA<DouyinAppLoginSucceeded>(),
+      );
+    },
+  );
 
   test('rejects binding response without registration token', () async {
     response = {'needBindPhone': true, 'registerToken': '', 'user': null};
     await expectLater(
-        api.loginByDouyinApp(code: 'code'), throwsA(isA<FormatException>()));
+      api.loginByDouyinApp(code: 'code'),
+      throwsA(isA<FormatException>()),
+    );
   });
 
   test('posts phone binding and optional invitation code', () async {
@@ -80,15 +94,17 @@ void main() {
     expect(session.accessToken, 'douyin-token');
   });
 
-  test('accepts envelope response and defaults invitation code to empty',
-      () async {
-    response = {'status': '0000', 'data': response};
-    final session = await api.registerDouyinAppByPhone(
-      registerToken: 'register-token',
-      phone: '13097205795',
-      code: '123456',
-    );
-    expect(request.data['inviteCode'], '');
-    expect(session.accessToken, 'douyin-token');
-  });
+  test(
+    'accepts envelope response and defaults invitation code to empty',
+    () async {
+      response = {'status': '0000', 'data': response};
+      final session = await api.registerDouyinAppByPhone(
+        registerToken: 'register-token',
+        phone: '13097205795',
+        code: '123456',
+      );
+      expect(request.data['inviteCode'], '');
+      expect(session.accessToken, 'douyin-token');
+    },
+  );
 }

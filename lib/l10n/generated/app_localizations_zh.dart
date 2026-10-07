@@ -149,6 +149,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newConversation => '新建对话';
 
   @override
+  String get newSessionTitle => '新会话';
+
+  @override
   String get changeAvatar => '更换头像';
 
   @override
@@ -436,6 +439,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchConversations => '搜索对话';
+
+  @override
+  String get newIpProject => '新建IP项目';
+
+  @override
+  String projectCount(int count) {
+    return '项目($count)';
+  }
+
+  @override
+  String get projectOptions => '项目选项';
+
+  @override
+  String get expandAllProjects => '展开全部项目';
+
+  @override
+  String get collapseAllProjects => '收起全部项目';
+
+  @override
+  String get loginToViewProjects => '登录后查看项目';
+
+  @override
+  String get noProjects => '暂无项目';
+
+  @override
+  String get projectsLoadFailed => '项目加载失败';
+
+  @override
+  String get projectSessionsLoadFailed => '会话加载失败';
+
+  @override
+  String projectItemOptions(String name) {
+    return '$name的选项';
+  }
+
+  @override
+  String get renameProjectItem => '重命名';
+
+  @override
+  String get projectItemName => '名称';
+
+  @override
+  String get pinSession => '置顶会话';
+
+  @override
+  String get unpinSession => '取消置顶';
+
+  @override
+  String deleteProjectConfirm(String name) {
+    return '删除「$name」及其全部会话？';
+  }
+
+  @override
+  String deleteSessionConfirm(String name) {
+    return '删除会话「$name」？';
+  }
+
+  @override
+  String get projectItemRenamed => '重命名成功';
+
+  @override
+  String get projectItemDeleted => '删除成功';
 
   @override
   String get popiConversations => 'POPi对话';

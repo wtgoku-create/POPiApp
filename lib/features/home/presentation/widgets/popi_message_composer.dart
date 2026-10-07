@@ -105,10 +105,7 @@ class _InlineImageWidget extends StatelessWidget {
     return RepaintBoundary(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: child,
-        ),
+        child: ClipRRect(borderRadius: BorderRadius.circular(4), child: child),
       ),
     );
   }
@@ -116,9 +113,10 @@ class _InlineImageWidget extends StatelessWidget {
 
 class PopiMessageComposerController {
   PopiMessageComposerController({String initialText = ''})
-      : textController = TextEditingController(text: initialText) {
-    textController.selection =
-        TextSelection.collapsed(offset: initialText.length);
+    : textController = TextEditingController(text: initialText) {
+    textController.selection = TextSelection.collapsed(
+      offset: initialText.length,
+    );
     specialTextSpanBuilder = _ComposerImageSpanBuilder(_images);
     textNotifier.value = markdown;
     textController.addListener(_handleTextChanged);
@@ -298,8 +296,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomPadding =
-        math.max(safeArea.bottom, keyboardHeight + 20).toDouble();
+    final bottomPadding = math
+        .max(safeArea.bottom, keyboardHeight + 20)
+        .toDouble();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImages = widget.selectedImages.isNotEmpty;
@@ -347,9 +346,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                             builder: (context, animatedInputHeight, _) {
                               final expandedHeight =
                                   (hasImages ? 136.0 : 70.0) +
-                                      animatedInputHeight;
-                              final contentHeight =
-                                  _hasFocus ? expandedHeight : 60.0;
+                                  animatedInputHeight;
+                              final contentHeight = _hasFocus
+                                  ? expandedHeight
+                                  : 60.0;
                               final content = _ComposerContent(
                                 isExpanded: _hasFocus,
                                 hasText: text.isNotEmpty,
@@ -368,17 +368,19 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                               return AnimatedBuilder(
                                 animation: _composerAnimationController,
                                 builder: (context, _) {
-                                  final progress =
-                                      Curves.easeInOutCubic.transform(
-                                    _composerAnimationController.value,
-                                  );
+                                  final progress = Curves.easeInOutCubic
+                                      .transform(
+                                        _composerAnimationController.value,
+                                      );
                                   final height =
                                       60 + (expandedHeight - 60) * progress;
-                                  final radius = AppRadii.pill +
+                                  final radius =
+                                      AppRadii.pill +
                                       (AppRadii.card - AppRadii.pill) *
                                           progress;
-                                  final borderRadius =
-                                      BorderRadius.circular(radius);
+                                  final borderRadius = BorderRadius.circular(
+                                    radius,
+                                  );
                                   return TapRegion(
                                     onTapOutside: (_) => _dismissEditor(),
                                     child: GestureDetector(
@@ -512,8 +514,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     double maxWidth,
     TextDirection textDirection,
   ) {
-    final tokenizedText =
-        rawText.replaceAll(RegExp(r'\[popi-image:\d+\]'), '\uFFFC');
+    final tokenizedText = rawText.replaceAll(
+      RegExp(r'\[popi-image:\d+\]'),
+      '\uFFFC',
+    );
     final displayText = tokenizedText.isEmpty ? ' ' : tokenizedText;
     final painter = TextPainter(
       text: TextSpan(
@@ -649,8 +653,9 @@ class _ComposerContent extends StatelessWidget {
     const duration = Duration(milliseconds: 220);
     const curve = Curves.easeOutCubic;
     final hasImages = images.isNotEmpty;
-    final compactImageStripWidth =
-        images.isEmpty ? 0.0 : images.length * 28.0 + (images.length - 1) * 6.0;
+    final compactImageStripWidth = images.isEmpty
+        ? 0.0
+        : images.length * 28.0 + (images.length - 1) * 6.0;
     return Stack(
       children: [
         if (hasImages)
@@ -664,9 +669,7 @@ class _ComposerContent extends StatelessWidget {
               key: const Key('popi-selected-images'),
               scrollDirection: Axis.horizontal,
               itemCount: images.length,
-              separatorBuilder: (_, __) => SizedBox(
-                width: isExpanded ? 8 : 6,
-              ),
+              separatorBuilder: (_, __) => SizedBox(width: isExpanded ? 8 : 6),
               itemBuilder: (context, index) => _SelectedImagePreview(
                 image: images[index],
                 index: index,
@@ -679,14 +682,11 @@ class _ComposerContent extends StatelessWidget {
           child: Padding(
             padding: hasImages
                 ? isExpanded
-                    ? EdgeInsets.only(
-                        top: 66,
-                        bottom: 50,
-                      )
-                    : EdgeInsets.only(left: 58 + compactImageStripWidth)
+                      ? EdgeInsets.only(top: 66, bottom: 50)
+                      : EdgeInsets.only(left: 58 + compactImageStripWidth)
                 : isExpanded
-                    ? const EdgeInsets.only(bottom: 50)
-                    : const EdgeInsets.only(left: 50),
+                ? const EdgeInsets.only(bottom: 50)
+                : const EdgeInsets.only(left: 50),
             child: Align(
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
@@ -741,10 +741,7 @@ class _ComposerContent extends StatelessWidget {
 }
 
 class _AttachmentButton extends StatelessWidget {
-  const _AttachmentButton({
-    required this.color,
-    required this.onPressed,
-  });
+  const _AttachmentButton({required this.color, required this.onPressed});
 
   final Color color;
   final VoidCallback onPressed;

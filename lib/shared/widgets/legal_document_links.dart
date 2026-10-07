@@ -87,7 +87,8 @@ class _LegalDocumentLinksState extends State<LegalDocumentLinks> {
   }
 
   Future<void> _open(String url) async {
-    final launcher = widget.urlLauncher ??
+    final launcher =
+        widget.urlLauncher ??
         (uri) => launchUrl(uri, mode: LaunchMode.externalApplication);
     try {
       if (await launcher(Uri.parse(url))) return;

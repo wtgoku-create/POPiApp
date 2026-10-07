@@ -60,13 +60,14 @@ void main() {
             douyinLoginServiceProvider.overrideWithValue(douyinService),
         ],
         child: ToastificationWrapper(
-            child: MaterialApp(
-          theme: theme ?? AppTheme.light,
-          locale: const Locale('zh'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: LoginPage(onLoginSuccess: () => loggedIn = true),
-        )),
+          child: MaterialApp(
+            theme: theme ?? AppTheme.light,
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: LoginPage(onLoginSuccess: () => loggedIn = true),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -77,8 +78,9 @@ void main() {
     );
   }
 
-  testWidgets('shows phone login and social entries on the first screen',
-      (tester) async {
+  testWidgets('shows phone login and social entries on the first screen', (
+    tester,
+  ) async {
     await pumpLoginPage(tester);
     expect(find.byKey(const Key('login-welcome-illustration')), findsOneWidget);
     expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
@@ -94,8 +96,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('password entry is available only in development',
-      (tester) async {
+  testWidgets('password entry is available only in development', (
+    tester,
+  ) async {
     await pumpLoginPage(tester);
     expect(
       find.byKey(const Key('login-mode-switch')),
@@ -105,40 +108,47 @@ void main() {
   });
 
   group('password login', () {
-    testWidgets('signs in with the original password and initializes the user',
-        (tester) async {
-      final context = await pumpLoginPage(tester);
-      await tester.tap(find.byKey(const Key('login-mode-switch')));
-      await tester.pump();
-      final passwordField = find.byKey(const Key('login-password-field'));
-      expect(tester.widget<TextField>(passwordField).obscureText, isTrue);
-      expect(find.byKey(const Key('login-code-field')), findsNothing);
-      expect(find.byKey(const Key('send-code-button')), findsNothing);
-      await tester.tap(find.byKey(const Key('login-password-visibility')));
-      await tester.pump();
-      expect(tester.widget<TextField>(passwordField).obscureText, isFalse);
-      await tester.enterText(
-          find.byKey(const Key('login-phone-field')), '13800138000');
-      await tester.enterText(passwordField, ' password ');
-      await tester.tap(find.byKey(const Key('agreement-checkbox')));
-      await tester.tap(find.byKey(const Key('phone-login-button')));
-      await tester.pumpAndSettle();
-      expect(context.api.loggedInPhone, '13800138000');
-      expect(context.api.loginPassword, ' password ');
-      expect(context.api.currentUserRequested, isTrue);
-      expect(context.storage.token, 'password-token');
-      expect(context.isLoggedIn(), isTrue);
-      await tester.pump(const Duration(seconds: 4));
-      await tester.pumpWidget(const SizedBox());
-    });
+    testWidgets(
+      'signs in with the original password and initializes the user',
+      (tester) async {
+        final context = await pumpLoginPage(tester);
+        await tester.tap(find.byKey(const Key('login-mode-switch')));
+        await tester.pump();
+        final passwordField = find.byKey(const Key('login-password-field'));
+        expect(tester.widget<TextField>(passwordField).obscureText, isTrue);
+        expect(find.byKey(const Key('login-code-field')), findsNothing);
+        expect(find.byKey(const Key('send-code-button')), findsNothing);
+        await tester.tap(find.byKey(const Key('login-password-visibility')));
+        await tester.pump();
+        expect(tester.widget<TextField>(passwordField).obscureText, isFalse);
+        await tester.enterText(
+          find.byKey(const Key('login-phone-field')),
+          '13800138000',
+        );
+        await tester.enterText(passwordField, ' password ');
+        await tester.tap(find.byKey(const Key('agreement-checkbox')));
+        await tester.tap(find.byKey(const Key('phone-login-button')));
+        await tester.pumpAndSettle();
+        expect(context.api.loggedInPhone, '13800138000');
+        expect(context.api.loginPassword, ' password ');
+        expect(context.api.currentUserRequested, isTrue);
+        expect(context.storage.token, 'password-token');
+        expect(context.isLoggedIn(), isTrue);
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
 
-    testWidgets('requires agreement, valid phone and at least six characters',
-        (tester) async {
+    testWidgets('requires agreement, valid phone and at least six characters', (
+      tester,
+    ) async {
       final context = await pumpLoginPage(tester);
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
       await tester.enterText(
-          find.byKey(const Key('login-password-field')), 'password');
+        find.byKey(const Key('login-password-field')),
+        'password',
+      );
       await tester.tap(find.byKey(const Key('phone-login-button')));
       await tester.pumpAndSettle();
       expect(find.text('请先阅读并同意用户协议和隐私政策'), findsOneWidget);
@@ -151,9 +161,13 @@ void main() {
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
       await tester.enterText(
-          find.byKey(const Key('login-phone-field')), '13800138000');
+        find.byKey(const Key('login-phone-field')),
+        '13800138000',
+      );
       await tester.enterText(
-          find.byKey(const Key('login-password-field')), '12345');
+        find.byKey(const Key('login-password-field')),
+        '12345',
+      );
       await tester.tap(find.byKey(const Key('phone-login-button')));
       await tester.pumpAndSettle();
       expect(find.text('请输入至少 6 位密码'), findsOneWidget);
@@ -169,9 +183,13 @@ void main() {
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
       await tester.enterText(
-          find.byKey(const Key('login-phone-field')), '13800138000');
+        find.byKey(const Key('login-phone-field')),
+        '13800138000',
+      );
       await tester.enterText(
-          find.byKey(const Key('login-password-field')), 'wrong-password');
+        find.byKey(const Key('login-password-field')),
+        'wrong-password',
+      );
       await tester.tap(find.byKey(const Key('agreement-checkbox')));
       await tester.tap(find.byKey(const Key('phone-login-button')));
       await tester.pumpAndSettle();
@@ -192,7 +210,9 @@ void main() {
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
       await tester.enterText(
-          find.byKey(const Key('login-password-field')), 'password');
+        find.byKey(const Key('login-password-field')),
+        'password',
+      );
       await tester.tap(find.byKey(const Key('login-password-visibility')));
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
@@ -200,8 +220,9 @@ void main() {
       expect(find.byKey(const Key('send-code-button')), findsOneWidget);
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
-      final field = tester
-          .widget<TextField>(find.byKey(const Key('login-password-field')));
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('login-password-field')),
+      );
       expect(field.controller!.text, isEmpty);
       expect(field.obscureText, isTrue);
       expect(tester.takeException(), isNull);
@@ -226,31 +247,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Douyin reports unavailable without backend or SDK',
-      (tester) async {
+  testWidgets('Douyin reports unavailable without backend or SDK', (
+    tester,
+  ) async {
     final context = await pumpLoginPage(tester);
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('douyin-login-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect((await const DouyinLoginService().authorize()).status,
-        DouyinAuthorizationStatus.unavailable);
     expect(
-        tester
-            .widget<TextButton>(find.byKey(const Key('douyin-login-button')))
-            .onPressed,
-        isNotNull);
+      (await const DouyinLoginService().authorize()).status,
+      DouyinAuthorizationStatus.unavailable,
+    );
+    expect(
+      tester
+          .widget<TextButton>(find.byKey(const Key('douyin-login-button')))
+          .onPressed,
+      isNotNull,
+    );
     expect(context.isLoggedIn(), isFalse);
     expect(context.storage.token, isNull);
     await tester.pump(const Duration(seconds: 4));
   });
 
-  testWidgets('Douyin exchanges authorization and initializes user',
-      (tester) async {
+  testWidgets('Douyin exchanges authorization and initializes user', (
+    tester,
+  ) async {
     final api = _FakeDouyinApi();
-    final context = await pumpLoginPage(tester,
-        douyinService: const _AuthorizedDouyinService(), douyinApi: api);
+    final context = await pumpLoginPage(
+      tester,
+      douyinService: const _AuthorizedDouyinService(),
+      douyinApi: api,
+    );
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('douyin-login-button')));
@@ -263,11 +292,15 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('Douyin phone binding uses its own reserved interface',
-      (tester) async {
+  testWidgets('Douyin phone binding uses its own reserved interface', (
+    tester,
+  ) async {
     final api = _FakeDouyinApi(needsBinding: true);
-    final context = await pumpLoginPage(tester,
-        douyinService: const _AuthorizedDouyinService(), douyinApi: api);
+    final context = await pumpLoginPage(
+      tester,
+      douyinService: const _AuthorizedDouyinService(),
+      douyinApi: api,
+    );
     if (AppConfig.passwordLoginEnabled) {
       await tester.tap(find.byKey(const Key('login-mode-switch')));
       await tester.pump();
@@ -281,7 +314,9 @@ void main() {
     expect(find.byKey(const Key('login-password-field')), findsNothing);
     expect(find.byKey(const Key('login-mode-switch')), findsNothing);
     await tester.enterText(
-        find.byKey(const Key('login-phone-field')), '13800138000');
+      find.byKey(const Key('login-phone-field')),
+      '13800138000',
+    );
     await tester.enterText(find.byKey(const Key('login-code-field')), '123456');
     await tester.tap(find.byKey(const Key('phone-login-button')));
     await tester.pumpAndSettle();
@@ -296,16 +331,20 @@ void main() {
   });
 
   testWidgets('supports dark mode and compact screens', (tester) async {
-    await pumpLoginPage(tester,
-        theme: AppTheme.dark, size: const Size(320, 568));
+    await pumpLoginPage(
+      tester,
+      theme: AppTheme.dark,
+      size: const Size(320, 568),
+    );
     final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
     expect(scaffold.backgroundColor, AppTheme.dark.colorScheme.surface);
     expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('validates phone and verification code before login',
-      (tester) async {
+  testWidgets('validates phone and verification code before login', (
+    tester,
+  ) async {
     final context = await pumpLoginPage(tester);
 
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
@@ -321,17 +360,15 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('dismisses the keyboard when tapping outside a field',
-      (tester) async {
+  testWidgets('dismisses the keyboard when tapping outside a field', (
+    tester,
+  ) async {
     await pumpLoginPage(tester);
 
     await tester.tap(find.byKey(const Key('login-phone-field')));
     await tester.pump();
 
-    expect(
-      tester.testTextInput.isVisible,
-      isTrue,
-    );
+    expect(tester.testTextInput.isVisible, isTrue);
 
     await tester.tapAt(const Offset(360, 300));
     await tester.pump();
@@ -339,8 +376,9 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
-  testWidgets('keeps the focused login field visible above the keyboard',
-      (tester) async {
+  testWidgets('keeps the focused login field visible above the keyboard', (
+    tester,
+  ) async {
     await pumpLoginPage(tester);
     addTearDown(tester.view.resetViewInsets);
 
@@ -350,7 +388,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 300));
 
-    final visibleBottom = tester.view.physicalSize.height -
+    final visibleBottom =
+        tester.view.physicalSize.height -
         tester.view.viewInsets.bottom / tester.view.devicePixelRatio;
     final scrollable = tester.state<ScrollableState>(
       find
@@ -385,8 +424,9 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
-  testWidgets('sends an SMS then initializes the signed-in user',
-      (tester) async {
+  testWidgets('sends an SMS then initializes the signed-in user', (
+    tester,
+  ) async {
     final context = await pumpLoginPage(tester);
 
     await tester.enterText(
@@ -404,7 +444,8 @@ void main() {
     expect(find.byType(BottomSheet), findsNothing);
     expect(find.byIcon(Icons.close), findsNothing);
     final captchaImages = find.byWidgetPredicate(
-        (widget) => widget is Image && widget.image is MemoryImage);
+      (widget) => widget is Image && widget.image is MemoryImage,
+    );
     final providers = tester
         .widgetList<Image>(captchaImages)
         .map((image) => image.image)
@@ -412,7 +453,8 @@ void main() {
     expect(providers, hasLength(2));
     expect(tester.getSize(captchaImages.first).width, greaterThan(280));
     final gesture = await tester.startGesture(
-        tester.getCenter(find.byKey(const Key('captcha-slider-handle'))));
+      tester.getCenter(find.byKey(const Key('captcha-slider-handle'))),
+    );
     await gesture.moveBy(const Offset(60, 0));
     await tester.pump();
     final movedProviders = tester
@@ -433,20 +475,18 @@ void main() {
     expect(countdown.maxLines, 1);
     expect(countdown.softWrap, isFalse);
     final sendButton = find.byKey(const Key('send-code-button'));
-    final countdownFit =
-        find.descendant(of: sendButton, matching: find.byType(FittedBox));
+    final countdownFit = find.descendant(
+      of: sendButton,
+      matching: find.byType(FittedBox),
+    );
     expect(countdownFit, findsOneWidget);
     expect(
-        tester
-            .getRect(sendButton)
-            .contains(tester.getRect(countdownFit).center),
-        isTrue);
+      tester.getRect(sendButton).contains(tester.getRect(countdownFit).center),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
 
-    await tester.enterText(
-      find.byKey(const Key('login-code-field')),
-      '123456',
-    );
+    await tester.enterText(find.byKey(const Key('login-code-field')), '123456');
     await tester.tap(find.byKey(const Key('phone-login-button')));
     await tester.pump();
 
@@ -460,18 +500,23 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('rejected slider never sends SMS and refreshes the challenge',
-      (tester) async {
+  testWidgets('rejected slider never sends SMS and refreshes the challenge', (
+    tester,
+  ) async {
     final context = await pumpLoginPage(tester);
     expect(context.api.challengesRequested, 0);
     context.api.failVerification = true;
     await tester.enterText(
-        find.byKey(const Key('login-phone-field')), '13800138000');
+      find.byKey(const Key('login-phone-field')),
+      '13800138000',
+    );
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.tap(find.byKey(const Key('send-code-button')));
     await tester.pumpAndSettle();
     await tester.drag(
-        find.byKey(const Key('captcha-slider-handle')), const Offset(120, 0));
+      find.byKey(const Key('captcha-slider-handle')),
+      const Offset(120, 0),
+    );
     await tester.pumpAndSettle();
     expect(context.api.sentPhone, isNull);
     expect(context.api.challengesRequested, 2);
@@ -479,8 +524,9 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('handles the WeChat Universal Link authorization callback',
-      (tester) async {
+  testWidgets('handles the WeChat Universal Link authorization callback', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final api = _FakeAuthApi();
@@ -601,8 +647,9 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
-  Future<WechatAppLoginResponse> loginByWechatApp(
-      {required String code}) async {
+  Future<WechatAppLoginResponse> loginByWechatApp({
+    required String code,
+  }) async {
     wechatAuthorizationCode = code;
     return const WechatAppPhoneBindingRequired('wechat-register-token');
   }
@@ -613,8 +660,7 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> logout() async {}
@@ -633,16 +679,15 @@ class _FakeAuthApi implements AuthApi {
     required String avatar,
     required String name,
     required String signature,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<UserPoints> userPoints() async => const UserPoints(
-        availableMemberPoints: 0,
-        availableOtherPoints: 0,
-        availableTotalPoints: 0,
-        consumePoints: 0,
-      );
+    availableMemberPoints: 0,
+    availableOtherPoints: 0,
+    availableTotalPoints: 0,
+    consumePoints: 0,
+  );
 }
 
 class _MemoryTokenStorage implements TokenStorage {
@@ -681,8 +726,9 @@ class _FakeDouyinApi implements DouyinAuthApi {
   );
 
   @override
-  Future<DouyinAppLoginResponse> loginByDouyinApp(
-      {required String code}) async {
+  Future<DouyinAppLoginResponse> loginByDouyinApp({
+    required String code,
+  }) async {
     authorizationCode = code;
     return needsBinding
         ? const DouyinAppPhoneBindingRequired('douyin-register-token')

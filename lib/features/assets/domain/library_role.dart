@@ -1,14 +1,15 @@
 class LibraryRole {
-  const LibraryRole(
-      {required this.id,
-      required this.title,
-      required this.description,
-      this.avatar = '',
-      this.profile = const {},
-      this.canEdit = false,
-      this.canCreate = false,
-      this.isCertified = false,
-      this.profileComplete = false});
+  const LibraryRole({
+    required this.id,
+    required this.title,
+    required this.description,
+    this.avatar = '',
+    this.profile = const {},
+    this.canEdit = false,
+    this.canCreate = false,
+    this.isCertified = false,
+    this.profileComplete = false,
+  });
 
   final String id;
   final String title;
@@ -31,8 +32,11 @@ class LibraryRole {
     return LibraryRole(
       id: json['id']?.toString() ?? '',
       title: firstText([profile['title'], json['title'], profile['name']]),
-      description: firstText(
-          [profile['description'], json['description'], profile['appearance']]),
+      description: firstText([
+        profile['description'],
+        json['description'],
+        profile['appearance'],
+      ]),
       avatar: firstText([json['avatar'], json['threeViewImage']]),
       profile: Map<String, dynamic>.from(profile),
       canEdit: json['canEdit'] == true,
@@ -44,8 +48,11 @@ class LibraryRole {
 }
 
 class LibraryRolePage {
-  const LibraryRolePage(
-      {required this.items, required this.page, required this.pageCount});
+  const LibraryRolePage({
+    required this.items,
+    required this.page,
+    required this.pageCount,
+  });
 
   final List<LibraryRole> items;
   final int page;
@@ -63,8 +70,10 @@ class LibraryRolePage {
     }
     return LibraryRolePage(
       items: list
-          .map((item) =>
-              LibraryRole.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) =>
+                LibraryRole.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .where((role) => role.id.isNotEmpty)
           .toList(),
       page: (info['page'] as num).toInt(),

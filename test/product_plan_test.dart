@@ -26,7 +26,8 @@ void main() {
                       'type': 1,
                       'image': '',
                       'title': 'Max 作品研修',
-                      'description': '<mark>包含Pro 全部课程</mark>\n\n'
+                      'description':
+                          '<mark>包含Pro 全部课程</mark>\n\n'
                           '<title>视频模型</title>',
                       'details': null,
                       'level': 4,
@@ -92,10 +93,7 @@ void main() {
     expect(plan.customInfo?.goalTitle, '专属内容｜独家连麦诊断帐号内容');
     expect(plan.customInfo?.newUser, isTrue);
     expect(plan.customInfo?.pointAmount, '每100积分≈￥3.56元');
-    expect(
-      plan.appleProductId,
-      'com.popiai.app.subscription.max.monthly',
-    );
+    expect(plan.appleProductId, 'com.popiai.app.subscription.max.monthly');
     expect(plan.planCategory, 'monthly');
     expect(plan.pointsGrantMode, 'once');
     expect(plan.price, 129900);

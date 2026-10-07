@@ -42,10 +42,7 @@ class AuthRepository {
     required String captchaToken,
   }) async {
     try {
-      await api.sendLoginCode(
-        phone: phone,
-        captchaToken: captchaToken,
-      );
+      await api.sendLoginCode(phone: phone, captchaToken: captchaToken);
     } on DioException catch (exception) {
       throw ApiException.fromDioException(exception);
     }
@@ -95,10 +92,9 @@ class AuthRepository {
   }) async {
     try {
       final response = await api.loginByWechatApp(code: code);
-      if (response
-          case WechatAppPhoneBindingRequired(
-            registerToken: final registerToken,
-          )) {
+      if (response case WechatAppPhoneBindingRequired(
+        registerToken: final registerToken,
+      )) {
         return WechatAppSignInPhoneBindingRequired(registerToken);
       }
       final session = (response as WechatAppLoginSucceeded).session;
@@ -142,10 +138,9 @@ class AuthRepository {
   }) async {
     try {
       final response = await douyinApi.loginByDouyinApp(code: code);
-      if (response
-          case DouyinAppPhoneBindingRequired(
-            registerToken: final registerToken,
-          )) {
+      if (response case DouyinAppPhoneBindingRequired(
+        registerToken: final registerToken,
+      )) {
         return DouyinAppSignInPhoneBindingRequired(registerToken);
       }
       final session = (response as DouyinAppLoginSucceeded).session;

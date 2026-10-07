@@ -22,15 +22,11 @@ import '../data/user_points_log_repository.dart';
 import '../domain/point_package.dart';
 import '../domain/user_points_log.dart';
 
-typedef PointsLogPageLoader = Future<UserPointsLogPage> Function(
-  int page,
-  int pageSize,
-);
+typedef PointsLogPageLoader =
+    Future<UserPointsLogPage> Function(int page, int pageSize);
 typedef PointPackageLoader = Future<List<PointPackage>> Function();
-typedef PointPackagePurchaseHandler = Future<bool> Function(
-  BuildContext context,
-  PointPackage package,
-);
+typedef PointPackagePurchaseHandler =
+    Future<bool> Function(BuildContext context, PointPackage package);
 
 Future<PointPackage?> showRechargePointsSheet({
   required BuildContext context,
@@ -154,8 +150,9 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     try {
       final result = await _fetchPointsLogPage(requestedPage);
       if (!mounted) return;
-      final knownIds =
-          firstPage ? <int>{} : _entries.map((entry) => entry.id).toSet();
+      final knownIds = firstPage
+          ? <int>{}
+          : _entries.map((entry) => entry.id).toSet();
       final newEntries = result.items
           .where((entry) => knownIds.add(entry.id))
           .toList(growable: false);
@@ -187,8 +184,9 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final otherCoins = user?.otherCoins ?? 100;
     final pointPackageCoins = user?.pointPackageCoins ?? 88;
     final totalPoints = user?.allCoins ?? 1750;
-    final topPadding =
-        math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final topPadding = math
+        .max(MediaQuery.paddingOf(context).top, 52)
+        .toDouble();
 
     final pageBody = Column(
       children: [
@@ -210,10 +208,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
                         tooltip: l10n.back,
                         padding: EdgeInsets.zero,
                         onPressed: () => context.pop(),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 21,
-                        ),
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 21),
                       ),
                     ),
                   ),
@@ -296,42 +291,41 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
               ),
             )
           : _entries.isEmpty
-              ? _PointsLogEmptyState(
-                  hasError: _loadError != null,
-                  onRetry: () => _loadPointsLog(firstPage: true),
-                )
-              : Column(
-                  children: [
-                    for (var index = 0; index < _entries.length; index++) ...[
-                      _PointsTransactionRow(entry: _entries[index]),
-                      if (index != _entries.length - 1)
-                        const SizedBox(height: 20),
-                    ],
-                    const SizedBox(height: 24),
-                    if (_isLoadingMore)
-                      const SizedBox.square(
-                        key: Key('points-log-loading-more'),
-                        dimension: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else if (_loadError != null)
-                      TextButton.icon(
-                        key: const Key('points-log-retry-more'),
-                        onPressed: _loadPointsLog,
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: Text(l10n.retry),
-                      )
-                    else
-                      Text(
-                        l10n.pointsHistoryNotice,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 14,
-                        ),
-                      ),
-                  ],
-                ),
+          ? _PointsLogEmptyState(
+              hasError: _loadError != null,
+              onRetry: () => _loadPointsLog(firstPage: true),
+            )
+          : Column(
+              children: [
+                for (var index = 0; index < _entries.length; index++) ...[
+                  _PointsTransactionRow(entry: _entries[index]),
+                  if (index != _entries.length - 1) const SizedBox(height: 20),
+                ],
+                const SizedBox(height: 24),
+                if (_isLoadingMore)
+                  const SizedBox.square(
+                    key: Key('points-log-loading-more'),
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (_loadError != null)
+                  TextButton.icon(
+                    key: const Key('points-log-retry-more'),
+                    onPressed: _loadPointsLog,
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: Text(l10n.retry),
+                  )
+                else
+                  Text(
+                    l10n.pointsHistoryNotice,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colorScheme.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
@@ -445,10 +439,7 @@ class _PointsSummaryCard extends StatelessWidget {
           const SizedBox(height: 12),
           Divider(height: 0, thickness: 1, color: colorScheme.outlineVariant),
           const SizedBox(height: 12),
-          _PointsBalanceRow(
-            label: l10n.rechargedPoints,
-            value: '$memberCoins',
-          ),
+          _PointsBalanceRow(label: l10n.rechargedPoints, value: '$memberCoins'),
           const SizedBox(height: 6),
           _PointsBalanceRow(label: l10n.giftPoints, value: '$otherCoins'),
           const SizedBox(height: 6),
@@ -635,16 +626,14 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 284,
-              child: _buildPackageGrid(l10n),
-            ),
+            SizedBox(height: 284, child: _buildPackageGrid(l10n)),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: LegalDocumentLinks(
                 key: const Key('recharge-legal-document-links'),
-                text: '${l10n.rechargeMembershipNotice}\n'
+                text:
+                    '${l10n.rechargeMembershipNotice}\n'
                     '${l10n.customerServiceContact}\n'
                     '${l10n.rechargeAgreementPrefix}'
                     '${l10n.userAgreement}'
@@ -716,9 +705,7 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
   Widget _buildPackageGrid(AppLocalizations l10n) {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          key: Key('point-packages-loading'),
-        ),
+        child: CircularProgressIndicator(key: Key('point-packages-loading')),
       );
     }
     if (_loadError != null) {
@@ -770,7 +757,9 @@ Future<bool> purchasePointPackage(
   PointPackage package,
 ) async {
   final l10n = AppLocalizations.of(context)!;
-  final outcome = await ref.read(applePurchaseServiceProvider).purchase(
+  final outcome = await ref
+      .read(applePurchaseServiceProvider)
+      .purchase(
         productId: resolveAppleProductId(package.appleProductId),
         businessProductId: package.id.toString(),
         businessProductType: appleTestProductType,
@@ -817,8 +806,8 @@ class _PointsPackageCard extends StatelessWidget {
       color: selected
           ? null
           : isDark
-              ? colorScheme.surfaceContainerHigh
-              : const Color(0xFFFBFAFF),
+          ? colorScheme.surfaceContainerHigh
+          : const Color(0xFFFBFAFF),
       gradient: selected
           ? LinearGradient(
               begin: Alignment.topCenter,
@@ -1016,10 +1005,11 @@ class _PointsTransactionRow extends StatelessWidget {
     final title = entry.content.isNotEmpty
         ? entry.content
         : entry.sourceType.isNotEmpty
-            ? entry.sourceType
-            : l10n.pointsLogUnknownSource;
-    final pointsText =
-        entry.points > 0 ? '+${entry.points}' : '${entry.points}';
+        ? entry.sourceType
+        : l10n.pointsLogUnknownSource;
+    final pointsText = entry.points > 0
+        ? '+${entry.points}'
+        : '${entry.points}';
 
     return SizedBox(
       key: Key('points-log-${entry.id}'),
@@ -1060,8 +1050,9 @@ class _PointsTransactionRow extends StatelessWidget {
             child: Text(
               pointsText,
               style: TextStyle(
-                color:
-                    entry.points > 0 ? AppColors.brand : colorScheme.onSurface,
+                color: entry.points > 0
+                    ? AppColors.brand
+                    : colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 height: 1.1,
@@ -1098,10 +1089,7 @@ class _PointsLogEmptyState extends StatelessWidget {
           Text(
             hasError ? l10n.pointsLogLoadFailed : l10n.pointsLogEmpty,
             key: Key(hasError ? 'points-log-error' : 'points-log-empty'),
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
           ),
           if (hasError) ...[
             const SizedBox(height: 8),

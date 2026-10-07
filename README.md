@@ -17,7 +17,7 @@
 
 ## 使用
 
-本机安装 Flutter SDK 后，在项目目录执行：
+本机安装包含 Dart 3.10.1 或更高版本的 Flutter SDK 后，在项目目录执行：
 
 ```bash
 flutter create .
@@ -118,6 +118,62 @@ AppToast.info(context, '提示信息');
 
 封装位置：`lib/shared/widgets/app_toast.dart`。
 
+## 菜单
+
+弹出菜单和二级菜单统一使用 `lib/shared/widgets/app_menu.dart`，外观自动适配
+浅色和深色主题：浅色使用白底，菜单外层统一为 20px 大圆角，菜单项为两端半圆的胶囊矩形，
+选中与悬停背景为淡灰色。
+文案由页面传入国际化字符串，操作在选择后自动关闭整组菜单。
+菜单参考苹果系统的排版，使用 44px 最小行高、16px 文案、右侧操作图标和左侧选中勾选。
+菜单面板背景不透明，普通菜单展开、收起和状态反馈即时显示，不使用点击波纹。
+
+```dart
+AppMenuButton(
+  tooltip: l10n.projectOptions,
+  entries: [
+    AppMenuItem(
+      label: l10n.expandAllProjects,
+      onSelected: expandAllProjects,
+    ),
+    AppSubmenu(
+      label: l10n.projectOptions,
+      entries: [
+        AppMenuItem(
+          label: l10n.collapseAllProjects,
+          onSelected: collapseAllProjects,
+        ),
+      ],
+    ),
+  ],
+)
+```
+
+`AppMenuItem` 支持 `icon`、`enabled`、`selected` 和 `destructive`；
+`AppSubmenu` 支持嵌套菜单与禁用状态。分组使用 `AppMenuDivider`。
+业务页面不直接创建 Flutter 原生菜单，也不覆盖菜单颜色、圆角和行距。
+
+长按内容预览菜单统一使用 `AppContextMenu`，底层使用
+`cupertino_context_menu_plus` 提供内容预览与弹层定位，菜单和二级菜单仍沿用上述样式。
+支持长按、鼠标右键、菜单键及 Shift+F10；长按时保留按压放大，弹层展开为 260ms、
+收起为 180ms。长按菜单与 `AppDialog.show` 的居中弹窗使用统一的背景模糊和轻度暗色遮罩，
+面板及内容保持清晰、不透明。系统开启减少动态效果时关闭可见动画。
+居中弹窗沿用 260ms 展开、180ms 收起节奏，轻微缩放并淡入淡出，背景模糊与遮罩同步过渡。
+选择操作时等待收起动画结束，再执行回调。
+
+```dart
+AppContextMenu(
+  label: l10n.projectOptions,
+  entries: [
+    AppMenuItem(label: l10n.renameProjectItem, onSelected: renameProject),
+  ],
+  preview: projectPreview,
+  child: projectRow,
+)
+```
+
+`preview` 可传入不含交互的内容副本；省略时使用 `child` 的外观。项目与会话列表使用静态预览，
+避免弹层复制列表行的交互状态。
+
 ## SVG 图标
 
 本地 SVG 放在 `assets/icons/`，统一通过组件加载：
@@ -128,3 +184,6 @@ AppSvgIcon.network(imageUrl, size: 24)
 ```
 
 组件位于 `lib/shared/widgets/app_svg_icon.dart`。
+
+独立图标按钮使用 `IconButton`，`AppTheme` 中的 `IconButtonTheme` 统一提供圆形中性灰
+悬停和聚焦热区。悬停不会改变按钮尺寸，禁用状态不显示热区。

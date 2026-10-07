@@ -18,10 +18,8 @@ class SecureStorage implements TokenStorage {
   Future<String?> readAccessToken() => storage.read(key: accessTokenKey);
 
   @override
-  Future<void> writeAccessToken(String token) => storage.write(
-        key: accessTokenKey,
-        value: token,
-      );
+  Future<void> writeAccessToken(String token) =>
+      storage.write(key: accessTokenKey, value: token);
 
   @override
   Future<void> deleteAccessToken() => storage.delete(key: accessTokenKey);

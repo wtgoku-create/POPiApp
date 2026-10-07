@@ -56,7 +56,8 @@ class DefaultAuthApi implements AuthApi {
   @override
   Future<CaptchaChallenge> createCaptcha({required String phone}) async {
     return CaptchaChallenge.fromJson(
-        await networkApi.createCaptcha(phone: phone));
+      await networkApi.createCaptcha(phone: phone),
+    );
   }
 
   @override
@@ -68,10 +69,7 @@ class DefaultAuthApi implements AuthApi {
     required String phone,
     required String captchaToken,
   }) async {
-    await networkApi.sendLoginCode(
-      phone: phone,
-      captchaToken: captchaToken,
-    );
+    await networkApi.sendLoginCode(phone: phone, captchaToken: captchaToken);
   }
 
   @override
@@ -93,10 +91,9 @@ class DefaultAuthApi implements AuthApi {
     required String username,
     required String password,
   }) async {
-    return AuthSession.fromJson(await networkApi.loginByPassword(
-      username: username,
-      password: password,
-    ));
+    return AuthSession.fromJson(
+      await networkApi.loginByPassword(username: username, password: password),
+    );
   }
 
   @override

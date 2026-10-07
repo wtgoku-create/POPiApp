@@ -20,10 +20,14 @@ import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/providers/project_provider.dart';
+
+import 'support/project_fixtures.dart';
 
 void main() {
-  testWidgets('keeps native splash until the home frame is ready',
-      (tester) async {
+  testWidgets('keeps native splash until the home frame is ready', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final tokenStorage = _DelayedTokenStorage();
@@ -35,10 +39,7 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(preferences),
           secureStorageProvider.overrideWithValue(tokenStorage),
           authRepositoryProvider.overrideWithValue(
-            AuthRepository(
-              api: _StartupAuthApi(),
-              secureStorage: tokenStorage,
-            ),
+            AuthRepository(api: _StartupAuthApi(), secureStorage: tokenStorage),
           ),
         ],
         child: StarterApp(onReady: () => readyCalls += 1),
@@ -93,10 +94,9 @@ void main() {
     expect(find.byKey(const Key('home-login-entry-chevron')), findsOneWidget);
 
     const protectedDrawerEntries = [
-      'drawer-nav-conversation',
       'drawer-nav-role',
       'drawer-nav-assets',
-      'drawer-new-conversation',
+      'drawer-new-project',
       'drawer-notification-button',
       'drawer-profile-button',
     ];
@@ -121,8 +121,9 @@ void main() {
     expect(find.byType(LoginPage), findsOneWidget);
   });
 
-  testWidgets('does not open login when user bootstrap returns 4001',
-      (tester) async {
+  testWidgets('does not open login when user bootstrap returns 4001', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     const tokenStorage = _MemoryTokenStorage('expired-token');
@@ -155,6 +156,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          projectRepositoryProvider.overrideWithValue(
+            FixtureProjectRepository(),
+          ),
           sharedPreferencesProvider.overrideWithValue(preferences),
           secureStorageProvider.overrideWithValue(
             const _MemoryTokenStorage('access-token'),
@@ -221,18 +225,18 @@ class _StartupAuthApi implements AuthApi {
   Future<AuthSession> loginByPassword({
     required String username,
     required String password,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
-  Future<CaptchaChallenge> createCaptcha({required String phone}) async =>
-      const CaptchaChallenge(
-        id: 'test-captcha',
-        bgUrl:
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        puzzleUrl:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-      );
+  Future<CaptchaChallenge> createCaptcha({
+    required String phone,
+  }) async => const CaptchaChallenge(
+    id: 'test-captcha',
+    bgUrl:
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    puzzleUrl:
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  );
 
   @override
   Future<String> verifyCaptcha(SliderCaptchaVerification verification) async =>
@@ -246,8 +250,7 @@ class _StartupAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<WechatAppLoginResponse> loginByWechatApp({required String code}) =>
@@ -259,8 +262,7 @@ class _StartupAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> logout() => throw UnimplementedError();
@@ -269,16 +271,14 @@ class _StartupAuthApi implements AuthApi {
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<User> updateUser({
     required String avatar,
     required String name,
     required String signature,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<UserPoints> userPoints() => throw UnimplementedError();
@@ -287,21 +287,21 @@ class _StartupAuthApi implements AuthApi {
 class _AuthenticatedAuthApi extends _StartupAuthApi {
   @override
   Future<User> currentUser() async => const User(
-        id: '10561',
-        name: '阿🤔',
-        email: 'user@popi.art',
-        phone: '17313164895',
-        isMember: true,
-        memberLevel: 3,
-      );
+    id: '10561',
+    name: '阿🤔',
+    email: 'user@popi.art',
+    phone: '17313164895',
+    isMember: true,
+    memberLevel: 3,
+  );
 
   @override
   Future<UserPoints> userPoints() async => const UserPoints(
-        availableMemberPoints: 0,
-        availableOtherPoints: 739,
-        availableTotalPoints: 739,
-        consumePoints: 18164,
-      );
+    availableMemberPoints: 0,
+    availableOtherPoints: 739,
+    availableTotalPoints: 739,
+    consumePoints: 18164,
+  );
 }
 
 class _ExpiredSessionAuthApi extends _StartupAuthApi {

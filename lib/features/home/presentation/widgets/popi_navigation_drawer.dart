@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme.dart';
@@ -10,9 +9,18 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../projects/domain/project.dart';
+import 'popi_drawer_projects.dart';
 
 class PopiNavigationDrawer extends ConsumerStatefulWidget {
-  const PopiNavigationDrawer({super.key});
+  const PopiNavigationDrawer({
+    this.onNewProject,
+    this.onOpenConversation,
+    super.key,
+  });
+
+  final VoidCallback? onNewProject;
+  final ValueChanged<ProjectSessionSelection>? onOpenConversation;
 
   @override
   ConsumerState<PopiNavigationDrawer> createState() =>
@@ -20,45 +28,19 @@ class PopiNavigationDrawer extends ConsumerStatefulWidget {
 }
 
 class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
-  final _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final tasks = [
-      (l10n.taskLifeStoryVlog, 'home_drawer_task-red'),
-      (l10n.taskDouyinAiDrama, 'home_drawer_task-blue'),
-      (l10n.taskCharacterIntroduction, 'home_drawer_task-gold'),
-      (l10n.taskCartoonIpCharacter, 'home_drawer_task-neutral'),
-      (l10n.taskHumanRender, 'home_drawer_task-neutral'),
-      (l10n.taskComedyVideoTopics, 'home_drawer_task-neutral'),
-      (l10n.taskIpMonetization, 'home_drawer_task-neutral'),
-      (l10n.taskBusinessPpt, 'home_drawer_task-neutral'),
-      (l10n.taskShanghaiBackground, 'home_drawer_task-neutral'),
-      (l10n.taskVideoCreatorRecommendations, 'home_drawer_task-neutral'),
-      (l10n.taskWeiboTrends, 'home_drawer_task-neutral'),
-      (l10n.taskComedyStoryVlog, 'home_drawer_task-neutral'),
-    ]
-        .where((task) => task.$1
-            .toLowerCase()
-            .contains(_searchController.text.trim().toLowerCase()))
-        .toList();
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final topInset = math.max(
-        math.max(safeArea.top, MediaQuery.viewPaddingOf(context).top) + 8,
-        53.0);
+      math.max(safeArea.top, MediaQuery.viewPaddingOf(context).top) + 8,
+      53.0,
+    );
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoggedIn = ref.watch(userProvider) != null;
     final route =
         GoRouter.maybeOf(context)?.routeInformationProvider.value.uri.path ??
-            '/';
+        '/';
 
     return Container(
       key: const Key('popi-navigation-drawer'),
@@ -77,115 +59,69 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-            20, topInset, 20, math.max(20, safeArea.bottom)),
+          20,
+          topInset,
+          20,
+          math.max(20, safeArea.bottom),
+        ),
         child: Column(
           children: [
             Expanded(
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          key: const Key('popi-drawer-search'),
-                          height: 40,
-                          child: Stack(
-                            alignment: Alignment.centerLeft,
-                            fit: StackFit.expand,
-                            children: [
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? colorScheme.surfaceContainerHigh
-                                      : colorScheme.surface,
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(AppRadii.pill),
-                                  ),
-                                  border: Border.all(
-                                    color: colorScheme.outlineVariant
-                                        .withValues(alpha: isDark ? 0.65 : 1),
-                                  ),
-                                ),
-                              ),
-                              TextField(
-                                controller: _searchController,
-                                onChanged: (_) => setState(() {}),
-                                textInputAction: TextInputAction.search,
-                                cursorColor: colorScheme.primary,
-                                maxLines: 1,
-                                textAlignVertical: TextAlignVertical.center,
-                                style: TextStyle(
-                                  color: colorScheme.onSurface,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  height: 20 / 14,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: l10n.searchConversations,
-                                  hintStyle: TextStyle(
-                                    color: colorScheme.onSurfaceVariant,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    height: 20 / 14,
-                                  ),
-                                  isCollapsed: true,
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding: EdgeInsets.only(
-                                    left: 40,
-                                    right: 12,
-                                    top: 10,
-                                    bottom: 10,
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 10,
-                                child: IgnorePointer(
-                                  child: AppSvgIcon.asset(
-                                    'home_drawer_search',
-                                    size: 30,
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton(
+                      key: const Key('drawer-new-project'),
+                      onPressed: () {
+                        if (!isLoggedIn) {
+                          _openRoute(context, '/login');
+                        } else if (widget.onNewProject != null) {
+                          Navigator.pop(context);
+                          widget.onNewProject!();
+                        } else {
+                          _openRoute(context, '/');
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.only(left: 20, right: 10),
+                        foregroundColor: colorScheme.onSurface,
+                        side: BorderSide(color: colorScheme.outline),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      SizedBox.square(
-                          dimension: 40,
-                          child: IconButton(
-                            key: const Key('drawer-new-conversation'),
-                            tooltip: l10n.newConversation,
-                            style: IconButton.styleFrom(
-                                side: BorderSide(color: colorScheme.outline),
-                                backgroundColor: colorScheme.surface,
-                                padding: const EdgeInsets.all(10)),
-                            icon: AppSvgIcon.asset('home_drawer_new',
-                                size: 20, color: colorScheme.onSurface),
-                            onPressed: () => _openProtectedRoute(context,
-                                isLoggedIn: isLoggedIn, route: '/'),
-                          )),
-                    ],
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.newIpProject,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                          SizedBox.square(
+                            dimension: 30,
+                            child: Center(
+                              child: AppSvgIcon.asset(
+                                'home_drawer_project_add',
+                                size: 14,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Column(
                     children: [
-                      _NavigationItem(
-                        key: const Key('drawer-nav-conversation'),
-                        iconAsset: 'home_drawer_nav-conversation',
-                        label: l10n.popiConversations,
-                        selected: route == '/',
-                        onTap: () => _openProtectedRoute(
-                          context,
-                          isLoggedIn: isLoggedIn,
-                          route: '/',
-                        ),
-                      ),
                       _NavigationItem(
                         key: const Key('drawer-nav-role'),
                         iconAsset: 'home_drawer_nav-role',
@@ -220,59 +156,17 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                   ),
                   const SizedBox(height: 9),
                   Expanded(
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 40,
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    l10n.tasks,
-                                    style: TextStyle(
-                                      color: colorScheme.onSurfaceVariant,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ),
-                                AppSvgIcon.asset(
-                                  'home_drawer_more',
-                                  size: 30,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView.builder(
-                            padding: EdgeInsets.zero,
-                            itemExtent: 40,
-                            itemCount: tasks.length,
-                            itemBuilder: (context, index) {
-                              final task = tasks[index];
-                              return _TaskItem(
-                                label: task.$1,
-                                iconAsset: task.$2,
-                                onTap: () {
-                                  final messenger =
-                                      ScaffoldMessenger.of(context);
-                                  Navigator.pop(context);
-                                  messenger.showSnackBar(
-                                    SnackBar(content: Text(task.$1)),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                    child: PopiDrawerProjects(
+                      onOpenConversation: (selection) {
+                        if (!isLoggedIn) {
+                          _openRoute(context, '/login');
+                        } else if (widget.onOpenConversation != null) {
+                          Navigator.pop(context);
+                          widget.onOpenConversation!(selection);
+                        } else {
+                          _showPending(context, selection.session.title);
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -312,9 +206,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
   void _showPending(BuildContext context, String label) {
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    messenger.showSnackBar(
-      SnackBar(content: Text(label)),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(label)));
   }
 }
 
@@ -398,103 +290,8 @@ class _NavigationItem extends StatelessWidget {
   }
 }
 
-class _TaskItem extends StatelessWidget {
-  const _TaskItem({
-    required this.label,
-    required this.iconAsset,
-    required this.onTap,
-  });
-
-  final String label;
-  final String iconAsset;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isNeutralIcon = iconAsset == 'home_drawer_task-neutral';
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: colorScheme.surface,
-      borderRadius: BorderRadius.circular(AppRadii.pill),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        hoverColor: Colors.transparent,
-        focusColor: Colors.transparent,
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return colorScheme.primary.withValues(alpha: .12);
-          }
-          return Colors.transparent;
-        }),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Row(
-            children: [
-              AppSvgIcon.asset(
-                iconAsset,
-                size: 30,
-                colorMapper: isNeutralIcon && isDark
-                    ? _NeutralTaskIconColorMapper(
-                        background: colorScheme.surfaceContainerHighest,
-                        foreground: colorScheme.onSurfaceVariant,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NeutralTaskIconColorMapper extends ColorMapper {
-  const _NeutralTaskIconColorMapper({
-    required this.background,
-    required this.foreground,
-  });
-
-  final Color background;
-  final Color foreground;
-
-  @override
-  Color substitute(
-    String? id,
-    String elementName,
-    String attributeName,
-    Color color,
-  ) {
-    if (color == const Color(0xFFE8E8E8)) {
-      return background;
-    }
-    if (color == Colors.white) {
-      return foreground;
-    }
-    return color;
-  }
-}
-
 class _DrawerFooter extends ConsumerWidget {
-  const _DrawerFooter({
-    required this.onNotification,
-    required this.onSettings,
-  });
+  const _DrawerFooter({required this.onNotification, required this.onSettings});
 
   final VoidCallback onNotification;
   final VoidCallback onSettings;
@@ -505,8 +302,9 @@ class _DrawerFooter extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
-    final displayId =
-        user?.code.isNotEmpty == true ? user!.code : user?.id ?? '--';
+    final displayId = user?.code.isNotEmpty == true
+        ? user!.code
+        : user?.id ?? '--';
 
     return SizedBox(
       height: 47,
@@ -566,9 +364,7 @@ class _DrawerFooter extends ConsumerWidget {
                       ),
                       const SizedBox(width: 2),
                       Image(
-                        image: AssetImage(
-                          'assets/icons/common_user_badge.png',
-                        ),
+                        image: AssetImage('assets/icons/common_user_badge.png'),
                         width: 15,
                         height: 15,
                       ),
@@ -612,9 +408,9 @@ class _DrawerFooter extends ConsumerWidget {
   }
 
   Widget _defaultAvatar() => Image.asset(
-        'assets/icons/common_user_avatar.png',
-        width: 47,
-        height: 47,
-        fit: BoxFit.cover,
-      );
+    'assets/icons/common_user_avatar.png',
+    width: 47,
+    height: 47,
+    fit: BoxFit.cover,
+  );
 }

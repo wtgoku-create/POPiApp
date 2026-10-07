@@ -14,10 +14,7 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
         path: '/WeChat/:appId/oauth',
         builder: (context, state) => LoginPage(
@@ -27,9 +24,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       GoRoute(
         path: '/assets',
         builder: (context, state) => AssetsPage.sample(
-            initialSection: state.uri.queryParameters['section'] == 'roles'
-                ? AssetLibrarySection.roles
-                : AssetLibrarySection.works),
+          initialSection: state.uri.queryParameters['section'] == 'roles'
+              ? AssetLibrarySection.roles
+              : AssetLibrarySection.works,
+        ),
       ),
       GoRoute(
         path: '/profile',

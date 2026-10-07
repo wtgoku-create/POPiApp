@@ -9,8 +9,8 @@ class AppSvgIcon extends StatelessWidget {
     this.colorMapper,
     this.semanticsLabel,
     super.key,
-  })  : assetName = name,
-        url = null;
+  }) : assetName = name,
+       url = null;
 
   const AppSvgIcon.network(
     String imageUrl, {
@@ -19,8 +19,8 @@ class AppSvgIcon extends StatelessWidget {
     this.colorMapper,
     this.semanticsLabel,
     super.key,
-  })  : assetName = null,
-        url = imageUrl;
+  }) : assetName = null,
+       url = imageUrl;
 
   final String? assetName;
   final String? url;
@@ -31,8 +31,9 @@ class AppSvgIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorFilter =
-        color == null ? null : ColorFilter.mode(color!, BlendMode.srcIn);
+    final colorFilter = color == null
+        ? null
+        : ColorFilter.mode(color!, BlendMode.srcIn);
 
     if (assetName != null) {
       return SvgPicture.asset(

@@ -28,10 +28,12 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider);
     final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
-    final displayId =
-        user?.code.isNotEmpty == true ? user!.code : user?.id ?? '--';
-    final displayPhone =
-        user?.phone.isNotEmpty == true ? _maskedPhone(user!.phone) : '--';
+    final displayId = user?.code.isNotEmpty == true
+        ? user!.code
+        : user?.id ?? '--';
+    final displayPhone = user?.phone.isNotEmpty == true
+        ? _maskedPhone(user!.phone)
+        : '--';
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final languageExpanded = ref.watch(_languageMenuExpandedProvider);
@@ -175,9 +177,11 @@ class ProfilePage extends ConsumerWidget {
                       label: l10n.language,
                       value: _languageLabel(locale, l10n),
                       expanded: languageExpanded,
-                      onToggle: () => ref
-                          .read(_languageMenuExpandedProvider.notifier)
-                          .state = !languageExpanded,
+                      onToggle: () =>
+                          ref
+                                  .read(_languageMenuExpandedProvider.notifier)
+                                  .state =
+                              !languageExpanded,
                       options: [
                         TreeSettingsOption(
                           label: l10n.chinese,
@@ -187,8 +191,11 @@ class ProfilePage extends ConsumerWidget {
                                 .read(localeProvider.notifier)
                                 .setLocale(const Locale('zh'));
                             ref
-                                .read(_languageMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(
+                                      _languageMenuExpandedProvider.notifier,
+                                    )
+                                    .state =
+                                false;
                           },
                         ),
                         TreeSettingsOption(
@@ -199,8 +206,11 @@ class ProfilePage extends ConsumerWidget {
                                 .read(localeProvider.notifier)
                                 .setLocale(const Locale('en'));
                             ref
-                                .read(_languageMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(
+                                      _languageMenuExpandedProvider.notifier,
+                                    )
+                                    .state =
+                                false;
                           },
                         ),
                         TreeSettingsOption(
@@ -211,8 +221,11 @@ class ProfilePage extends ConsumerWidget {
                                 .read(localeProvider.notifier)
                                 .setLocale(null);
                             ref
-                                .read(_languageMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(
+                                      _languageMenuExpandedProvider.notifier,
+                                    )
+                                    .state =
+                                false;
                           },
                         ),
                       ],
@@ -223,9 +236,9 @@ class ProfilePage extends ConsumerWidget {
                       label: l10n.theme,
                       value: _themeLabel(themeMode, l10n),
                       expanded: themeExpanded,
-                      onToggle: () => ref
-                          .read(_themeMenuExpandedProvider.notifier)
-                          .state = !themeExpanded,
+                      onToggle: () =>
+                          ref.read(_themeMenuExpandedProvider.notifier).state =
+                              !themeExpanded,
                       options: [
                         TreeSettingsOption(
                           label: l10n.light,
@@ -235,8 +248,9 @@ class ProfilePage extends ConsumerWidget {
                                 .read(themeModeProvider.notifier)
                                 .setThemeMode(ThemeMode.light);
                             ref
-                                .read(_themeMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(_themeMenuExpandedProvider.notifier)
+                                    .state =
+                                false;
                           },
                         ),
                         TreeSettingsOption(
@@ -247,8 +261,9 @@ class ProfilePage extends ConsumerWidget {
                                 .read(themeModeProvider.notifier)
                                 .setThemeMode(ThemeMode.dark);
                             ref
-                                .read(_themeMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(_themeMenuExpandedProvider.notifier)
+                                    .state =
+                                false;
                           },
                         ),
                         TreeSettingsOption(
@@ -259,8 +274,9 @@ class ProfilePage extends ConsumerWidget {
                                 .read(themeModeProvider.notifier)
                                 .setThemeMode(ThemeMode.system);
                             ref
-                                .read(_themeMenuExpandedProvider.notifier)
-                                .state = false;
+                                    .read(_themeMenuExpandedProvider.notifier)
+                                    .state =
+                                false;
                           },
                         ),
                       ],
@@ -318,10 +334,10 @@ class ProfilePage extends ConsumerWidget {
       };
 
   String _themeLabel(ThemeMode mode, AppLocalizations l10n) => switch (mode) {
-        ThemeMode.light => l10n.light,
-        ThemeMode.dark => l10n.dark,
-        ThemeMode.system => l10n.system,
-      };
+    ThemeMode.light => l10n.light,
+    ThemeMode.dark => l10n.dark,
+    ThemeMode.system => l10n.system,
+  };
 }
 
 class MembershipCard extends ConsumerWidget {
@@ -403,7 +419,8 @@ class MembershipCard extends ConsumerWidget {
                       key: const Key('profile-points-recharge'),
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                       onTap: () async {
-                        final loader = pointPackageLoader ??
+                        final loader =
+                            pointPackageLoader ??
                             PointPackageRepository(
                               NetworkApi(ref.read(dioProvider)),
                             ).fetchAll;
@@ -413,7 +430,7 @@ class MembershipCard extends ConsumerWidget {
                           loadPackages: loader,
                           onPurchase: pointPackageLoader == null
                               ? (context, package) =>
-                                  purchasePointPackage(context, ref, package)
+                                    purchasePointPackage(context, ref, package)
                               : null,
                         );
                       },
@@ -537,11 +554,7 @@ class SettingsRow extends StatelessWidget {
                 dimension: 20,
                 child: Center(
                   child: iconWidget == null
-                      ? Icon(
-                          icon,
-                          size: 20,
-                          color: colorScheme.onSurface,
-                        )
+                      ? Icon(icon, size: 20, color: colorScheme.onSurface)
                       : ColorFiltered(
                           colorFilter: ColorFilter.mode(
                             colorScheme.onSurface,
@@ -555,10 +568,7 @@ class SettingsRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
                 ),
               ),
               if (value != null)
@@ -578,11 +588,7 @@ class SettingsRow extends StatelessWidget {
                     color: colorScheme.onSurfaceVariant,
                   )
                 else
-                  Icon(
-                    trailing,
-                    size: 21,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
+                  Icon(trailing, size: 21, color: colorScheme.onSurfaceVariant),
               ],
             ],
           ),
@@ -672,11 +678,7 @@ class TreeSettingsOption extends StatelessWidget {
                 ),
               ),
               if (selected)
-                Icon(
-                  Icons.check,
-                  color: colorScheme.primary,
-                  size: 20,
-                ),
+                Icon(Icons.check, color: colorScheme.primary, size: 20),
               const SizedBox(width: 8),
             ],
           ),

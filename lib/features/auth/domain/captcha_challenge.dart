@@ -1,6 +1,9 @@
 class CaptchaChallenge {
-  const CaptchaChallenge(
-      {required this.id, required this.bgUrl, required this.puzzleUrl});
+  const CaptchaChallenge({
+    required this.id,
+    required this.bgUrl,
+    required this.puzzleUrl,
+  });
 
   final String id;
   final String bgUrl;
@@ -18,14 +21,15 @@ class CaptchaChallenge {
 }
 
 class SliderCaptchaVerification {
-  const SliderCaptchaVerification(
-      {required this.captchaId,
-      required this.phone,
-      required this.x,
-      required this.y,
-      required this.sliderOffsetX,
-      required this.duration,
-      required this.trail});
+  const SliderCaptchaVerification({
+    required this.captchaId,
+    required this.phone,
+    required this.x,
+    required this.y,
+    required this.sliderOffsetX,
+    required this.duration,
+    required this.trail,
+  });
 
   final String captchaId;
   final String phone;
@@ -36,15 +40,15 @@ class SliderCaptchaVerification {
   final List<List<double>> trail;
 
   Map<String, dynamic> toJson() => {
-        'id': captchaId,
-        'phone': phone,
-        'usage': 'LOGIN',
-        'type': 'SLIDER',
-        'x': x,
-        'y': y,
-        'sliderOffsetX': sliderOffsetX,
-        'duration': duration,
-        'trail': trail,
-        'targetType': 'button',
-      };
+    'id': captchaId,
+    'phone': phone,
+    'usage': 'LOGIN',
+    'type': 'SLIDER',
+    'x': x,
+    'y': y,
+    'sliderOffsetX': sliderOffsetX,
+    'duration': duration,
+    'trail': trail,
+    'targetType': 'button',
+  };
 }

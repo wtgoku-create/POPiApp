@@ -14,8 +14,9 @@ import 'network_provider.dart';
 import 'storage_provider.dart';
 import '../type/user_type.dart';
 
-final userProvider =
-    NotifierProvider<UserController, User?>(UserController.new);
+final userProvider = NotifierProvider<UserController, User?>(
+  UserController.new,
+);
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
@@ -37,8 +38,8 @@ final userStatusProvider = Provider<UserStatus>((ref) {
 
 final userPointsProvider =
     AsyncNotifierProvider<UserPointsController, UserPoints?>(
-  UserPointsController.new,
-);
+      UserPointsController.new,
+    );
 
 final userBootstrapProvider = FutureProvider<void>((ref) async {
   final token = await ref.read(secureStorageProvider).readAccessToken();
@@ -71,10 +72,9 @@ class UserController extends Notifier<User?> {
     required String phone,
     required String password,
   }) async {
-    final user = await ref.read(authRepositoryProvider).loginWithPassword(
-          phone: phone,
-          password: password,
-        );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .loginWithPassword(phone: phone, password: password);
     await setUser(user);
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
@@ -82,8 +82,9 @@ class UserController extends Notifier<User?> {
   Future<WechatAppSignInResult> signInWithWechatApp({
     required String code,
   }) async {
-    final result =
-        await ref.read(authRepositoryProvider).loginWithWechatApp(code: code);
+    final result = await ref
+        .read(authRepositoryProvider)
+        .loginWithWechatApp(code: code);
     if (result case WechatAppSignInSucceeded(user: final user)) {
       await setUser(user);
       unawaited(ref.read(userPointsProvider.notifier).refresh());
@@ -96,12 +97,13 @@ class UserController extends Notifier<User?> {
     required String phone,
     required String code,
   }) async {
-    final user =
-        await ref.read(authRepositoryProvider).registerWechatAppByPhone(
-              registerToken: registerToken,
-              phone: phone,
-              code: code,
-            );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .registerWechatAppByPhone(
+          registerToken: registerToken,
+          phone: phone,
+          code: code,
+        );
     await setUser(user);
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
@@ -109,8 +111,9 @@ class UserController extends Notifier<User?> {
   Future<DouyinAppSignInResult> signInWithDouyinApp({
     required String code,
   }) async {
-    final result =
-        await ref.read(authRepositoryProvider).loginWithDouyinApp(code: code);
+    final result = await ref
+        .read(authRepositoryProvider)
+        .loginWithDouyinApp(code: code);
     if (result case DouyinAppSignInSucceeded(user: final user)) {
       await setUser(user);
       unawaited(ref.read(userPointsProvider.notifier).refresh());
@@ -123,12 +126,13 @@ class UserController extends Notifier<User?> {
     required String phone,
     required String code,
   }) async {
-    final user =
-        await ref.read(authRepositoryProvider).registerDouyinAppByPhone(
-              registerToken: registerToken,
-              phone: phone,
-              code: code,
-            );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .registerDouyinAppByPhone(
+          registerToken: registerToken,
+          phone: phone,
+          code: code,
+        );
     await setUser(user);
     unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
@@ -144,7 +148,9 @@ class UserController extends Notifier<User?> {
   }) async {
     final currentUser = state;
     if (currentUser == null) return;
-    final updatedUser = await ref.read(authRepositoryProvider).updateUser(
+    final updatedUser = await ref
+        .read(authRepositoryProvider)
+        .updateUser(
           avatar: avatarUrl ?? currentUser.avatarUrl ?? '',
           name: name ?? currentUser.name,
           signature: signature ?? currentUser.signature,

@@ -46,15 +46,16 @@ class _AssetsPageState extends State<AssetsPage> {
     _section = widget.initialSection;
     _workGroups = widget.hasSampleContent
         ? _sampleWorkGroups
-            .map((group) => _WorkGroup(group.date, List.of(group.items)))
-            .toList()
+              .map((group) => _WorkGroup(group.date, List.of(group.items)))
+              .toList()
         : [];
   }
 
   @override
   Widget build(BuildContext context) {
-    final statusBarHeight =
-        math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final statusBarHeight = math
+        .max(MediaQuery.paddingOf(context).top, 52)
+        .toDouble();
 
     return Scaffold(
       key: _scaffoldKey,
@@ -76,6 +77,13 @@ class _AssetsPageState extends State<AssetsPage> {
               section: _section,
               selected: _selectedFilter,
               selectingWorks: _selectingWorks,
+              hasWorks: _workGroups.any(
+                (group) => group.items.any(
+                  (item) =>
+                      _selectedFilter == 0 ||
+                      (_selectedFilter == 2) == item.isVideo,
+                ),
+              ),
               onSelected: (index) => setState(() {
                 _selectedFilter = index;
                 _selectedWorks.clear();
@@ -93,7 +101,8 @@ class _AssetsPageState extends State<AssetsPage> {
   Widget _buildSection() {
     if (_section == AssetLibrarySection.roles) {
       return RoleLibraryList(
-          category: _selectedFilter == 0 ? 'official' : 'personal');
+        category: _selectedFilter == 0 ? 'official' : 'personal',
+      );
     }
     if (!widget.hasSampleContent) {
       return _LibraryEmptyState(section: _section);
@@ -101,19 +110,19 @@ class _AssetsPageState extends State<AssetsPage> {
 
     return switch (_section) {
       AssetLibrarySection.works => _WorksLibrary(
-          groups: _workGroups,
-          filter: _selectedFilter,
-          selecting: _selectingWorks,
-          selected: _selectedWorks,
-          onToggle: _toggleWork,
-          onPreview: _previewWork,
-          onLongPress: (index) => setState(() {
-            _selectingWorks = true;
-            _selectedWorks.add(index);
-          }),
-          onDownload: _downloadSelected,
-          onDelete: _deleteSelected,
-        ),
+        groups: _workGroups,
+        filter: _selectedFilter,
+        selecting: _selectingWorks,
+        selected: _selectedWorks,
+        onToggle: _toggleWork,
+        onPreview: _previewWork,
+        onLongPress: (index) => setState(() {
+          _selectingWorks = true;
+          _selectedWorks.add(index);
+        }),
+        onDownload: _downloadSelected,
+        onDelete: _deleteSelected,
+      ),
       AssetLibrarySection.roles => throw StateError('Roles handled above'),
     };
   }
@@ -155,9 +164,7 @@ class _AssetsPageState extends State<AssetsPage> {
     if (_selectedWorks.isEmpty) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          AppLocalizations.of(context)!.assetDownloadUnavailable,
-        ),
+        content: Text(AppLocalizations.of(context)!.assetDownloadUnavailable),
       ),
     );
   }
@@ -166,13 +173,14 @@ class _AssetsPageState extends State<AssetsPage> {
     if (_selectedWorks.isEmpty) return;
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await AppDialog.confirm(
-        context: context,
-        title: l10n.deleteAssetsTitle,
-        description: l10n.deleteAssetsDescription(_selectedWorks.length),
-        cancelLabel: l10n.cancel,
-        confirmLabel: l10n.delete,
-        confirmKey: const Key('confirm-delete-assets'),
-        destructive: true);
+      context: context,
+      title: l10n.deleteAssetsTitle,
+      description: l10n.deleteAssetsDescription(_selectedWorks.length),
+      cancelLabel: l10n.cancel,
+      confirmLabel: l10n.delete,
+      confirmKey: const Key('confirm-delete-assets'),
+      destructive: true,
+    );
     if (confirmed != true || !mounted) return;
     var flatIndex = 0;
     final groups = <_WorkGroup>[];
@@ -193,12 +201,12 @@ class _AssetsPageState extends State<AssetsPage> {
 
   void _previewWork(int index) {
     final item = _workGroups.expand((group) => group.items).elementAt(index);
-    Navigator.of(context).push<void>(MaterialPageRoute(
-      builder: (context) => AssetPreviewPage(
-        asset: item.asset,
-        isVideo: item.isVideo,
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) =>
+            AssetPreviewPage(asset: item.asset, isVideo: item.isVideo),
       ),
-    ));
+    );
   }
 }
 
@@ -239,29 +247,34 @@ class _LibraryNavigation extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-              child: Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(AppRadii.pill)),
-            child: Row(children: [
-              Expanded(
-                  child: _LibraryTab(
-                label: l10n.assetLibrary,
-                selected: selected == AssetLibrarySection.works,
-                onTap: () => onSelected(AssetLibrarySection.works),
-              )),
-              Expanded(
-                  child: _LibraryTab(
-                label: l10n.roleLibrary,
-                selected: selected == AssetLibrarySection.roles,
-                onTap: () => onSelected(AssetLibrarySection.roles),
-              )),
-            ]),
-          )),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _LibraryTab(
+                      label: l10n.assetLibrary,
+                      selected: selected == AssetLibrarySection.works,
+                      onTap: () => onSelected(AssetLibrarySection.works),
+                    ),
+                  ),
+                  Expanded(
+                    child: _LibraryTab(
+                      label: l10n.roleLibrary,
+                      selected: selected == AssetLibrarySection.roles,
+                      onTap: () => onSelected(AssetLibrarySection.roles),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(width: 20),
         ],
       ),
@@ -289,10 +302,11 @@ class _LibraryTab extends StatelessWidget {
       child: Container(
         height: 34,
         decoration: BoxDecoration(
-            color: selected
-                ? Theme.of(context).colorScheme.surface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadii.pill)),
+          color: selected
+              ? Theme.of(context).colorScheme.surface
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
         child: Center(
           child: Text(
             label,
@@ -315,6 +329,7 @@ class _SectionFilters extends StatelessWidget {
     required this.section,
     required this.selected,
     required this.selectingWorks,
+    required this.hasWorks,
     required this.onSelected,
     required this.onToggleSelection,
   });
@@ -322,6 +337,7 @@ class _SectionFilters extends StatelessWidget {
   final AssetLibrarySection section;
   final int selected;
   final bool selectingWorks;
+  final bool hasWorks;
   final ValueChanged<int> onSelected;
   final VoidCallback onToggleSelection;
 
@@ -329,15 +345,8 @@ class _SectionFilters extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final labels = switch (section) {
-      AssetLibrarySection.works => [
-          l10n.filterAll,
-          l10n.images,
-          l10n.videos,
-        ],
-      AssetLibrarySection.roles => [
-          l10n.officialRoles,
-          l10n.myRoles,
-        ],
+      AssetLibrarySection.works => [l10n.filterAll, l10n.images, l10n.videos],
+      AssetLibrarySection.roles => [l10n.officialRoles, l10n.myRoles],
     };
     return SizedBox(
       key: const Key('assets-history-filters'),
@@ -364,11 +373,10 @@ class _SectionFilters extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: active
                           ? section == AssetLibrarySection.roles
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.05)
-                              : AppColors.surfaceTint
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.05)
+                                : AppColors.surfaceTint
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                     ),
@@ -377,11 +385,12 @@ class _SectionFilters extends StatelessWidget {
                       style: TextStyle(
                         color: active
                             ? section == AssetLibrarySection.roles
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Colors.black
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.black
                             : AppColors.textTertiary,
-                        fontSize:
-                            section == AssetLibrarySection.roles ? 14 : 16,
+                        fontSize: section == AssetLibrarySection.roles
+                            ? 14
+                            : 16,
                         fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
@@ -390,7 +399,7 @@ class _SectionFilters extends StatelessWidget {
               },
             ),
           ),
-          if (section == AssetLibrarySection.works)
+          if (section == AssetLibrarySection.works && hasWorks)
             SizedBox(
               width: selectingWorks ? 64 : 48,
               child: TextButton(
@@ -404,7 +413,8 @@ class _SectionFilters extends StatelessWidget {
                     ? Text(l10n.cancel, style: const TextStyle(fontSize: 16))
                     : Tooltip(
                         message: l10n.selectAssets,
-                        child: const Icon(Icons.checklist, size: 22)),
+                        child: const Icon(Icons.checklist, size: 22),
+                      ),
               ),
             ),
           const SizedBox(width: 12),
@@ -459,53 +469,76 @@ class _LibraryEmptyState extends StatelessWidget {
       );
     }
 
-    return Center(
-      child: Transform.translate(
-        offset: const Offset(0, -80),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 55,
-              height: 62,
-              child: AppSvgIcon.asset('assets_works_empty'),
+    final colors = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              math.min(180, constraints.maxHeight / 4),
             ),
-            const SizedBox(height: 10),
-            Text(
-              l10n.noWorks,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: AppTypeSizes.pageTitle,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              l10n.noWorksDescription,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 16,
-                height: 20 / 16,
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: 110,
-              height: 50,
-              child: FilledButton(
-                key: const Key('assets-go-generate'),
-                onPressed: () => context.go('/'),
-                child: Text(
-                  l10n.goGenerate,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+            child: Center(
+              child: Column(
+                key: const Key('assets-works-empty-state'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ExcludeSemantics(
+                    child: SizedBox(
+                      width: 55,
+                      height: 62,
+                      child: AppSvgIcon.asset('assets_works_empty'),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  Text(
+                    l10n.noWorks,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colors.onSurface,
+                      fontSize: 25,
+                      height: 1.4,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    l10n.noWorksDescription,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 16,
+                      height: 30 / 16,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 110),
+                    child: SizedBox(
+                      height: 50,
+                      child: FilledButton(
+                        key: const Key('assets-go-generate'),
+                        onPressed: () => context.go('/'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                        ),
+                        child: Text(
+                          l10n.goGenerate,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 20 / 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -547,7 +580,7 @@ class _WorksLibrary extends StatelessWidget {
       final groupOffset = offset;
       final visible = [
         for (var i = 0; i < group.items.length; i++)
-          if (filter == 0 || (filter == 2) == group.items[i].isVideo) i
+          if (filter == 0 || (filter == 2) == group.items[i].isVideo) i,
       ];
       offset += group.items.length;
       if (visible.isEmpty) continue;
@@ -595,6 +628,10 @@ class _WorksLibrary extends StatelessWidget {
         ),
       );
       sections.add(const SizedBox(height: 20));
+    }
+
+    if (sections.isEmpty) {
+      return const _LibraryEmptyState(section: AssetLibrarySection.works);
     }
 
     return Stack(
@@ -645,10 +682,7 @@ class _WorkTile extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              item.asset,
-              fit: BoxFit.cover,
-            ),
+            Image.asset(item.asset, fit: BoxFit.cover),
             if (selecting)
               Positioned(
                 right: 8,
@@ -705,30 +739,36 @@ class _SelectionActions extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SizedBox(height: 8),
-        Text(l10n.selectedAssets(selectionCount),
-            style: Theme.of(context).textTheme.labelMedium),
-        Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Text(
+            l10n.selectedAssets(selectionCount),
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          Expanded(
             child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _SelectionAction(
-              icon: Icons.file_download_outlined,
-              label: l10n.download,
-              enabled: hasSelection,
-              onTap: onDownload,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _SelectionAction(
+                  icon: Icons.file_download_outlined,
+                  label: l10n.download,
+                  enabled: hasSelection,
+                  onTap: onDownload,
+                ),
+                _SelectionAction(
+                  icon: Icons.delete_outline,
+                  label: l10n.delete,
+                  color: const Color(0xFFF05A5A),
+                  enabled: hasSelection,
+                  onTap: onDelete,
+                ),
+              ],
             ),
-            _SelectionAction(
-              icon: Icons.delete_outline,
-              label: l10n.delete,
-              color: const Color(0xFFF05A5A),
-              enabled: hasSelection,
-              onTap: onDelete,
-            ),
-          ],
-        )),
-      ]),
+          ),
+        ],
+      ),
     );
   }
 }

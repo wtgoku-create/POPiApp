@@ -12,7 +12,8 @@ class NetworkApi {
 
   Future<Map<String, dynamic>> libraryRoleDetail(String id) async {
     final response = await dio.get<Map<String, dynamic>>(
-        '/api_client/agent/v2/roles/${Uri.encodeComponent(id)}');
+      '/api_client/agent/v2/roles/${Uri.encodeComponent(id)}',
+    );
     final data = response.data?['data'];
     if (data is! Map<String, dynamic>) throw const ApiException();
     return data;
@@ -20,20 +21,22 @@ class NetworkApi {
 
   Future<void> deleteLibraryRole(String id, String clientRequestId) async {
     await dio.delete<Map<String, dynamic>>(
-        '/api_client/agent/v2/roles/${Uri.encodeComponent(id)}',
-        data: {'clientRequestId': clientRequestId});
+      '/api_client/agent/v2/roles/${Uri.encodeComponent(id)}',
+      data: {'clientRequestId': clientRequestId},
+    );
   }
 
-  Future<Map<String, dynamic>> listLibraryRoles(
-      {required String category,
-      required int page,
-      required int pageSize}) async {
+  Future<Map<String, dynamic>> listLibraryRoles({
+    required String category,
+    required int page,
+    required int pageSize,
+  }) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/roles',
       queryParameters: {
         'category': category,
         'page': page,
-        'pageSize': pageSize
+        'pageSize': pageSize,
       },
     );
     final data = response.data?['data'];
@@ -243,8 +246,10 @@ class NetworkApi {
     return _data(response);
   }
 
-  Future<String> uploadAvatar(
-      {required List<int> bytes, required String filename}) async {
+  Future<String> uploadAvatar({
+    required List<int> bytes,
+    required String filename,
+  }) async {
     final response = await dio.post<Map<String, dynamic>>(
       '/api_client/media/upload',
       data: FormData.fromMap({
@@ -290,9 +295,7 @@ class NetworkApi {
 
   // The WeChat endpoints have historically returned their result directly,
   // while other API endpoints use the standard status/data envelope.
-  Map<String, dynamic> _appAuthData(
-    Response<Map<String, dynamic>> response,
-  ) {
+  Map<String, dynamic> _appAuthData(Response<Map<String, dynamic>> response) {
     final body = response.data;
     if (body == null) throw const ApiException();
 

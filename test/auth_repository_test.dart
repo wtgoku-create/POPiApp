@@ -40,36 +40,43 @@ void main() {
     expect(storage.token, isNull);
   });
 
-  test('initializes the current user after saving the password login token',
-      () async {
-    final events = <String>[];
-    final storage = _EventTokenStorage(events);
-    final repository = AuthRepository(
-      api: _FakeAuthApi(events),
-      secureStorage: storage,
-    );
-    final user = await repository.loginWithPassword(
-      phone: '13800138000',
-      password: 'password',
-    );
-    expect(user.name, '初始化用户');
-    expect(storage.token, 'token-from-password');
-    expect(events, ['password-login', 'save-token', 'current-user']);
-  });
+  test(
+    'initializes the current user after saving the password login token',
+    () async {
+      final events = <String>[];
+      final storage = _EventTokenStorage(events);
+      final repository = AuthRepository(
+        api: _FakeAuthApi(events),
+        secureStorage: storage,
+      );
+      final user = await repository.loginWithPassword(
+        phone: '13800138000',
+        password: 'password',
+      );
+      expect(user.name, '初始化用户');
+      expect(storage.token, 'token-from-password');
+      expect(events, ['password-login', 'save-token', 'current-user']);
+    },
+  );
 
-  test('clears the password login token when user initialization fails',
-      () async {
-    final storage = _EventTokenStorage([]);
-    final repository = AuthRepository(
-      api: _FakeAuthApi([], failCurrentUser: true),
-      secureStorage: storage,
-    );
-    await expectLater(
-      repository.loginWithPassword(phone: '13800138000', password: 'password'),
-      throwsStateError,
-    );
-    expect(storage.token, isNull);
-  });
+  test(
+    'clears the password login token when user initialization fails',
+    () async {
+      final storage = _EventTokenStorage([]);
+      final repository = AuthRepository(
+        api: _FakeAuthApi([], failCurrentUser: true),
+        secureStorage: storage,
+      );
+      await expectLater(
+        repository.loginWithPassword(
+          phone: '13800138000',
+          password: 'password',
+        ),
+        throwsStateError,
+      );
+      expect(storage.token, isNull);
+    },
+  );
 
   test('initializes the current user after WeChat authorization', () async {
     final events = <String>[];
@@ -155,8 +162,7 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> logout() async {}
@@ -174,8 +180,7 @@ class _FakeAuthApi implements AuthApi {
     required String avatar,
     required String name,
     required String signature,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<UserPoints> userPoints() => throw UnimplementedError();

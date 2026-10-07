@@ -1,4 +1,1 @@
-enum UserStatus {
-  guest,
-  authenticated,
-}
+enum UserStatus { guest, authenticated }

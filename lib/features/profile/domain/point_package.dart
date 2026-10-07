@@ -47,10 +47,11 @@ class PointPackage {
       updatedAt: updatedAt > 0
           ? DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000, isUtc: true)
           : null,
-      appleProductId: _firstString(
-        json,
-        const ['apple_product_id', 'appleProductId', 'ios_product_id'],
-      ),
+      appleProductId: _firstString(json, const [
+        'apple_product_id',
+        'appleProductId',
+        'ios_product_id',
+      ]),
     );
   }
 }

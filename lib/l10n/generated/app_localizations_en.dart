@@ -154,6 +154,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newConversation => 'New conversation';
 
   @override
+  String get newSessionTitle => 'New conversation';
+
+  @override
   String get changeAvatar => 'Change avatar';
 
   @override
@@ -451,6 +454,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchConversations => 'Search conversations';
+
+  @override
+  String get newIpProject => 'New IP project';
+
+  @override
+  String projectCount(int count) {
+    return 'Projects ($count)';
+  }
+
+  @override
+  String get projectOptions => 'Project options';
+
+  @override
+  String get expandAllProjects => 'Expand all projects';
+
+  @override
+  String get collapseAllProjects => 'Collapse all projects';
+
+  @override
+  String get loginToViewProjects => 'Log in to view projects';
+
+  @override
+  String get noProjects => 'No projects yet';
+
+  @override
+  String get projectsLoadFailed => 'Could not load projects';
+
+  @override
+  String get projectSessionsLoadFailed => 'Could not load conversations';
+
+  @override
+  String projectItemOptions(String name) {
+    return 'Options for $name';
+  }
+
+  @override
+  String get renameProjectItem => 'Rename';
+
+  @override
+  String get projectItemName => 'Name';
+
+  @override
+  String get pinSession => 'Pin conversation';
+
+  @override
+  String get unpinSession => 'Unpin conversation';
+
+  @override
+  String deleteProjectConfirm(String name) {
+    return 'Delete $name and all its conversations?';
+  }
+
+  @override
+  String deleteSessionConfirm(String name) {
+    return 'Delete conversation $name?';
+  }
+
+  @override
+  String get projectItemRenamed => 'Renamed successfully';
+
+  @override
+  String get projectItemDeleted => 'Deleted successfully';
 
   @override
   String get popiConversations => 'POPi conversations';

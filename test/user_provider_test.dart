@@ -67,15 +67,16 @@ void main() {
     final container = createContainer(_FakeAuthApi());
     addTearDown(container.dispose);
     expect(container.read(userProvider), isNull);
-    await container.read(userProvider.notifier).signInWithPassword(
-          phone: '13800138000',
-          password: 'password',
-        );
+    await container
+        .read(userProvider.notifier)
+        .signInWithPassword(phone: '13800138000', password: 'password');
     await container.read(userPointsProvider.future);
     expect(container.read(userProvider)?.id, '1');
     expect(container.read(userStatusProvider).name, 'authenticated');
-    expect(container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
-        739);
+    expect(
+      container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
+      739,
+    );
   });
 
   test('loads user points into global state', () async {
@@ -151,18 +152,16 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<AuthSession> loginByPassword({
     required String username,
     required String password,
-  }) async =>
-      const AuthSession(
-        accessToken: 'password-token',
-        user: User(id: '1', name: '张三', email: 'test@example.com'),
-      );
+  }) async => const AuthSession(
+    accessToken: 'password-token',
+    user: User(id: '1', name: '张三', email: 'test@example.com'),
+  );
 
   @override
   Future<WechatAppLoginResponse> loginByWechatApp({required String code}) =>
@@ -174,8 +173,7 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> logout() async => logoutCalled = true;
@@ -184,24 +182,22 @@ class _FakeAuthApi implements AuthApi {
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<User> updateUser({
     required String avatar,
     required String name,
     required String signature,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<UserPoints> userPoints() async => const UserPoints(
-        availableMemberPoints: 0,
-        availableOtherPoints: 739,
-        availableTotalPoints: 739,
-        consumePoints: 18164,
-      );
+    availableMemberPoints: 0,
+    availableOtherPoints: 739,
+    availableTotalPoints: 739,
+    consumePoints: 18164,
+  );
 }
 
 class _MemoryTokenStorage implements TokenStorage {

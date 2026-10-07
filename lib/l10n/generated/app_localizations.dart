@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('zh')
+    Locale('zh'),
   ];
 
   /// No description provided for @appTitle.
@@ -361,6 +361,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New conversation'**
   String get newConversation;
+
+  /// No description provided for @newSessionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get newSessionTitle;
 
   /// No description provided for @changeAvatar.
   ///
@@ -931,6 +937,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search conversations'**
   String get searchConversations;
+
+  /// No description provided for @newIpProject.
+  ///
+  /// In en, this message translates to:
+  /// **'New IP project'**
+  String get newIpProject;
+
+  /// No description provided for @projectCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects ({count})'**
+  String projectCount(int count);
+
+  /// No description provided for @projectOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Project options'**
+  String get projectOptions;
+
+  /// No description provided for @expandAllProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all projects'**
+  String get expandAllProjects;
+
+  /// No description provided for @collapseAllProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all projects'**
+  String get collapseAllProjects;
+
+  /// No description provided for @loginToViewProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to view projects'**
+  String get loginToViewProjects;
+
+  /// No description provided for @noProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects yet'**
+  String get noProjects;
+
+  /// No description provided for @projectsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load projects'**
+  String get projectsLoadFailed;
+
+  /// No description provided for @projectSessionsLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load conversations'**
+  String get projectSessionsLoadFailed;
+
+  /// No description provided for @projectItemOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Options for {name}'**
+  String projectItemOptions(String name);
+
+  /// No description provided for @renameProjectItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get renameProjectItem;
+
+  /// No description provided for @projectItemName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get projectItemName;
+
+  /// No description provided for @pinSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin conversation'**
+  String get pinSession;
+
+  /// No description provided for @unpinSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin conversation'**
+  String get unpinSession;
+
+  /// No description provided for @deleteProjectConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name} and all its conversations?'**
+  String deleteProjectConfirm(String name);
+
+  /// No description provided for @deleteSessionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation {name}?'**
+  String deleteSessionConfirm(String name);
+
+  /// No description provided for @projectItemRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed successfully'**
+  String get projectItemRenamed;
+
+  /// No description provided for @projectItemDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted successfully'**
+  String get projectItemDeleted;
 
   /// No description provided for @popiConversations.
   ///
@@ -1680,8 +1794,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }
