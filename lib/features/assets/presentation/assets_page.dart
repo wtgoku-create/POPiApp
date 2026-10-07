@@ -7,9 +7,10 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_skeleton.dart';
 import '../../home/presentation/widgets/popi_navigation_drawer.dart';
 import 'role_library_list.dart';
-import 'asset_preview_page.dart';
+import '../../../shared/widgets/app_image_preview.dart';
 
 enum AssetLibrarySection { works, roles }
 
@@ -17,15 +18,20 @@ class AssetsPage extends StatefulWidget {
   const AssetsPage({
     super.key,
     this.hasSampleContent = false,
+    this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
   });
 
   const AssetsPage.sample({
     super.key,
+    this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
   }) : hasSampleContent = true;
 
   final bool hasSampleContent;
+
+  /// Driven by the asset list request when the real data source is connected.
+  final bool isLoadingWorks;
   final AssetLibrarySection initialSection;
 
   @override
@@ -102,6 +108,16 @@ class _AssetsPageState extends State<AssetsPage> {
     if (_section == AssetLibrarySection.roles) {
       return RoleLibraryList(
         category: _selectedFilter == 0 ? 'official' : 'personal',
+      );
+    }
+    if (widget.isLoadingWorks &&
+        !_workGroups.any((group) => group.items.isNotEmpty)) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        child: AppSkeletonGrid(
+          key: const Key('assets-works-skeleton'),
+          label: AppLocalizations.of(context)!.loadingAssets,
+        ),
       );
     }
     if (!widget.hasSampleContent) {
@@ -201,11 +217,12 @@ class _AssetsPageState extends State<AssetsPage> {
 
   void _previewWork(int index) {
     final item = _workGroups.expand((group) => group.items).elementAt(index);
-    Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (context) =>
-            AssetPreviewPage(asset: item.asset, isVideo: item.isVideo),
-      ),
+    final l10n = AppLocalizations.of(context)!;
+    AppImagePreview.show(
+      context: context,
+      image: AssetImage(item.asset),
+      heroTag: 'work-preview-$index',
+      label: item.isVideo ? l10n.videoCoverPreview : null,
     );
   }
 }
@@ -616,6 +633,7 @@ class _WorksLibrary extends StatelessWidget {
             return _WorkTile(
               key: Key('assets-work-$globalIndex'),
               item: group.items[itemIndex],
+              heroTag: 'work-preview-$globalIndex',
               selecting: selecting,
               selectionNumber: selected.contains(globalIndex)
                   ? selected.toList().indexOf(globalIndex) + 1
@@ -660,6 +678,7 @@ class _WorkTile extends StatelessWidget {
   const _WorkTile({
     super.key,
     required this.item,
+    required this.heroTag,
     required this.selecting,
     required this.selectionNumber,
     required this.onTap,
@@ -667,6 +686,7 @@ class _WorkTile extends StatelessWidget {
   });
 
   final _WorkItem item;
+  final String heroTag;
   final bool selecting;
   final int? selectionNumber;
   final VoidCallback onTap;
@@ -682,7 +702,10 @@ class _WorkTile extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(item.asset, fit: BoxFit.cover),
+            Hero(
+              tag: heroTag,
+              child: Image.asset(item.asset, fit: BoxFit.cover),
+            ),
             if (selecting)
               Positioned(
                 right: 8,

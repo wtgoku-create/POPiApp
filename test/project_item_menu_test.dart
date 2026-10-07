@@ -266,7 +266,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('服务器拒绝了操作'), findsOneWidget);
       expect(find.byType(AppDialog), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppDialog),
+          matching: find.text('服务器拒绝了操作'),
+        ),
+        findsNothing,
+      );
       expect(repository.projects.first.title, '原项目');
+      await dismissToast(tester);
       await tester.tap(find.byKey(const Key('project-action-confirm')));
       await tester.pumpAndSettle();
       expect(find.byType(AppDialog), findsNothing);
@@ -279,6 +287,55 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final project in [true, false]) {
+    testWidgets(
+      '${project ? 'project' : 'session'} deletion failure uses a toast and can retry',
+      (tester) async {
+        final repository = _Repository();
+        await pumpDrawer(tester, repository);
+        await menu(
+          tester,
+          project ? 'drawer-project-p' : 'drawer-conversation-p-second',
+        );
+        await tester.tap(find.text('删除'));
+        await tester.pumpAndSettle();
+        repository.failNext = true;
+        await tester.tap(find.byKey(const Key('project-action-confirm')));
+        await tester.pumpAndSettle();
+        expect(find.text('服务器拒绝了操作'), findsOneWidget);
+        expect(find.byType(AppDialog), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AppDialog),
+            matching: find.text('服务器拒绝了操作'),
+          ),
+          findsNothing,
+        );
+        expect(repository.projects.length, 2);
+        expect(repository.sessions.length, 2);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.byKey(const Key('project-action-confirm')),
+              )
+              .onPressed,
+          isNotNull,
+        );
+        await dismissToast(tester);
+        await tester.tap(find.byKey(const Key('project-action-confirm')));
+        await tester.pumpAndSettle();
+        expect(find.byType(AppDialog), findsNothing);
+        if (project) {
+          expect(repository.projects.map((item) => item.id), ['q']);
+        } else {
+          expect(repository.sessions.map((item) => item.id), ['first']);
+        }
+        await dismissToast(tester);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets(
     'session menu pins, unpins, renames and deletes after confirmation',

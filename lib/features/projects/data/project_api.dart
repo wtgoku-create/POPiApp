@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/network/api_exception.dart';
 
@@ -86,17 +85,14 @@ class ProjectApi {
 
   int _revision(Map<String, dynamic> value) {
     final revision = value['revision'];
-    if (revision is! int || revision < 0) throw const ApiException();
+    if (revision is! int || revision < 1) throw const ApiException();
     return revision;
   }
 
   String _requestId() => createClientRequestId();
 
   /// Creates an idempotency key that can be retained across command retries.
-  static String createClientRequestId() {
-    final random = Random.secure();
-    return 'mobile-project-${List.generate(16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join()}';
-  }
+  static String createClientRequestId() => const Uuid().v4();
 
   Map<String, dynamic> _businessData(Map<String, dynamic>? body) {
     if (body == null ||

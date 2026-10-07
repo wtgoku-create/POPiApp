@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
@@ -11,6 +12,8 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
+import 'package:popi_ai_app/features/assets/domain/role_profile_edit.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -34,6 +37,19 @@ const sample = LibraryRole(
 
 void main() {
   final boundaryKey = GlobalKey();
+  Future<void> capture(WidgetTester tester, String path) async {
+    if (!const bool.fromEnvironment('CAPTURE_ROLE_PROFILE')) return;
+    final boundary =
+        boundaryKey.currentContext!.findRenderObject()!
+            as RenderRepaintBoundary;
+    await tester.runAsync(() async {
+      final image = await boundary.toImage();
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      await File(path).writeAsBytes(bytes!.buffer.asUint8List());
+      image.dispose();
+    });
+  }
+
   Future<void> pumpPage(
     WidgetTester tester, {
     Size size = const Size(440, 956),
@@ -42,6 +58,8 @@ void main() {
     double textScale = 1,
     Future<LibraryRole> Function(String)? load,
     Future<void> Function(String)? delete,
+    RoleProfileSaver? save,
+    ValueChanged<LibraryRole>? onRoleUpdated,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -72,6 +90,9 @@ void main() {
             load ?? (_) async => sample,
           ),
           roleDeleteProvider.overrideWithValue(delete ?? (_) async {}),
+          roleProfileSaverProvider.overrideWithValue(
+            save ?? (_, _) async => sample,
+          ),
         ],
         child: MaterialApp(
           theme: theme,
@@ -89,8 +110,11 @@ void main() {
               body: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute<bool>(
-                    builder: (_) =>
-                        RoleDetailPage(role: sample, category: category),
+                    builder: (_) => RoleDetailPage(
+                      role: sample,
+                      category: category,
+                      onRoleUpdated: onRoleUpdated,
+                    ),
                   ),
                 ),
                 child: const Text('Open'),
@@ -145,6 +169,386 @@ void main() {
     expect(requests.last.method, 'DELETE');
     expect(requests.last.data, {'clientRequestId': 'request-1'});
   });
+
+  test(
+    'profile saving posts the Web contract then loads fresh details',
+    () async {
+      final requests = <RequestOptions>[];
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            requests.add(request);
+            handler.resolve(
+              Response(
+                requestOptions: request,
+                data: {
+                  'data': request.method == 'POST'
+                      ? {}
+                      : {
+                          'id': '7',
+                          'canEdit': true,
+                          'profileVersion': {
+                            'profile': {
+                              'title': 'Updated',
+                              'expressionStyle': 'New style',
+                            },
+                          },
+                        },
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [dioProvider.overrideWithValue(dio)],
+      );
+      addTearDown(container.dispose);
+      final profile = {
+        'expressionStyle': 'New style',
+        'targetAudience': 'Audience',
+        'contentTags': ['Tag'],
+        'profileData': <String, Object?>{},
+      };
+
+      final updated = await container.read(roleProfileSaverProvider)(
+        '7',
+        profile,
+      );
+
+      expect(requests.map((request) => request.method), ['POST', 'GET']);
+      expect(requests.first.path, '/api_client/agent/v2/roles/7/save');
+      expect(requests.first.data['profile'], profile);
+      expect(
+        requests.first.data['clientRequestId'],
+        startsWith('mobile-role-profile-save-'),
+      );
+      expect(updated.title, 'Updated');
+      expect(updated.profile['expressionStyle'], 'New style');
+    },
+  );
+
+  test('profile edits preserve custom labels and array value types', () {
+    final edit = RoleProfileEdit.fromRole(
+      const LibraryRole(
+        id: '7',
+        title: 'Role',
+        description: '',
+        profile: {
+          'profileData': {
+            'abilities': {
+              'label': '能力',
+              'value': ['观察', '推理'],
+            },
+            'metadata': {
+              'label': '信息',
+              'value': {'source': 'original'},
+            },
+          },
+        },
+      ),
+    );
+    final result = edit.savedProfile({
+      'expressionStyle': ' Style ',
+      'targetAudience': ' Audience ',
+      'contentTags': '校园、生活,成长，喜剧\n互动',
+      'profileData-abilities': '观察、推理,表达',
+    });
+    expect(result['contentTags'], ['校园', '生活', '成长', '喜剧', '互动']);
+    expect(result['profileData'], {
+      'abilities': {
+        'label': '能力',
+        'value': ['观察', '推理', '表达'],
+      },
+      'metadata': {
+        'label': '信息',
+        'value': {'source': 'original'},
+      },
+    });
+    expect(result['expressionStyle'], 'Style');
+  });
+
+  test(
+    'existing positioning field replaces the legacy description fallback',
+    () {
+      final edit = RoleProfileEdit.fromRole(
+        const LibraryRole(
+          id: '7',
+          title: 'Role',
+          description: 'Legacy description',
+          profile: {
+            'profileData': {
+              'positioning': {'label': '人物定位', 'value': 'Current positioning'},
+            },
+          },
+        ),
+      );
+      final fields = edit.fields.where(
+        (field) => field.type == RoleProfileFieldType.positioning,
+      );
+      expect(fields, hasLength(1));
+      expect(fields.single.text, 'Current positioning');
+      expect(fields.single.editable, isTrue);
+    },
+  );
+
+  testWidgets(
+    'legacy appearance and empty boundaries can be edited and saved',
+    (tester) async {
+      const legacy = LibraryRole(
+        id: '7',
+        title: 'Role',
+        description: '原人物定位',
+        canEdit: true,
+        profile: {
+          'expressionStyle': '原表达风格',
+          'targetAudience': '原面向受众',
+          'contentTags': ['原标签'],
+          'appearance': '231',
+        },
+      );
+      Map<String, Object?>? saved;
+      await pumpPage(
+        tester,
+        load: (_) async => legacy,
+        save: (_, profile) async {
+          saved = profile;
+          return legacy;
+        },
+      );
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsNWidgets(6));
+      final appearance = find.byKey(const Key('role-edit-appearance'));
+      final boundaries = find.byKey(const Key('role-edit-boundaries'));
+      expect(tester.widget<TextFormField>(appearance).controller!.text, '231');
+      expect(
+        tester.widget<TextFormField>(boundaries).controller!.text,
+        isEmpty,
+      );
+      await tester.ensureVisible(appearance);
+      await tester.enterText(appearance, '新的外形');
+      await tester.ensureVisible(boundaries);
+      await tester.enterText(boundaries, '新的表达边界');
+      await tester.pumpAndSettle();
+      await capture(tester, '/tmp/popi-role-profile-edit-legacy.png');
+      await tester.tap(find.byKey(const Key('role-edit-confirm')));
+      await tester.pumpAndSettle();
+      final data = saved!['profileData'] as Map;
+      expect(data['appearance'], {'label': '人物外形', 'value': '新的外形'});
+      expect(data['boundaries'], {'label': '表达边界', 'value': '新的表达边界'});
+      expect(data['positioning'], {'label': '人物定位', 'value': '原人物定位'});
+      expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'improve edits inline and cancellation restores original values',
+    (tester) async {
+      var saves = 0;
+      await pumpPage(
+        tester,
+        save: (_, _) async {
+          saves++;
+          return sample;
+        },
+      );
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsNothing);
+      expect(find.byType(TextFormField), findsNWidgets(5));
+      await capture(tester, '/tmp/popi-role-profile-edit.png');
+      expect(find.byKey(const Key('role-create')), findsNothing);
+      final field = find.byKey(const Key('role-edit-expressionStyle'));
+      await tester.enterText(field, '草稿设定');
+      await tester.tap(find.byKey(const Key('role-edit-cancel')));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextFormField), findsNothing);
+      expect(find.text('草稿设定'), findsNothing);
+      expect(saves, 0);
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextFormField>(field).controller!.text,
+        sample.profile['expressionStyle'],
+      );
+      await tester.tap(find.byKey(const Key('role-profile-back')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('role-detail-page')), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'confirmation saves the draft once and renders fresh server values',
+    (tester) async {
+      final pending = Completer<LibraryRole>();
+      final profiles = <Map<String, Object?>>[];
+      LibraryRole? notified;
+      await pumpPage(
+        tester,
+        save: (id, profile) {
+          expect(id, '7');
+          profiles.add(profile);
+          return pending.future;
+        },
+        onRoleUpdated: (role) => notified = role,
+      );
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('role-edit-expressionStyle')),
+        ' 更自然的表达 ',
+      );
+      await tester.enterText(
+        find.byKey(const Key('role-edit-contentTags')),
+        '校园、喜剧，成长',
+      );
+      await tester.tap(find.byKey(const Key('role-edit-confirm')));
+      await tester.pump();
+      expect(profiles.single['expressionStyle'], '更自然的表达');
+      expect(profiles.single['contentTags'], ['校园', '喜剧', '成长']);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('role-edit-confirm')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('role-edit-cancel')))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const Key('role-edit-expressionStyle')),
+            )
+            .enabled,
+        isFalse,
+      );
+      const updated = LibraryRole(
+        id: '7',
+        title: '爱丽丝',
+        description: '叮叮的同桌',
+        canEdit: true,
+        profile: {
+          'expressionStyle': '服务端最新表达',
+          'contentTags': ['校园', '喜剧', '成长'],
+        },
+      );
+      pending.complete(updated);
+      await tester.pumpAndSettle();
+      expect(notified, same(updated));
+      expect(find.byType(TextFormField), findsNothing);
+      expect(find.text('服务端最新表达'), findsOneWidget);
+      expect(find.text('校园 / 喜剧 / 成长'), findsNWidgets(2));
+      expect(profiles, hasLength(1));
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'required fields block saving and failed saves retain the draft for retry',
+    (tester) async {
+      var calls = 0;
+      await pumpPage(
+        tester,
+        save: (_, _) async {
+          if (++calls == 1) throw StateError('Offline');
+          return sample;
+        },
+      );
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const Key('role-edit-expressionStyle'));
+      for (final label in ['人物定位', '性格与表达风格', '面向受众', '内容标签', '表达边界']) {
+        expect(find.text('$label *'), findsOneWidget);
+      }
+      final inputs = tester
+          .widgetList<TextFormField>(find.byType(TextFormField))
+          .toList();
+      for (final input in inputs) {
+        final finder = find.byKey(input.key!);
+        final original = input.controller!.text;
+        await tester.ensureVisible(finder);
+        await tester.enterText(finder, '   ');
+        await tester.pump();
+        expect(find.text('请填写此项'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(find.byKey(const Key('role-edit-confirm')))
+              .onPressed,
+          isNull,
+        );
+        await tester.enterText(finder, original);
+        await tester.pump();
+      }
+      await tester.ensureVisible(field);
+      await tester.enterText(field, '   ');
+      await tester.pump();
+      expect(find.text('请填写此项'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('role-edit-confirm')))
+            .onPressed,
+        isNull,
+      );
+      expect(calls, 0);
+      await tester.enterText(field, '保留我的草稿');
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('role-edit-confirm')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextFormField>(field).controller!.text, '保留我的草稿');
+      expect(find.text('角色档案保存失败，请稍后重试'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('role-edit-confirm')));
+      await tester.pumpAndSettle();
+      expect(calls, 2);
+      expect(find.byType(TextFormField), findsNothing);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'editing actions remain reachable with keyboard and larger English text',
+    (tester) async {
+      await pumpPage(
+        tester,
+        size: const Size(320, 640),
+        locale: const Locale('en'),
+        textScale: 1.3,
+      );
+      await tester.ensureVisible(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('role-improve')));
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('role-edit-cancel')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('role-edit-confirm')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getBottomRight(find.byKey(const Key('role-profile-edit-actions')))
+            .dy,
+        lessThanOrEqualTo(380),
+      );
+      expect(tester.takeException(), isNull);
+      await capture(tester, '/tmp/popi-role-profile-edit-keyboard.png');
+    },
+  );
 
   testWidgets('renders the archive and actions from real profile fields', (
     tester,

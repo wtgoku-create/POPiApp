@@ -64,6 +64,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get improveRole => 'Enrich role profile';
 
   @override
+  String get confirmRoleChanges => 'Confirm changes';
+
+  @override
+  String get savingRoleChanges => 'Saving…';
+
+  @override
+  String get roleChangesSaved => 'Role profile saved';
+
+  @override
+  String get roleChangesSaveFailed =>
+      'Could not save the role profile. Try again.';
+
+  @override
+  String get roleFieldRequired => 'This field is required';
+
+  @override
   String get createWithRole => 'Create with this role';
 
   @override
@@ -479,6 +495,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noProjects => 'No projects yet';
 
   @override
+  String get projectsTitle => 'Projects';
+
+  @override
+  String get loadingProjects => 'Loading projects';
+
+  @override
+  String get loadingProjectSessions => 'Loading conversations';
+
+  @override
+  String get loadingRoles => 'Loading roles';
+
+  @override
+  String get loadingAssets => 'Loading assets';
+
+  @override
   String get projectsLoadFailed => 'Could not load projects';
 
   @override
@@ -666,6 +697,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get download => 'Download';
+
+  @override
+  String get imageSavedToPhotos => 'Image saved to Photos';
+
+  @override
+  String get imageSaveFailed => 'Could not save the image. Try again later.';
+
+  @override
+  String get imageSaveAccessDenied =>
+      'Allow adding photos in system settings to save images.';
 
   @override
   String get delete => 'Delete';

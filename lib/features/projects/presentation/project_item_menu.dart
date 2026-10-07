@@ -193,7 +193,6 @@ class _ProjectActionDialogState extends ConsumerState<_ProjectActionDialog> {
   late final _name = TextEditingController(text: widget.title);
   bool _pending = false;
   bool _closing = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -208,10 +207,7 @@ class _ProjectActionDialogState extends ConsumerState<_ProjectActionDialog> {
         (!widget.delete && (title.isEmpty || title.runes.length > 200))) {
       return;
     }
-    setState(() {
-      _pending = true;
-      _error = null;
-    });
+    setState(() => _pending = true);
     final l10n = AppLocalizations.of(context)!;
     try {
       final actions = ref.read(projectActionsProvider.notifier);
@@ -230,7 +226,9 @@ class _ProjectActionDialogState extends ConsumerState<_ProjectActionDialog> {
       );
       Navigator.of(context).pop(true);
     } catch (error) {
-      if (mounted) setState(() => _error = _errorMessage(error, l10n));
+      if (mounted && ref.read(userProvider)?.id == widget.userId) {
+        AppToast.error(context, _errorMessage(error, l10n));
+      }
     } finally {
       if (mounted) setState(() => _pending = false);
     }
@@ -299,14 +297,6 @@ class _ProjectActionDialogState extends ConsumerState<_ProjectActionDialog> {
                   counterText: '',
                 ),
               ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: colors.error, fontSize: 14),
-              ),
-            ],
             const SizedBox(height: 25),
             Row(
               children: [

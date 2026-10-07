@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -145,7 +146,19 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
   Future<void> _showRole(LibraryRole role) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => RoleDetailPage(role: role, category: widget.category),
+        builder: (_) => RoleDetailPage(
+          role: role,
+          category: widget.category,
+          onRoleUpdated: (updated) {
+            if (!mounted) return;
+            setState(
+              () => _roles = [
+                for (final item in _roles)
+                  item.id == updated.id ? updated : item,
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -207,6 +220,12 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               if (_roles.isEmpty) {
+                if (_loading) {
+                  return AppSkeletonList(
+                    key: const Key('roles-skeleton'),
+                    label: l10n.loadingRoles,
+                  );
+                }
                 return SizedBox(
                   height: math.max(
                     320,
@@ -215,9 +234,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
                         MediaQuery.paddingOf(context).bottom,
                   ),
                   child: Center(
-                    child: _loading
-                        ? const CircularProgressIndicator()
-                        : _error != null
+                    child: _error != null
                         ? _retry(_refresh)
                         : widget.category == 'personal'
                         ? const _MyRolesEmptyState()

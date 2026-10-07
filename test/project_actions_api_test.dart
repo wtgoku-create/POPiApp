@@ -5,6 +5,9 @@ import 'package:popi_ai_app/features/projects/data/project_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 
 void main() {
+  final studioRequestId = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+  );
   test('creates an account session with the Web resolve contract', () async {
     final dio = Dio();
     late RequestOptions request;
@@ -25,20 +28,22 @@ void main() {
         },
       ),
     );
+    final requestId = ProjectApi.createClientRequestId();
     final session = await ProjectRepository(ProjectApi(dio)).createSession(
       'project / 1',
       ' New conversation ',
-      clientRequestId: 'retry-key',
+      clientRequestId: requestId,
     );
     expect(request.method, 'POST');
     expect(request.path, '/api_agent/v2/sessions/resolve');
     expect(request.data, {
-      'clientRequestId': 'retry-key',
+      'clientRequestId': requestId,
       'mode': 'new',
       'title': 'New conversation',
       'contextRef': {'kind': 'account', 'id': 'project / 1'},
     });
     expect(session.id, 'created');
+    expect(request.data['clientRequestId'], matches(studioRequestId));
     expect(session.title, 'New conversation');
   });
 
@@ -156,10 +161,7 @@ void main() {
           expect(requests.first.path, project ? path : '$path/snapshot');
           expect(requests.last.path, path);
           final body = requests.last.data as Map<String, dynamic>;
-          expect(
-            body['clientRequestId'],
-            matches(RegExp(r'^mobile-project-[0-9a-f]{32}$')),
-          );
+          expect(body['clientRequestId'], matches(studioRequestId));
           expect(body, {
             'clientRequestId': body['clientRequestId'],
             'expectedRevision': 7,
@@ -170,30 +172,42 @@ void main() {
     }
   }
 
-  test('does not send a mutation when revision is missing', () async {
-    final requests = <RequestOptions>[];
-    final dio = Dio();
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          requests.add(options);
-          handler.resolve(
-            Response(
-              requestOptions: options,
-              data: {
-                'data': {'id': '1'},
+  for (final project in [true, false]) {
+    for (final revision in [null, 0, -1]) {
+      test(
+        '${project ? 'project' : 'session'} revision $revision cannot mutate',
+        () async {
+          final requests = <RequestOptions>[];
+          final dio = Dio();
+          dio.interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                requests.add(options);
+                handler.resolve(
+                  Response(
+                    requestOptions: options,
+                    data: {
+                      project ? 'data' : 'session': {
+                        'id': '1',
+                        if (revision != null) 'revision': revision,
+                      },
+                    },
+                  ),
+                );
               },
             ),
           );
+          await expectLater(
+            project
+                ? ProjectRepository(ProjectApi(dio)).deleteProject('1')
+                : ProjectRepository(ProjectApi(dio)).deleteSession('1'),
+            throwsA(isA<ApiException>()),
+          );
+          expect(requests.map((request) => request.method), ['GET']);
         },
-      ),
-    );
-    await expectLater(
-      ProjectRepository(ProjectApi(dio)).deleteProject('1'),
-      throwsA(isA<ApiException>()),
-    );
-    expect(requests.map((request) => request.method), ['GET']);
-  });
+      );
+    }
+  }
 
   test('preserves backend conflict message for retry', () async {
     final dio = Dio();

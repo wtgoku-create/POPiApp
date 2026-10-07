@@ -74,6 +74,69 @@ void main() {
   }
 
   testWidgets(
+    'empty role loading uses skeletons and keeps rows during refresh',
+    (tester) async {
+      var pending = Completer<LibraryRolePage>();
+      await pumpRoles(
+        tester,
+        ({required category, required page, required pageSize}) =>
+            pending.future,
+      );
+      expect(find.byKey(const Key('roles-skeleton')), findsOneWidget);
+      expect(find.text('暂无官方角色'), findsNothing);
+      pending.complete(
+        LibraryRolePage(items: [role(1)], page: 1, pageCount: 1),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('roles-skeleton')), findsNothing);
+      expect(find.text('Role 1'), findsOneWidget);
+      pending = Completer<LibraryRolePage>();
+      final refresh = tester.widget<RefreshIndicator>(
+        find.byType(RefreshIndicator),
+      );
+      final loading = refresh.onRefresh();
+      await tester.pump();
+      expect(find.text('Role 1'), findsOneWidget);
+      expect(find.byKey(const Key('roles-skeleton')), findsNothing);
+      pending.complete(
+        LibraryRolePage(items: [role(2)], page: 1, pageCount: 1),
+      );
+      await loading;
+      await tester.pumpAndSettle();
+      expect(find.text('Role 1'), findsNothing);
+      expect(find.text('Role 2'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('empty role refresh shows skeletons until completion', (
+    tester,
+  ) async {
+    var pending = Future.value(
+      const LibraryRolePage(items: [], page: 1, pageCount: 0),
+    );
+    await pumpRoles(
+      tester,
+      ({required category, required page, required pageSize}) => pending,
+    );
+    await tester.pumpAndSettle();
+    final completer = Completer<LibraryRolePage>();
+    pending = completer.future;
+    final refresh = tester.widget<RefreshIndicator>(
+      find.byType(RefreshIndicator),
+    );
+    final loading = refresh.onRefresh();
+    await tester.pump();
+    expect(find.byKey(const Key('roles-skeleton')), findsOneWidget);
+    expect(find.text('暂无官方角色'), findsNothing);
+    completer.complete(const LibraryRolePage(items: [], page: 1, pageCount: 0));
+    await loading;
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('roles-skeleton')), findsNothing);
+    expect(find.text('暂无官方角色'), findsOneWidget);
+  });
+
+  testWidgets(
     'swipe reveals deletion, cancel retains row, confirm refreshes list',
     (tester) async {
       final roles = [role(1, canEdit: true), role(2, canEdit: true)];

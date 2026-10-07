@@ -206,6 +206,36 @@ abstract class AppLocalizations {
   /// **'Enrich role profile'**
   String get improveRole;
 
+  /// No description provided for @confirmRoleChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm changes'**
+  String get confirmRoleChanges;
+
+  /// No description provided for @savingRoleChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get savingRoleChanges;
+
+  /// No description provided for @roleChangesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Role profile saved'**
+  String get roleChangesSaved;
+
+  /// No description provided for @roleChangesSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the role profile. Try again.'**
+  String get roleChangesSaveFailed;
+
+  /// No description provided for @roleFieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required'**
+  String get roleFieldRequired;
+
   /// No description provided for @createWithRole.
   ///
   /// In en, this message translates to:
@@ -980,6 +1010,36 @@ abstract class AppLocalizations {
   /// **'No projects yet'**
   String get noProjects;
 
+  /// No description provided for @projectsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get projectsTitle;
+
+  /// No description provided for @loadingProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading projects'**
+  String get loadingProjects;
+
+  /// No description provided for @loadingProjectSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading conversations'**
+  String get loadingProjectSessions;
+
+  /// No description provided for @loadingRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading roles'**
+  String get loadingRoles;
+
+  /// No description provided for @loadingAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading assets'**
+  String get loadingAssets;
+
   /// No description provided for @projectsLoadFailed.
   ///
   /// In en, this message translates to:
@@ -1321,6 +1381,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Download'**
   String get download;
+
+  /// No description provided for @imageSavedToPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Image saved to Photos'**
+  String get imageSavedToPhotos;
+
+  /// No description provided for @imageSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the image. Try again later.'**
+  String get imageSaveFailed;
+
+  /// No description provided for @imageSaveAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow adding photos in system settings to save images.'**
+  String get imageSaveAccessDenied;
 
   /// No description provided for @delete.
   ///

@@ -20,6 +20,7 @@ void main() {
     WidgetTester tester,
     _Repository repository, {
     bool loggedIn = true,
+    bool reduceMotion = false,
     ValueChanged<ProjectSessionSelection>? onOpen,
   }) async {
     final container = ProviderContainer(
@@ -39,6 +40,12 @@ void main() {
           locale: const Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reduceMotion),
+            child: child!,
+          ),
           home: Scaffold(
             body: SizedBox(
               width: 320,
@@ -66,11 +73,73 @@ void main() {
     final repository = _Repository()..loadProjects = () => completer.future;
     await pumpProjects(tester, repository);
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    final skeleton = find.byKey(const Key('drawer-projects-skeleton'));
+    expect(skeleton, findsOneWidget);
+    expect(find.text('项目(0)'), findsNothing);
+    expect(find.byKey(const Key('drawer-projects-empty')), findsNothing);
+    final bounds = tester.getRect(skeleton);
+    final fade = find.descendant(
+      of: skeleton,
+      matching: find.byType(FadeTransition),
+    );
+    final before = tester.widget<FadeTransition>(fade).opacity.value;
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(tester.widget<FadeTransition>(fade).opacity.value, isNot(before));
+    expect(tester.getRect(skeleton), bounds);
     completer.complete([]);
     await tester.pumpAndSettle();
     expect(find.text('暂无项目'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byKey(const Key('drawer-projects-empty')), findsOneWidget);
+    expect(skeleton, findsNothing);
+    await tester.drag(
+      find.byKey(const Key('drawer-project-list')),
+      const Offset(0, 200),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.projectCalls, 2);
+    expect(find.byKey(const Key('drawer-projects-empty')), findsOneWidget);
+  });
+
+  testWidgets('reduced motion keeps the skeleton static until data arrives', (
+    tester,
+  ) async {
+    final completer = Completer<List<Project>>();
+    final repository = _Repository()..loadProjects = () => completer.future;
+    await pumpProjects(tester, repository, reduceMotion: true);
+    await tester.pumpAndSettle();
+    final skeleton = find.byKey(const Key('drawer-projects-skeleton'));
+    final fade = find.descendant(
+      of: skeleton,
+      matching: find.byType(FadeTransition),
+    );
+    expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+    completer.complete([const Project(id: 'p', title: '真实项目')]);
+    await tester.pumpAndSettle();
+    expect(skeleton, findsNothing);
+    expect(find.text('真实项目'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('conversation skeleton gives way to the loaded conversation', (
+    tester,
+  ) async {
+    final completer = Completer<List<ProjectSession>>();
+    final repository = _Repository();
+    repository.loadProjects = () async => [
+      const Project(id: 'p', title: '真实项目'),
+    ];
+    repository.loadSessions = (_) => completer.future;
+    await pumpProjects(tester, repository);
+    await tester.pump();
+    await tester.pump();
+    final skeleton = find.byKey(const Key('drawer-sessions-skeleton-p'));
+    expect(skeleton, findsOneWidget);
+    expect(find.text('暂无历史'), findsNothing);
+    completer.complete([const ProjectSession(id: 's', title: '真实会话')]);
+    await tester.pumpAndSettle();
+    expect(skeleton, findsNothing);
+    expect(find.text('真实会话'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('project failure retries and shows real backend titles', (
@@ -90,6 +159,59 @@ void main() {
     expect(find.text('真实项目'), findsOneWidget);
     expect(find.text('暂无历史'), findsOneWidget);
     expect(repository.projectCalls, 2);
+  });
+
+  testWidgets(
+    'refresh keeps populated projects and sessions without skeletons',
+    (tester) async {
+      final repository = _Repository();
+      repository.loadProjects = () async => [
+        const Project(id: 'p', title: '真实项目'),
+      ];
+      repository.loadSessions = (_) async => [
+        const ProjectSession(id: 's', title: '真实会话'),
+      ];
+      final container = await pumpProjects(tester, repository);
+      await tester.pumpAndSettle();
+      final projects = Completer<List<Project>>();
+      final sessions = Completer<List<ProjectSession>>();
+      repository.loadProjects = () => projects.future;
+      repository.loadSessions = (_) => sessions.future;
+      container.invalidate(projectsProvider);
+      container.invalidate(projectSessionsProvider('p'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('真实项目'), findsOneWidget);
+      expect(find.text('真实会话'), findsOneWidget);
+      expect(find.text('项目(1)'), findsOneWidget);
+      expect(find.byKey(const Key('drawer-projects-skeleton')), findsNothing);
+      expect(find.byKey(const Key('drawer-sessions-skeleton-p')), findsNothing);
+      projects.complete([const Project(id: 'p', title: '更新项目')]);
+      sessions.complete([const ProjectSession(id: 's', title: '更新会话')]);
+      await tester.pumpAndSettle();
+      expect(find.text('更新项目'), findsOneWidget);
+      expect(find.text('更新会话'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('refresh of an empty list displays skeletons again', (
+    tester,
+  ) async {
+    final repository = _Repository();
+    final container = await pumpProjects(tester, repository);
+    await tester.pumpAndSettle();
+    final pending = Completer<List<Project>>();
+    repository.loadProjects = () => pending.future;
+    container.invalidate(projectsProvider);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const Key('drawer-projects-skeleton')), findsOneWidget);
+    expect(find.byKey(const Key('drawer-projects-empty')), findsNothing);
+    pending.complete([]);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('drawer-projects-skeleton')), findsNothing);
+    expect(find.byKey(const Key('drawer-projects-empty')), findsOneWidget);
   });
 
   testWidgets('sessions load lazily, retry and pass backend IDs on selection', (

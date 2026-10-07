@@ -6,6 +6,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/project_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_menu.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../projects/domain/project.dart';
 import '../../../projects/presentation/project_item_menu.dart';
@@ -39,7 +40,7 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
         : AppColors.textTertiary;
     final userId = ref.watch(userProvider.select((user) => user?.id));
     final result = ref.watch(projectsProvider);
-    final projects = result.isLoading || result.hasError
+    final projects = result.isReloading || result.hasError
         ? const <Project>[]
         : result.valueOrNull ?? const <Project>[];
     if (_userId != userId) {
@@ -78,7 +79,9 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
               children: [
                 Expanded(
                   child: Text(
-                    l10n.projectCount(projects.length),
+                    result.isLoading && projects.isEmpty
+                        ? l10n.projectsTitle
+                        : l10n.projectCount(projects.length),
                     key: const Key('drawer-project-count'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -89,6 +92,7 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
                   key: const Key('drawer-projects-menu'),
                   tooltip: l10n.projectOptions,
                   size: 30,
+                  enabled: projects.isNotEmpty,
                   icon: AppSvgIcon.asset(
                     'home_drawer_more',
                     size: 30,
@@ -133,15 +137,15 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
               children: [
                 if (userId == null)
                   _ProjectStatus(label: l10n.loginToViewProjects)
-                else if (result.isLoading)
-                  const _ProjectLoading()
-                else if (result.hasError)
+                else if (result.isLoading && projects.isEmpty)
+                  const _ProjectSkeleton(key: Key('drawer-projects-skeleton'))
+                else if (result.hasError && projects.isEmpty)
                   _ProjectStatus(
                     label: l10n.projectsLoadFailed,
                     onRetry: () => ref.invalidate(projectsProvider),
                   )
                 else if (projects.isEmpty)
-                  _ProjectStatus(label: l10n.noProjects),
+                  const _ProjectEmptyState(),
                 for (final project in projects)
                   Column(
                     key: ValueKey(project.id),
@@ -251,14 +255,21 @@ class _ProjectSessions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final result = ref.watch(projectSessionsProvider(projectId));
-    if (result.isLoading) return const _ProjectLoading();
-    if (result.hasError) {
+    final sessions = result.isReloading || result.hasError
+        ? const <ProjectSession>[]
+        : result.valueOrNull ?? const <ProjectSession>[];
+    if (result.isLoading && sessions.isEmpty) {
+      return _ProjectSkeleton(
+        key: Key('drawer-sessions-skeleton-$projectId'),
+        sessionsOnly: true,
+      );
+    }
+    if (result.hasError && sessions.isEmpty) {
       return _ProjectStatus(
         label: l10n.projectSessionsLoadFailed,
         onRetry: () => ref.invalidate(projectSessionsProvider(projectId)),
       );
     }
-    final sessions = result.valueOrNull ?? const <ProjectSession>[];
     if (sessions.isEmpty) return _ProjectStatus(label: l10n.noHistory);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -281,19 +292,92 @@ class _ProjectSessions extends ConsumerWidget {
   }
 }
 
-class _ProjectLoading extends StatelessWidget {
-  const _ProjectLoading();
+class _ProjectEmptyState extends StatelessWidget {
+  const _ProjectEmptyState();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
-    height: 42,
+  Widget build(BuildContext context) => SizedBox(
+    key: const Key('drawer-projects-empty'),
+    height: 180,
     child: Center(
-      child: SizedBox.square(
-        dimension: 16,
-        child: CircularProgressIndicator(strokeWidth: 2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeSemantics(
+              child: AppSvgIcon.asset(
+                'home_drawer_project',
+                size: 48,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: .25),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              AppLocalizations.of(context)!.noProjects,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
+}
+
+class _ProjectSkeleton extends StatelessWidget {
+  const _ProjectSkeleton({this.sessionsOnly = false, super.key});
+
+  final bool sessionsOnly;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    Widget bar(double height) => AppSkeletonBox(height: height);
+    Widget row({required bool header, required double widthFactor}) => SizedBox(
+      height: 42,
+      child: Padding(
+        padding: EdgeInsets.only(left: header ? 10 : 35, right: 35),
+        child: Row(
+          children: [
+            if (header) ...[
+              SizedBox(width: 20, child: bar(20)),
+              const SizedBox(width: 5),
+            ],
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: widthFactor,
+                  child: bar(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    return AppSkeleton(
+      label: sessionsOnly ? l10n.loadingProjectSessions : l10n.loadingProjects,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < 3; index++) ...[
+            row(header: !sessionsOnly, widthFactor: index.isEven ? .65 : .45),
+            if (!sessionsOnly && index < 2) ...[
+              row(header: false, widthFactor: .85),
+              row(header: false, widthFactor: .6),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _ProjectStatus extends StatelessWidget {

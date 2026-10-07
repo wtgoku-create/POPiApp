@@ -63,6 +63,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get improveRole => '完善角色设定';
 
   @override
+  String get confirmRoleChanges => '确认修改';
+
+  @override
+  String get savingRoleChanges => '保存中…';
+
+  @override
+  String get roleChangesSaved => '角色档案已保存';
+
+  @override
+  String get roleChangesSaveFailed => '角色档案保存失败，请稍后重试';
+
+  @override
+  String get roleFieldRequired => '请填写此项';
+
+  @override
   String get createWithRole => '围绕角色创作';
 
   @override
@@ -464,6 +479,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noProjects => '暂无项目';
 
   @override
+  String get projectsTitle => '项目';
+
+  @override
+  String get loadingProjects => '正在加载项目';
+
+  @override
+  String get loadingProjectSessions => '正在加载会话';
+
+  @override
+  String get loadingRoles => '正在加载角色';
+
+  @override
+  String get loadingAssets => '正在加载资产';
+
+  @override
   String get projectsLoadFailed => '项目加载失败';
 
   @override
@@ -645,6 +675,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get download => '下载';
+
+  @override
+  String get imageSavedToPhotos => '图片已保存到相册';
+
+  @override
+  String get imageSaveFailed => '图片保存失败，请稍后重试';
+
+  @override
+  String get imageSaveAccessDenied => '无法保存图片，请在系统设置中允许添加照片';
 
   @override
   String get delete => '删除';

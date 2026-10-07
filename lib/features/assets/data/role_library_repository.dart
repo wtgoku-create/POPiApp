@@ -3,6 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../domain/library_role.dart';
+import 'role_profile_api.dart';
+
+typedef RoleProfileSaver =
+    Future<LibraryRole> Function(String id, Map<String, Object?> profile);
+
+final roleProfileSaverProvider = Provider<RoleProfileSaver>((ref) {
+  final dio = ref.watch(dioProvider);
+  final api = RoleProfileApi(dio);
+  final details = NetworkApi(dio);
+  return (id, profile) async {
+    await api.save(id, profile);
+    return LibraryRole.fromJson(await details.libraryRoleDetail(id));
+  };
+});
 
 final roleDetailLoaderProvider = Provider<Future<LibraryRole> Function(String)>(
   (ref) {

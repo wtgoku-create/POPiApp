@@ -232,14 +232,14 @@ void main() {
     await tester.tap(find.byKey(const Key('assets-work-0')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('asset-preview-image')), findsOneWidget);
-    expect(find.byKey(const Key('asset-preview-page')), findsOneWidget);
+    expect(find.byKey(const Key('asset-preview-page')), findsNothing);
     expect(find.byType(Dialog), findsNothing);
-    await tester.tap(find.byKey(const Key('asset-preview-back')));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('assets-work-3')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('asset-preview-page')), findsOneWidget);
-    expect(find.text('视频封面预览'), findsOneWidget);
+    expect(find.byKey(const Key('asset-preview-page')), findsNothing);
+    expect(find.text('视频封面预览'), findsNothing);
     expect(find.byType(Dialog), findsNothing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
