@@ -71,7 +71,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
-        // The custom app bar already includes the status bar safe area.
+        // The app bar already includes the stored status-bar inset.
         primary: false,
         backgroundColor: Colors.transparent,
         drawerScrimColor: const Color(0x33333333),
@@ -135,7 +135,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         body: _blurBehindDrawer(
           SingleChildScrollView(
             key: const Key('home-welcome-scroll'),
-            padding: EdgeInsets.only(top: 20, bottom: safeArea.bottom + 30),
+            padding: EdgeInsets.only(top: 12, bottom: safeArea.bottom + 30),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 440),

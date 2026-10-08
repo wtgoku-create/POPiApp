@@ -199,6 +199,8 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       ),
       child: Scaffold(
         key: _scaffoldKey,
+        // The app bar already includes the stored status-bar inset.
+        primary: false,
         backgroundColor: Colors.transparent,
         drawerScrimColor: const Color(0x33333333),
         drawer: PopiNavigationDrawer(onNewProject: () => _goToStep(0)),

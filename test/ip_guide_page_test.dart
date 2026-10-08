@@ -21,11 +21,14 @@ void main() {
     Locale locale = const Locale('zh'),
     double textScale = 1,
     bool reducedMotion = false,
+    double systemTopInset = 0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(top: systemTopInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
     final container = ProviderContainer();
     addTearDown(container.dispose);
     await container
@@ -72,6 +75,17 @@ void main() {
     of: find.byKey(Key(key)),
     matching: find.byType(TextField),
   );
+
+  testWidgets('status bar inset is counted once above the guide progress', (
+    tester,
+  ) async {
+    await pumpGuide(tester, systemTopInset: 52);
+    final menu = find.byKey(const Key('ip-guide-menu'));
+    expect(tester.getSize(menu), const Size(40, 40));
+    expect(tester.getTopLeft(menu).dy, 52 + 8);
+    expect(tester.getTopLeft(find.byType(TabBar)).dy, 52 + 56);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'all four steps preserve selections and confirm the exact plan into a session',

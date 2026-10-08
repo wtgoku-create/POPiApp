@@ -28,12 +28,14 @@ void main() {
     Locale locale = const Locale('zh'),
     User? user,
     double textScale = 1,
-    EdgeInsets safeArea = const EdgeInsets.only(top: 52, bottom: 34),
+    double systemTopInset = 0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(top: systemTopInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
     final container = ProviderContainer(
       overrides: [
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
@@ -110,7 +112,7 @@ void main() {
       expect(find.text('从选题/内容/脚本开始'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('home-banner-carousel'))).dy,
-        128,
+        120,
       );
       expect(
         tester.getSize(find.byKey(const Key('home-creation-panel'))).height,
@@ -128,7 +130,24 @@ void main() {
   );
 
   testWidgets(
-    'guest creation entries open login and use current authentication state',
+    'status bar inset is counted once and toolbar does not cover the banner',
+    (tester) async {
+      await pumpHome(tester, systemTopInset: 52);
+      final menu = find.byKey(const Key('popi-open-navigation'));
+      final banner = find.byKey(const Key('home-banner-carousel'));
+      expect(tester.getSize(menu), const Size(40, 40));
+      expect(tester.getTopLeft(menu).dy, 52 + 8);
+      expect(tester.getTopLeft(banner).dy, 52 + 56 + 12);
+      expect(
+        tester.getBottomRight(menu).dy,
+        lessThan(tester.getTopLeft(banner).dy),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'creation entries open the IP guide or a session and return home',
     (tester) async {
       final container = await pumpHome(tester);
       final router = container.read(routerProvider(false));
