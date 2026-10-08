@@ -5,6 +5,7 @@ import '../features/assets/presentation/assets_page.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/home/presentation/home_page.dart';
 import '../features/ip_guide/presentation/ip_guide_page.dart';
+import '../features/ip_accounts/presentation/ip_accounts_page.dart';
 import '../features/session/presentation/session_page.dart';
 import '../core/config/app_config.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -19,6 +20,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
     initialLocation: '/',
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
+      GoRoute(
+        path: '/ip-accounts',
+        builder: (context, state) => const IpAccountsPage.sample(),
+      ),
       GoRoute(
         path: '/ip-guide',
         builder: (context, state) => const IpGuidePage(),

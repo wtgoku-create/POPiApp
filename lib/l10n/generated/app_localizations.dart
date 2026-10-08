@@ -380,6 +380,66 @@ abstract class AppLocalizations {
   /// **'My IP accounts'**
   String get myIpAccounts;
 
+  /// No description provided for @ipAccountsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'IP Account Management'**
+  String get ipAccountsTitle;
+
+  /// No description provided for @ipAccountsAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get ipAccountsAll;
+
+  /// No description provided for @ipAccountsRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Used'**
+  String get ipAccountsRecent;
+
+  /// No description provided for @ipAccountsPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get ipAccountsPaused;
+
+  /// No description provided for @ipAccountNormalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get ipAccountNormalStatus;
+
+  /// No description provided for @ipAccountPausedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get ipAccountPausedStatus;
+
+  /// No description provided for @noIpAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No IP accounts yet'**
+  String get noIpAccounts;
+
+  /// No description provided for @noRecentIpAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No recently used accounts'**
+  String get noRecentIpAccounts;
+
+  /// No description provided for @noPausedIpAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'No paused accounts'**
+  String get noPausedIpAccounts;
+
+  /// No description provided for @ipAccountDetailsPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Account details are not available yet'**
+  String get ipAccountDetailsPending;
+
   /// No description provided for @ipAccountsPending.
   ///
   /// In en, this message translates to:
@@ -1922,6 +1982,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Douyin'**
   String get douyin;
+
+  /// No description provided for @socialBound.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked'**
+  String get socialBound;
+
+  /// No description provided for @socialUnbound.
+  ///
+  /// In en, this message translates to:
+  /// **'Not linked'**
+  String get socialUnbound;
+
+  /// No description provided for @socialBindingLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get socialBindingLoading;
+
+  /// No description provided for @socialBindingLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed. Retry'**
+  String get socialBindingLoadFailed;
+
+  /// No description provided for @socialBindingSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Account linked'**
+  String get socialBindingSucceeded;
+
+  /// No description provided for @socialBindingCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking canceled'**
+  String get socialBindingCanceled;
+
+  /// No description provided for @socialBindingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization is unavailable. Check that the app is installed and authorization is configured.'**
+  String get socialBindingUnavailable;
+
+  /// No description provided for @socialBindingFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not link account. Please try again.'**
+  String get socialBindingFailed;
 
   /// No description provided for @logout.
   ///

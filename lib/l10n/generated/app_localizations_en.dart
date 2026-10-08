@@ -164,6 +164,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myIpAccounts => 'My IP accounts';
 
   @override
+  String get ipAccountsTitle => 'IP Account Management';
+
+  @override
+  String get ipAccountsAll => 'All';
+
+  @override
+  String get ipAccountsRecent => 'Recently Used';
+
+  @override
+  String get ipAccountsPaused => 'Paused';
+
+  @override
+  String get ipAccountNormalStatus => 'Normal';
+
+  @override
+  String get ipAccountPausedStatus => 'Pause';
+
+  @override
+  String get noIpAccounts => 'No IP accounts yet';
+
+  @override
+  String get noRecentIpAccounts => 'No recently used accounts';
+
+  @override
+  String get noPausedIpAccounts => 'No paused accounts';
+
+  @override
+  String get ipAccountDetailsPending => 'Account details are not available yet';
+
+  @override
   String get ipAccountsPending => 'IP accounts are not available yet';
 
   @override
@@ -994,6 +1024,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get douyin => 'Douyin';
+
+  @override
+  String get socialBound => 'Linked';
+
+  @override
+  String get socialUnbound => 'Not linked';
+
+  @override
+  String get socialBindingLoading => 'Pending';
+
+  @override
+  String get socialBindingLoadFailed => 'Failed. Retry';
+
+  @override
+  String get socialBindingSucceeded => 'Account linked';
+
+  @override
+  String get socialBindingCanceled => 'Linking canceled';
+
+  @override
+  String get socialBindingUnavailable =>
+      'Authorization is unavailable. Check that the app is installed and authorization is configured.';
+
+  @override
+  String get socialBindingFailed => 'Could not link account. Please try again.';
 
   @override
   String get logout => 'Sign out';

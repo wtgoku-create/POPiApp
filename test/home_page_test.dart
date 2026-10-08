@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
@@ -97,9 +98,41 @@ void main() {
   );
 
   testWidgets(
-    'creation entries open the IP guide or a session and return home',
+    'guest creation entries open login and use current authentication state',
     (tester) async {
       final container = await pumpHome(tester);
+      final router = container.read(routerProvider(false));
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(Key('home-start-$i')));
+        await tester.pumpAndSettle();
+        expect(find.byType(LoginPage), findsOneWidget);
+        expect(find.byType(IpGuidePage), findsNothing);
+        expect(find.byType(SessionPage), findsNothing);
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(HomePage), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
+
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '1', name: '用户', email: ''));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('home-start-0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(IpGuidePage), findsOneWidget);
+      expect(find.byType(LoginPage), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'creation entries open the IP guide or a session and return home',
+    (tester) async {
+      final container = await pumpHome(
+        tester,
+        user: const User(id: '1', name: '用户', email: ''),
+      );
       final prompts = ['做一个新IP账号', '从创建角色开始', '从选题/内容/脚本开始'];
       for (var i = 0; i < prompts.length; i++) {
         await tester.tap(find.byKey(Key('home-start-$i')));

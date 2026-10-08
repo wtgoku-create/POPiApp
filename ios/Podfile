@@ -38,14 +38,31 @@ end
 
 post_install do |installer|
   wechat_sdk = installer.pod_targets.find { |target| target.name == 'WechatOpenSDK-XCFramework' }
+  douyin_sdk = installer.pod_targets.find { |target| target.name == 'DouyinOpenSDK' }
+  simulator_sdk_targets = []
+  simulator_sdk_targets << 'WechatOpenSDK-XCFramework' if wechat_sdk && wechat_sdk.root_spec.version.to_s == '2.0.7'
+  simulator_sdk_targets << 'DouyinOpenSDK' if douyin_sdk && douyin_sdk.root_spec.version.to_s == '4.2.5'
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    if wechat_sdk && wechat_sdk.root_spec.version.to_s == '2.0.7' &&
-       (target.name == 'WechatOpenSDK-XCFramework' || target.name.start_with?('Pods-Runner'))
-      # 2.0.7 includes arm64 simulators; override its stale podspec exclusion without inheriting it.
+    if simulator_sdk_targets.include?(target.name) ||
+       (!simulator_sdk_targets.empty? && target.name.start_with?('Pods-Runner'))
+      # WeChat has an arm64 simulator slice; Douyin is linked only on devices below.
       target.build_configurations.each do |config|
         config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386'
       end
+    end
+  end
+
+  installer.aggregate_targets.each do |target|
+    target.xcconfigs.each do |name, config|
+      config.attributes['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'i386' unless simulator_sdk_targets.empty?
+      if simulator_sdk_targets.include?('DouyinOpenSDK') && config.frameworks.include?('DouyinOpenSDK')
+        # Conditional flags inherit the default flags, so add this SDK only for devices.
+        config.frameworks.delete('DouyinOpenSDK')
+        config.attributes['OTHER_LDFLAGS[sdk=iphoneos*]'] = '$(inherited) -framework "DouyinOpenSDK"'
+      end
+      config.save_as(target.xcconfig_path(name))
     end
   end
 end

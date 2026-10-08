@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
+import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 void main() {
   Future<void> pumpGuide(
@@ -26,6 +28,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    await container
+        .read(userProvider.notifier)
+        .setUser(const User(id: '1', name: '用户', email: ''));
     container
         .read(safeAreaInsetsProvider.notifier)
         .update(const EdgeInsets.only(top: 52, bottom: 34));

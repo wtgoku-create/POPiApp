@@ -293,7 +293,7 @@ void main() {
       tester.getSize(find.byKey(const Key('drawer-new-project'))),
       const Size(320, 50),
     );
-    expect(find.text('我的IP账号'), findsNothing);
+    expect(find.text('我的IP账号'), findsOneWidget);
     expect(find.text('灵感库'), findsNothing);
     expect(find.text('Skill'), findsNothing);
 

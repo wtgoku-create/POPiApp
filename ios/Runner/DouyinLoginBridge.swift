@@ -1,6 +1,26 @@
-import DouyinOpenSDK
 import Flutter
 import UIKit
+
+#if targetEnvironment(simulator)
+/// The vendor SDK has no arm64 simulator slice; preserve the channel contract.
+final class DouyinLoginBridge {
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "authorize":
+      result(["status": "unavailable", "reason": "simulator_unsupported"])
+    case "cancelAuthorization":
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  static func handleURL(_ url: URL, sourceApplication: String? = nil) -> Bool {
+    return false
+  }
+}
+#else
+import DouyinOpenSDK
 
 /// Keeps SDK authorization and callbacks out of Flutter's presentation layer.
 final class DouyinLoginBridge {
@@ -107,3 +127,4 @@ final class DouyinLoginBridge {
     result?(response)
   }
 }
+#endif

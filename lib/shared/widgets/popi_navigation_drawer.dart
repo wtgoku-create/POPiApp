@@ -38,9 +38,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
     );
     final colorScheme = Theme.of(context).colorScheme;
     final isLoggedIn = ref.watch(userProvider) != null;
-    final route =
-        GoRouter.maybeOf(context)?.routeInformationProvider.value.uri.path ??
-        '/';
+    final route = GoRouter.maybeOf(context) == null
+        ? '/'
+        : GoRouterState.of(context).uri.path;
 
     return Container(
       key: const Key('popi-navigation-drawer'),
@@ -122,6 +122,17 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                   const SizedBox(height: 10),
                   Column(
                     children: [
+                      _NavigationItem(
+                        key: const Key('drawer-nav-ip-accounts'),
+                        iconAsset: 'home_drawer_nav-ip-account',
+                        label: l10n.myIpAccounts,
+                        selected: route == '/ip-accounts',
+                        onTap: () => _openProtectedRoute(
+                          context,
+                          isLoggedIn: isLoggedIn,
+                          route: '/ip-accounts',
+                        ),
+                      ),
                       _NavigationItem(
                         key: const Key('drawer-nav-role'),
                         iconAsset: 'home_drawer_nav-role',

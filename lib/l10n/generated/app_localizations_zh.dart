@@ -158,6 +158,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myIpAccounts => '我的IP账号';
 
   @override
+  String get ipAccountsTitle => 'IP账号管理';
+
+  @override
+  String get ipAccountsAll => '全部';
+
+  @override
+  String get ipAccountsRecent => '最近常用';
+
+  @override
+  String get ipAccountsPaused => '停滞';
+
+  @override
+  String get ipAccountNormalStatus => 'Normal';
+
+  @override
+  String get ipAccountPausedStatus => 'Pause';
+
+  @override
+  String get noIpAccounts => '暂无IP账号';
+
+  @override
+  String get noRecentIpAccounts => '暂无最近常用账号';
+
+  @override
+  String get noPausedIpAccounts => '暂无停滞账号';
+
+  @override
+  String get ipAccountDetailsPending => '账号详情页待接入';
+
+  @override
   String get ipAccountsPending => 'IP账号功能待接入';
 
   @override
@@ -961,6 +991,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get douyin => '抖音';
+
+  @override
+  String get socialBound => '已绑定';
+
+  @override
+  String get socialUnbound => '未绑定';
+
+  @override
+  String get socialBindingLoading => '处理中';
+
+  @override
+  String get socialBindingLoadFailed => '查询失败，重试';
+
+  @override
+  String get socialBindingSucceeded => '绑定成功';
+
+  @override
+  String get socialBindingCanceled => '已取消绑定';
+
+  @override
+  String get socialBindingUnavailable => '授权不可用，请检查对应应用是否已安装及授权配置';
+
+  @override
+  String get socialBindingFailed => '绑定失败，请重试';
 
   @override
   String get logout => '退出登录';

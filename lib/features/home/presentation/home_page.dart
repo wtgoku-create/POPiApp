@@ -26,6 +26,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   bool _drawerOpen = false;
 
   void _startSession(String prompt) {
+    if (ref.read(userProvider) == null) {
+      context.push('/login');
+      return;
+    }
     if (prompt == AppLocalizations.of(context)!.homeStartIp) {
       context.push('/ip-guide');
       return;

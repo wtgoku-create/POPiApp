@@ -9,12 +9,17 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/type/social_app_type.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/point_package_repository.dart';
 import 'points_details_page.dart';
 import 'widgets/profile_chrome.dart';
+import 'widgets/profile_settings_row.dart';
+import 'widgets/social_app_binding_row.dart';
+
+export 'widgets/profile_settings_row.dart';
 
 final _languageMenuExpandedProvider = StateProvider<bool>((ref) => false);
 final _themeMenuExpandedProvider = StateProvider<bool>((ref) => false);
@@ -150,22 +155,8 @@ class ProfilePage extends ConsumerWidget {
                       label: l10n.phoneNumber,
                       value: '+86 $displayPhone',
                     ),
-                    SettingsRow(
-                      iconWidget: AppSvgIcon.asset(
-                        'profile_settings_wechat',
-                        size: 21,
-                      ),
-                      label: l10n.wechatId,
-                      value: 'dssads222',
-                    ),
-                    SettingsRow(
-                      iconWidget: AppSvgIcon.asset(
-                        'profile_settings_douyin',
-                        size: 20,
-                      ),
-                      label: l10n.douyin,
-                      value: 'Alice',
-                    ),
+                    const SocialAppBindingRow(app: SocialAppType.wechat),
+                    const SocialAppBindingRow(app: SocialAppType.douyin),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -514,86 +505,6 @@ class SettingsGroup extends StatelessWidget {
             : null,
       ),
       child: Column(children: children),
-    );
-  }
-}
-
-class SettingsRow extends StatelessWidget {
-  const SettingsRow({
-    this.icon,
-    this.iconWidget,
-    required this.label,
-    this.value,
-    this.onTap,
-    this.trailing,
-    this.showChevron = true,
-    super.key,
-  }) : assert(icon != null || iconWidget != null);
-
-  final IconData? icon;
-  final Widget? iconWidget;
-  final String label;
-  final String? value;
-  final VoidCallback? onTap;
-  final IconData? trailing;
-  final bool showChevron;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.medium),
-      child: SizedBox(
-        height: 48,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              SizedBox.square(
-                dimension: 20,
-                child: Center(
-                  child: iconWidget == null
-                      ? Icon(icon, size: 20, color: colorScheme.onSurface)
-                      : ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            colorScheme.onSurface,
-                            BlendMode.srcIn,
-                          ),
-                          child: iconWidget!,
-                        ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
-                ),
-              ),
-              if (value != null)
-                Text(
-                  value!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              if (showChevron) ...[
-                const SizedBox(width: 7),
-                if (trailing == null)
-                  AppSvgIcon.asset(
-                    'profile_settings_chevron',
-                    size: 13,
-                    color: colorScheme.onSurfaceVariant,
-                  )
-                else
-                  Icon(trailing, size: 21, color: colorScheme.onSurfaceVariant),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

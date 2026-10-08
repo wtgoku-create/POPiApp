@@ -106,6 +106,10 @@ URL Scheme、Universal Link 和 Associated Domains；`AppDelegate` 和
 开放平台的移动应用 Bundle ID、Client Key 和 Universal Link 必须与构建一致，
 后端换取授权 Token 时也必须使用该移动应用的 Key/Secret。
 
+`DouyinOpenSDK` 4.2.5 没有 arm64 模拟器版本。Pod 安装钩子仅在真机构建中链接
+该 SDK，模拟器上的抖音授权返回不可用，其他页面及登录方式可正常调试。
+不要为此排除模拟器的 arm64 架构，iOS 26+ 的 Apple Silicon 模拟器需要该架构。
+
 Android 使用官方 `opensdk-china-external` 和 `opensdk-common` 0.2.0.10，
 通过同一 MethodChannel 接收环境配置中的 Client Key，仅在用户发起授权时初始化。
 `DouyinEntryActivity` 接收 SDK 回调，校验 state 后将授权码交给现有登录接口；
