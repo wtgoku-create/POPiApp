@@ -46,6 +46,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Opt in locally so other developers can still use the default debug key.
+            if (keystoreProperties.getProperty("useForDebug") == "true") {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
@@ -64,4 +70,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("com.bytedance.ies.ugc.aweme:opensdk-china-external:0.2.0.10")
+    implementation("com.bytedance.ies.ugc.aweme:opensdk-common:0.2.0.10")
 }

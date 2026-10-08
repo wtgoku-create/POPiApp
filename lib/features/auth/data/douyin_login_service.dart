@@ -42,7 +42,8 @@ class DouyinLoginService {
 
   Future<DouyinAuthorizationResult> authorize() async {
     if (kIsWeb ||
-        defaultTargetPlatform != TargetPlatform.iOS ||
+        (defaultTargetPlatform != TargetPlatform.iOS &&
+            defaultTargetPlatform != TargetPlatform.android) ||
         clientKey.trim().isEmpty) {
       return const DouyinAuthorizationResult.unavailable();
     }
@@ -91,7 +92,7 @@ class DouyinLoginService {
       return const DouyinAuthorizationResult.failed();
     } on MissingPluginException {
       if (kDebugMode) {
-        debugPrint('Douyin native channel is missing; rebuild the iOS app.');
+        debugPrint('Douyin native channel is missing; rebuild the mobile app.');
       }
       return const DouyinAuthorizationResult.unavailable();
     } on PlatformException catch (error) {

@@ -104,7 +104,14 @@ URL Scheme、Universal Link 和 Associated Domains；`AppDelegate` 和
 `SceneDelegate` 将授权回调交给 SDK，Dart 获取一次性 code 后通过现有
 `loginByDouyinCode` 接口登录，首次登录继续验证并绑定手机号。
 开放平台的移动应用 Bundle ID、Client Key 和 Universal Link 必须与构建一致，
-后端换取授权 Token 时也必须使用该移动应用的 Key/Secret。Android 原生适配尚未接入。
+后端换取授权 Token 时也必须使用该移动应用的 Key/Secret。
+
+Android 使用官方 `opensdk-china-external` 和 `opensdk-common` 0.2.0.10，
+通过同一 MethodChannel 接收环境配置中的 Client Key，仅在用户发起授权时初始化。
+`DouyinEntryActivity` 接收 SDK 回调，校验 state 后将授权码交给现有登录接口；
+取消、超时和引擎销毁会清理待处理请求。Android 需要安装支持授权的抖音客户端，
+开放平台登记的包名 `com.popiai.app`、APK 签名和 Client Key 必须匹配。
+Debug 默认使用本机调试签名，真机登录前需要在平台配置相应签名，或使用已登记的签名打包。
 
 认证相关代码位于 `lib/features/auth/data/`：
 

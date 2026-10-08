@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -253,9 +254,17 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Douyin reports unavailable without backend or SDK', (
+  testWidgets('Douyin reports unavailable when native SDK cannot authorize', (
     tester,
   ) async {
+    const channel = MethodChannel('art.popi/douyin_login');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      channel,
+      (call) async => {'status': 'unavailable'},
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
     final context = await pumpLoginPage(tester);
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
