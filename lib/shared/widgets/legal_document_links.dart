@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:go_router/go_router.dart';
 
 import 'app_toast.dart';
 import '../../core/config/app_config.dart';
@@ -42,9 +42,9 @@ class _LegalDocumentLinksState extends State<LegalDocumentLinks> {
   void initState() {
     super.initState();
     _userAgreementRecognizer = TapGestureRecognizer()
-      ..onTap = () => _open(userAgreementUrl);
+      ..onTap = () => _open(userAgreementUrl, '/legal/user-agreement');
     _privacyPolicyRecognizer = TapGestureRecognizer()
-      ..onTap = () => _open(privacyPolicyUrl);
+      ..onTap = () => _open(privacyPolicyUrl, '/legal/privacy-policy');
   }
 
   @override
@@ -86,10 +86,13 @@ class _LegalDocumentLinksState extends State<LegalDocumentLinks> {
     );
   }
 
-  Future<void> _open(String url) async {
+  Future<void> _open(String url, String path) async {
     final launcher =
         widget.urlLauncher ??
-        (uri) => launchUrl(uri, mode: LaunchMode.externalApplication);
+        (uri) async {
+          await context.push<void>(path);
+          return true;
+        };
     try {
       if (await launcher(Uri.parse(url))) return;
     } catch (_) {

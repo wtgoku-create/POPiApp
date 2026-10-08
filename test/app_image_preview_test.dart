@@ -20,12 +20,13 @@ void main() {
   Future<void> openPreview(
     WidgetTester tester, {
     bool reduceMotion = false,
+    String imageAsset = 'assets/images/assets_works_gallery_01.png',
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    const image = AssetImage('assets/images/assets_works_gallery_01.png');
+    final image = AssetImage(imageAsset);
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
@@ -48,7 +49,7 @@ void main() {
                   image: image,
                   heroTag: 'test-image',
                 ),
-                child: const Hero(
+                child: Hero(
                   tag: 'test-image',
                   child: Image(
                     image: image,
@@ -114,6 +115,86 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(preview), original);
     await tester.drag(preview, const Offset(0, 160));
+    await tester.pumpAndSettle();
+    expect(preview, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  Rect largestPaintedImage(WidgetTester tester) {
+    final bounds = find.byType(RawImage).evaluate().map((element) {
+      final render = element.findRenderObject()! as RenderImage;
+      final image = render.image!;
+      final size = applyBoxFit(
+        render.fit ?? BoxFit.scaleDown,
+        Size(image.width / render.scale, image.height / render.scale),
+        render.size,
+      ).destination;
+      final rect = render.alignment
+          .resolve(TextDirection.ltr)
+          .inscribe(size, Offset.zero & render.size);
+      return MatrixUtils.transformRect(render.getTransformTo(null), rect);
+    }).toList();
+    bounds.sort((a, b) => (b.width * b.height).compareTo(a.width * a.height));
+    return bounds.first;
+  }
+
+  for (final asset in [
+    'assets/images/assets_works_gallery_01.png',
+    'assets/images/assets_works_selection_01.png',
+    'assets/images/assets_works_selection_04.png',
+  ]) {
+    for (final drag in [false, true]) {
+      testWidgets('closing $asset never enlarges the image with drag=$drag', (
+        tester,
+      ) async {
+        await openPreview(tester, imageAsset: asset);
+        final preview = find.byKey(const Key('asset-preview-image'));
+        TestGesture? gesture;
+        if (drag) {
+          gesture = await tester.startGesture(tester.getCenter(preview));
+          await gesture.moveBy(const Offset(0, 160));
+          await tester.pump();
+        }
+        var previous = largestPaintedImage(tester);
+        if (gesture != null) {
+          await gesture.up();
+        } else {
+          await tester.binding.handlePopRoute();
+        }
+        await tester.pump();
+        for (var frame = 0; frame < 14; frame++) {
+          final current = largestPaintedImage(tester);
+          expect(current.width, lessThanOrEqualTo(previous.width + .01));
+          expect(current.height, lessThanOrEqualTo(previous.height + .01));
+          previous = current;
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+        expect(preview, findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('tap closing preserves the zoom until the return flight starts', (
+    tester,
+  ) async {
+    await openPreview(tester);
+    final preview = find.byKey(const Key('asset-preview-image'));
+    await tester.tap(preview);
+    await tester.pump(const Duration(milliseconds: 60));
+    await tester.tap(preview);
+    await tester.pumpAndSettle();
+    final controller = tester
+        .widget<InteractiveViewer>(preview)
+        .transformationController!;
+    final before = largestPaintedImage(tester);
+    await tester.tap(preview);
+    await tester.pump(const Duration(milliseconds: 310));
+    expect(controller.value.getMaxScaleOnAxis(), 2.5);
+    final start = largestPaintedImage(tester);
+    expect(start.width, closeTo(before.width, .01));
+    expect(start.height, closeTo(before.height, .01));
     await tester.pumpAndSettle();
     expect(preview, findsNothing);
     expect(tester.takeException(), isNull);

@@ -23,6 +23,7 @@ import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/providers/social_login_provider.dart';
 
 void main() {
   setUp(() => toastification.managers.clear());
@@ -33,6 +34,8 @@ void main() {
     Size size = const Size(390, 844),
     DouyinLoginService? douyinService,
     DouyinAuthApi? douyinApi,
+    String? wechatAuthorizationCode,
+    Locale locale = const Locale('zh'),
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -62,10 +65,13 @@ void main() {
         child: ToastificationWrapper(
           child: MaterialApp(
             theme: theme ?? AppTheme.light,
-            locale: const Locale('zh'),
+            locale: locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
-            home: LoginPage(onLoginSuccess: () => loggedIn = true),
+            home: LoginPage(
+              onLoginSuccess: () => loggedIn = true,
+              wechatAuthorizationCode: wechatAuthorizationCode,
+            ),
           ),
         ),
       ),
@@ -311,6 +317,10 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     expect(context.storage.token, isNull);
     expect(context.isLoggedIn(), isFalse);
+    expect(find.byKey(const Key('phone-binding-page')), findsOneWidget);
+    expect(find.byKey(const Key('douyin-login-button')), findsNothing);
+    expect(find.byKey(const Key('wechat-login-button')), findsNothing);
+    expect(find.text('请绑定手机号以完成抖音登录'), findsOneWidget);
     expect(find.byKey(const Key('login-password-field')), findsNothing);
     expect(find.byKey(const Key('login-mode-switch')), findsNothing);
     await tester.enterText(
@@ -329,6 +339,161 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets(
+    'Douyin binding sends SMS through captcha and can retry failure',
+    (tester) async {
+      final api = _FakeDouyinApi(needsBinding: true)..failBinding = true;
+      final context = await pumpLoginPage(
+        tester,
+        douyinService: const _AuthorizedDouyinService(),
+        douyinApi: api,
+      );
+      await tester.tap(find.byKey(const Key('agreement-checkbox')));
+      await tester.tap(find.byKey(const Key('douyin-login-button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('login-phone-field')),
+        '13800138000',
+      );
+      await tester.tap(find.byKey(const Key('send-code-button')));
+      await tester.pumpAndSettle();
+      await tester.drag(
+        find.byKey(const Key('captcha-slider-handle')),
+        const Offset(120, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(context.api.sentPhone, '13800138000');
+      expect(context.api.sentCaptchaValue, 'captcha-token');
+      await tester.enterText(
+        find.byKey(const Key('login-code-field')),
+        '123456',
+      );
+      await tester.tap(find.byKey(const Key('phone-login-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('phone-binding-page')), findsOneWidget);
+      expect(context.storage.token, isNull);
+      expect(context.isLoggedIn(), isFalse);
+      expect(find.text('验证码错误'), findsOneWidget);
+      api.failBinding = false;
+      await tester.tap(find.byKey(const Key('phone-login-button')));
+      await tester.pumpAndSettle();
+      expect(api.bindingToken, 'douyin-register-token');
+      expect(context.storage.token, 'douyin-token');
+      expect(context.isLoggedIn(), isTrue);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  for (final systemBack in [false, true]) {
+    testWidgets(
+      'leaving phone binding clears its token with systemBack=$systemBack',
+      (tester) async {
+        final api = _FakeDouyinApi(needsBinding: true);
+        final context = await pumpLoginPage(
+          tester,
+          douyinService: const _AuthorizedDouyinService(),
+          douyinApi: api,
+        );
+        await tester.tap(find.byKey(const Key('agreement-checkbox')));
+        await tester.tap(find.byKey(const Key('douyin-login-button')));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('login-code-field')),
+          '654321',
+        );
+        if (systemBack) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tap(find.byKey(const Key('phone-binding-back-button')));
+        }
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('phone-binding-page')), findsNothing);
+        expect(find.byKey(const Key('douyin-login-button')), findsOneWidget);
+        expect(
+          tester
+              .widget<TextField>(find.byKey(const Key('login-code-field')))
+              .controller!
+              .text,
+          isEmpty,
+        );
+        await tester.enterText(
+          find.byKey(const Key('login-phone-field')),
+          '13800138000',
+        );
+        await tester.enterText(
+          find.byKey(const Key('login-code-field')),
+          '123456',
+        );
+        await tester.tap(find.byKey(const Key('phone-login-button')));
+        await tester.pumpAndSettle();
+        expect(api.bindingToken, isNull);
+        expect(context.api.loggedInPhone, '13800138000');
+        expect(context.isLoggedIn(), isTrue);
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
+  testWidgets(
+    'WeChat uses the same binding page and its own binding endpoint',
+    (tester) async {
+      final context = await pumpLoginPage(
+        tester,
+        wechatAuthorizationCode: 'wechat-code',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('phone-binding-page')), findsOneWidget);
+      expect(find.text('请先绑定手机号以完成微信登录'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('agreement-checkbox')));
+      await tester.enterText(
+        find.byKey(const Key('login-phone-field')),
+        '13800138000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-code-field')),
+        '123456',
+      );
+      await tester.tap(find.byKey(const Key('phone-login-button')));
+      await tester.pumpAndSettle();
+      expect(context.api.wechatBindingToken, 'wechat-register-token');
+      expect(context.api.wechatBindingPhone, '13800138000');
+      expect(context.api.wechatBindingCode, '123456');
+      expect(context.storage.token, 'wechat-token');
+      expect(context.isLoggedIn(), isTrue);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  for (final locale in [const Locale('zh'), const Locale('en')]) {
+    testWidgets(
+      'phone binding fits a compact dark screen in ${locale.languageCode}',
+      (tester) async {
+        await pumpLoginPage(
+          tester,
+          theme: AppTheme.dark,
+          size: const Size(320, 568),
+          locale: locale,
+          wechatAuthorizationCode: 'wechat-code',
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('phone-binding-page')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        final field = find.byKey(const Key('login-code-field'));
+        final position = tester.getTopLeft(field);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.tap(field);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 250);
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(tester.getTopLeft(field), position);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
 
   testWidgets('supports dark mode and compact screens', (tester) async {
     await pumpLoginPage(
@@ -376,11 +541,16 @@ void main() {
     expect(tester.testTextInput.isVisible, isFalse);
   });
 
-  testWidgets('keeps the focused login field visible above the keyboard', (
+  testWidgets('keyboard overlays the login page without moving its fields', (
     tester,
   ) async {
     await pumpLoginPage(tester);
     addTearDown(tester.view.resetViewInsets);
+    final field = find.byKey(const Key('login-code-field'));
+    final fieldPosition = tester.getTopLeft(field);
+    final viewportSize = tester.getSize(
+      find.byKey(const Key('login-design-scroll-view')),
+    );
 
     await tester.tap(find.byKey(const Key('login-code-field')));
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -399,13 +569,15 @@ void main() {
           )
           .first,
     );
+    expect(tester.getTopLeft(field), fieldPosition);
     expect(
-      tester.getBottomRight(find.byKey(const Key('login-code-field'))).dy,
-      lessThanOrEqualTo(visibleBottom),
-      reason:
-          'viewport=${tester.getSize(find.byKey(const Key('login-design-scroll-view')))}, '
-          'pixels=${scrollable.position.pixels}, '
-          'max=${scrollable.position.maxScrollExtent}',
+      tester.getSize(find.byKey(const Key('login-design-scroll-view'))),
+      viewportSize,
+    );
+    expect(scrollable.position.pixels, 0);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).resizeToAvoidBottomInset,
+      isFalse,
     );
     final keyboardBackButton = find.byKey(
       const Key('login-keyboard-back-button'),
@@ -591,6 +763,9 @@ class _FakeAuthApi implements AuthApi {
   String? loginPassword;
   bool failPasswordLogin = false;
   String? wechatAuthorizationCode;
+  String? wechatBindingToken;
+  String? wechatBindingPhone;
+  String? wechatBindingCode;
   bool currentUserRequested = false;
 
   @override
@@ -660,7 +835,15 @@ class _FakeAuthApi implements AuthApi {
     required String phone,
     required String code,
     String inviteCode = '',
-  }) => throw UnimplementedError();
+  }) async {
+    wechatBindingToken = registerToken;
+    wechatBindingPhone = phone;
+    wechatBindingCode = code;
+    return const AuthSession(
+      accessToken: 'wechat-token',
+      user: User(id: '1', name: '微信用户', email: ''),
+    );
+  }
 
   @override
   Future<void> logout() async {}
@@ -715,6 +898,7 @@ class _FakeDouyinApi implements DouyinAuthApi {
   _FakeDouyinApi({this.needsBinding = false});
 
   final bool needsBinding;
+  bool failBinding = false;
   String? authorizationCode;
   String? bindingToken;
   String? bindingPhone;
@@ -745,6 +929,7 @@ class _FakeDouyinApi implements DouyinAuthApi {
     bindingToken = registerToken;
     bindingPhone = phone;
     bindingCode = code;
+    if (failBinding) throw const ApiException(message: '验证码错误');
     return session;
   }
 }

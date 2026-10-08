@@ -1,0 +1,4 @@
+DOUYIN_CLIENT_KEY = awrmmvudt93mnhxg
+DOUYIN_ASSOCIATED_DOMAIN = app.popi.art
+DOUYIN_UNIVERSAL_LINK = https:/$()/app.popi.art/WeChat/
+#include? "Environment.xcconfig"

@@ -713,7 +713,7 @@ abstract class AppLocalizations {
   /// No description provided for @douyinLoginUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'Douyin sign-in is not available yet. Use your phone number or WeChat.'**
+  /// **'Douyin sign-in is unavailable. Check that Douyin is installed and the app is configured.'**
   String get douyinLoginUnavailable;
 
   /// No description provided for @douyinLoginFailed.
@@ -1807,6 +1807,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Privacy Policy'**
   String get privacyPolicy;
+
+  /// No description provided for @webPageLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this page. Please try again'**
+  String get webPageLoadFailed;
+
+  /// No description provided for @webPageLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading page'**
+  String get webPageLoading;
+
+  /// No description provided for @webPageOpenInBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get webPageOpenInBrowser;
+
+  /// No description provided for @webPageBrowserRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please view this page in your browser'**
+  String get webPageBrowserRequired;
+
+  /// No description provided for @webPageRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh page'**
+  String get webPageRefresh;
 
   /// No description provided for @nicknameRequiredLabel.
   ///

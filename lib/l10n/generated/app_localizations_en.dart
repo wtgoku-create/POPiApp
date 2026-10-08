@@ -334,7 +334,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get douyinLoginUnavailable =>
-      'Douyin sign-in is not available yet. Use your phone number or WeChat.';
+      'Douyin sign-in is unavailable. Check that Douyin is installed and the app is configured.';
 
   @override
   String get douyinLoginFailed => 'Douyin sign-in failed. Please try again.';
@@ -927,6 +927,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get privacyPolicy => 'Privacy Policy';
+
+  @override
+  String get webPageLoadFailed => 'Could not load this page. Please try again';
+
+  @override
+  String get webPageLoading => 'Loading page';
+
+  @override
+  String get webPageOpenInBrowser => 'Open in browser';
+
+  @override
+  String get webPageBrowserRequired => 'Please view this page in your browser';
+
+  @override
+  String get webPageRefresh => 'Refresh page';
 
   @override
   String get nicknameRequiredLabel => 'Nickname*';

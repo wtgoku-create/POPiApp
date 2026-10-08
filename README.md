@@ -65,6 +65,8 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
 | `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，需使用 HTTPS 域名 |
+| `DOUYIN_CLIENT_KEY` | 抖音开放平台移动应用 Client Key |
+| `DOUYIN_UNIVERSAL_LINK` | 抖音 iOS Universal Link，可与微信共用 |
 | `USER_AGREEMENT_URL` | 用户协议地址 |
 | `PRIVACY_POLICY_URL` | 隐私政策地址 |
 
@@ -97,6 +99,13 @@ flutter build ios --config-only --dart-define-from-file=config/env/development.j
 日常运行和构建应使用上面的脚本。环境配置在构建时生效，切换后需要重新构建。
 客户端环境文件只放公开配置，不存放 App Secret、私钥或服务端密钥。
 
+抖音原生授权目前接入 iOS 官方 `DouyinOpenSDK`。环境脚本同步 Client Key、
+URL Scheme、Universal Link 和 Associated Domains；`AppDelegate` 和
+`SceneDelegate` 将授权回调交给 SDK，Dart 获取一次性 code 后通过现有
+`loginByDouyinCode` 接口登录，首次登录继续验证并绑定手机号。
+开放平台的移动应用 Bundle ID、Client Key 和 Universal Link 必须与构建一致，
+后端换取授权 Token 时也必须使用该移动应用的 Key/Secret。Android 原生适配尚未接入。
+
 认证相关代码位于 `lib/features/auth/data/`：
 
 - `auth_api.dart`：定义图形验证码、短信验证码、验证码登录和当前用户接口
@@ -105,6 +114,15 @@ flutter build ios --config-only --dart-define-from-file=config/env/development.j
 
 真实后端接入后，在 `lib/shared/providers/user_provider.dart` 调用
 `signIn`，再根据项目的登录页增加路由守卫。
+
+## 协议 H5 页面
+
+用户协议和隐私政策统一使用 `lib/shared/pages/h5_page.dart` 在 App 内展示，
+入口路由分别为 `/legal/user-agreement` 和 `/legal/privacy-policy`。
+登录页和充值页的 `LegalDocumentLinks` 已连接到这两个路由。
+文档地址继续通过环境配置中的 `USER_AGREEMENT_URL` 和 `PRIVACY_POLICY_URL` 管理。
+页面支持加载进度、刷新、失败重试及返回；加载失败时也可在外部浏览器打开。
+原生 WebView 支持 Android、iOS 和 macOS，其他平台提供浏览器打开入口。
 
 ## Toast
 

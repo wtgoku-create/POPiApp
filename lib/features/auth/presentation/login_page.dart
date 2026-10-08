@@ -13,6 +13,7 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/providers/social_login_provider.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/legal_document_links.dart';
@@ -20,6 +21,7 @@ import '../data/wechat_login_service.dart';
 import '../data/douyin_auth_api.dart';
 import '../data/douyin_login_service.dart';
 import 'slider_captcha_sheet.dart';
+import 'phone_binding_page.dart';
 import '../domain/wechat_app_login.dart';
 import '../domain/douyin_app_login.dart';
 
@@ -77,12 +79,44 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final phoneBindingRequired =
+        _wechatRegisterToken != null || _douyinRegisterToken != null;
+    final form = _PhoneLoginForm(
+      phoneController: _phoneController,
+      codeController: _codeController,
+      passwordController: _passwordController,
+      passwordLogin: _passwordLogin,
+      passwordVisible: _passwordVisible,
+      onToggleLoginMode: _toggleLoginMode,
+      onTogglePasswordVisibility: () =>
+          setState(() => _passwordVisible = !_passwordVisible),
+      countdown: _countdown,
+      sendingCode: _isSendingCode,
+      loggingIn: _isLoggingIn,
+      phoneBindingRequired: phoneBindingRequired,
+      wechatLoggingIn: _isWechatLoggingIn,
+      douyinLoggingIn: _isDouyinLoggingIn,
+      onSendCode: _showCaptchaSheet,
+      onLogin: _loginWithPhone,
+    );
+    if (phoneBindingRequired) {
+      return PhoneBindingPage(
+        douyin: _douyinRegisterToken != null,
+        busy: _isLoggingIn || _isSendingCode,
+        onBack: _cancelPhoneBinding,
+        form: form,
+        agreement: _LoginAgreement(
+          agreed: _agreed,
+          onChanged: _toggleAgreement,
+        ),
+      );
+    }
 
     return PopScope(
       canPop: true,
       child: Scaffold(
         backgroundColor: colorScheme.surface,
-        resizeToAvoidBottomInset: true,
+        resizeToAvoidBottomInset: false,
         body: GestureDetector(
           key: const Key('login-keyboard-dismiss-area'),
           behavior: HitTestBehavior.translucent,
@@ -91,7 +125,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             fit: StackFit.expand,
             children: [
               _LoginDesignViewport(
-                keyboardInset: keyboardInset,
                 child: Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
@@ -113,29 +146,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const _LoginIllustration(),
                     _PhoneLoginDesign(
-                      phoneController: _phoneController,
-                      codeController: _codeController,
-                      passwordController: _passwordController,
-                      passwordLogin: _passwordLogin,
-                      passwordVisible: _passwordVisible,
-                      onToggleLoginMode: _toggleLoginMode,
-                      onTogglePasswordVisibility: () =>
-                          setState(() => _passwordVisible = !_passwordVisible),
+                      form: form,
                       agreed: _agreed,
-                      countdown: _countdown,
-                      sendingCode: _isSendingCode,
                       loggingIn: _isLoggingIn,
-                      phoneBindingRequired:
-                          _wechatRegisterToken != null ||
-                          _douyinRegisterToken != null,
                       wechatLoggingIn: _isWechatLoggingIn,
                       douyinLoggingIn: _isDouyinLoggingIn,
                       onWechatLogin: _loginWithWechat,
                       onDouyinLogin: _loginWithDouyin,
                       onBack: _closePage,
                       onAgreementChanged: _toggleAgreement,
-                      onSendCode: _showCaptchaSheet,
-                      onLogin: _loginWithPhone,
                     ),
                   ],
                 ),
@@ -159,6 +178,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   void _toggleAgreement() => setState(() => _agreed = !_agreed);
+
+  void _cancelPhoneBinding() {
+    if (_isLoggingIn || _isSendingCode) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _wechatRegisterToken = null;
+      _douyinRegisterToken = null;
+      _codeController.clear();
+    });
+  }
 
   void _toggleLoginMode() {
     if (!AppConfig.passwordLoginEnabled ||
@@ -374,11 +403,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordLogin = false;
           _passwordVisible = false;
           _passwordController.clear();
+          _codeController.clear();
         });
-        AppToast.info(
-          context,
-          AppLocalizations.of(context)!.wechatPhoneBindingRequired,
-        );
         return;
       }
       AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
@@ -458,11 +484,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           _passwordLogin = false;
           _passwordVisible = false;
           _passwordController.clear();
+          _codeController.clear();
         });
-        AppToast.info(
-          context,
-          AppLocalizations.of(context)!.douyinPhoneBindingRequired,
-        );
         return;
       }
       AppToast.success(context, AppLocalizations.of(context)!.loginSucceeded);
@@ -516,44 +539,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
-class _LoginDesignViewport extends StatefulWidget {
-  const _LoginDesignViewport({
-    required this.child,
-    required this.keyboardInset,
-  });
+class _LoginDesignViewport extends StatelessWidget {
+  const _LoginDesignViewport({required this.child});
 
   static const designSize = Size(440, 956);
 
   final Widget child;
-  final double keyboardInset;
-
-  @override
-  State<_LoginDesignViewport> createState() => _LoginDesignViewportState();
-}
-
-class _LoginDesignViewportState extends State<_LoginDesignViewport> {
-  final _scrollController = ScrollController();
-
-  @override
-  void didUpdateWidget(covariant _LoginDesignViewport oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.keyboardInset > oldWidget.keyboardInset) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_scrollController.hasClients) return;
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-        );
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -564,9 +555,7 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
           1.0,
         );
         final scaledSize = _LoginDesignViewport.designSize * scale;
-        final keyboardOpen = widget.keyboardInset > 0;
-        final needsScrolling =
-            keyboardOpen || scaledSize.height > constraints.maxHeight;
+        final needsScrolling = scaledSize.height > constraints.maxHeight;
         final canvas = SizedBox(
           width: scaledSize.width,
           height: scaledSize.height,
@@ -574,14 +563,13 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
             fit: BoxFit.fill,
             child: SizedBox.fromSize(
               size: _LoginDesignViewport.designSize,
-              child: widget.child,
+              child: child,
             ),
           ),
         );
 
         return SingleChildScrollView(
           key: const Key('login-design-scroll-view'),
-          controller: _scrollController,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           physics: needsScrolling
               ? const ClampingScrollPhysics()
@@ -601,8 +589,8 @@ class _LoginDesignViewportState extends State<_LoginDesignViewport> {
   }
 }
 
-class _PhoneLoginDesign extends StatelessWidget {
-  const _PhoneLoginDesign({
+class _PhoneLoginForm extends StatelessWidget {
+  const _PhoneLoginForm({
     required this.phoneController,
     required this.codeController,
     required this.passwordController,
@@ -610,17 +598,12 @@ class _PhoneLoginDesign extends StatelessWidget {
     required this.passwordVisible,
     required this.onToggleLoginMode,
     required this.onTogglePasswordVisibility,
-    required this.agreed,
     required this.countdown,
     required this.sendingCode,
     required this.loggingIn,
     required this.phoneBindingRequired,
     required this.wechatLoggingIn,
     required this.douyinLoggingIn,
-    required this.onWechatLogin,
-    required this.onDouyinLogin,
-    required this.onBack,
-    required this.onAgreementChanged,
     required this.onSendCode,
     required this.onLogin,
   });
@@ -632,17 +615,12 @@ class _PhoneLoginDesign extends StatelessWidget {
   final bool passwordVisible;
   final VoidCallback onToggleLoginMode;
   final VoidCallback onTogglePasswordVisibility;
-  final bool agreed;
   final int countdown;
   final bool sendingCode;
   final bool loggingIn;
   final bool phoneBindingRequired;
   final bool wechatLoggingIn;
   final bool douyinLoggingIn;
-  final VoidCallback onWechatLogin;
-  final VoidCallback onDouyinLogin;
-  final VoidCallback onBack;
-  final VoidCallback onAgreementChanged;
   final VoidCallback onSendCode;
   final VoidCallback onLogin;
 
@@ -659,6 +637,183 @@ class _PhoneLoginDesign extends StatelessWidget {
       height: 24 / 18,
     );
 
+    return Column(
+      children: [
+        _LoginFieldShell(
+          color: fieldColor,
+          child: Row(
+            children: [
+              Text('+86', style: textStyle),
+              const SizedBox(width: 11),
+              const _LoginFieldDivider(),
+              const SizedBox(width: 11),
+              Expanded(
+                child: TextField(
+                  key: const Key('login-phone-field'),
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.telephoneNumber],
+                  maxLength: 11,
+                  style: textStyle,
+                  decoration: _fieldDecoration(l10n.phoneNumberHint),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 15),
+        _LoginFieldShell(
+          color: fieldColor,
+          padding: const EdgeInsets.only(left: 20, right: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: passwordLogin
+                    ? TextField(
+                        key: const Key('login-password-field'),
+                        controller: passwordController,
+                        obscureText: !passwordVisible,
+                        enableSuggestions: false,
+                        autocorrect: false,
+                        keyboardType: TextInputType.visiblePassword,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.password],
+                        style: textStyle,
+                        decoration: _fieldDecoration(l10n.passwordHint),
+                        onSubmitted: (_) => onLogin(),
+                      )
+                    : TextField(
+                        key: const Key('login-code-field'),
+                        controller: codeController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        maxLength: 6,
+                        style: textStyle,
+                        decoration: _fieldDecoration(l10n.verificationCodeHint),
+                        onSubmitted: (_) => onLogin(),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              if (passwordLogin)
+                IconButton(
+                  key: const Key('login-password-visibility'),
+                  tooltip: passwordVisible
+                      ? l10n.hidePassword
+                      : l10n.showPassword,
+                  onPressed: onTogglePasswordVisibility,
+                  icon: Icon(
+                    passwordVisible
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                  ),
+                )
+              else
+                TextButton(
+                  key: const Key('send-code-button'),
+                  onPressed: countdown > 0 || sendingCode ? null : onSendCode,
+                  style: TextButton.styleFrom(
+                    fixedSize: const Size(116, 40),
+                    minimumSize: const Size(116, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    backgroundColor: colorScheme.surface,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: AppColors.brand,
+                    disabledForegroundColor: colorScheme.onSurfaceVariant,
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      sendingCode
+                          ? l10n.sendingVerificationCode
+                          : countdown > 0
+                          ? l10n.resendCountdown(countdown)
+                          : l10n.sendVerificationCode,
+                      maxLines: 1,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 15),
+        _LoginActionButton(
+          key: const Key('phone-login-button'),
+          label: phoneBindingRequired
+              ? l10n.bindPhone
+              : passwordLogin
+              ? l10n.passwordLogin
+              : l10n.loginOrRegister,
+          onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+              ? null
+              : onLogin,
+          loading: loggingIn,
+        ),
+        if (AppConfig.passwordLoginEnabled && !phoneBindingRequired) ...[
+          const SizedBox(height: 8),
+          TextButton(
+            key: const Key('login-mode-switch'),
+            onPressed:
+                loggingIn || wechatLoggingIn || douyinLoggingIn || sendingCode
+                ? null
+                : onToggleLoginMode,
+            child: Text(passwordLogin ? l10n.codeLogin : l10n.passwordLogin),
+          ),
+        ],
+      ],
+    );
+  }
+
+  static InputDecoration _fieldDecoration(String hintText) => InputDecoration(
+    hintText: hintText,
+    hintStyle: const TextStyle(
+      color: Color(0xFF999999),
+      fontSize: 18,
+      height: 24 / 18,
+    ),
+    counterText: '',
+    isCollapsed: true,
+    filled: false,
+    border: InputBorder.none,
+    enabledBorder: InputBorder.none,
+    focusedBorder: InputBorder.none,
+    contentPadding: EdgeInsets.zero,
+  );
+}
+
+class _PhoneLoginDesign extends StatelessWidget {
+  const _PhoneLoginDesign({
+    required this.form,
+    required this.agreed,
+    required this.wechatLoggingIn,
+    required this.douyinLoggingIn,
+    required this.loggingIn,
+    required this.onWechatLogin,
+    required this.onDouyinLogin,
+    required this.onBack,
+    required this.onAgreementChanged,
+  });
+
+  final Widget form;
+  final bool agreed;
+  final bool wechatLoggingIn;
+  final bool douyinLoggingIn;
+  final bool loggingIn;
+  final VoidCallback onWechatLogin;
+  final VoidCallback onDouyinLogin;
+  final VoidCallback onBack;
+  final VoidCallback onAgreementChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
         _LoginBackButton(onPressed: onBack),
@@ -676,151 +831,7 @@ class _PhoneLoginDesign extends StatelessWidget {
             ),
           ),
         ),
-        Positioned(
-          left: 40,
-          top: 391,
-          width: 360,
-          child: Column(
-            children: [
-              _LoginFieldShell(
-                color: fieldColor,
-                child: Row(
-                  children: [
-                    Text('+86', style: textStyle),
-                    const SizedBox(width: 11),
-                    const _LoginFieldDivider(),
-                    const SizedBox(width: 11),
-                    Expanded(
-                      child: TextField(
-                        key: const Key('login-phone-field'),
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.telephoneNumber],
-                        maxLength: 11,
-                        style: textStyle,
-                        decoration: _fieldDecoration(l10n.phoneNumberHint),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 15),
-              _LoginFieldShell(
-                color: fieldColor,
-                padding: const EdgeInsets.only(left: 20, right: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: passwordLogin
-                          ? TextField(
-                              key: const Key('login-password-field'),
-                              controller: passwordController,
-                              obscureText: !passwordVisible,
-                              enableSuggestions: false,
-                              autocorrect: false,
-                              keyboardType: TextInputType.visiblePassword,
-                              textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.password],
-                              style: textStyle,
-                              decoration: _fieldDecoration(l10n.passwordHint),
-                              onSubmitted: (_) => onLogin(),
-                            )
-                          : TextField(
-                              key: const Key('login-code-field'),
-                              controller: codeController,
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.oneTimeCode],
-                              maxLength: 6,
-                              style: textStyle,
-                              decoration: _fieldDecoration(
-                                l10n.verificationCodeHint,
-                              ),
-                              onSubmitted: (_) => onLogin(),
-                            ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (passwordLogin)
-                      IconButton(
-                        key: const Key('login-password-visibility'),
-                        tooltip: passwordVisible
-                            ? l10n.hidePassword
-                            : l10n.showPassword,
-                        onPressed: onTogglePasswordVisibility,
-                        icon: Icon(
-                          passwordVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                      )
-                    else
-                      TextButton(
-                        key: const Key('send-code-button'),
-                        onPressed: countdown > 0 || sendingCode
-                            ? null
-                            : onSendCode,
-                        style: TextButton.styleFrom(
-                          fixedSize: const Size(116, 40),
-                          minimumSize: const Size(116, 40),
-                          padding: const EdgeInsets.symmetric(horizontal: 15),
-                          backgroundColor: colorScheme.surface,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          foregroundColor: AppColors.brand,
-                          disabledForegroundColor: colorScheme.onSurfaceVariant,
-                          textStyle: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            sendingCode
-                                ? l10n.sendingVerificationCode
-                                : countdown > 0
-                                ? l10n.resendCountdown(countdown)
-                                : l10n.sendVerificationCode,
-                            maxLines: 1,
-                            softWrap: false,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 15),
-              _LoginActionButton(
-                key: const Key('phone-login-button'),
-                label: phoneBindingRequired
-                    ? l10n.bindPhone
-                    : passwordLogin
-                    ? l10n.passwordLogin
-                    : l10n.loginOrRegister,
-                onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
-                    ? null
-                    : onLogin,
-                loading: loggingIn,
-              ),
-              if (AppConfig.passwordLoginEnabled && !phoneBindingRequired) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  key: const Key('login-mode-switch'),
-                  onPressed:
-                      loggingIn ||
-                          wechatLoggingIn ||
-                          douyinLoggingIn ||
-                          sendingCode
-                      ? null
-                      : onToggleLoginMode,
-                  child: Text(
-                    passwordLogin ? l10n.codeLogin : l10n.passwordLogin,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+        Positioned(left: 40, top: 391, width: 360, child: form),
         Positioned(
           left: 100,
           top: 838,
@@ -930,22 +941,6 @@ class _PhoneLoginDesign extends StatelessWidget {
       ],
     );
   }
-
-  static InputDecoration _fieldDecoration(String hintText) => InputDecoration(
-    hintText: hintText,
-    hintStyle: const TextStyle(
-      color: Color(0xFF999999),
-      fontSize: 18,
-      height: 24 / 18,
-    ),
-    counterText: '',
-    isCollapsed: true,
-    filled: false,
-    border: InputBorder.none,
-    enabledBorder: InputBorder.none,
-    focusedBorder: InputBorder.none,
-    contentPadding: EdgeInsets.zero,
-  );
 }
 
 class _LoginBackButton extends StatelessWidget {

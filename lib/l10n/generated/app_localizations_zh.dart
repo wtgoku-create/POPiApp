@@ -325,7 +325,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get douyinLoginCanceled => '已取消抖音登录';
 
   @override
-  String get douyinLoginUnavailable => '抖音登录暂未开放，请使用手机号或微信登录';
+  String get douyinLoginUnavailable => '抖音登录不可用，请检查抖音是否已安装或应用配置是否完成';
 
   @override
   String get douyinLoginFailed => '抖音登录失败，请重试';
@@ -898,6 +898,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicy => '隐私政策';
+
+  @override
+  String get webPageLoadFailed => '页面加载失败，请稍后重试';
+
+  @override
+  String get webPageLoading => '正在加载页面';
+
+  @override
+  String get webPageOpenInBrowser => '在浏览器中打开';
+
+  @override
+  String get webPageBrowserRequired => '请在浏览器中查看此页面';
+
+  @override
+  String get webPageRefresh => '刷新页面';
 
   @override
   String get nicknameRequiredLabel => '昵称*';

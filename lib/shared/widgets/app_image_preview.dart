@@ -59,6 +59,16 @@ class _ImagePreviewState extends State<_ImagePreview>
     with SingleTickerProviderStateMixin {
   final _transform = TransformationController();
   final _pointers = <int>{};
+  ImageStream? _imageStream;
+  Size? _imageSize;
+  late final _imageListener = ImageStreamListener((info, _) {
+    final size = Size(
+      info.image.width.toDouble(),
+      info.image.height.toDouble(),
+    );
+    info.dispose();
+    if (mounted && size != _imageSize) setState(() => _imageSize = size);
+  });
   late final AnimationController _returnController;
   Offset _offset = Offset.zero;
   Offset _returnFrom = Offset.zero;
@@ -125,11 +135,19 @@ class _ImagePreviewState extends State<_ImagePreview>
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final stream = widget.image.resolve(createLocalImageConfiguration(context));
+    if (_imageStream?.key == stream.key) return;
+    _imageStream?.removeListener(_imageListener);
+    _imageStream = stream..addListener(_imageListener);
+  }
+
   void _close() {
     if (_closing) return;
     _closing = true;
     _returnController.stop();
-    _transform.value = Matrix4.identity();
     Navigator.of(context).pop();
   }
 
@@ -182,6 +200,7 @@ class _ImagePreviewState extends State<_ImagePreview>
 
   @override
   void dispose() {
+    _imageStream?.removeListener(_imageListener);
     _transform.removeListener(_onTransform);
     _transform.dispose();
     _returnController.dispose();
@@ -230,19 +249,37 @@ class _ImagePreviewState extends State<_ImagePreview>
                       panEnabled: _zoomed,
                       minScale: 1,
                       maxScale: 4,
-                      child: Hero(
-                        tag: widget.heroTag,
-                        child: Image(
-                          image: widget.image,
-                          fit: BoxFit.contain,
-                          semanticLabel: widget.label ?? l10n.assetPreview,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Text(
-                              l10n.networkRequestFailed,
-                              style: const TextStyle(color: Colors.white),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final imageSize = _imageSize;
+                          final size = imageSize == null
+                              ? constraints.biggest
+                              : applyBoxFit(
+                                  BoxFit.contain,
+                                  imageSize,
+                                  constraints.biggest,
+                                ).destination;
+                          // The Hero must enclose the painted image, not its letterboxing.
+                          return Center(
+                            child: Hero(
+                              tag: widget.heroTag,
+                              child: Image(
+                                image: widget.image,
+                                width: size.width,
+                                height: size.height,
+                                fit: BoxFit.contain,
+                                semanticLabel:
+                                    widget.label ?? l10n.assetPreview,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    l10n.networkRequestFailed,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ),

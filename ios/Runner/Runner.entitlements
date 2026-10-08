@@ -5,6 +5,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:$(WECHAT_ASSOCIATED_DOMAIN)</string>
+		<string>applinks:$(DOUYIN_ASSOCIATED_DOMAIN)</string>
 	</array>
 </dict>
 </plist>
