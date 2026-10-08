@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/providers/safe_area_provider.dart';
-import '../../../../shared/providers/user_provider.dart';
-import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../../projects/domain/project.dart';
+import '../../app/theme.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../providers/safe_area_provider.dart';
+import '../providers/user_provider.dart';
+import 'app_svg_icon.dart';
+import '../../features/projects/domain/project.dart';
 import 'popi_drawer_projects.dart';
 
 class PopiNavigationDrawer extends ConsumerStatefulWidget {
@@ -81,7 +81,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                           Navigator.pop(context);
                           widget.onNewProject!();
                         } else {
-                          _openRoute(context, '/');
+                          _openRoute(context, '/session');
                         }
                       },
                       style: OutlinedButton.styleFrom(

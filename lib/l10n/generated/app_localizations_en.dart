@@ -424,7 +424,248 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGreetingTitle => 'Hi, I\'m POPi~\n';
 
   @override
+  String get homeWelcomeGuest => 'Hi, I\'m POPi~';
+
+  @override
+  String homeWelcomeUser(String name) {
+    return 'Hi, $name~';
+  }
+
+  @override
+  String get homeWelcomeBody => 'Let\'s create something today';
+
+  @override
+  String get homeStartIp => 'Create a new IP account';
+
+  @override
+  String get homeStartRole => 'Start with a character';
+
+  @override
+  String get homeStartContent => 'Start with a topic, content or script';
+
+  @override
+  String homeBannerPage(int page, int total) {
+    return 'Creative inspiration, image $page of $total';
+  }
+
+  @override
   String get homeGreetingBody => 'I\'ll help you\nbuild an account together!';
+
+  @override
+  String get ipGuideIntroduction => 'Introduction';
+
+  @override
+  String get ipGuideIntroBefore => 'Just ';
+
+  @override
+  String get ipGuideIntroFourSteps => '4 steps';
+
+  @override
+  String get ipGuideIntroAfter => '\nto create your IP account';
+
+  @override
+  String get ipGuideStart => 'Start creating';
+
+  @override
+  String ipGuideStep(int step) {
+    return 'Step $step';
+  }
+
+  @override
+  String get ipDirectionQuestion => 'What would you like to share over time?';
+
+  @override
+  String get ipFeelingQuestion => 'How should your audience feel?';
+
+  @override
+  String get ipPresentationQuestion => 'How should your account appear?';
+
+  @override
+  String get ipReviewQuestion => 'Your personal plan is ready to review~';
+
+  @override
+  String get ipNextFeelings => 'Next: audience feelings';
+
+  @override
+  String get ipNextPresentation => 'Next: presentation';
+
+  @override
+  String get ipNextReview => 'Next: review your plan';
+
+  @override
+  String get ipConfirmCreate => 'Confirm and create';
+
+  @override
+  String get ipReview => 'Review';
+
+  @override
+  String get ipContentDirection => 'Content direction';
+
+  @override
+  String get ipAudienceFeeling => 'Audience feelings';
+
+  @override
+  String get ipPresentation => 'Presentation';
+
+  @override
+  String get ipContentFormat => 'Content format';
+
+  @override
+  String get ipTargetAudience => 'Target audience';
+
+  @override
+  String get ipTargetAudienceValue =>
+      'People who want to share this feeling with you';
+
+  @override
+  String get ipCustomHint => 'Something else, in my own words';
+
+  @override
+  String ipPrimarySelection(String label) {
+    return 'Primary: $label';
+  }
+
+  @override
+  String ipSecondarySelection(String label) {
+    return 'Secondary: $label';
+  }
+
+  @override
+  String get ipMaximumSelections =>
+      'Choose up to two: a primary and a secondary';
+
+  @override
+  String get ipSelectDirection =>
+      'Choose a content direction or write your own';
+
+  @override
+  String get ipSelectFeeling => 'Choose an audience feeling or write your own';
+
+  @override
+  String get ipSelectPresentation => 'Choose a presentation style';
+
+  @override
+  String get ipNotSelected => 'Not selected';
+
+  @override
+  String get ipAccountAvatar => 'Me';
+
+  @override
+  String get ipNewAccount => 'My new account';
+
+  @override
+  String get ipAccountProfile => 'IP profile';
+
+  @override
+  String get ipAccountNickname => 'Account nickname:';
+
+  @override
+  String get ipNicknameHint => 'Give your account a name';
+
+  @override
+  String get ipDirectionCampus => 'Campus';
+
+  @override
+  String get ipDirectionEmotion => 'Relationships';
+
+  @override
+  String get ipDirectionGrowth => 'Growth';
+
+  @override
+  String get ipDirectionCareer => 'Career';
+
+  @override
+  String get ipDirectionFamily => 'Family';
+
+  @override
+  String get ipDirectionHumor => 'Humor';
+
+  @override
+  String get ipDirectionMystery => 'Mystery';
+
+  @override
+  String get ipDirectionPets => 'Pets';
+
+  @override
+  String get ipDirectionKnowledge => 'Knowledge';
+
+  @override
+  String get ipFeelingAuthentic => 'Authentic';
+
+  @override
+  String get ipFeelingMoving => 'Moving';
+
+  @override
+  String get ipFeelingHealing => 'Healing';
+
+  @override
+  String get ipFeelingGripping => 'Gripping';
+
+  @override
+  String get ipFeelingDestiny => 'Destiny';
+
+  @override
+  String get ipFeelingSurprising => 'Surprising';
+
+  @override
+  String get ipFeelingAuthenticDescription =>
+      'Natural stories that feel close to real life';
+
+  @override
+  String get ipFeelingMovingDescription =>
+      'Touch the heart and bring a tear to the eye';
+
+  @override
+  String get ipFeelingHealingDescription =>
+      'Warm, comforting moments to help people unwind';
+
+  @override
+  String get ipFeelingGrippingDescription =>
+      'A compelling pace that keeps people watching';
+
+  @override
+  String get ipFeelingDestinyDescription =>
+      'Encounters and bonds that feel meant to be';
+
+  @override
+  String get ipFeelingSurprisingDescription =>
+      'Unexpected endings that surprise your audience';
+
+  @override
+  String get ipPresentationAiReal => 'AI human';
+
+  @override
+  String get ipPresentation2d => '2D animation';
+
+  @override
+  String get ipPresentation3d => '3D animation';
+
+  @override
+  String get ipPresentationLive => 'Live action';
+
+  @override
+  String get ipFormatShortFilm => 'Short film';
+
+  @override
+  String get ipFormatComicDrama => 'Comic drama';
+
+  @override
+  String get ipFormatInteractiveDrama => 'Interactive drama';
+
+  @override
+  String get ipFormatTalkingHead => 'Talking head';
+
+  @override
+  String ipGuideSessionPrompt(
+    String name,
+    String direction,
+    String feelings,
+    String presentation,
+    String format,
+    String audience,
+  ) {
+    return 'Help me create a new IP account.\nAccount nickname: $name\nContent direction: $direction\nAudience feelings: $feelings\nPresentation: $presentation\nContent format: $format\nTarget audience: $audience';
+  }
 
   @override
   String get homePromptIntro => 'First, tell me:';
@@ -461,6 +702,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addAttachment => 'Add attachment';
+
+  @override
+  String get attachmentTitle => 'Add';
+
+  @override
+  String get attachmentCamera => 'Camera';
+
+  @override
+  String get attachmentConfirm => 'Confirm upload';
+
+  @override
+  String get attachmentLegalNotice =>
+      'By uploading, you agree to the User Agreement and Privacy Policy. Please ensure you have the rights to use the uploaded materials.';
+
+  @override
+  String get galleryManageAccess => 'Manage accessible photos';
+
+  @override
+  String get galleryOpenSettings => 'Photo access settings';
+
+  @override
+  String get galleryAccessDenied => 'Photo access is disabled';
+
+  @override
+  String get galleryRestricted => 'Photo access is restricted on this device';
+
+  @override
+  String get galleryEmpty => 'No accessible photos';
+
+  @override
+  String get galleryLoadFailed => 'Could not load photos. Please try again';
 
   @override
   String get voiceInput => 'Voice input';

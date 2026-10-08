@@ -878,11 +878,444 @@ abstract class AppLocalizations {
   /// **'Hi, I\'m POPi~\n'**
   String get homeGreetingTitle;
 
+  /// No description provided for @homeWelcomeGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, I\'m POPi~'**
+  String get homeWelcomeGuest;
+
+  /// No description provided for @homeWelcomeUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, {name}~'**
+  String homeWelcomeUser(String name);
+
+  /// No description provided for @homeWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s create something today'**
+  String get homeWelcomeBody;
+
+  /// No description provided for @homeStartIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new IP account'**
+  String get homeStartIp;
+
+  /// No description provided for @homeStartRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a character'**
+  String get homeStartRole;
+
+  /// No description provided for @homeStartContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a topic, content or script'**
+  String get homeStartContent;
+
+  /// No description provided for @homeBannerPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative inspiration, image {page} of {total}'**
+  String homeBannerPage(int page, int total);
+
   /// No description provided for @homeGreetingBody.
   ///
   /// In en, this message translates to:
   /// **'I\'ll help you\nbuild an account together!'**
   String get homeGreetingBody;
+
+  /// No description provided for @ipGuideIntroduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Introduction'**
+  String get ipGuideIntroduction;
+
+  /// No description provided for @ipGuideIntroBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Just '**
+  String get ipGuideIntroBefore;
+
+  /// No description provided for @ipGuideIntroFourSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'4 steps'**
+  String get ipGuideIntroFourSteps;
+
+  /// No description provided for @ipGuideIntroAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'\nto create your IP account'**
+  String get ipGuideIntroAfter;
+
+  /// No description provided for @ipGuideStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start creating'**
+  String get ipGuideStart;
+
+  /// No description provided for @ipGuideStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step}'**
+  String ipGuideStep(int step);
+
+  /// No description provided for @ipDirectionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to share over time?'**
+  String get ipDirectionQuestion;
+
+  /// No description provided for @ipFeelingQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How should your audience feel?'**
+  String get ipFeelingQuestion;
+
+  /// No description provided for @ipPresentationQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How should your account appear?'**
+  String get ipPresentationQuestion;
+
+  /// No description provided for @ipReviewQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Your personal plan is ready to review~'**
+  String get ipReviewQuestion;
+
+  /// No description provided for @ipNextFeelings.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: audience feelings'**
+  String get ipNextFeelings;
+
+  /// No description provided for @ipNextPresentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: presentation'**
+  String get ipNextPresentation;
+
+  /// No description provided for @ipNextReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: review your plan'**
+  String get ipNextReview;
+
+  /// No description provided for @ipConfirmCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm and create'**
+  String get ipConfirmCreate;
+
+  /// No description provided for @ipReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get ipReview;
+
+  /// No description provided for @ipContentDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Content direction'**
+  String get ipContentDirection;
+
+  /// No description provided for @ipAudienceFeeling.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience feelings'**
+  String get ipAudienceFeeling;
+
+  /// No description provided for @ipPresentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Presentation'**
+  String get ipPresentation;
+
+  /// No description provided for @ipContentFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Content format'**
+  String get ipContentFormat;
+
+  /// No description provided for @ipTargetAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Target audience'**
+  String get ipTargetAudience;
+
+  /// No description provided for @ipTargetAudienceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'People who want to share this feeling with you'**
+  String get ipTargetAudienceValue;
+
+  /// No description provided for @ipCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else, in my own words'**
+  String get ipCustomHint;
+
+  /// No description provided for @ipPrimarySelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary: {label}'**
+  String ipPrimarySelection(String label);
+
+  /// No description provided for @ipSecondarySelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Secondary: {label}'**
+  String ipSecondarySelection(String label);
+
+  /// No description provided for @ipMaximumSelections.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to two: a primary and a secondary'**
+  String get ipMaximumSelections;
+
+  /// No description provided for @ipSelectDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a content direction or write your own'**
+  String get ipSelectDirection;
+
+  /// No description provided for @ipSelectFeeling.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an audience feeling or write your own'**
+  String get ipSelectFeeling;
+
+  /// No description provided for @ipSelectPresentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a presentation style'**
+  String get ipSelectPresentation;
+
+  /// No description provided for @ipNotSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get ipNotSelected;
+
+  /// No description provided for @ipAccountAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Me'**
+  String get ipAccountAvatar;
+
+  /// No description provided for @ipNewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'My new account'**
+  String get ipNewAccount;
+
+  /// No description provided for @ipAccountProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'IP profile'**
+  String get ipAccountProfile;
+
+  /// No description provided for @ipAccountNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Account nickname:'**
+  String get ipAccountNickname;
+
+  /// No description provided for @ipNicknameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your account a name'**
+  String get ipNicknameHint;
+
+  /// No description provided for @ipDirectionCampus.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus'**
+  String get ipDirectionCampus;
+
+  /// No description provided for @ipDirectionEmotion.
+  ///
+  /// In en, this message translates to:
+  /// **'Relationships'**
+  String get ipDirectionEmotion;
+
+  /// No description provided for @ipDirectionGrowth.
+  ///
+  /// In en, this message translates to:
+  /// **'Growth'**
+  String get ipDirectionGrowth;
+
+  /// No description provided for @ipDirectionCareer.
+  ///
+  /// In en, this message translates to:
+  /// **'Career'**
+  String get ipDirectionCareer;
+
+  /// No description provided for @ipDirectionFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get ipDirectionFamily;
+
+  /// No description provided for @ipDirectionHumor.
+  ///
+  /// In en, this message translates to:
+  /// **'Humor'**
+  String get ipDirectionHumor;
+
+  /// No description provided for @ipDirectionMystery.
+  ///
+  /// In en, this message translates to:
+  /// **'Mystery'**
+  String get ipDirectionMystery;
+
+  /// No description provided for @ipDirectionPets.
+  ///
+  /// In en, this message translates to:
+  /// **'Pets'**
+  String get ipDirectionPets;
+
+  /// No description provided for @ipDirectionKnowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge'**
+  String get ipDirectionKnowledge;
+
+  /// No description provided for @ipFeelingAuthentic.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentic'**
+  String get ipFeelingAuthentic;
+
+  /// No description provided for @ipFeelingMoving.
+  ///
+  /// In en, this message translates to:
+  /// **'Moving'**
+  String get ipFeelingMoving;
+
+  /// No description provided for @ipFeelingHealing.
+  ///
+  /// In en, this message translates to:
+  /// **'Healing'**
+  String get ipFeelingHealing;
+
+  /// No description provided for @ipFeelingGripping.
+  ///
+  /// In en, this message translates to:
+  /// **'Gripping'**
+  String get ipFeelingGripping;
+
+  /// No description provided for @ipFeelingDestiny.
+  ///
+  /// In en, this message translates to:
+  /// **'Destiny'**
+  String get ipFeelingDestiny;
+
+  /// No description provided for @ipFeelingSurprising.
+  ///
+  /// In en, this message translates to:
+  /// **'Surprising'**
+  String get ipFeelingSurprising;
+
+  /// No description provided for @ipFeelingAuthenticDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural stories that feel close to real life'**
+  String get ipFeelingAuthenticDescription;
+
+  /// No description provided for @ipFeelingMovingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch the heart and bring a tear to the eye'**
+  String get ipFeelingMovingDescription;
+
+  /// No description provided for @ipFeelingHealingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm, comforting moments to help people unwind'**
+  String get ipFeelingHealingDescription;
+
+  /// No description provided for @ipFeelingGrippingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A compelling pace that keeps people watching'**
+  String get ipFeelingGrippingDescription;
+
+  /// No description provided for @ipFeelingDestinyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Encounters and bonds that feel meant to be'**
+  String get ipFeelingDestinyDescription;
+
+  /// No description provided for @ipFeelingSurprisingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected endings that surprise your audience'**
+  String get ipFeelingSurprisingDescription;
+
+  /// No description provided for @ipPresentationAiReal.
+  ///
+  /// In en, this message translates to:
+  /// **'AI human'**
+  String get ipPresentationAiReal;
+
+  /// No description provided for @ipPresentation2d.
+  ///
+  /// In en, this message translates to:
+  /// **'2D animation'**
+  String get ipPresentation2d;
+
+  /// No description provided for @ipPresentation3d.
+  ///
+  /// In en, this message translates to:
+  /// **'3D animation'**
+  String get ipPresentation3d;
+
+  /// No description provided for @ipPresentationLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Live action'**
+  String get ipPresentationLive;
+
+  /// No description provided for @ipFormatShortFilm.
+  ///
+  /// In en, this message translates to:
+  /// **'Short film'**
+  String get ipFormatShortFilm;
+
+  /// No description provided for @ipFormatComicDrama.
+  ///
+  /// In en, this message translates to:
+  /// **'Comic drama'**
+  String get ipFormatComicDrama;
+
+  /// No description provided for @ipFormatInteractiveDrama.
+  ///
+  /// In en, this message translates to:
+  /// **'Interactive drama'**
+  String get ipFormatInteractiveDrama;
+
+  /// No description provided for @ipFormatTalkingHead.
+  ///
+  /// In en, this message translates to:
+  /// **'Talking head'**
+  String get ipFormatTalkingHead;
+
+  /// No description provided for @ipGuideSessionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me create a new IP account.\nAccount nickname: {name}\nContent direction: {direction}\nAudience feelings: {feelings}\nPresentation: {presentation}\nContent format: {format}\nTarget audience: {audience}'**
+  String ipGuideSessionPrompt(
+    String name,
+    String direction,
+    String feelings,
+    String presentation,
+    String format,
+    String audience,
+  );
 
   /// No description provided for @homePromptIntro.
   ///
@@ -949,6 +1382,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add attachment'**
   String get addAttachment;
+
+  /// No description provided for @attachmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get attachmentTitle;
+
+  /// No description provided for @attachmentCamera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get attachmentCamera;
+
+  /// No description provided for @attachmentConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm upload'**
+  String get attachmentConfirm;
+
+  /// No description provided for @attachmentLegalNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'By uploading, you agree to the User Agreement and Privacy Policy. Please ensure you have the rights to use the uploaded materials.'**
+  String get attachmentLegalNotice;
+
+  /// No description provided for @galleryManageAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage accessible photos'**
+  String get galleryManageAccess;
+
+  /// No description provided for @galleryOpenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access settings'**
+  String get galleryOpenSettings;
+
+  /// No description provided for @galleryAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access is disabled'**
+  String get galleryAccessDenied;
+
+  /// No description provided for @galleryRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo access is restricted on this device'**
+  String get galleryRestricted;
+
+  /// No description provided for @galleryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No accessible photos'**
+  String get galleryEmpty;
+
+  /// No description provided for @galleryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load photos. Please try again'**
+  String get galleryLoadFailed;
 
   /// No description provided for @voiceInput.
   ///

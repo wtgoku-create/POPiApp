@@ -409,7 +409,239 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGreetingTitle => '嗨，我是POPi~\n';
 
   @override
+  String get homeWelcomeGuest => '嗨，我是POPi～';
+
+  @override
+  String homeWelcomeUser(String name) {
+    return '嗨，$name～';
+  }
+
+  @override
+  String get homeWelcomeBody => '开始今天的创作吧';
+
+  @override
+  String get homeStartIp => '做一个新IP账号';
+
+  @override
+  String get homeStartRole => '从创建角色开始';
+
+  @override
+  String get homeStartContent => '从选题/内容/脚本开始';
+
+  @override
+  String homeBannerPage(int page, int total) {
+    return '创作灵感，第$page张，共$total张';
+  }
+
+  @override
   String get homeGreetingBody => '我来帮你一起\n把一个账号做起来！';
+
+  @override
+  String get ipGuideIntroduction => '开始引导';
+
+  @override
+  String get ipGuideIntroBefore => '简单';
+
+  @override
+  String get ipGuideIntroFourSteps => '4步';
+
+  @override
+  String get ipGuideIntroAfter => '\n帮你创建IP账号';
+
+  @override
+  String get ipGuideStart => '开始创建';
+
+  @override
+  String ipGuideStep(int step) {
+    return '第$step步';
+  }
+
+  @override
+  String get ipDirectionQuestion => '你想长期分享什么？';
+
+  @override
+  String get ipFeelingQuestion => '你想让观众有什么感受？';
+
+  @override
+  String get ipPresentationQuestion => '你的账号，想以什么样子出现？';
+
+  @override
+  String get ipReviewQuestion => '一份独属你的方案待你确认~';
+
+  @override
+  String get ipNextFeelings => '下一步：观看感受';
+
+  @override
+  String get ipNextPresentation => '下一步：呈现形态';
+
+  @override
+  String get ipNextReview => '下一步：确认方案';
+
+  @override
+  String get ipConfirmCreate => '确认创建';
+
+  @override
+  String get ipReview => '确认方案';
+
+  @override
+  String get ipContentDirection => '内容方向';
+
+  @override
+  String get ipAudienceFeeling => '观众感受';
+
+  @override
+  String get ipPresentation => '呈现形态';
+
+  @override
+  String get ipContentFormat => '内容形式';
+
+  @override
+  String get ipTargetAudience => '目标观众';
+
+  @override
+  String get ipTargetAudienceValue => '愿意与你分享这种感受的人';
+
+  @override
+  String get ipCustomHint => '以上都不满意，我要自己填写';
+
+  @override
+  String ipPrimarySelection(String label) {
+    return '主方向：$label';
+  }
+
+  @override
+  String ipSecondarySelection(String label) {
+    return '辅助：$label';
+  }
+
+  @override
+  String get ipMaximumSelections => '最多选择两个，先选主方向，再选辅助方向';
+
+  @override
+  String get ipSelectDirection => '请选择内容方向或填写自己的方向';
+
+  @override
+  String get ipSelectFeeling => '请选择观众感受或填写自己的感受';
+
+  @override
+  String get ipSelectPresentation => '请选择一种呈现形态';
+
+  @override
+  String get ipNotSelected => '未选择';
+
+  @override
+  String get ipAccountAvatar => '我';
+
+  @override
+  String get ipNewAccount => '我的新账号';
+
+  @override
+  String get ipAccountProfile => 'IP账号档案';
+
+  @override
+  String get ipAccountNickname => '账号昵称：';
+
+  @override
+  String get ipNicknameHint => '给账号取个好听的名字';
+
+  @override
+  String get ipDirectionCampus => '校园';
+
+  @override
+  String get ipDirectionEmotion => '情感';
+
+  @override
+  String get ipDirectionGrowth => '成长';
+
+  @override
+  String get ipDirectionCareer => '职场';
+
+  @override
+  String get ipDirectionFamily => '家庭';
+
+  @override
+  String get ipDirectionHumor => '搞笑';
+
+  @override
+  String get ipDirectionMystery => '悬疑';
+
+  @override
+  String get ipDirectionPets => '萌宠';
+
+  @override
+  String get ipDirectionKnowledge => '知识';
+
+  @override
+  String get ipFeelingAuthentic => '真实';
+
+  @override
+  String get ipFeelingMoving => '泪目';
+
+  @override
+  String get ipFeelingHealing => '治愈';
+
+  @override
+  String get ipFeelingGripping => '上头';
+
+  @override
+  String get ipFeelingDestiny => '宿命感';
+
+  @override
+  String get ipFeelingSurprising => '反转';
+
+  @override
+  String get ipFeelingAuthenticDescription => '像生活一样自然，让人产生共鸣';
+
+  @override
+  String get ipFeelingMovingDescription => '触动心底的柔软，让人感动落泪';
+
+  @override
+  String get ipFeelingHealingDescription => '温暖又安心，陪你慢慢放松下来';
+
+  @override
+  String get ipFeelingGrippingDescription => '节奏紧凑，让人忍不住接着看';
+
+  @override
+  String get ipFeelingDestinyDescription => '相遇与错过，命中注定的牵绊';
+
+  @override
+  String get ipFeelingSurprisingDescription => '意料之外的结局，带来惊喜';
+
+  @override
+  String get ipPresentationAiReal => 'AI真人';
+
+  @override
+  String get ipPresentation2d => '2D动漫';
+
+  @override
+  String get ipPresentation3d => '3D动漫';
+
+  @override
+  String get ipPresentationLive => '真人实拍';
+
+  @override
+  String get ipFormatShortFilm => '剧情短片';
+
+  @override
+  String get ipFormatComicDrama => '漫剧';
+
+  @override
+  String get ipFormatInteractiveDrama => '互动剧';
+
+  @override
+  String get ipFormatTalkingHead => '口播';
+
+  @override
+  String ipGuideSessionPrompt(
+    String name,
+    String direction,
+    String feelings,
+    String presentation,
+    String format,
+    String audience,
+  ) {
+    return '请帮我创建一个新的IP账号。\n账号昵称：$name\n内容方向：$direction\n观众感受：$feelings\n呈现形态：$presentation\n内容形式：$format\n目标观众：$audience';
+  }
 
   @override
   String get homePromptIntro => '先告诉我：';
@@ -445,6 +677,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get addAttachment => '添加附件';
+
+  @override
+  String get attachmentTitle => '添加';
+
+  @override
+  String get attachmentCamera => '拍摄';
+
+  @override
+  String get attachmentConfirm => '确认上传';
+
+  @override
+  String get attachmentLegalNotice => '温馨提示：您上传必须同意遵守用户协议和隐私政策，请确保上传的素材已获得合法权益';
+
+  @override
+  String get galleryManageAccess => '管理可访问照片';
+
+  @override
+  String get galleryOpenSettings => '相册权限设置';
+
+  @override
+  String get galleryAccessDenied => '未开启相册访问权限';
+
+  @override
+  String get galleryRestricted => '此设备限制了相册访问';
+
+  @override
+  String get galleryEmpty => '暂无可访问的照片';
+
+  @override
+  String get galleryLoadFailed => '照片加载失败，请重试';
 
   @override
   String get voiceInput => '语音输入';

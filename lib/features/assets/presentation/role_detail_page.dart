@@ -7,7 +7,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../home/presentation/home_page.dart';
+import '../../session/presentation/session_page.dart';
 import '../data/role_library_repository.dart';
 import '../domain/library_role.dart';
 import '../domain/role_profile_edit.dart';
@@ -130,7 +130,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     final prompt = l10n.createRolePrompt(_role.title);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => HomePage(
+        builder: (_) => SessionPage(
           initialPrompt: '$prompt\nID: ${_role.id}\n${_role.description}',
         ),
       ),

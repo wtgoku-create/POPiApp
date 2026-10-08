@@ -10,7 +10,7 @@ import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_library_list.dart';
-import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
 LibraryRole role(int id, {bool canEdit = false}) => LibraryRole(
@@ -552,7 +552,7 @@ void main() {
       await tester.tap(find.byKey(const Key('my-roles-create')));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<HomePage>(find.byType(HomePage)).initialPrompt,
+        tester.widget<SessionPage>(find.byType(SessionPage)).initialPrompt,
         contains('新角色'),
       );
     },

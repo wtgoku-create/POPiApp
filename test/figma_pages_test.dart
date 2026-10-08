@@ -12,7 +12,7 @@ import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
 import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
-import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/membership_page.dart';
@@ -645,9 +645,9 @@ void main() {
   });
 
   testWidgets('opens membership from the home app bar', (tester) async {
-    await pumpPage(tester, const HomePage());
+    await pumpPage(tester, const SessionPage());
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(HomePage)),
+      tester.element(find.byType(SessionPage)),
     );
     await container
         .read(userProvider.notifier)

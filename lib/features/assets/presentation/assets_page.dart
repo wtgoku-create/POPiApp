@@ -8,7 +8,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_skeleton.dart';
-import '../../home/presentation/widgets/popi_navigation_drawer.dart';
+import '../../../shared/widgets/popi_navigation_drawer.dart';
 import 'role_library_list.dart';
 import '../../../shared/widgets/app_image_preview.dart';
 

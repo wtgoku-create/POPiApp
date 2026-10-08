@@ -9,7 +9,7 @@ import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../home/presentation/home_page.dart';
+import '../../session/presentation/session_page.dart';
 import '../data/role_library_repository.dart';
 import '../domain/library_role.dart';
 import 'role_detail_page.dart';
@@ -414,7 +414,7 @@ class _MyRolesEmptyState extends StatelessWidget {
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) =>
-                      HomePage(initialPrompt: l10n.createNewRolePrompt),
+                      SessionPage(initialPrompt: l10n.createNewRolePrompt),
                 ),
               ),
               child: ColoredBox(

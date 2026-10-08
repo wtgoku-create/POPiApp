@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
-import 'package:popi_ai_app/features/home/presentation/widgets/popi_drawer_projects.dart';
+import 'package:popi_ai_app/shared/widgets/popi_drawer_projects.dart';
 import 'package:popi_ai_app/features/projects/data/project_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';

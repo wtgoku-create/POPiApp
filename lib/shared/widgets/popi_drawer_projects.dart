@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme.dart';
-import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/providers/project_provider.dart';
-import '../../../../shared/providers/user_provider.dart';
-import '../../../../shared/widgets/app_menu.dart';
-import '../../../../shared/widgets/app_skeleton.dart';
-import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../../projects/domain/project.dart';
-import '../../../projects/presentation/project_item_menu.dart';
+import '../../app/theme.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../providers/project_provider.dart';
+import '../providers/user_provider.dart';
+import 'app_menu.dart';
+import 'app_skeleton.dart';
+import 'app_svg_icon.dart';
+import '../../features/projects/domain/project.dart';
+import '../../features/projects/presentation/project_item_menu.dart';
 
 const _projectTransitionDuration = Duration(milliseconds: 220);
 const _projectTransitionCurve = Curves.easeInOutCubic;

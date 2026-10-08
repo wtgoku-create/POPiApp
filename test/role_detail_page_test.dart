@@ -15,7 +15,7 @@ import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/domain/role_profile_edit.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
-import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
 const sample = LibraryRole(
@@ -358,7 +358,7 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('role-improve')));
       await tester.pumpAndSettle();
-      expect(find.byType(HomePage), findsNothing);
+      expect(find.byType(SessionPage), findsNothing);
       expect(find.byType(TextFormField), findsNWidgets(5));
       await capture(tester, '/tmp/popi-role-profile-edit.png');
       expect(find.byKey(const Key('role-create')), findsNothing);
@@ -627,7 +627,7 @@ void main() {
     await tester.tap(find.byKey(const Key('role-create')));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<HomePage>(find.byType(HomePage)).initialPrompt,
+      tester.widget<SessionPage>(find.byType(SessionPage)).initialPrompt,
       contains('Official role'),
     );
   });
@@ -713,7 +713,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('role-create')));
     await tester.tap(find.byKey(const Key('role-create')));
     await tester.pumpAndSettle();
-    final home = tester.widget<HomePage>(find.byType(HomePage));
+    final home = tester.widget<SessionPage>(find.byType(SessionPage));
     expect(home.initialPrompt, contains('爱丽丝'));
     expect(home.initialPrompt, contains('ID: 7'));
     expect(tester.takeException(), isNull);

@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
-import 'package:popi_ai_app/features/home/presentation/home_page.dart';
-import 'package:popi_ai_app/features/home/presentation/widgets/popi_message_composer.dart';
+import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
@@ -47,7 +47,7 @@ void main() {
             ).copyWith(disableAnimations: disableAnimations),
             child: child!,
           ),
-          home: const HomePage(initialPrompt: '旧草稿'),
+          home: const SessionPage(initialPrompt: '旧草稿'),
         ),
       ),
     );

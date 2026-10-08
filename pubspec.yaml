@@ -22,6 +22,7 @@ dependencies:
   fluwx: ^6.0.2
   go_router: ^14.8.1
   image_picker: ^1.2.1
+  photo_manager: ^3.12.0
   in_app_purchase: ^3.2.3
   shared_preferences: ^2.5.3
   toastification: ^3.2.0

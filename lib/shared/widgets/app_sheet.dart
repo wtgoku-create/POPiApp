@@ -13,6 +13,7 @@ class AppSheet {
     bool showDragHandle = true,
     Color? backgroundColor,
     Color? barrierColor,
+    ShapeBorder? shape,
   }) {
     return showModalBottomSheet<T>(
       context: context,
@@ -23,6 +24,7 @@ class AppSheet {
       showDragHandle: showDragHandle,
       backgroundColor: backgroundColor,
       barrierColor: barrierColor,
+      shape: shape,
       builder: builder,
     );
   }
