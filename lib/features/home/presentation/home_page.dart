@@ -71,6 +71,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       ),
       child: Scaffold(
         key: _scaffoldKey,
+        // The custom app bar already includes the status bar safe area.
+        primary: false,
         backgroundColor: Colors.transparent,
         drawerScrimColor: const Color(0x33333333),
         drawer: PopiNavigationDrawer(

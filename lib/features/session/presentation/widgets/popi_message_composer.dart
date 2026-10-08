@@ -188,8 +188,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     required this.onRemoveImage,
     required this.onHeightChanged,
     required this.onSubmitted,
-    required this.onModelParametersRequested,
-    required this.modelParametersDescription,
+    this.onModelParametersRequested,
+    this.modelParametersDescription = '',
     this.onMentionRequested,
     super.key,
   });
@@ -200,7 +200,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<double> onHeightChanged;
   final ValueChanged<String> onSubmitted;
-  final VoidCallback onModelParametersRequested;
+  final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
   final VoidCallback? onMentionRequested;
 
@@ -662,7 +662,7 @@ class _ComposerContent extends StatelessWidget {
   final ValueChanged<int> onRemoveImage;
   final VoidCallback onKeepFocus;
   final VoidCallback onSubmitted;
-  final VoidCallback onModelParametersRequested;
+  final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
 
   @override
@@ -723,27 +723,28 @@ class _ComposerContent extends StatelessWidget {
             onPressed: onAttachment,
           ),
         ),
-        Positioned(
-          left: 50,
-          right: hasText ? 96 : 48,
-          bottom: 0,
-          height: 40,
-          child: IgnorePointer(
-            ignoring: !isExpanded,
-            child: AnimatedOpacity(
-              duration: duration,
-              curve: curve,
-              opacity: isExpanded ? 1 : 0,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _ModelParametersButton(
-                  description: modelParametersDescription,
-                  onPressed: onModelParametersRequested,
+        if (onModelParametersRequested != null)
+          Positioned(
+            left: 50,
+            right: hasText ? 96 : 48,
+            bottom: 0,
+            height: 40,
+            child: IgnorePointer(
+              ignoring: !isExpanded,
+              child: AnimatedOpacity(
+                duration: duration,
+                curve: curve,
+                opacity: isExpanded ? 1 : 0,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: _ModelParametersButton(
+                    description: modelParametersDescription,
+                    onPressed: onModelParametersRequested!,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         Positioned(
           right: 0,
           bottom: 0,
@@ -806,10 +807,18 @@ class _ModelParametersButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppSvgIcon.asset(
-              'role_guide_model',
-              size: 24,
-              color: colors.onSurface,
+            const SizedBox.square(
+              dimension: 24,
+              child: Center(
+                child: RotatedBox(
+                  quarterTurns: 1,
+                  child: AppSvgIcon.asset(
+                    'role_guide_model',
+                    size: 19.2,
+                    color: AppColors.brand,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 5),
             Flexible(
@@ -817,7 +826,10 @@ class _ModelParametersButton extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   AppLocalizations.of(context)!.roleModelParameters,
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
             ),

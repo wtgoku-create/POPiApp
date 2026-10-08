@@ -28,6 +28,7 @@ void main() {
     Locale locale = const Locale('zh'),
     User? user,
     double textScale = 1,
+    EdgeInsets safeArea = const EdgeInsets.only(top: 52, bottom: 34),
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -43,9 +44,7 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    container
-        .read(safeAreaInsetsProvider.notifier)
-        .update(const EdgeInsets.only(top: 52, bottom: 34));
+    container.read(safeAreaInsetsProvider.notifier).update(safeArea);
     if (user != null) await container.read(userProvider.notifier).setUser(user);
     final router = container.read(routerProvider(false));
     addTearDown(router.dispose);
@@ -59,9 +58,11 @@ void main() {
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           routerConfig: router,
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(textScale),
+              padding: safeArea,
+              viewPadding: safeArea,
+            ),
             child: child!,
           ),
         ),
@@ -69,6 +70,28 @@ void main() {
     );
     await tester.pumpAndSettle();
     return container;
+  }
+
+  for (final topInset in [0.0, 24.0, 62.0]) {
+    testWidgets('home counts the status bar inset once: $topInset', (
+      tester,
+    ) async {
+      await pumpHome(
+        tester,
+        safeArea: EdgeInsets.only(top: topInset, bottom: 34),
+      );
+      expect(tester.getSize(find.byType(AppBar)).height, 56);
+      expect(tester.getTopLeft(find.byType(AppBar)).dy, topInset);
+      expect(
+        tester.getCenter(find.byKey(const Key('popi-open-navigation'))).dy,
+        topInset + 28,
+      );
+      expect(
+        tester.getTopLeft(find.byKey(const Key('home-banner-carousel'))).dy,
+        topInset + 56 + 20,
+      );
+      expect(tester.takeException(), isNull);
+    });
   }
 
   testWidgets(
