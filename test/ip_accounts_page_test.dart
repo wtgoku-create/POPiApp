@@ -9,6 +9,7 @@ import 'package:popi_ai_app/features/ip_accounts/presentation/ip_accounts_page.d
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
 import 'package:popi_ai_app/shared/widgets/popi_navigation_drawer.dart';
 
 import 'support/project_fixtures.dart';
@@ -21,6 +22,8 @@ void main() {
     Size size = const Size(440, 956),
     bool dark = false,
     Locale locale = const Locale('zh'),
+    bool settle = true,
+    bool reduceMotion = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -61,15 +64,25 @@ void main() {
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: reduceMotion),
+            child: child!,
+          ),
           routerConfig: router,
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
     return router;
   }
 
-  testWidgets('Figma examples filter by recent usage and pause status', (
+  testWidgets('account list shows all accounts without category controls', (
     tester,
   ) async {
     await pumpPage(tester);
@@ -79,21 +92,16 @@ void main() {
     expect(find.text('后来才懂'), findsOneWidget);
     expect(find.text('水獭兜兜儿'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('ip-accounts-filter-recent')));
-    await tester.pumpAndSettle();
-    expect(find.text('后来才懂'), findsOneWidget);
-    expect(find.text('拜托了爱丽丝'), findsOneWidget);
-    expect(find.text('叮叮睡醒了'), findsNothing);
-    expect(find.text('Pause'), findsNothing);
-
-    await tester.tap(find.byKey(const Key('ip-accounts-filter-paused')));
-    await tester.pumpAndSettle();
     expect(find.text('益达'), findsOneWidget);
-    expect(find.text('Normal'), findsNothing);
-
-    await tester.tap(find.byKey(const Key('ip-accounts-filter-all')));
-    await tester.pumpAndSettle();
-    expect(find.text('Normal'), findsNWidgets(4));
+    expect(find.text('全部'), findsNothing);
+    expect(find.text('最近常用'), findsNothing);
+    expect(find.text('停滞'), findsNothing);
+    expect(find.byKey(const Key('ip-accounts-open-navigation')), findsNothing);
+    expect(find.byType(DrawerButton), findsNothing);
+    expect(
+      tester.getCenter(find.byKey(const Key('ip-accounts-back'))).dx,
+      lessThan(tester.getCenter(find.text('IP账号管理')).dx),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -113,17 +121,10 @@ void main() {
         findsOneWidget,
       );
       if (signedIn) {
-        await tester.tap(find.byKey(const Key('ip-accounts-open-navigation')));
+        await tester.tap(find.byKey(const Key('ip-accounts-back')));
         await tester.pumpAndSettle();
-        final material = tester.widget<Material>(
-          find.descendant(
-            of: find.byKey(const Key('drawer-nav-ip-accounts')),
-            matching: find.byType(Material),
-          ),
-        );
-        expect(material.color, AppColors.brand.withValues(alpha: .05));
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
+        expect(find.byType(IpAccountsPage), findsNothing);
+        expect(router.routeInformationProvider.value.uri.path, '/');
       }
       expect(
         find.byKey(const Key('drawer-nav-ip-accounts')).hitTestable(),
@@ -133,24 +134,20 @@ void main() {
     });
   }
 
-  testWidgets('account page reopens drawer with selected entry', (
-    tester,
-  ) async {
-    await pumpPage(tester);
-    await tester.tap(find.byKey(const Key('ip-accounts-open-navigation')));
-    await tester.pumpAndSettle();
-    final entry = find.byKey(const Key('drawer-nav-ip-accounts'));
-    expect(entry.hitTestable(), findsOneWidget);
-    final material = tester.widget<Material>(
-      find.descendant(of: entry, matching: find.byType(Material)),
-    );
-    expect(material.color, AppColors.brand.withValues(alpha: .05));
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'back falls back to home when opened without navigation history',
+    (tester) async {
+      final router = await pumpPage(tester);
+      expect(router.canPop(), isFalse);
+      await tester.tap(find.byKey(const Key('ip-accounts-back')));
+      await tester.pumpAndSettle();
+      expect(router.routeInformationProvider.value.uri.path, '/');
+      expect(find.byType(IpAccountsPage), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('empty filters and account opening use supplied data', (
-    tester,
-  ) async {
+  testWidgets('account opening uses supplied data', (tester) async {
     const account = IpAccount(
       id: 'custom',
       title: 'Custom account',
@@ -166,12 +163,83 @@ void main() {
     );
     await tester.tap(find.text('Custom account'));
     expect(opened, same(account));
-    await tester.tap(find.byKey(const Key('ip-accounts-filter-recent')));
-    await tester.pumpAndSettle();
-    expect(find.text('暂无最近常用账号'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('ip-accounts-filter-paused')));
-    await tester.pumpAndSettle();
-    expect(find.text('暂无停滞账号'), findsOneWidget);
+  });
+
+  testWidgets('empty loaded list shows an empty state', (tester) async {
+    await pumpPage(tester, page: const IpAccountsPage());
+    expect(find.text('暂无IP账号'), findsOneWidget);
+    expect(find.byType(AppSkeleton), findsNothing);
+  });
+
+  for (final dark in [false, true]) {
+    testWidgets(
+      'loading placeholders pulse and give way to accounts: dark $dark',
+      (tester) async {
+        final loading = ValueNotifier(true);
+        addTearDown(loading.dispose);
+        await pumpPage(
+          tester,
+          page: ValueListenableBuilder<bool>(
+            valueListenable: loading,
+            builder: (_, isLoading, _) => isLoading
+                ? const IpAccountsPage(isLoading: true)
+                : const IpAccountsPage.sample(),
+          ),
+          dark: dark,
+          settle: false,
+        );
+        expect(find.byKey(const Key('ip-accounts-skeleton')), findsOneWidget);
+        expect(find.text('暂无IP账号'), findsNothing);
+        final row = find.byKey(const Key('ip-account-skeleton-0'));
+        final bounds = tester.getRect(row);
+        expect(bounds.size, const Size(400, 90));
+        final fade = find.descendant(
+          of: find.byType(AppSkeleton),
+          matching: find.byType(FadeTransition),
+        );
+        final opacity = tester.widget<FadeTransition>(fade).opacity.value;
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(
+          tester.widget<FadeTransition>(fade).opacity.value,
+          isNot(opacity),
+        );
+        expect(tester.getRect(row), bounds);
+        loading.value = false;
+        await tester.pumpAndSettle();
+        expect(find.byType(AppSkeleton), findsNothing);
+        expect(
+          tester.getRect(find.byKey(const Key('ip-account-example-houlai'))),
+          bounds,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'loading placeholders respect reduced motion on compact screens',
+    (tester) async {
+      await pumpPage(
+        tester,
+        page: const IpAccountsPage(isLoading: true),
+        size: const Size(320, 568),
+        reduceMotion: true,
+      );
+      final fade = find.descendant(
+        of: find.byType(AppSkeleton),
+        matching: find.byType(FadeTransition),
+      );
+      expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('refresh retains existing account rows', (tester) async {
+    await pumpPage(tester, page: const IpAccountsPage.sample(isLoading: true));
+    expect(find.byType(AppSkeleton), findsNothing);
+    expect(find.text('后来才懂'), findsOneWidget);
   });
 
   for (final dark in [false, true]) {

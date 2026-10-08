@@ -33,53 +33,74 @@ class SettingsRow extends StatelessWidget {
         height: 48,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              SizedBox.square(
-                dimension: 20,
-                child: Center(
-                  child: iconWidget == null
-                      ? Icon(icon, size: 20, color: colorScheme.onSurface)
-                      : ColorFiltered(
-                          colorFilter: ColorFilter.mode(
-                            colorScheme.onSurface,
-                            BlendMode.srcIn,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                SizedBox.square(
+                  dimension: 20,
+                  child: Center(
+                    child: iconWidget == null
+                        ? Icon(icon, size: 20, color: colorScheme.onSurface)
+                        : ColorFiltered(
+                            colorFilter: ColorFilter.mode(
+                              colorScheme.onSurface,
+                              BlendMode.srcIn,
+                            ),
+                            child: iconWidget!,
                           ),
-                          child: iconWidget!,
-                        ),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: 16, color: colorScheme.onSurface),
-                ),
-              ),
-              if (value != null)
-                Flexible(
+                const SizedBox(width: 10),
+                Expanded(
                   child: Text(
-                    value!,
+                    label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
-                      color: colorScheme.onSurfaceVariant,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                 ),
-              if (showChevron) ...[
-                const SizedBox(width: 7),
-                if (trailing == null)
-                  AppSvgIcon.asset(
-                    'profile_settings_chevron',
-                    size: 13,
-                    color: colorScheme.onSurfaceVariant,
-                  )
-                else
-                  Icon(trailing, size: 21, color: colorScheme.onSurfaceVariant),
+                if (value != null) ...[
+                  const SizedBox(width: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * .55,
+                    ),
+                    child: Text(
+                      value!,
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+                if (showChevron) ...[
+                  const SizedBox(width: 7),
+                  SizedBox.square(
+                    dimension: 20,
+                    child: Center(
+                      child: trailing == null
+                          ? AppSvgIcon.asset(
+                              'profile_settings_chevron',
+                              size: 13,
+                              color: colorScheme.onSurfaceVariant,
+                            )
+                          : Icon(
+                              trailing,
+                              size: 20,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

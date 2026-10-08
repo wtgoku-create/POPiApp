@@ -188,6 +188,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     required this.onRemoveImage,
     required this.onHeightChanged,
     required this.onSubmitted,
+    required this.onModelParametersRequested,
+    required this.modelParametersDescription,
     this.onMentionRequested,
     super.key,
   });
@@ -198,6 +200,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<double> onHeightChanged;
   final ValueChanged<String> onSubmitted;
+  final VoidCallback onModelParametersRequested;
+  final String modelParametersDescription;
   final VoidCallback? onMentionRequested;
 
   @override
@@ -364,6 +368,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 onRemoveImage: widget.onRemoveImage,
                                 onKeepFocus: _focusNode.requestFocus,
                                 onSubmitted: () => widget.onSubmitted(text),
+                                onModelParametersRequested:
+                                    widget.onModelParametersRequested,
+                                modelParametersDescription:
+                                    widget.modelParametersDescription,
                               );
                               return AnimatedBuilder(
                                 animation: _composerAnimationController,
@@ -640,6 +648,8 @@ class _ComposerContent extends StatelessWidget {
     required this.onRemoveImage,
     required this.onKeepFocus,
     required this.onSubmitted,
+    required this.onModelParametersRequested,
+    required this.modelParametersDescription,
   });
 
   final bool isExpanded;
@@ -652,6 +662,8 @@ class _ComposerContent extends StatelessWidget {
   final ValueChanged<int> onRemoveImage;
   final VoidCallback onKeepFocus;
   final VoidCallback onSubmitted;
+  final VoidCallback onModelParametersRequested;
+  final String modelParametersDescription;
 
   @override
   Widget build(BuildContext context) {
@@ -712,6 +724,27 @@ class _ComposerContent extends StatelessWidget {
           ),
         ),
         Positioned(
+          left: 50,
+          right: hasText ? 96 : 48,
+          bottom: 0,
+          height: 40,
+          child: IgnorePointer(
+            ignoring: !isExpanded,
+            child: AnimatedOpacity(
+              duration: duration,
+              curve: curve,
+              opacity: isExpanded ? 1 : 0,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _ModelParametersButton(
+                  description: modelParametersDescription,
+                  onPressed: onModelParametersRequested,
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
           right: 0,
           bottom: 0,
           child: IgnorePointer(
@@ -741,6 +774,56 @@ class _ComposerContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ModelParametersButton extends StatelessWidget {
+  const _ModelParametersButton({
+    required this.description,
+    required this.onPressed,
+  });
+
+  final String description;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: description,
+      child: TextButton(
+        key: const Key('popi-model-parameters'),
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: AppColors.brand.withValues(alpha: .05),
+          foregroundColor: colors.onSurface,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          minimumSize: const Size(0, 34),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const StadiumBorder(),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppSvgIcon.asset(
+              'role_guide_model',
+              size: 24,
+              color: colors.onSurface,
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  AppLocalizations.of(context)!.roleModelParameters,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

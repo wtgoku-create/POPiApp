@@ -99,6 +99,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await mount(tester, profile: true);
+    expect(find.text('账号管理'), findsNothing);
     expect(api.queries, containsAll(SocialAppType.values));
     expect(find.text('未绑定'), findsNWidgets(2));
     expect(wechat.calls, 0);

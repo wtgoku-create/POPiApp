@@ -15,6 +15,8 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../attachments/presentation/attachment_picker_sheet.dart';
+import '../../role_guide/domain/role_guide_draft.dart';
+import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'widgets/popi_message_composer.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
@@ -40,6 +42,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   double _bodyOffsetBeforeKeyboard = 0;
   final List<PopiComposerImage> _selectedImages = [];
   bool _mentionMode = false;
+  RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
+  bool _generationSheetOpen = false;
 
   static const _maxImageCount = 5;
   static const _maxImageBytes = 6 * 1024 * 1024;
@@ -298,6 +302,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             onHeightChanged: _handleComposerHeightChanged,
                             onSubmitted: _openConversation,
                             onMentionRequested: _showMentionSheet,
+                            onModelParametersRequested: _showModelParameters,
+                            modelParametersDescription: [
+                              _generationSettings.model.label,
+                              '${l10n.roleVideoPreference}: ${_generationSettings.videoResolution}P / ${_generationSettings.videoRatio.label}',
+                              '${l10n.roleImagePreference}: ${_generationSettings.imageResolution}P / ${_generationSettings.imageRatio.label}',
+                              '${l10n.roleQuantity}: ${_generationSettings.quantity}',
+                            ].join('\n'),
                           ),
                         ),
                       ),
@@ -323,6 +334,28 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   void _openConversation(String value) {
     if (value.trim().isEmpty) return;
     AppToast.info(context, AppLocalizations.of(context)!.conversationPending);
+  }
+
+  Future<void> _showModelParameters() async {
+    if (_generationSheetOpen) return;
+    _generationSheetOpen = true;
+    _messageController.dismissKeyboard();
+    try {
+      final settings = await AppSheet.show<RoleGenerationSettings>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        backgroundColor: Colors.transparent,
+        barrierColor: const Color(0x22000000),
+        builder: (_) =>
+            RoleGenerationSheet(initialSettings: _generationSettings),
+      );
+      if (settings != null && mounted) {
+        setState(() => _generationSettings = settings);
+      }
+    } finally {
+      _generationSheetOpen = false;
+    }
   }
 
   Future<void> _selectPrompt(String prompt) async {

@@ -34,6 +34,10 @@ class _HomePageState extends ConsumerState<HomePage> {
       context.push('/ip-guide');
       return;
     }
+    if (prompt == AppLocalizations.of(context)!.homeStartRole) {
+      context.push('/role-guide');
+      return;
+    }
     context.push(
       Uri(path: '/session', queryParameters: {'prompt': prompt}).toString(),
     );

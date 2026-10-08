@@ -12,6 +12,235 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get roleGuideTitle => 'Start with characters';
+
+  @override
+  String get roleGuideDescription =>
+      'Choose up to 6 characters\nto start a new project:';
+
+  @override
+  String get roleCastTitle => 'Choose your cast';
+
+  @override
+  String get roleCastDescription =>
+      'Choose up to 3 characters\nfrom your project for the video:';
+
+  @override
+  String get roleTopicTitle => 'Find their next story';
+
+  @override
+  String get roleTopicDescription =>
+      'POPi suggests 3 stories\nfor your characters:';
+
+  @override
+  String get roleProductionTitle => 'Create your video';
+
+  @override
+  String get roleProductionDescription =>
+      'Choose a model and settings\nto bring your story to life:';
+
+  @override
+  String get roleCreateProject => 'Create project';
+
+  @override
+  String get roleGuideViewMore => 'View more';
+
+  @override
+  String roleSelectedCount(int count) {
+    return ' ($count selected)';
+  }
+
+  @override
+  String get roleChooseCast => 'Use this cast';
+
+  @override
+  String get roleSelectProjectFirst =>
+      'Choose characters for your project first';
+
+  @override
+  String get roleSelectCastFirst => 'Choose your cast first';
+
+  @override
+  String get roleProjectLimit => 'Choose up to 6 project characters';
+
+  @override
+  String get roleCastLimit => 'Choose up to 3 cast members';
+
+  @override
+  String roleProjectName(String name) {
+    return '$name\'s project';
+  }
+
+  @override
+  String roleProjectCount(int count) {
+    return '$count project characters';
+  }
+
+  @override
+  String roleCastCount(int count) {
+    return '$count cast members';
+  }
+
+  @override
+  String get roleChooseStory => 'Choose this story';
+
+  @override
+  String get roleRefreshStories => 'Try another set';
+
+  @override
+  String get rolePreviousStory => 'Previous story';
+
+  @override
+  String get roleNextStory => 'Next story';
+
+  @override
+  String get roleStoryOverview => 'Story overview';
+
+  @override
+  String get roleModelParameters => 'Model / settings';
+
+  @override
+  String get roleModelPending => 'Model / settings (choose)';
+
+  @override
+  String get roleChooseParametersFirst => 'Choose a model and settings first';
+
+  @override
+  String get roleVideoPreference => 'Video preferences';
+
+  @override
+  String get roleImagePreference => 'Image preferences';
+
+  @override
+  String get roleModelSelection => 'Choose a model';
+
+  @override
+  String get roleResolution => 'Resolution';
+
+  @override
+  String get roleRatio => 'Aspect ratio';
+
+  @override
+  String get roleDimensions => 'Dimensions';
+
+  @override
+  String get roleQuantity => 'Quantity';
+
+  @override
+  String roleEstimatedPoints(int points) {
+    return 'Estimated points: $points';
+  }
+
+  @override
+  String get roleModelSoraDescription =>
+      'OpenAI media generation with synchronized audio and video';
+
+  @override
+  String get roleModelVeoDescription =>
+      'Google video model with cinematic quality and precise camera control';
+
+  @override
+  String get roleModelJimengDescription =>
+      'ByteDance video model with consistent motion and image-to-video generation';
+
+  @override
+  String get roleModelKlingDescription =>
+      'Kuaishou video model with natural physics and stable camera movement';
+
+  @override
+  String get roleModelViduDescription =>
+      'ShengShu model with reference-based effects and material transfer';
+
+  @override
+  String get roleModelDiscount => '50% off';
+
+  @override
+  String roleVideoPlanPrompt(
+    String project,
+    String roles,
+    String cast,
+    String title,
+    String story,
+    String model,
+    String video,
+    String image,
+    int quantity,
+  ) {
+    return 'Create a video using this plan.\nProject: $project\nProject characters: $roles\nCast: $cast\nTopic: $title\nStory overview: $story\nVideo model: $model\nVideo settings: $video\nImage settings: $image\nQuantity: $quantity';
+  }
+
+  @override
+  String get roleExampleAlice => 'Alice';
+
+  @override
+  String get roleExampleErer => 'Erer';
+
+  @override
+  String get roleExampleHua => 'Hua Xileng';
+
+  @override
+  String get roleExampleDoudou => 'Doudou';
+
+  @override
+  String get roleExampleConfused => 'Little Dreamer';
+
+  @override
+  String get roleExampleStrawberry => 'Strawberry';
+
+  @override
+  String get roleExampleQiqi => 'Qiqi and Didi';
+
+  @override
+  String get roleExampleMermaid => 'Miss Mermaid';
+
+  @override
+  String get roleExampleDescription =>
+      'A classmate, roommate, and witty best friend...';
+
+  @override
+  String get roleExampleStoryTitle1 =>
+      'After graduation, I found my passion...';
+
+  @override
+  String get roleExampleStoryTitle2 => 'My roommate\'s secret plan';
+
+  @override
+  String get roleExampleStoryTitle3 => 'Today, I\'ll look after you';
+
+  @override
+  String get roleExampleStoryTitle4 => 'The first time I spoke my mind';
+
+  @override
+  String get roleExampleStoryTitle5 => 'Hot cocoa after a misunderstanding';
+
+  @override
+  String get roleExampleStoryTitle6 => 'One last little adventure together';
+
+  @override
+  String get roleExampleStory1 =>
+      'He looks down at the pen in his hand, unable to write his plans for life after graduation. Laughter outside brings back memories of late nights finishing assignments together. A friend notices his hesitation and hands him a sketchbook filled with everyday moments. He realizes his passion has always been telling stories about the people around him. Together, they decide to shoot one final short film before graduation, turning their unspoken thoughts into a story and leaving their future selves a little courage.';
+
+  @override
+  String get roleExampleStory2 =>
+      'Their roommate has been slipping out early and returning late. Worried, the friends decide to follow her, stumbling through one funny misunderstanding after another. Behind the classroom door, they discover a surprise farewell party. Photographs cover the walls, each carrying a thank-you she never quite managed to say aloud.';
+
+  @override
+  String get roleExampleStory3 =>
+      'The friend who always takes care of everyone loses her confidence after a setback. Her companions quietly take over the little things: saving breakfast, waiting for her to come home, remembering a small wish. When she realizes she can be cared for too, she finally lets herself stop pretending to be fine.';
+
+  @override
+  String get roleExampleStory4 =>
+      'An ordinary dinner turns into a conversation about unspoken dreams. Encouraged by her friends, she finally shares what she really wants to do. Nobody laughs or rushes her. They write down their wishes and promise to open them together a year later, to see where this small act of courage has taken them.';
+
+  @override
+  String get roleExampleStory5 =>
+      'A careless remark leaves two best friends barely speaking. Their companions try to help, creating more confusion along the way. On a rainy evening, the two meet at their usual cafe. Over hot cocoa, an honest conversation reveals they were both waiting for the other to speak first.';
+
+  @override
+  String get roleExampleStory6 =>
+      'Before moving out, the friends make a list of things to do together. The final wish is to watch a sunrise. Forgotten keys, a wrong turn, and a missed breakfast almost derail the trip. Standing in the morning light, they skip the goodbyes and simply promise another little adventure when they meet again.';
+
+  @override
   String get officialRoles => 'Official roles';
 
   @override
@@ -165,6 +394,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipAccountsTitle => 'IP Account Management';
+
+  @override
+  String get loadingIpAccounts => 'Loading accounts';
 
   @override
   String get ipAccountsAll => 'All';

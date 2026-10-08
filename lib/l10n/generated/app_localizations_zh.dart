@@ -12,6 +12,223 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get roleGuideTitle => '从角色出发～';
+
+  @override
+  String get roleGuideDescription => '选择至多6个角色\n组建一个新项目：';
+
+  @override
+  String get roleCastTitle => '选择出场角色';
+
+  @override
+  String get roleCastDescription => '选择你项目内\n至多3个角色参演视频：';
+
+  @override
+  String get roleTopicTitle => '为TA们匹配选题';
+
+  @override
+  String get roleTopicDescription => 'POPi根据角色人设\n推荐合适的3个选题：';
+
+  @override
+  String get roleProductionTitle => '开始制作视频';
+
+  @override
+  String get roleProductionDescription => '选择模型与参数\n让角色与剧情动起来：';
+
+  @override
+  String get roleCreateProject => '创建项目';
+
+  @override
+  String get roleGuideViewMore => '查看更多';
+
+  @override
+  String roleSelectedCount(int count) {
+    return '（已选$count个角色）';
+  }
+
+  @override
+  String get roleChooseCast => '选择TA们参演';
+
+  @override
+  String get roleSelectProjectFirst => '请先选择项目角色';
+
+  @override
+  String get roleSelectCastFirst => '请先选择出场角色';
+
+  @override
+  String get roleProjectLimit => '至多选择6个项目角色';
+
+  @override
+  String get roleCastLimit => '至多选择3个出场角色';
+
+  @override
+  String roleProjectName(String name) {
+    return '$name的项目';
+  }
+
+  @override
+  String roleProjectCount(int count) {
+    return '共有$count个角色';
+  }
+
+  @override
+  String roleCastCount(int count) {
+    return '共$count个角色';
+  }
+
+  @override
+  String get roleChooseStory => '选择这个故事';
+
+  @override
+  String get roleRefreshStories => '都不满意，换一批';
+
+  @override
+  String get rolePreviousStory => '上一个故事';
+
+  @override
+  String get roleNextStory => '下一个故事';
+
+  @override
+  String get roleStoryOverview => '故事概况';
+
+  @override
+  String get roleModelParameters => '模型/参数';
+
+  @override
+  String get roleModelPending => '模型/参数（待选择）';
+
+  @override
+  String get roleChooseParametersFirst => '请先选择模型与参数';
+
+  @override
+  String get roleVideoPreference => '视频偏好';
+
+  @override
+  String get roleImagePreference => '图片偏好';
+
+  @override
+  String get roleModelSelection => '模型选择';
+
+  @override
+  String get roleResolution => '分辨率';
+
+  @override
+  String get roleRatio => '比例';
+
+  @override
+  String get roleDimensions => '尺寸';
+
+  @override
+  String get roleQuantity => '生成数量';
+
+  @override
+  String roleEstimatedPoints(int points) {
+    return '预计消耗积分：$points';
+  }
+
+  @override
+  String get roleModelSoraDescription => 'OpenAI 最新媒体生成模型,原生支持音视频同步输出';
+
+  @override
+  String get roleModelVeoDescription => '谷歌顶级视频模型，电影级画质，镜头级精准控制';
+
+  @override
+  String get roleModelJimengDescription => '字节跳动即梦AI，动态连贯，风格统一，图生视频高效出片';
+
+  @override
+  String get roleModelKlingDescription => '快手可灵视频模型，物理拟真自然，运镜流畅稳定，高效出片';
+
+  @override
+  String get roleModelViduDescription => '生数科技自研模型，万物可参考，特效 / 材质精准迁移';
+
+  @override
+  String get roleModelDiscount => '限时5折';
+
+  @override
+  String roleVideoPlanPrompt(
+    String project,
+    String roles,
+    String cast,
+    String title,
+    String story,
+    String model,
+    String video,
+    String image,
+    int quantity,
+  ) {
+    return '请按以下配置制作视频。\n项目：$project\n项目角色：$roles\n出场角色：$cast\n选题：$title\n故事概况：$story\n视频模型：$model\n视频参数：$video\n图片参数：$image\n生成数量：$quantity';
+  }
+
+  @override
+  String get roleExampleAlice => '爱丽丝';
+
+  @override
+  String get roleExampleErer => '尔尔';
+
+  @override
+  String get roleExampleHua => '花西冷少';
+
+  @override
+  String get roleExampleDoudou => '水獭兜兜儿';
+
+  @override
+  String get roleExampleConfused => '小迷糊';
+
+  @override
+  String get roleExampleStrawberry => '草莓';
+
+  @override
+  String get roleExampleQiqi => '奇奇蒂蒂';
+
+  @override
+  String get roleExampleMermaid => '人鱼小姐';
+
+  @override
+  String get roleExampleDescription => '叮叮当同桌、室友和毒舌闺蜜...';
+
+  @override
+  String get roleExampleStoryTitle1 => '毕业以后，才发现自己喜欢...';
+
+  @override
+  String get roleExampleStoryTitle2 => '室友的秘密计划';
+
+  @override
+  String get roleExampleStoryTitle3 => '今天，换我来保护你';
+
+  @override
+  String get roleExampleStoryTitle4 => '第一次勇敢说出心里话';
+
+  @override
+  String get roleExampleStoryTitle5 => '误会之后的一杯热可可';
+
+  @override
+  String get roleExampleStoryTitle6 => '一起完成的最后一件小事';
+
+  @override
+  String get roleExampleStory1 =>
+      '他低着头，手里拿着笔，迟迟没有写下毕业后的计划。窗外的笑声让他想起那些一起熬夜赶作业的日子。朋友发现了他的犹豫，递来一本记录着日常小事的画册。原来，他一直喜欢的是用故事留住身边的人。他们决定一起拍摄毕业前的最后一支短片，把没说出口的话写进剧情，也给未来的自己留下一份勇敢的答案。';
+
+  @override
+  String get roleExampleStory2 =>
+      '最近，室友总是神神秘秘地早出晚归。大家以为她遇到了麻烦，决定悄悄跟上去。一路上的误会让这次调查变得啼笑皆非。推开熟悉的教室门，他们才发现，室友正在准备一场属于所有人的告别派对。墙上贴满合影，每一张照片后面，都藏着她想说却没说出口的感谢。';
+
+  @override
+  String get roleExampleStory3 =>
+      '平时总是照顾别人的她，在一次意外中失去了信心。伙伴们没有急着安慰，而是偷偷接过她每天完成的小事：留一份早餐、等一次晚归、记住一个小愿望。当她发现自己也可以被照顾时，终于放下了逞强的笑容。原来，陪伴从来不是一个人的责任。';
+
+  @override
+  String get roleExampleStory4 =>
+      '一次普通的聚餐，让大家谈起了从未说出口的梦想。她本想像往常一样笑着带过，却在朋友的鼓励下，说出了自己真正想做的事。没有人嘲笑，也没有人催促。大家把各自的愿望写在纸上，约定一年后再一起打开，看看这次勇敢会带他们走向哪里。';
+
+  @override
+  String get roleExampleStory5 =>
+      '一句无心的话，让两个最好的朋友闹起了别扭。其他伙伴尝试撮合，却不断制造新的笑话。直到一个下雨的傍晚，两人在常去的小店相遇。一杯热可可和一段坦诚的对话，让他们发现自己都在等对方先开口。雨停了，友情也重新回到了熟悉的温度。';
+
+  @override
+  String get roleExampleStory6 =>
+      '搬走前，大家列出一张共同生活的愿望清单。最后一项，是去看一次日出。为了赶上最早的车，他们经历了忘带钥匙、走错路和买不到早餐的小插曲。站在晨光里时，谁也没有说告别。他们只是约好，下一次相聚，再一起做一件小事。';
+
+  @override
   String get officialRoles => '官方角色';
 
   @override
@@ -159,6 +376,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipAccountsTitle => 'IP账号管理';
+
+  @override
+  String get loadingIpAccounts => '正在加载账号';
 
   @override
   String get ipAccountsAll => '全部';

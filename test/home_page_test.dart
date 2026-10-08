@@ -8,6 +8,9 @@ import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
+import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
+import 'package:popi_ai_app/features/assets/domain/library_role.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -33,6 +36,10 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
+        rolePageLoaderProvider.overrideWithValue(
+          ({required category, required page, required pageSize}) async =>
+              LibraryRolePage(items: const [], page: page, pageCount: 1),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -127,7 +134,7 @@ void main() {
   );
 
   testWidgets(
-    'creation entries open the IP guide or a session and return home',
+    'creation entries open the IP guide, role guide or a session and return home',
     (tester) async {
       final container = await pumpHome(
         tester,
@@ -141,6 +148,9 @@ void main() {
           expect(find.byType(IpGuidePage), findsOneWidget);
           expect(find.byType(SessionPage), findsNothing);
           expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+        } else if (i == 1) {
+          expect(find.byType(RoleGuidePage), findsOneWidget);
+          expect(find.byType(SessionPage), findsNothing);
         } else {
           final page = tester.widget<SessionPage>(find.byType(SessionPage));
           expect(page.initialPrompt, prompts[i]);

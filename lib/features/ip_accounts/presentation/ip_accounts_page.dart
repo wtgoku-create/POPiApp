@@ -2,42 +2,38 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/ip_account_examples.dart';
 import '../domain/ip_account.dart';
+import 'widgets/ip_accounts_skeleton.dart';
 
-enum _AccountFilter { all, recent, paused }
-
-/// Account management layout with page-local filtering and injectable data.
-class IpAccountsPage extends ConsumerStatefulWidget {
+/// Account management layout with injectable data and loading state.
+class IpAccountsPage extends ConsumerWidget {
   const IpAccountsPage({
     this.accounts = const [],
+    this.isLoading = false,
     this.onOpenAccount,
     super.key,
   });
 
-  const IpAccountsPage.sample({this.onOpenAccount, super.key})
-    : accounts = ipAccountExamples;
+  const IpAccountsPage.sample({
+    this.isLoading = false,
+    this.onOpenAccount,
+    super.key,
+  }) : accounts = ipAccountExamples;
 
   final List<IpAccount> accounts;
+  final bool isLoading;
   final ValueChanged<IpAccount>? onOpenAccount;
 
   @override
-  ConsumerState<IpAccountsPage> createState() => _IpAccountsPageState();
-}
-
-class _IpAccountsPageState extends ConsumerState<IpAccountsPage> {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
-  _AccountFilter _filter = _AccountFilter.all;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final safeArea = ref.watch(safeAreaInsetsProvider);
@@ -45,23 +41,17 @@ class _IpAccountsPageState extends ConsumerState<IpAccountsPage> {
       52.0,
       math.max(safeArea.top, MediaQuery.viewPaddingOf(context).top),
     );
-    final accounts = widget.accounts
-        .where(
-          (account) => switch (_filter) {
-            _AccountFilter.all => true,
-            _AccountFilter.recent => account.isRecentlyUsed,
-            _AccountFilter.paused => account.isPaused,
-          },
-        )
-        .toList();
+    final listPadding = EdgeInsets.fromLTRB(
+      20,
+      0,
+      20,
+      math.max(20, safeArea.bottom),
+    );
 
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: colors.brightness == Brightness.light
           ? const Color(0xFFF5F4FA)
           : colors.surface,
-      drawer: const PopiNavigationDrawer(),
-      drawerScrimColor: const Color(0x33333333),
       body: Column(
         children: [
           SizedBox(height: top),
@@ -73,15 +63,17 @@ class _IpAccountsPageState extends ConsumerState<IpAccountsPage> {
                 SizedBox.square(
                   dimension: 40,
                   child: IconButton(
-                    key: const Key('ip-accounts-open-navigation'),
-                    tooltip: l10n.openNavigation,
-                    padding: const EdgeInsets.all(5),
-                    onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                    icon: AppSvgIcon.asset(
-                      'common_navigation_menu',
-                      size: 30,
-                      color: colors.onSurface,
-                    ),
+                    key: const Key('ip-accounts-back'),
+                    tooltip: l10n.back,
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back_ios_new, size: 21),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -101,74 +93,22 @@ class _IpAccountsPageState extends ConsumerState<IpAccountsPage> {
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              scrollDirection: Axis.horizontal,
-              itemCount: _AccountFilter.values.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 5),
-              itemBuilder: (context, index) {
-                final filter = _AccountFilter.values[index];
-                final selected = filter == _filter;
-                final label = switch (filter) {
-                  _AccountFilter.all => l10n.ipAccountsAll,
-                  _AccountFilter.recent => l10n.ipAccountsRecent,
-                  _AccountFilter.paused => l10n.ipAccountsPaused,
-                };
-                return Semantics(
-                  selected: selected,
-                  child: TextButton(
-                    key: Key('ip-accounts-filter-${filter.name}'),
-                    onPressed: () => setState(() => _filter = filter),
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.standard,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      minimumSize: Size(
-                        filter == _AccountFilter.recent ? 105 : 76,
-                        36,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      backgroundColor: selected
-                          ? colors.primary.withValues(alpha: .05)
-                          : Colors.transparent,
-                      foregroundColor: selected
-                          ? colors.onSurface
-                          : colors.brightness == Brightness.light
-                          ? AppColors.textTertiary
-                          : colors.onSurfaceVariant,
-                      shape: const StadiumBorder(),
-                      textStyle: TextStyle(
-                        fontSize: 14,
-                        fontWeight: selected
-                            ? FontWeight.w500
-                            : FontWeight.w400,
-                      ),
-                    ),
-                    child: Text(label),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 10),
           Expanded(
             child: accounts.isEmpty
-                ? Center(
-                    child: Text(switch (_filter) {
-                      _AccountFilter.all => l10n.noIpAccounts,
-                      _AccountFilter.recent => l10n.noRecentIpAccounts,
-                      _AccountFilter.paused => l10n.noPausedIpAccounts,
-                    }, style: TextStyle(color: colors.onSurfaceVariant)),
-                  )
+                ? isLoading
+                      ? IpAccountsSkeleton(
+                          key: const Key('ip-accounts-skeleton'),
+                          padding: listPadding,
+                        )
+                      : Center(
+                          child: Text(
+                            l10n.noIpAccounts,
+                            style: TextStyle(color: colors.onSurfaceVariant),
+                          ),
+                        )
                 : ListView.separated(
                     key: const Key('ip-accounts-list'),
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      0,
-                      20,
-                      math.max(20, safeArea.bottom),
-                    ),
+                    padding: listPadding,
                     itemCount: accounts.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
@@ -176,9 +116,9 @@ class _IpAccountsPageState extends ConsumerState<IpAccountsPage> {
                       return _AccountCard(
                         key: ValueKey('ip-account-${account.id}'),
                         account: account,
-                        colorIndex: widget.accounts.indexOf(account),
+                        colorIndex: index,
                         onTap: () {
-                          if (widget.onOpenAccount case final callback?) {
+                          if (onOpenAccount case final callback?) {
                             callback(account);
                           } else {
                             AppToast.info(

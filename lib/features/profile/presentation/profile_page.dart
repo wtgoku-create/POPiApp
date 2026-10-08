@@ -136,24 +136,13 @@ class ProfilePage extends ConsumerWidget {
                 SettingsGroup(
                   children: [
                     SettingsRow(
-                      iconWidget: const AppSvgIcon.asset(
-                        'profile_settings_account',
-                        size: 20,
-                      ),
-                      label: l10n.accountManagement,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SettingsGroup(
-                  children: [
-                    SettingsRow(
                       iconWidget: AppSvgIcon.asset(
                         'profile_settings_phone',
                         size: 20,
                       ),
                       label: l10n.phoneNumber,
                       value: '+86 $displayPhone',
+                      showChevron: false,
                     ),
                     const SocialAppBindingRow(app: SocialAppType.wechat),
                     const SocialAppBindingRow(app: SocialAppType.douyin),
