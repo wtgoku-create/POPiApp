@@ -297,7 +297,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final bottomPadding = math
-        .max(safeArea.bottom, keyboardHeight + 20)
+        .max(safeArea.bottom - keyboardHeight, 20)
         .toDouble();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -381,7 +381,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                   final borderRadius = BorderRadius.circular(
                                     radius,
                                   );
-                                  return TapRegion(
+                                  // Selection handles and the editing toolbar belong to
+                                  // the text field's tap group even outside this frame.
+                                  return TextFieldTapRegion(
                                     onTapOutside: (_) => _dismissEditor(),
                                     child: GestureDetector(
                                       behavior: HitTestBehavior.translucent,
@@ -438,7 +440,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                                   : const EdgeInsets.symmetric(
                                                       horizontal: 10,
                                                     ),
-                                              child: content,
+                                              child: RepaintBoundary(
+                                                child: content,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -528,6 +532,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       textDirection: textDirection,
     )..layout(maxWidth: maxWidth);
     final lines = painter.computeLineMetrics().length.clamp(2, 4);
+    painter.dispose();
     return lines * 21.0;
   }
 }

@@ -88,12 +88,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final composerBottomPadding = math
-        .max(safeArea.bottom, keyboardHeight + 20)
+        .max(safeArea.bottom - keyboardHeight, 20)
         .toDouble();
     final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
-    final composerInset = _composerHeight > 0
+    final composerHeight = _composerHeight > 0
         ? _composerHeight
         : fallbackComposerHeight;
+    final composerInset = composerHeight + keyboardHeight;
     final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -276,7 +277,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: 0,
+                  // Keep the keyboard's occluded area outside the blur layer.
+                  bottom: keyboardHeight,
                   child: ClipRect(
                     child: BackdropFilter(
                       key: const Key('popi-composer-region-blur'),

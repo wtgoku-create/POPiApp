@@ -230,6 +230,15 @@ void main() {
 
     tester.view.viewInsets = const FakeViewPadding(bottom: 300);
     await tester.pumpAndSettle();
+    final blurRegion = find.byKey(const Key('popi-composer-region-blur'));
+    expect(tester.getBottomRight(blurRegion).dy, 956 - 300);
+    final blurHeight = tester.getSize(blurRegion).height;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 350);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(blurRegion).height, blurHeight);
+    expect(tester.getBottomRight(blurRegion).dy, 956 - 350);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
     expect(
       tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
       956 - 300 - 20,
