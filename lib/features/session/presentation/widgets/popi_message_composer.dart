@@ -19,11 +19,9 @@ class PopiComposerImage {
 }
 
 class _InlineComposerImage {
-  const _InlineComposerImage.bytes(this.bytes) : source = null;
-  const _InlineComposerImage.network(this.source) : bytes = null;
+  const _InlineComposerImage.bytes(this.bytes);
 
-  final Uint8List? bytes;
-  final String? source;
+  final Uint8List bytes;
 }
 
 class _ComposerImageSpanBuilder extends SpecialTextSpanBuilder {
@@ -83,25 +81,15 @@ class _InlineImageWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = image.bytes != null
-        ? Image.memory(
-            image.bytes!,
-            width: 24,
-            height: 24,
-            cacheWidth: 48,
-            cacheHeight: 48,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.low,
-          )
-        : Image.network(
-            image.source!,
-            width: 24,
-            height: 24,
-            cacheWidth: 48,
-            cacheHeight: 48,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.low,
-          );
+    final child = Image.memory(
+      image.bytes,
+      width: 24,
+      height: 24,
+      cacheWidth: 48,
+      cacheHeight: 48,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.low,
+    );
     return RepaintBoundary(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -150,10 +138,6 @@ class PopiMessageComposerController {
 
   Future<void> insertImage(Uint8List bytes) async {
     _insertInlineImage(_InlineComposerImage.bytes(bytes));
-  }
-
-  Future<void> insertImageSource(String source) async {
-    _insertInlineImage(_InlineComposerImage.network(source));
   }
 
   void _insertInlineImage(_InlineComposerImage image) {
@@ -214,7 +198,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   late final FocusNode _focusNode;
   late final AnimationController _composerAnimationController;
   final _sizeKey = GlobalKey();
-  bool _hasFocus = false;
+  bool _isExpanded = false;
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
 
@@ -222,11 +206,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   void initState() {
     super.initState();
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
+    _isExpanded = widget.controller.textController.text.isNotEmpty;
     _composerAnimationController = AnimationController(
       vsync: this,
+      value: _isExpanded ? 1 : 0,
       duration: const Duration(milliseconds: 220),
     )..addStatusListener(_handleComposerAnimationStatus);
     widget.controller.textNotifier.addListener(_handleTextChanged);
+    widget.controller.textController.addListener(_syncExpansion);
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
   }
 
@@ -239,6 +226,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       ..removeStatusListener(_handleComposerAnimationStatus)
       ..dispose();
     widget.controller.textNotifier.removeListener(_handleTextChanged);
+    widget.controller.textController.removeListener(_syncExpansion);
     super.dispose();
   }
 
@@ -256,23 +244,29 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   void _handleFocusChanged() {
     final revision = ++_focusRevision;
     if (_focusNode.hasFocus) {
-      if (mounted && !_hasFocus) {
-        setState(() => _hasFocus = true);
-        _composerAnimationController.forward();
-      }
+      _syncExpansion();
       return;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted ||
-          _focusNode.hasFocus ||
-          revision != _focusRevision ||
-          !_hasFocus) {
+      if (!mounted || _focusNode.hasFocus || revision != _focusRevision) {
         return;
       }
-      setState(() => _hasFocus = false);
-      _composerAnimationController.reverse();
+      _syncExpansion();
     });
+  }
+
+  void _syncExpansion() {
+    if (!mounted) return;
+    final expanded =
+        _focusNode.hasFocus || widget.controller.textController.text.isNotEmpty;
+    if (expanded == _isExpanded) return;
+    setState(() => _isExpanded = expanded);
+    if (expanded) {
+      _composerAnimationController.forward();
+    } else {
+      _composerAnimationController.reverse();
+    }
   }
 
   void _dismissEditor() {
@@ -351,11 +345,11 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                               final expandedHeight =
                                   (hasImages ? 136.0 : 70.0) +
                                   animatedInputHeight;
-                              final contentHeight = _hasFocus
+                              final contentHeight = _isExpanded
                                   ? expandedHeight
                                   : 60.0;
                               final content = _ComposerContent(
-                                isExpanded: _hasFocus,
+                                isExpanded: _isExpanded,
                                 hasText: text.isNotEmpty,
                                 images: widget.selectedImages,
                                 expandedInputHeight: animatedInputHeight,
@@ -366,7 +360,6 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 colorScheme: colorScheme,
                                 onAttachment: widget.onAttachment,
                                 onRemoveImage: widget.onRemoveImage,
-                                onKeepFocus: _focusNode.requestFocus,
                                 onSubmitted: () => widget.onSubmitted(text),
                                 onModelParametersRequested:
                                     widget.onModelParametersRequested,
@@ -443,7 +436,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                             minHeight: contentHeight,
                                             maxHeight: contentHeight,
                                             child: Padding(
-                                              padding: _hasFocus
+                                              padding: _isExpanded
                                                   ? const EdgeInsets.all(10)
                                                   : const EdgeInsets.symmetric(
                                                       horizontal: 10,
@@ -498,7 +491,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       focusNode: _focusNode,
       controller: widget.controller.textController,
       specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
-      minLines: _hasFocus ? 2 : 1,
+      minLines: _isExpanded ? 2 : 1,
       maxLines: 4,
       cursorColor: colorScheme.primary,
       style: TextStyle(
@@ -646,7 +639,6 @@ class _ComposerContent extends StatelessWidget {
     required this.colorScheme,
     required this.onAttachment,
     required this.onRemoveImage,
-    required this.onKeepFocus,
     required this.onSubmitted,
     required this.onModelParametersRequested,
     required this.modelParametersDescription,
@@ -660,7 +652,6 @@ class _ComposerContent extends StatelessWidget {
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
-  final VoidCallback onKeepFocus;
   final VoidCallback onSubmitted;
   final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
@@ -726,7 +717,7 @@ class _ComposerContent extends StatelessWidget {
         if (onModelParametersRequested != null)
           Positioned(
             left: 50,
-            right: hasText ? 96 : 48,
+            right: hasText ? 48 : 0,
             bottom: 0,
             height: 40,
             child: IgnorePointer(
@@ -754,22 +745,12 @@ class _ComposerContent extends StatelessWidget {
               duration: duration,
               curve: curve,
               opacity: isExpanded ? 1 : 0,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _VoiceButton(
-                    color: colorScheme.primary,
-                    onPressed: onKeepFocus,
-                  ),
-                  if (hasText) const SizedBox(width: 8),
-                  AnimatedSize(
-                    duration: duration,
-                    curve: curve,
-                    child: hasText
-                        ? _SendButton(onPressed: onSubmitted)
-                        : const SizedBox.shrink(),
-                  ),
-                ],
+              child: AnimatedSize(
+                duration: duration,
+                curve: curve,
+                child: hasText
+                    ? _SendButton(onPressed: onSubmitted)
+                    : const SizedBox.shrink(),
               ),
             ),
           ),
@@ -869,34 +850,6 @@ class _AttachmentButton extends StatelessWidget {
   }
 }
 
-class _VoiceButton extends StatelessWidget {
-  const _VoiceButton({required this.color, required this.onPressed});
-
-  final Color color;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return CustomPaint(
-      painter: _DashedCircleBorderPainter(color: color),
-      child: SizedBox.square(
-        dimension: 40,
-        child: IconButton(
-          tooltip: l10n.voiceInput,
-          constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-          style: IconButton.styleFrom(
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          padding: EdgeInsets.zero,
-          onPressed: onPressed,
-          icon: Icon(Icons.mic_none_rounded, size: 18, color: color),
-        ),
-      ),
-    );
-  }
-}
-
 class _SendButton extends StatelessWidget {
   const _SendButton({required this.onPressed});
 
@@ -925,31 +878,5 @@ class _SendButton extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _DashedCircleBorderPainter extends CustomPainter {
-  const _DashedCircleBorderPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final rect = Offset.zero & size;
-    final borderRect = rect.deflate(.5);
-    const dashCount = 20;
-    final step = math.pi * 2 / dashCount;
-    for (var index = 0; index < dashCount; index++) {
-      canvas.drawArc(borderRect, index * step, step * .58, false, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedCircleBorderPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }

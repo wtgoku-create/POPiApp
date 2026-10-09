@@ -15,7 +15,6 @@ import 'package:popi_ai_app/features/attachments/data/device_gallery_repository.
 import 'package:popi_ai_app/features/attachments/domain/gallery_repository.dart';
 import 'package:popi_ai_app/features/attachments/presentation/attachment_picker_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
-import 'package:popi_ai_app/shared/providers/media_provider.dart';
 
 final _png = Uint8List.fromList(
   base64Decode(
@@ -79,7 +78,6 @@ void main() {
     final appTheme = theme ?? AppTheme.light;
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [galleryRepositoryProvider.overrideWithValue(repository)],
         child: RepaintBoundary(
           key: const Key('attachment-screenshot'),
           child: MaterialApp(
@@ -101,6 +99,7 @@ void main() {
                       final result = await AttachmentPickerSheet.show(
                         context: context,
                         limit: limit,
+                        repository: repository,
                       );
                       onResult?.call(result);
                     },

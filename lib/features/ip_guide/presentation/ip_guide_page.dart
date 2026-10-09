@@ -203,7 +203,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         primary: false,
         backgroundColor: Colors.transparent,
         drawerScrimColor: const Color(0x33333333),
-        drawer: PopiNavigationDrawer(onNewProject: () => _goToStep(0)),
+        drawer: const PopiNavigationDrawer(),
         onDrawerChanged: (open) => setState(() => _drawerOpen = open),
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(safeArea.top + 56),
@@ -283,27 +283,24 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               child: Column(
                 children: [
                   SizedBox(
+                    key: const Key('ip-guide-progress'),
                     height: 25,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 54),
-                      child: TabBar(
-                        controller: _tabs,
-                        dividerColor: Colors.transparent,
-                        indicator: const BoxDecoration(),
-                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
-                        onTap: _goToStep,
-                        tabs: [
+                      child: Row(
+                        children: [
                           for (var i = 0; i < 5; i++)
-                            Tooltip(
-                              message: tabLabels[i],
-                              child: Semantics(
-                                label: tabLabels[i],
-                                selected: _step == i,
-                                child: Tab(
-                                  key: Key('ip-guide-tab-$i'),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                child: Semantics(
+                                  key: Key('ip-guide-progress-$i'),
+                                  label: tabLabels[i],
+                                  selected: _step == i,
                                   child: Container(
                                     height: 5,
-                                    width: double.infinity,
                                     decoration: BoxDecoration(
                                       color: AppColors.brand.withValues(
                                         alpha: _step == i ? 1 : .2,

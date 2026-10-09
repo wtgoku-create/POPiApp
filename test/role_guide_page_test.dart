@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
-import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
@@ -18,6 +18,7 @@ import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'support/project_fixtures.dart';
+import 'support/role_library_fixtures.dart';
 
 void main() {
   WidgetController.hitTestWarningShouldBeFatal = true;
@@ -27,29 +28,35 @@ void main() {
     Locale locale = const Locale('zh'),
     bool dark = false,
     double scale = 1,
+    double systemTopInset = 0,
     RolePageLoader? loader,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(top: systemTopInset);
+    tester.view.viewPadding = FakeViewPadding(top: systemTopInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     final roles = roleGuideExamples(lookupAppLocalizations(locale));
     final container = ProviderContainer(
       overrides: [
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
-        rolePageLoaderProvider.overrideWithValue(
-          loader ??
-              ({required category, required page, required pageSize}) async =>
-                  LibraryRolePage(
-                    items: category == 'official'
-                        ? roles
-                        : roles.take(2).toList(),
-                    page: page,
-                    pageCount: 1,
-                  ),
-        ),
-        roleDetailLoaderProvider.overrideWithValue(
-          (id) async => roles.firstWhere((role) => role.id == id),
+        dioProvider.overrideWithValue(
+          roleLibraryDio(
+            loadPage:
+                loader ??
+                ({required category, required page, required pageSize}) async =>
+                    LibraryRolePage(
+                      items: category == 'official'
+                          ? roles
+                          : roles.take(2).toList(),
+                      page: page,
+                      pageCount: 1,
+                    ),
+            loadDetail: (id) async => roles.firstWhere((role) => role.id == id),
+          ),
         ),
       ],
     );
@@ -122,6 +129,17 @@ void main() {
     await tap(tester, 'role-guide-confirm-cast');
     await tap(tester, 'role-guide-choose-story');
   }
+
+  testWidgets('app bar counts the device top inset only once', (tester) async {
+    await pumpGuide(tester, systemTopInset: 52);
+    expect(tester.getSize(find.byType(AppBar)).height, 56);
+    expect(tester.getTopLeft(find.byType(AppBar)).dy, 52);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('role-guide-scroll'))).dy,
+      52 + 56,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('home character entry opens the guide', (tester) async {
     final container = await pumpGuide(tester);

@@ -75,9 +75,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         primary: false,
         backgroundColor: Colors.transparent,
         drawerScrimColor: const Color(0x33333333),
-        drawer: PopiNavigationDrawer(
-          onNewProject: () => _startSession(l10n.homeStartIp),
-        ),
+        drawer: const PopiNavigationDrawer(),
         onDrawerChanged: (open) => setState(() => _drawerOpen = open),
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(safeArea.top + 56),

@@ -5,10 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../l10n/generated/app_localizations.dart';
-import '../widgets/app_toast.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/app_toast.dart';
 
-/// Shared in-app browser for public H5 content. It never adds app credentials.
+/// In-app browser for public H5 content. It never adds app credentials.
 class H5Page extends StatefulWidget {
   const H5Page({required this.title, required this.url, super.key});
 

@@ -7,20 +7,16 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../providers/safe_area_provider.dart';
+import '../providers/session_provider.dart';
 import '../providers/user_provider.dart';
 import 'app_svg_icon.dart';
-import '../../features/projects/domain/project.dart';
-import 'popi_drawer_projects.dart';
+import '../../features/session/domain/conversation_session.dart';
+import 'popi_drawer_sessions.dart';
 
 class PopiNavigationDrawer extends ConsumerStatefulWidget {
-  const PopiNavigationDrawer({
-    this.onNewProject,
-    this.onOpenConversation,
-    super.key,
-  });
+  const PopiNavigationDrawer({this.onOpenConversation, super.key});
 
-  final VoidCallback? onNewProject;
-  final ValueChanged<ProjectSessionSelection>? onOpenConversation;
+  final ValueChanged<ConversationSession>? onOpenConversation;
 
   @override
   ConsumerState<PopiNavigationDrawer> createState() =>
@@ -73,15 +69,15 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                     width: double.infinity,
                     height: 50,
                     child: OutlinedButton(
-                      key: const Key('drawer-new-project'),
+                      key: const Key('drawer-new-session'),
                       onPressed: () {
                         if (!isLoggedIn) {
                           _openRoute(context, '/login');
-                        } else if (widget.onNewProject != null) {
-                          Navigator.pop(context);
-                          widget.onNewProject!();
                         } else {
-                          _openRoute(context, '/session');
+                          final session = ref
+                              .read(sessionsProvider.notifier)
+                              .create(l10n.newSessionTitle);
+                          _openConversation(context, session);
                         }
                       },
                       style: OutlinedButton.styleFrom(
@@ -96,7 +92,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         children: [
                           Expanded(
                             child: Text(
-                              l10n.newIpProject,
+                              l10n.newSessionTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -123,8 +119,20 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                   Column(
                     children: [
                       _NavigationItem(
+                        key: const Key('drawer-nav-home'),
+                        icon: Icons.home_outlined,
+                        iconWidth: 24,
+                        iconHeight: 24,
+                        label: l10n.home,
+                        onTap: () {
+                          final router = GoRouter.of(context);
+                          Navigator.pop(context);
+                          if (route != '/') router.go('/');
+                        },
+                      ),
+                      _NavigationItem(
                         key: const Key('drawer-nav-ip-accounts'),
-                        iconAsset: 'home_drawer_nav-ip-account',
+                        iconAsset: 'home_drawer_nav_ip_account',
                         label: l10n.myIpAccounts,
                         selected: route == '/ip-accounts',
                         onTap: () => _openProtectedRoute(
@@ -135,7 +143,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                       ),
                       _NavigationItem(
                         key: const Key('drawer-nav-role'),
-                        iconAsset: 'home_drawer_nav-role',
+                        iconAsset: 'home_drawer_nav_role',
                         iconWidth: 18.4994,
                         iconHeight: 20.716,
                         flipIconVertically: true,
@@ -148,7 +156,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                       ),
                       _NavigationItem(
                         key: const Key('drawer-nav-assets'),
-                        iconAsset: 'home_drawer_nav-asset',
+                        iconAsset: 'home_drawer_nav_asset',
                         label: l10n.assets,
                         selected: route == '/assets',
                         onTap: () => _openProtectedRoute(
@@ -167,15 +175,12 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                   ),
                   const SizedBox(height: 9),
                   Expanded(
-                    child: PopiDrawerProjects(
-                      onOpenConversation: (selection) {
+                    child: PopiDrawerSessions(
+                      onOpenConversation: (session) {
                         if (!isLoggedIn) {
                           _openRoute(context, '/login');
-                        } else if (widget.onOpenConversation != null) {
-                          Navigator.pop(context);
-                          widget.onOpenConversation!(selection);
                         } else {
-                          _showPending(context, selection.session.title);
+                          _openConversation(context, session);
                         }
                       },
                     ),
@@ -198,6 +203,21 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
         ),
       ),
     );
+  }
+
+  void _openConversation(BuildContext context, ConversationSession session) {
+    if (widget.onOpenConversation != null) {
+      Navigator.pop(context);
+      widget.onOpenConversation!(session);
+    } else {
+      _openRoute(
+        context,
+        Uri(
+          path: '/session',
+          queryParameters: {'sessionId': session.id},
+        ).toString(),
+      );
+    }
   }
 
   void _openRoute(BuildContext context, String route) {
@@ -223,7 +243,8 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
 
 class _NavigationItem extends StatelessWidget {
   const _NavigationItem({
-    required this.iconAsset,
+    this.iconAsset,
+    this.icon,
     required this.label,
     required this.onTap,
     this.iconWidth = 30,
@@ -231,9 +252,10 @@ class _NavigationItem extends StatelessWidget {
     this.flipIconVertically = false,
     this.selected = false,
     super.key,
-  });
+  }) : assert(iconAsset != null || icon != null);
 
-  final String iconAsset;
+  final String? iconAsset;
+  final IconData? icon;
   final double iconWidth;
   final double iconHeight;
   final bool flipIconVertically;
@@ -275,7 +297,9 @@ class _NavigationItem extends StatelessWidget {
                       child: SizedBox(
                         width: iconWidth,
                         height: iconHeight,
-                        child: AppSvgIcon.asset(iconAsset, color: color),
+                        child: iconAsset != null
+                            ? AppSvgIcon.asset(iconAsset!, color: color)
+                            : Icon(icon, size: iconWidth, color: color),
                       ),
                     ),
                   ),

@@ -133,9 +133,10 @@ void main() {
         final attachment = tester.getRect(
           find.byTooltip(englishDark ? 'Add attachment' : '添加附件'),
         );
-        final voice = tester.getRect(find.byIcon(Icons.mic_none_rounded));
+        final send = tester.getRect(find.byKey(const Key('popi-send-button')));
+        expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
         expect(parameters.left, greaterThanOrEqualTo(attachment.right));
-        expect(parameters.right, lessThanOrEqualTo(voice.left));
+        expect(parameters.right, lessThanOrEqualTo(send.left));
         expect(tester.takeException(), isNull);
         await openParameters(tester);
         expect(find.byType(RoleGenerationSheet), findsOneWidget);

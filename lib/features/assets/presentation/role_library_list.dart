@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
+import '../../../core/network/network_api.dart';
+import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/app_dialog.dart';
@@ -23,6 +25,7 @@ class RoleLibraryList extends ConsumerStatefulWidget {
 }
 
 class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
+  late final RoleLibraryRepository _repository;
   final _scroll = ScrollController();
   List<LibraryRole> _roles = [];
   bool _loading = true;
@@ -38,6 +41,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
   @override
   void initState() {
     super.initState();
+    _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _scroll.addListener(_nearBottom);
     _refresh();
   }
@@ -80,7 +84,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
       _refreshFailed = false;
     });
     try {
-      final result = await ref.read(rolePageLoaderProvider)(
+      final result = await _repository.fetchPage(
         category: widget.category,
         page: 1,
         pageSize: 20,
@@ -121,7 +125,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
       _error = null;
     });
     try {
-      final result = await ref.read(rolePageLoaderProvider)(
+      final result = await _repository.fetchPage(
         category: widget.category,
         page: _page + 1,
         pageSize: 20,
@@ -182,7 +186,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
       );
       if (confirmed != true || !mounted || generation != _generation) return;
       setState(() => _deletingId = role.id);
-      await ref.read(roleDeleteProvider)(role.id);
+      await _repository.delete(role.id);
       if (!mounted) return;
       setState(() => _roles.removeWhere((item) => item.id == role.id));
       // Restart pagination so deleting a row cannot skip the next page's first item.

@@ -1,13 +1,17 @@
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/network_api.dart';
 import '../domain/project.dart';
-import 'project_api.dart';
 
 class ProjectRepository {
   const ProjectRepository(this._api);
 
-  final ProjectApi _api;
+  final NetworkApi _api;
+
+  /// Creates an idempotency key that can be retained across command retries.
+  static String createClientRequestId() => const Uuid().v4();
 
   Future<ProjectSession> createSession(
     String projectId,
@@ -15,7 +19,7 @@ class ProjectRepository {
     required String clientRequestId,
     CancelToken? cancelToken,
   }) => _mutate(() async {
-    final value = await _api.createSession(
+    final value = await _api.createProjectSession(
       projectId,
       _title(title),
       clientRequestId: clientRequestId,
@@ -34,12 +38,21 @@ class ProjectRepository {
     String title, {
     CancelToken? cancelToken,
   }) => _mutate(
-    () =>
-        _api.updateProject(id, title: _title(title), cancelToken: cancelToken),
+    () => _api.updateProject(
+      id,
+      clientRequestId: createClientRequestId(),
+      title: _title(title),
+      cancelToken: cancelToken,
+    ),
   );
 
   Future<void> deleteProject(String id, {CancelToken? cancelToken}) => _mutate(
-    () => _api.updateProject(id, archive: true, cancelToken: cancelToken),
+    () => _api.updateProject(
+      id,
+      clientRequestId: createClientRequestId(),
+      archive: true,
+      cancelToken: cancelToken,
+    ),
   );
 
   Future<void> renameSession(
@@ -47,12 +60,21 @@ class ProjectRepository {
     String title, {
     CancelToken? cancelToken,
   }) => _mutate(
-    () =>
-        _api.updateSession(id, title: _title(title), cancelToken: cancelToken),
+    () => _api.updateProjectSession(
+      id,
+      clientRequestId: createClientRequestId(),
+      title: _title(title),
+      cancelToken: cancelToken,
+    ),
   );
 
   Future<void> deleteSession(String id, {CancelToken? cancelToken}) => _mutate(
-    () => _api.updateSession(id, archived: true, cancelToken: cancelToken),
+    () => _api.updateProjectSession(
+      id,
+      clientRequestId: createClientRequestId(),
+      archived: true,
+      cancelToken: cancelToken,
+    ),
   );
 
   Future<void> setSessionPinned(
@@ -60,7 +82,12 @@ class ProjectRepository {
     bool pinned, {
     CancelToken? cancelToken,
   }) => _mutate(
-    () => _api.updateSession(id, pinned: pinned, cancelToken: cancelToken),
+    () => _api.updateProjectSession(
+      id,
+      clientRequestId: createClientRequestId(),
+      pinned: pinned,
+      cancelToken: cancelToken,
+    ),
   );
 
   Future<T> _mutate<T>(Future<T> Function() action) async {
@@ -97,7 +124,8 @@ class ProjectRepository {
     CancelToken? cancelToken,
   }) async {
     final items = await _pages(
-      (page) => _api.sessionsPage(projectId, page, cancelToken: cancelToken),
+      (page) =>
+          _api.projectSessionsPage(projectId, page, cancelToken: cancelToken),
     );
     final sessions = {
       for (final item in items)

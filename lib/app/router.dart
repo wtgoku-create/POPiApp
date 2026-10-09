@@ -10,7 +10,7 @@ import '../features/ip_accounts/presentation/ip_accounts_page.dart';
 import '../features/session/presentation/session_page.dart';
 import '../core/config/app_config.dart';
 import '../l10n/generated/app_localizations.dart';
-import '../shared/pages/h5_page.dart';
+import '../features/h5/presentation/h5_page.dart';
 import '../features/profile/presentation/edit_profile_page.dart';
 import '../features/profile/presentation/membership_page.dart';
 import '../features/profile/presentation/points_details_page.dart';
@@ -35,8 +35,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
       GoRoute(
         path: '/session',
-        builder: (context, state) =>
-            SessionPage(initialPrompt: state.uri.queryParameters['prompt']),
+        builder: (context, state) => SessionPage(
+          initialPrompt: state.uri.queryParameters['prompt'],
+          sessionId: state.uri.queryParameters['sessionId'],
+        ),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(
@@ -61,7 +63,7 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
       GoRoute(
         path: '/assets',
-        builder: (context, state) => AssetsPage.sample(
+        builder: (context, state) => AssetsPage(
           initialSection: state.uri.queryParameters['section'] == 'roles'
               ? AssetLibrarySection.roles
               : AssetLibrarySection.works,

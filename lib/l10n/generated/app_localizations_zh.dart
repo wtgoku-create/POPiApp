@@ -356,6 +356,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoCoverPreview => '视频封面预览';
 
   @override
+  String get videoPlay => '播放';
+
+  @override
+  String get videoPause => '暂停';
+
+  @override
+  String get videoMute => '静音';
+
+  @override
+  String get videoUnmute => '取消静音';
+
+  @override
+  String get videoSeek => '播放进度';
+
+  @override
+  String get videoLoadFailed => '视频播放失败';
+
+  @override
   String get assetDownloadUnavailable => '当前资产没有可下载的源文件';
 
   @override
@@ -969,6 +987,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get newIpProject => '新建IP项目';
+
+  @override
+  String get drawerSessions => '会话';
+
+  @override
+  String sessionItemOptions(String name) {
+    return '会话“$name”的操作';
+  }
 
   @override
   String projectCount(int count) {

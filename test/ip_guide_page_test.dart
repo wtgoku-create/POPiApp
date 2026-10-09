@@ -83,7 +83,38 @@ void main() {
     final menu = find.byKey(const Key('ip-guide-menu'));
     expect(tester.getSize(menu), const Size(40, 40));
     expect(tester.getTopLeft(menu).dy, 52 + 8);
-    expect(tester.getTopLeft(find.byType(TabBar)).dy, 52 + 56);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('ip-guide-progress'))).dy,
+      52 + 56,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('progress only displays the current step and cannot navigate', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    for (var step = 0; step < 5; step++) {
+      final indicator = find.byKey(Key('ip-guide-progress-$step'));
+      final semantics = tester.widget<Semantics>(indicator).properties;
+      expect(semantics.selected, step == 0);
+      expect(semantics.button, isNot(true));
+      expect(semantics.onTap, isNull);
+      await tester.tap(indicator);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+    }
+    await tap(tester, 'ip-guide-start');
+    await tester.tap(find.byKey(const Key('ip-guide-progress-0')));
+    await tester.pumpAndSettle();
+    expect(find.text('你想长期分享什么？'), findsOneWidget);
+    expect(
+      tester
+          .widget<Semantics>(find.byKey(const Key('ip-guide-progress-1')))
+          .properties
+          .selected,
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -134,10 +165,10 @@ void main() {
   );
 
   testWidgets(
-    'tabs retain custom answers and fields enforce character limits',
+    'back navigation retains custom answers and fields enforce character limits',
     (tester) async {
       await pumpGuide(tester);
-      await tap(tester, 'ip-guide-tab-1');
+      await tap(tester, 'ip-guide-start');
       await tap(tester, 'ip-direction-campus');
       await tester.enterText(field('ip-custom-direction'), '独立音乐');
       await tester.pumpAndSettle();
@@ -157,7 +188,9 @@ void main() {
         tester.widget<TextField>(field('ip-nickname')).controller!.text,
         'abcdefghijklmno',
       );
-      await tap(tester, 'ip-guide-tab-1');
+      for (var i = 0; i < 3; i++) {
+        await tap(tester, 'ip-guide-back');
+      }
       expect(
         tester.widget<TextField>(field('ip-custom-direction')).controller!.text,
         '独立音乐',
@@ -192,8 +225,9 @@ void main() {
     await tap(tester, 'ip-guide-start');
     await tap(tester, 'ip-guide-next-1');
     expect(find.text('你想长期分享什么？'), findsOneWidget);
-    await tap(tester, 'ip-guide-tab-4');
-    await tap(tester, 'ip-confirm');
+    await tester.tap(find.byKey(const Key('ip-guide-progress-4')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('ip-confirm')), findsNothing);
     expect(find.byType(SessionPage), findsNothing);
     expect(find.text('你想长期分享什么？'), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
@@ -258,13 +292,12 @@ void main() {
         );
         expect(
           tester
-              .widget<TabBar>(find.byType(TabBar))
+              .widget<TabBarView>(find.byType(TabBarView))
               .controller!
               .animationDuration,
           Duration.zero,
         );
         for (var step = 0; step < 5; step++) {
-          await tap(tester, 'ip-guide-tab-$step');
           final key = step == 0
               ? 'ip-guide-start'
               : step == 4
@@ -274,6 +307,11 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byKey(Key(key)).hitTestable(), findsOneWidget);
           expect(tester.takeException(), isNull);
+          if (step == 4) continue;
+          if (step == 1) await tap(tester, 'ip-direction-campus');
+          if (step == 2) await tap(tester, 'ip-feeling-authentic');
+          if (step == 3) await tap(tester, 'ip-presentation-animation3d');
+          await tap(tester, key);
         }
       },
     );

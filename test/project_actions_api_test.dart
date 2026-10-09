@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
-import 'package:popi_ai_app/features/projects/data/project_api.dart';
+import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 
 void main() {
@@ -28,8 +28,8 @@ void main() {
         },
       ),
     );
-    final requestId = ProjectApi.createClientRequestId();
-    final session = await ProjectRepository(ProjectApi(dio)).createSession(
+    final requestId = ProjectRepository.createClientRequestId();
+    final session = await ProjectRepository(NetworkApi(dio)).createSession(
       'project / 1',
       ' New conversation ',
       clientRequestId: requestId,
@@ -60,7 +60,7 @@ void main() {
     );
     await expectLater(
       ProjectRepository(
-        ProjectApi(dio),
+        NetworkApi(dio),
       ).createSession('p', 'New', clientRequestId: 'key'),
       throwsA(isA<ApiException>()),
     );
@@ -86,7 +86,7 @@ void main() {
     );
     await expectLater(
       ProjectRepository(
-        ProjectApi(dio),
+        NetworkApi(dio),
       ).createSession('p', 'New', clientRequestId: 'key'),
       throwsA(
         isA<ApiException>().having(
@@ -138,7 +138,7 @@ void main() {
               },
             ),
           );
-          final repository = ProjectRepository(ProjectApi(dio));
+          final repository = ProjectRepository(NetworkApi(dio));
           if (project) {
             if (change.containsKey('title')) {
               await repository.renameProject('id / 1', ' Renamed ');
@@ -199,8 +199,8 @@ void main() {
           );
           await expectLater(
             project
-                ? ProjectRepository(ProjectApi(dio)).deleteProject('1')
-                : ProjectRepository(ProjectApi(dio)).deleteSession('1'),
+                ? ProjectRepository(NetworkApi(dio)).deleteProject('1')
+                : ProjectRepository(NetworkApi(dio)).deleteSession('1'),
             throwsA(isA<ApiException>()),
           );
           expect(requests.map((request) => request.method), ['GET']);
@@ -242,7 +242,7 @@ void main() {
       ),
     );
     await expectLater(
-      ProjectRepository(ProjectApi(dio)).setSessionPinned('1', true),
+      ProjectRepository(NetworkApi(dio)).setSessionPinned('1', true),
       throwsA(
         isA<ApiException>()
             .having((error) => error.statusCode, 'status', 409)
@@ -269,7 +269,7 @@ void main() {
         },
       ),
     );
-    final repository = ProjectRepository(ProjectApi(dio));
+    final repository = ProjectRepository(NetworkApi(dio));
     for (final title in [
       '   ',
       List.filled(201, 'a').join(),

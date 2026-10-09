@@ -9,8 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
-import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
-import 'package:popi_ai_app/features/assets/domain/library_role.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -24,6 +23,8 @@ import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
+
+import 'support/role_library_fixtures.dart';
 
 void main() {
   setUp(() {
@@ -74,10 +75,7 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
-          rolePageLoaderProvider.overrideWithValue(
-            ({required category, required page, required pageSize}) async =>
-                LibraryRolePage(items: const [], page: page, pageCount: 0),
-          ),
+          dioProvider.overrideWithValue(roleLibraryDio()),
         ],
         child: MaterialApp.router(
           theme: theme ?? AppTheme.light,

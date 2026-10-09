@@ -14,7 +14,6 @@ import 'package:popi_ai_app/features/profile/domain/social_app_binding.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/widgets/social_app_binding_row.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
-import 'package:popi_ai_app/shared/providers/social_binding_provider.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/type/social_app_type.dart';
@@ -25,6 +24,7 @@ void main() {
   late _BindingApi api;
   late _WechatService wechat;
   late _DouyinService douyin;
+  late SocialAppBindingRepository repository;
   late ProviderContainer container;
 
   setUp(() async {
@@ -33,17 +33,13 @@ void main() {
     api = _BindingApi();
     wechat = _WechatService();
     douyin = _DouyinService();
+    repository = SocialAppBindingRepository(
+      api: api,
+      wechatService: wechat,
+      douyinService: douyin,
+    );
     container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(preferences),
-        socialAppBindingRepositoryProvider.overrideWithValue(
-          SocialAppBindingRepository(
-            api: api,
-            wechatService: wechat,
-            douyinService: douyin,
-          ),
-        ),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
     );
     await container
         .read(userProvider.notifier)
@@ -66,13 +62,19 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             home: profile
-                ? const ProfilePage()
-                : const Scaffold(
+                ? ProfilePage(socialBindingRepository: repository)
+                : Scaffold(
                     body: Column(
                       children: [
-                        SizedBox(height: 180),
-                        SocialAppBindingRow(app: SocialAppType.wechat),
-                        SocialAppBindingRow(app: SocialAppType.douyin),
+                        const SizedBox(height: 180),
+                        SocialAppBindingRow(
+                          app: SocialAppType.wechat,
+                          repository: repository,
+                        ),
+                        SocialAppBindingRow(
+                          app: SocialAppType.douyin,
+                          repository: repository,
+                        ),
                       ],
                     ),
                   ),

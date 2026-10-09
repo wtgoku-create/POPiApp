@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/point_package_repository.dart';
+import '../data/social_app_binding_repository.dart';
 import 'points_details_page.dart';
 import 'widgets/profile_chrome.dart';
 import 'widgets/profile_settings_row.dart';
@@ -21,16 +22,36 @@ import 'widgets/social_app_binding_row.dart';
 
 export 'widgets/profile_settings_row.dart';
 
-final _languageMenuExpandedProvider = StateProvider<bool>((ref) => false);
-final _themeMenuExpandedProvider = StateProvider<bool>((ref) => false);
-
-class ProfilePage extends ConsumerWidget {
-  const ProfilePage({this.pointPackageLoader, super.key});
+class ProfilePage extends ConsumerStatefulWidget {
+  const ProfilePage({
+    this.pointPackageLoader,
+    this.socialBindingRepository,
+    super.key,
+  });
 
   final PointPackageLoader? pointPackageLoader;
+  final SocialAppBindingRepository? socialBindingRepository;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  bool _languageExpanded = false;
+  bool _themeExpanded = false;
+
+  Future<void> _setLocale(Locale? locale) async {
+    await ref.read(localeProvider.notifier).setLocale(locale);
+    if (mounted) setState(() => _languageExpanded = false);
+  }
+
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    await ref.read(themeModeProvider.notifier).setThemeMode(mode);
+    if (mounted) setState(() => _themeExpanded = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
     final displayId = user?.code.isNotEmpty == true
@@ -41,8 +62,6 @@ class ProfilePage extends ConsumerWidget {
         : '--';
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final languageExpanded = ref.watch(_languageMenuExpandedProvider);
-    final themeExpanded = ref.watch(_themeMenuExpandedProvider);
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final VoidCallback? copyUid = displayId == '--'
@@ -131,7 +150,7 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                MembershipCard(pointPackageLoader: pointPackageLoader),
+                MembershipCard(pointPackageLoader: widget.pointPackageLoader),
                 const SizedBox(height: 12),
                 SettingsGroup(
                   children: [
@@ -144,8 +163,14 @@ class ProfilePage extends ConsumerWidget {
                       value: '+86 $displayPhone',
                       showChevron: false,
                     ),
-                    const SocialAppBindingRow(app: SocialAppType.wechat),
-                    const SocialAppBindingRow(app: SocialAppType.douyin),
+                    SocialAppBindingRow(
+                      app: SocialAppType.wechat,
+                      repository: widget.socialBindingRepository,
+                    ),
+                    SocialAppBindingRow(
+                      app: SocialAppType.douyin,
+                      repository: widget.socialBindingRepository,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -156,57 +181,25 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.translate,
                       label: l10n.language,
                       value: _languageLabel(locale, l10n),
-                      expanded: languageExpanded,
-                      onToggle: () =>
-                          ref
-                                  .read(_languageMenuExpandedProvider.notifier)
-                                  .state =
-                              !languageExpanded,
+                      expanded: _languageExpanded,
+                      onToggle: () => setState(
+                        () => _languageExpanded = !_languageExpanded,
+                      ),
                       options: [
                         TreeSettingsOption(
                           label: l10n.chinese,
                           selected: locale?.languageCode == 'zh',
-                          onTap: () async {
-                            await ref
-                                .read(localeProvider.notifier)
-                                .setLocale(const Locale('zh'));
-                            ref
-                                    .read(
-                                      _languageMenuExpandedProvider.notifier,
-                                    )
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setLocale(const Locale('zh')),
                         ),
                         TreeSettingsOption(
                           label: l10n.english,
                           selected: locale?.languageCode == 'en',
-                          onTap: () async {
-                            await ref
-                                .read(localeProvider.notifier)
-                                .setLocale(const Locale('en'));
-                            ref
-                                    .read(
-                                      _languageMenuExpandedProvider.notifier,
-                                    )
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setLocale(const Locale('en')),
                         ),
                         TreeSettingsOption(
                           label: l10n.system,
                           selected: locale == null,
-                          onTap: () async {
-                            await ref
-                                .read(localeProvider.notifier)
-                                .setLocale(null);
-                            ref
-                                    .read(
-                                      _languageMenuExpandedProvider.notifier,
-                                    )
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setLocale(null),
                         ),
                       ],
                     ),
@@ -215,49 +208,24 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.dark_mode_outlined,
                       label: l10n.theme,
                       value: _themeLabel(themeMode, l10n),
-                      expanded: themeExpanded,
+                      expanded: _themeExpanded,
                       onToggle: () =>
-                          ref.read(_themeMenuExpandedProvider.notifier).state =
-                              !themeExpanded,
+                          setState(() => _themeExpanded = !_themeExpanded),
                       options: [
                         TreeSettingsOption(
                           label: l10n.light,
                           selected: themeMode == ThemeMode.light,
-                          onTap: () async {
-                            await ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.light);
-                            ref
-                                    .read(_themeMenuExpandedProvider.notifier)
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setThemeMode(ThemeMode.light),
                         ),
                         TreeSettingsOption(
                           label: l10n.dark,
                           selected: themeMode == ThemeMode.dark,
-                          onTap: () async {
-                            await ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.dark);
-                            ref
-                                    .read(_themeMenuExpandedProvider.notifier)
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setThemeMode(ThemeMode.dark),
                         ),
                         TreeSettingsOption(
                           label: l10n.system,
                           selected: themeMode == ThemeMode.system,
-                          onTap: () async {
-                            await ref
-                                .read(themeModeProvider.notifier)
-                                .setThemeMode(ThemeMode.system);
-                            ref
-                                    .read(_themeMenuExpandedProvider.notifier)
-                                    .state =
-                                false;
-                          },
+                          onTap: () => _setThemeMode(ThemeMode.system),
                         ),
                       ],
                     ),
@@ -382,7 +350,7 @@ class MembershipCard extends ConsumerWidget {
                 child: Row(
                   children: [
                     const AppSvgIcon.asset(
-                      'common_brand_icon-vector',
+                      'common_brand_icon_vector',
                       key: Key('profile-points-icon'),
                       size: 12,
                     ),

@@ -1,53 +1,42 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/network/network_api.dart';
-import '../../../shared/providers/network_provider.dart';
 import '../domain/library_role.dart';
-import 'role_profile_api.dart';
 
-typedef RoleProfileSaver =
-    Future<LibraryRole> Function(String id, Map<String, Object?> profile);
+/// Loads role data on demand without retaining page state or cached results.
+class RoleLibraryRepository {
+  const RoleLibraryRepository(this._api);
 
-final roleProfileSaverProvider = Provider<RoleProfileSaver>((ref) {
-  final dio = ref.watch(dioProvider);
-  final api = RoleProfileApi(dio);
-  final details = NetworkApi(dio);
-  return (id, profile) async {
-    await api.save(id, profile);
-    return LibraryRole.fromJson(await details.libraryRoleDetail(id));
-  };
-});
+  final NetworkApi _api;
 
-final roleDetailLoaderProvider = Provider<Future<LibraryRole> Function(String)>(
-  (ref) {
-    final api = NetworkApi(ref.watch(dioProvider));
-    return (id) async => LibraryRole.fromJson(await api.libraryRoleDetail(id));
-  },
-);
+  Future<LibraryRolePage> fetchPage({
+    required String category,
+    required int page,
+    required int pageSize,
+  }) async => LibraryRolePage.fromJson(
+    await _api.listLibraryRoles(
+      category: category,
+      page: page,
+      pageSize: pageSize,
+    ),
+  );
 
-final roleDeleteProvider = Provider<Future<void> Function(String)>((ref) {
-  final api = NetworkApi(ref.watch(dioProvider));
-  return (id) => api.deleteLibraryRole(
+  Future<LibraryRole> fetchDetail(String id) async =>
+      LibraryRole.fromJson(await _api.libraryRoleDetail(id));
+
+  Future<void> delete(String id) => _api.deleteLibraryRole(
     id,
     'mobile-role-delete-${DateTime.now().microsecondsSinceEpoch}',
   );
-});
 
-typedef RolePageLoader =
-    Future<LibraryRolePage> Function({
-      required String category,
-      required int page,
-      required int pageSize,
-    });
-
-final rolePageLoaderProvider = Provider<RolePageLoader>((ref) {
-  final api = NetworkApi(ref.watch(dioProvider));
-  return ({required category, required page, required pageSize}) async =>
-      LibraryRolePage.fromJson(
-        await api.listLibraryRoles(
-          category: category,
-          page: page,
-          pageSize: pageSize,
-        ),
-      );
-});
+  Future<LibraryRole> saveProfile(
+    String id,
+    Map<String, Object?> profile,
+  ) async {
+    await _api.saveLibraryRoleProfile(
+      id,
+      profile,
+      clientRequestId:
+          'mobile-role-profile-save-${DateTime.now().microsecondsSinceEpoch}',
+    );
+    return fetchDetail(id);
+  }
+}

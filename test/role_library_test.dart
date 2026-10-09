@@ -7,11 +7,13 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
-import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_library_list.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+
+import 'support/role_library_fixtures.dart';
 
 LibraryRole role(int id, {bool canEdit = false}) => LibraryRole(
   id: '$id',
@@ -36,10 +38,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          rolePageLoaderProvider.overrideWithValue(loader),
-          roleDeleteProvider.overrideWithValue(delete ?? (_) async {}),
-          roleDetailLoaderProvider.overrideWithValue(
-            (id) async => role(int.parse(id)),
+          dioProvider.overrideWithValue(
+            roleLibraryDio(
+              loadPage: loader,
+              delete: delete,
+              loadDetail: (id) async => role(int.parse(id)),
+            ),
           ),
         ],
         child: MaterialApp(
@@ -73,6 +77,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('reopening the role library requests fresh data', (tester) async {
+    var requests = 0;
+    Future<LibraryRolePage> load({
+      required String category,
+      required int page,
+      required int pageSize,
+    }) async =>
+        LibraryRolePage(items: [role(++requests)], page: page, pageCount: 1);
+    await pumpRoles(tester, load);
+    await tester.pumpAndSettle();
+    expect(find.text('Role 1'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await pumpRoles(tester, load);
+    await tester.pumpAndSettle();
+    expect(requests, 2);
+    expect(find.text('Role 2'), findsOneWidget);
+    expect(find.text('Role 1'), findsNothing);
+  });
+
   testWidgets(
     'empty role loading uses skeletons and keeps rows during refresh',
     (tester) async {
@@ -101,8 +124,8 @@ void main() {
       pending.complete(
         LibraryRolePage(items: [role(2)], page: 1, pageCount: 1),
       );
-      await loading;
       await tester.pumpAndSettle();
+      await loading;
       expect(find.text('Role 1'), findsNothing);
       expect(find.text('Role 2'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -130,8 +153,8 @@ void main() {
     expect(find.byKey(const Key('roles-skeleton')), findsOneWidget);
     expect(find.text('暂无官方角色'), findsNothing);
     completer.complete(const LibraryRolePage(items: [], page: 1, pageCount: 0));
-    await loading;
     await tester.pumpAndSettle();
+    await loading;
     expect(find.byKey(const Key('roles-skeleton')), findsNothing);
     expect(find.text('暂无官方角色'), findsOneWidget);
   });

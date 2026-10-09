@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/network/network_api.dart';
+import '../../../../shared/providers/network_provider.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../assets/data/role_library_repository.dart';
@@ -36,6 +38,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
 }
 
 class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
+  late final RoleLibraryRepository _repository;
   late String _category;
   final _roles = <LibraryRole>[];
   bool _loading = true;
@@ -47,6 +50,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   @override
   void initState() {
     super.initState();
+    _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _category = widget.initialCategory;
     _load();
   }
@@ -82,7 +86,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       _failed = false;
     });
     try {
-      final result = await ref.read(rolePageLoaderProvider)(
+      final result = await _repository.fetchPage(
         category: _category,
         page: _page + 1,
         pageSize: 20,

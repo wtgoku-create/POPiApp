@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/network_api.dart';
+import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -28,6 +30,7 @@ class RoleDetailPage extends ConsumerStatefulWidget {
 }
 
 class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
+  late final RoleLibraryRepository _repository;
   late LibraryRole _role;
   bool _loading = true;
   bool _failed = false;
@@ -84,10 +87,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _saving = true);
     try {
-      final updated = await ref.read(roleProfileSaverProvider)(
-        _role.id,
-        profile,
-      );
+      final updated = await _repository.saveProfile(_role.id, profile);
       if (!mounted) return;
       setState(() {
         _role = updated;
@@ -106,6 +106,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
   @override
   void initState() {
     super.initState();
+    _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _role = widget.role;
     _load();
   }
@@ -116,7 +117,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
       _failed = false;
     });
     try {
-      final role = await ref.read(roleDetailLoaderProvider)(_role.id);
+      final role = await _repository.fetchDetail(_role.id);
       if (mounted) setState(() => _role = role);
     } catch (_) {
       if (mounted) setState(() => _failed = true);

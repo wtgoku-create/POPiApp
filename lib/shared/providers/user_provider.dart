@@ -19,16 +19,13 @@ final userProvider = NotifierProvider<UserController, User?>(
 );
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final networkApi = NetworkApi(ref.watch(dioProvider));
   return AuthRepository(
-    api: DefaultAuthApi(NetworkApi(ref.watch(dioProvider))),
+    api: DefaultAuthApi(networkApi),
     secureStorage: ref.watch(secureStorageProvider),
-    douyinApi: ref.watch(douyinAuthApiProvider),
+    douyinApi: DefaultDouyinAuthApi(networkApi),
   );
 });
-
-final douyinAuthApiProvider = Provider<DouyinAuthApi>(
-  (ref) => DefaultDouyinAuthApi(NetworkApi(ref.watch(dioProvider))),
-);
 
 final userStatusProvider = Provider<UserStatus>((ref) {
   return ref.watch(userProvider) == null

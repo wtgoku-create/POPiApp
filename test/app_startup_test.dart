@@ -96,7 +96,7 @@ void main() {
     const protectedDrawerEntries = [
       'drawer-nav-role',
       'drawer-nav-assets',
-      'drawer-new-project',
+      'drawer-new-session',
       'drawer-notification-button',
       'drawer-profile-button',
     ];

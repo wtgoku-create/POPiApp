@@ -52,7 +52,7 @@ lib/shared/providers/
 
 新增全局状态时，按职责创建独立文件，不要把所有 Provider 堆到一个文件中。
 
-页面或业务专属的临时状态可以放在对应 `features/<feature>/presentation/` 下。
+页面内部的分页、筛选和加载状态由页面本地管理。打开页面时请求的数据直接通过 Repository 获取，不为简单接口调用创建额外 Provider；跨页面或应用级共享的状态才使用 Provider。共享 Dio、存储等基础依赖继续通过现有 Provider 获取。
 
 ## 类型定义
 
@@ -67,7 +67,8 @@ lib/shared/type/
 ## 网络层
 
 - 页面和 Provider 不直接拼接 Dio 请求。
-- API 定义放在对应 feature 的 `data/` 目录。
+- 所有后端请求 URL、HTTP 方法和请求参数统一在 `lib/core/network/network_api.dart` 的 `NetworkApi` 中定义，feature 文件不得直接发起 Dio 请求或定义接口路径。
+- feature 专属的 API 适配和业务数据转换放在对应 feature 的 `data/` 目录，通过 `NetworkApi` 调用接口。
 - 业务调用通过 Repository 暴露。
 - 统一使用 `dioProvider` 获取 Dio。
 - Token 由 `AuthInterceptor` 自动添加。

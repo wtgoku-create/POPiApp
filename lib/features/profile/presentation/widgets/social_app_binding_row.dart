@@ -3,20 +3,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../auth/data/wechat_login_service.dart';
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/providers/social_binding_provider.dart';
+import '../../../../shared/providers/network_provider.dart';
+import '../../../../shared/providers/social_login_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/type/social_app_type.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../data/social_app_binding_api.dart';
+import '../../data/social_app_binding_repository.dart';
 import '../../domain/social_app_binding.dart';
 import 'profile_settings_row.dart';
 
 /// Loads fresh binding state whenever the profile is opened or the user changes.
 class SocialAppBindingRow extends ConsumerStatefulWidget {
-  const SocialAppBindingRow({required this.app, super.key});
+  const SocialAppBindingRow({required this.app, this.repository, super.key});
 
   final SocialAppType app;
+  final SocialAppBindingRepository? repository;
 
   @override
   ConsumerState<SocialAppBindingRow> createState() =>
@@ -24,6 +29,7 @@ class SocialAppBindingRow extends ConsumerStatefulWidget {
 }
 
 class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
+  late SocialAppBindingRepository _repository;
   AsyncValue<SocialAppBinding?> _binding = const AsyncData(null);
   bool _bindingInProgress = false;
   int _generation = 0;
@@ -31,11 +37,30 @@ class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
   @override
   void initState() {
     super.initState();
+    _repository = _createRepository();
     ref.listenManual(
       userProvider.select((user) => user?.id),
       (_, __) => unawaited(_load()),
       fireImmediately: true,
     );
+  }
+
+  SocialAppBindingRepository _createRepository() =>
+      widget.repository ??
+      SocialAppBindingRepository(
+        api: SocialAppBindingApi(ref.read(dioProvider)),
+        wechatService: WechatLoginService(),
+        douyinService: ref.read(douyinLoginServiceProvider),
+      );
+
+  @override
+  void didUpdateWidget(covariant SocialAppBindingRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.repository, widget.repository) ||
+        oldWidget.app != widget.app) {
+      _repository = _createRepository();
+      unawaited(_load());
+    }
   }
 
   Future<void> _load() async {
@@ -47,8 +72,7 @@ class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
     });
     if (!signedIn) return;
     final result = await AsyncValue.guard(
-      () =>
-          ref.read(socialAppBindingRepositoryProvider).fetchStatus(widget.app),
+      () => _repository.fetchStatus(widget.app),
     );
     if (mounted && generation == _generation) {
       setState(() => _binding = result);
@@ -61,12 +85,10 @@ class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
     final l10n = AppLocalizations.of(context)!;
     setState(() => _bindingInProgress = true);
     try {
-      final binding = await ref
-          .read(socialAppBindingRepositoryProvider)
-          .bind(
-            widget.app,
-            isCurrentUser: () => mounted && generation == _generation,
-          );
+      final binding = await _repository.bind(
+        widget.app,
+        isCurrentUser: () => mounted && generation == _generation,
+      );
       if (!mounted || generation != _generation) return;
       setState(() => _binding = AsyncData(binding));
       AppToast.success(context, l10n.socialBindingSucceeded);

@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
+import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
@@ -23,10 +24,16 @@ import '../../../shared/widgets/popi_membership_entry.dart';
 
 /// Creation session with a prompt composer and attachment selection.
 class SessionPage extends ConsumerStatefulWidget {
-  const SessionPage({this.pickImages, this.initialPrompt, super.key});
+  const SessionPage({
+    this.pickImages,
+    this.initialPrompt,
+    this.sessionId,
+    super.key,
+  });
 
   final Future<List<XFile>> Function()? pickImages;
   final String? initialPrompt;
+  final String? sessionId;
 
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
@@ -44,6 +51,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   bool _mentionMode = false;
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
+  String? _activeSessionId;
 
   static const _maxImageCount = 5;
   static const _maxImageBytes = 6 * 1024 * 1024;
@@ -51,11 +59,28 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   void initState() {
     super.initState();
+    _activeSessionId = widget.sessionId;
     if (widget.initialPrompt != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _selectPrompt(widget.initialPrompt!);
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(SessionPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId != widget.sessionId) {
+      _activeSessionId = widget.sessionId;
+      _resetComposer();
+    }
+  }
+
+  void _resetComposer() {
+    _selectedImages.clear();
+    _mentionMode = false;
+    _messageController.setText('');
+    _messageController.dismissKeyboard();
   }
 
   @override
@@ -88,6 +113,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(userProvider.select((user) => user?.id), (previous, next) {
+      if (previous == next) return;
+      setState(() {
+        _activeSessionId = null;
+        _resetComposer();
+      });
+    });
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
@@ -105,6 +137,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final user = ref.watch(userProvider);
     final isLoggedIn = user != null;
     final pointsBalance = user?.allCoins ?? 0;
+    final activeSession = ref
+        .watch(sessionsProvider)
+        .where((session) => session.id == _activeSessionId)
+        .firstOrNull;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -126,9 +162,18 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
           drawer: PopiNavigationDrawer(
-            onNewProject: () => _selectPrompt(l10n.homePromptCreateIp),
-            onOpenConversation: (selection) =>
-                _openConversation(selection.session.id),
+            onOpenConversation: (session) {
+              setState(() {
+                _activeSessionId = session.id;
+                _resetComposer();
+              });
+              GoRouter.maybeOf(context)?.replace(
+                Uri(
+                  path: '/session',
+                  queryParameters: {'sessionId': session.id},
+                ).toString(),
+              );
+            },
           ),
           drawerScrimColor: const Color(0x33333333),
           onDrawerChanged: (isOpened) {
@@ -151,6 +196,15 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     elevation: 0,
                     toolbarHeight: 56,
                     leadingWidth: 80,
+                    title: activeSession == null
+                        ? null
+                        : Text(
+                            activeSession.title,
+                            key: const Key('session-active-title'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                     leading: Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(

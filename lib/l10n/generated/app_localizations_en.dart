@@ -373,6 +373,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoCoverPreview => 'Video cover preview';
 
   @override
+  String get videoPlay => 'Play';
+
+  @override
+  String get videoPause => 'Pause';
+
+  @override
+  String get videoMute => 'Mute';
+
+  @override
+  String get videoUnmute => 'Unmute';
+
+  @override
+  String get videoSeek => 'Playback position';
+
+  @override
+  String get videoLoadFailed => 'Could not play this video';
+
+  @override
   String get assetDownloadUnavailable =>
       'No source file is available to download';
 
@@ -1007,6 +1025,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get newIpProject => 'New IP project';
+
+  @override
+  String get drawerSessions => 'Conversations';
+
+  @override
+  String sessionItemOptions(String name) {
+    return 'Options for conversation $name';
+  }
 
   @override
   String projectCount(int count) {

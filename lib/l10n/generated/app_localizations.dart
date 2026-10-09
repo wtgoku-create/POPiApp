@@ -738,6 +738,42 @@ abstract class AppLocalizations {
   /// **'Video cover preview'**
   String get videoCoverPreview;
 
+  /// No description provided for @videoPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get videoPlay;
+
+  /// No description provided for @videoPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get videoPause;
+
+  /// No description provided for @videoMute.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute'**
+  String get videoMute;
+
+  /// No description provided for @videoUnmute.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmute'**
+  String get videoUnmute;
+
+  /// No description provided for @videoSeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback position'**
+  String get videoSeek;
+
+  /// No description provided for @videoLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not play this video'**
+  String get videoLoadFailed;
+
   /// No description provided for @assetDownloadUnavailable.
   ///
   /// In en, this message translates to:
@@ -1920,6 +1956,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New IP project'**
   String get newIpProject;
+
+  /// No description provided for @drawerSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get drawerSessions;
+
+  /// No description provided for @sessionItemOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Options for conversation {name}'**
+  String sessionItemOptions(String name);
 
   /// No description provided for @projectCount.
   ///

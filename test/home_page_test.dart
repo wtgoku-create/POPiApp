@@ -8,8 +8,7 @@ import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
-import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
-import 'package:popi_ai_app/features/assets/domain/library_role.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
@@ -19,6 +18,7 @@ import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'support/project_fixtures.dart';
+import 'support/role_library_fixtures.dart';
 
 void main() {
   Future<ProviderContainer> pumpHome(
@@ -29,7 +29,9 @@ void main() {
     User? user,
     double textScale = 1,
     double systemTopInset = 0,
+    EdgeInsets? safeArea,
   }) async {
+    safeArea ??= const EdgeInsets.only(top: 52, bottom: 34);
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     tester.view.padding = FakeViewPadding(top: systemTopInset);
@@ -39,10 +41,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
-        rolePageLoaderProvider.overrideWithValue(
-          ({required category, required page, required pageSize}) async =>
-              LibraryRolePage(items: const [], page: page, pageCount: 1),
-        ),
+        dioProvider.overrideWithValue(roleLibraryDio()),
       ],
     );
     addTearDown(container.dispose);
@@ -90,7 +89,7 @@ void main() {
       );
       expect(
         tester.getTopLeft(find.byKey(const Key('home-banner-carousel'))).dy,
-        topInset + 56 + 20,
+        topInset + 56 + 12,
       );
       expect(tester.takeException(), isNull);
     });
@@ -268,17 +267,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('home drawer starts the IP creation guide', (tester) async {
+  testWidgets('home drawer starts a new mock conversation', (tester) async {
     await pumpHome(
       tester,
       user: const User(id: '1', name: '用户', email: ''),
     );
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('drawer-new-project')));
+    await tester.tap(find.byKey(const Key('drawer-new-session')));
     await tester.pumpAndSettle();
-    expect(find.byType(IpGuidePage), findsOneWidget);
-    expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+    expect(find.byType(SessionPage), findsOneWidget);
+    expect(find.byKey(const Key('session-active-title')), findsOneWidget);
+    expect(find.text('新会话'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

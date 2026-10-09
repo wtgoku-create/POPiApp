@@ -215,7 +215,7 @@ void main() {
       112,
     );
     expect(find.text('SDXL1.0'), findsNothing);
-    expect(find.byTooltip('语音输入'), findsOneWidget);
+    expect(find.byTooltip('语音输入'), findsNothing);
     expect(find.text('AI生成结果可能有误，仅供参考'), findsOneWidget);
     await tester.tapAt(const Offset(10, 800));
     await tester.pump();
@@ -274,7 +274,7 @@ void main() {
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    expect(find.text('新建IP项目'), findsOneWidget);
+    expect(find.text('新会话'), findsOneWidget);
     expect(find.text('搜索对话'), findsNothing);
     expect(find.text('POPi对话'), findsNothing);
     expect(find.text('当前用户'), findsOneWidget);
@@ -283,14 +283,14 @@ void main() {
       tester.getSize(find.byKey(const Key('drawer-user-summary'))).width,
       greaterThan(81),
     );
-    expect(find.text('项目(5)'), findsOneWidget);
-    expect(find.text('爱丽丝'), findsOneWidget);
+    expect(find.text('项目(5)'), findsNothing);
+    expect(find.text('会话'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.byKey(const Key('drawer-new-project'))).dy,
+      tester.getTopLeft(find.byKey(const Key('drawer-new-session'))).dy,
       53,
     );
     expect(
-      tester.getSize(find.byKey(const Key('drawer-new-project'))),
+      tester.getSize(find.byKey(const Key('drawer-new-session'))),
       const Size(320, 50),
     );
     expect(find.text('我的IP账号'), findsOneWidget);
@@ -300,11 +300,8 @@ void main() {
     final navigationInkWell = tester.widget<InkWell>(
       find.ancestor(of: find.text('角色'), matching: find.byType(InkWell)),
     );
-    final projectInkWell = tester.widget<InkWell>(
-      find.descendant(
-        of: find.byKey(const Key('drawer-project-0')),
-        matching: find.byType(InkWell),
-      ),
+    final sessionInkWell = tester.widget<InkWell>(
+      find.byKey(const Key('drawer-session-mock-1')),
     );
     final pressedStates = {WidgetState.pressed};
     expect(
@@ -312,7 +309,7 @@ void main() {
       AppColors.brand.withValues(alpha: .12),
     );
     expect(
-      projectInkWell.overlayColor?.resolve(pressedStates),
+      sessionInkWell.overlayColor?.resolve(pressedStates),
       AppColors.brand.withValues(alpha: .12),
     );
     final drawer = tester.widget<Container>(
@@ -323,12 +320,10 @@ void main() {
       const BorderRadius.horizontal(right: Radius.circular(30)),
     );
     expect(drawer.clipBehavior, Clip.antiAlias);
-    await tester.tap(find.byKey(const Key('drawer-project-0')));
-    await tester.pumpAndSettle();
-    expect(find.text('校园野餐vlog'), findsNothing);
-    await tester.tap(find.byKey(const Key('drawer-project-0')));
+    await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
     await tester.pumpAndSettle();
     expect(find.text('校园野餐vlog'), findsOneWidget);
+    expect(find.byKey(const Key('session-active-title')), findsOneWidget);
   });
 
   testWidgets('renders home content in English', (tester) async {
@@ -617,12 +612,12 @@ void main() {
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    final projectIcon = tester
+    final newSessionIcon = tester
         .widgetList<AppSvgIcon>(find.byType(AppSvgIcon))
-        .firstWhere((icon) => icon.assetName == 'home_drawer_project');
-    expect(projectIcon.color, AppTheme.dark.colorScheme.primary);
-    final projectLabel = tester.widget<Text>(find.text('爱丽丝'));
-    expect(projectLabel.style?.color, AppTheme.dark.colorScheme.primary);
+        .firstWhere((icon) => icon.assetName == 'home_drawer_project_add');
+    expect(newSessionIcon.color, AppTheme.dark.colorScheme.onSurface);
+    final sessionLabel = tester.widget<Text>(find.text('校园野餐vlog'));
+    expect(sessionLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     final navigationLabel = tester.widget<Text>(find.text('角色'));
     expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     expect(tester.takeException(), isNull);

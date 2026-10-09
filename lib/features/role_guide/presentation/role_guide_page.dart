@@ -97,11 +97,6 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     _step(RoleGuideStep.story);
   }
 
-  void _newProject() {
-    _draft.clear();
-    _step(RoleGuideStep.roles);
-  }
-
   Future<void> _details(LibraryRole role) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -300,9 +295,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         ),
         child: Scaffold(
           key: _scaffoldKey,
+          // The app bar already includes the stored status-bar inset.
+          primary: false,
           backgroundColor: Colors.transparent,
           drawerScrimColor: const Color(0x33333333),
-          drawer: PopiNavigationDrawer(onNewProject: _newProject),
+          drawer: const PopiNavigationDrawer(),
           onDrawerChanged: (open) => setState(() => _drawerOpen = open),
           appBar: PreferredSize(
             preferredSize: Size.fromHeight(safeArea.top + 56),

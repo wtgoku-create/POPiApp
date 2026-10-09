@@ -18,6 +18,8 @@ import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
+import 'support/role_library_fixtures.dart';
+
 const sample = LibraryRole(
   id: '7',
   title: '爱丽丝',
@@ -86,12 +88,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          roleDetailLoaderProvider.overrideWithValue(
-            load ?? (_) async => sample,
-          ),
-          roleDeleteProvider.overrideWithValue(delete ?? (_) async {}),
-          roleProfileSaverProvider.overrideWithValue(
-            save ?? (_, _) async => sample,
+          dioProvider.overrideWithValue(
+            roleLibraryDio(
+              loadDetail: load ?? (_) async => sample,
+              delete: delete,
+              save: save ?? (_, _) async => sample,
+            ),
           ),
         ],
         child: MaterialApp(
@@ -201,10 +203,6 @@ void main() {
           },
         ),
       );
-      final container = ProviderContainer(
-        overrides: [dioProvider.overrideWithValue(dio)],
-      );
-      addTearDown(container.dispose);
       final profile = {
         'expressionStyle': 'New style',
         'targetAudience': 'Audience',
@@ -212,10 +210,9 @@ void main() {
         'profileData': <String, Object?>{},
       };
 
-      final updated = await container.read(roleProfileSaverProvider)(
-        '7',
-        profile,
-      );
+      final updated = await RoleLibraryRepository(
+        NetworkApi(dio),
+      ).saveProfile('7', profile);
 
       expect(requests.map((request) => request.method), ['POST', 'GET']);
       expect(requests.first.path, '/api_client/agent/v2/roles/7/save');
@@ -408,7 +405,7 @@ void main() {
         '校园、喜剧，成长',
       );
       await tester.tap(find.byKey(const Key('role-edit-confirm')));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
       expect(profiles.single['expressionStyle'], '更自然的表达');
       expect(profiles.single['contentTags'], ['校园', '喜剧', '成长']);
       expect(
@@ -443,7 +440,9 @@ void main() {
       );
       pending.complete(updated);
       await tester.pumpAndSettle();
-      expect(notified, same(updated));
+      expect(notified?.id, updated.id);
+      expect(notified?.title, updated.title);
+      expect(notified?.profile, updated.profile);
       expect(find.byType(TextFormField), findsNothing);
       expect(find.text('服务端最新表达'), findsOneWidget);
       expect(find.text('校园 / 喜剧 / 成长'), findsNWidgets(2));

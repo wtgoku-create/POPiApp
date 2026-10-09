@@ -7,7 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
-import 'package:popi_ai_app/shared/pages/h5_page.dart';
+import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
 
 import 'support/fake_webview.dart';

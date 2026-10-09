@@ -1,50 +1,75 @@
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
+import '../../../shared/providers/user_provider.dart';
+import '../../../shared/providers/network_provider.dart';
+import '../data/work_library_repository.dart';
+import '../domain/library_work.dart';
 import 'role_library_list.dart';
 import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_video_preview.dart';
 
 enum AssetLibrarySection { works, roles }
 
-class AssetsPage extends StatefulWidget {
+class AssetsPage extends ConsumerStatefulWidget {
   const AssetsPage({
     super.key,
     this.hasSampleContent = false,
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
+    this.repository,
   });
 
   const AssetsPage.sample({
     super.key,
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
+    this.repository,
   }) : hasSampleContent = true;
 
   final bool hasSampleContent;
 
-  /// Driven by the asset list request when the real data source is connected.
+  /// Allows previews to demonstrate the loading state.
   final bool isLoadingWorks;
   final AssetLibrarySection initialSection;
+  final WorkLibraryRepository? repository;
 
   @override
-  State<AssetsPage> createState() => _AssetsPageState();
+  ConsumerState<AssetsPage> createState() => _AssetsPageState();
 }
 
-class _AssetsPageState extends State<AssetsPage> {
+class _AssetsPageState extends ConsumerState<AssetsPage> {
+  late final WorkLibraryRepository _repository =
+      widget.repository ??
+      WorkLibraryRepository(NetworkApi(ref.read(dioProvider)));
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   late AssetLibrarySection _section;
   int _selectedFilter = 0;
   bool _selectingWorks = false;
   final Set<int> _selectedWorks = {};
   late List<_WorkGroup> _workGroups;
+  final _scroll = ScrollController();
+  List<LibraryWork> _works = [];
+  bool _loading = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  bool _deleting = false;
+  Object? _error;
+  int _page = 0;
+  int _generation = 0;
+  CancelToken? _requestToken;
 
   @override
   void initState() {
@@ -55,6 +80,140 @@ class _AssetsPageState extends State<AssetsPage> {
               .map((group) => _WorkGroup(group.date, List.of(group.items)))
               .toList()
         : [];
+    _scroll.addListener(_nearBottom);
+    ref.listenManual(userProvider.select((user) => user?.id), (_, __) {
+      if (!widget.hasSampleContent) _refreshWorks(clear: true);
+    });
+    if (!widget.hasSampleContent && _section == AssetLibrarySection.works) {
+      _refreshWorks();
+    }
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    _requestToken?.cancel();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _nearBottom() {
+    if (_scroll.hasClients &&
+        _scroll.position.extentAfter < 200 &&
+        _error == null) {
+      _loadMoreWorks();
+    }
+  }
+
+  Future<void> _refreshWorks({bool clear = false}) async {
+    final generation = ++_generation;
+    _requestToken?.cancel();
+    final token = CancelToken();
+    _requestToken = token;
+    final authenticated = ref.read(userProvider) != null;
+    setState(() {
+      _loading = authenticated;
+      _loadingMore = false;
+      _error = null;
+      _page = 0;
+      _hasMore = false;
+      _selectingWorks = false;
+      _selectedWorks.clear();
+      if (clear || !authenticated) {
+        _works = [];
+        _workGroups = [];
+      }
+    });
+    if (!authenticated || _section != AssetLibrarySection.works) {
+      setState(() => _loading = false);
+      return;
+    }
+    await _fetchWorks(1, generation, token);
+  }
+
+  Future<void> _loadMoreWorks() async {
+    if (_loading ||
+        _loadingMore ||
+        !_hasMore ||
+        _selectingWorks ||
+        _deleting ||
+        widget.hasSampleContent ||
+        _section != AssetLibrarySection.works) {
+      return;
+    }
+    setState(() {
+      _loadingMore = true;
+      _error = null;
+    });
+    final token = CancelToken();
+    _requestToken = token;
+    await _fetchWorks(_page + 1, _generation, token);
+  }
+
+  Future<void> _fetchWorks(int page, int generation, CancelToken token) async {
+    try {
+      final result = await _repository.fetchPage(
+        type: _selectedFilter,
+        page: page,
+        cancelToken: token,
+      );
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _works = {
+          if (page > 1)
+            for (final work in _works) work.id: work,
+          for (final work in result.items) work.id: work,
+        }.values.toList();
+        _workGroups = _groupWorks(_works);
+        _page = page;
+        _hasMore = result.hasMore;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      setState(() => _error = error);
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() {
+          _loading = false;
+          _loadingMore = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _nearBottom();
+        });
+      }
+    }
+  }
+
+  List<_WorkGroup> _groupWorks(List<LibraryWork> works) {
+    final sorted = List.of(works)
+      ..sort(
+        (a, b) => (b.createdAt?.millisecondsSinceEpoch ?? 0).compareTo(
+          a.createdAt?.millisecondsSinceEpoch ?? 0,
+        ),
+      );
+    final groups = <String, List<_WorkItem>>{};
+    for (final work in sorted) {
+      final date = work.createdAt;
+      final label = date == null
+          ? ''
+          : '${date.year}.${date.month.toString().padLeft(2, '0')}.'
+                '${date.day.toString().padLeft(2, '0')}';
+      groups
+          .putIfAbsent(label, () => [])
+          .add(
+            _WorkItem(
+              work.previewUrl,
+              id: work.id,
+              isNetwork: true,
+              isVideo: work.isVideo,
+              videoUrl: work.videoUrl,
+              selectionAsset: work.previewUrl,
+            ),
+          );
+    }
+    return [
+      for (final group in groups.entries) _WorkGroup(group.key, group.value),
+    ];
   }
 
   @override
@@ -90,10 +249,7 @@ class _AssetsPageState extends State<AssetsPage> {
                       (_selectedFilter == 2) == item.isVideo,
                 ),
               ),
-              onSelected: (index) => setState(() {
-                _selectedFilter = index;
-                _selectedWorks.clear();
-              }),
+              onSelected: _changeFilter,
               onToggleSelection: _toggleSelectionMode,
             ),
           ],
@@ -110,7 +266,7 @@ class _AssetsPageState extends State<AssetsPage> {
         category: _selectedFilter == 0 ? 'official' : 'personal',
       );
     }
-    if (widget.isLoadingWorks &&
+    if ((widget.isLoadingWorks || _loading) &&
         !_workGroups.any((group) => group.items.isNotEmpty)) {
       return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
@@ -120,37 +276,52 @@ class _AssetsPageState extends State<AssetsPage> {
         ),
       );
     }
-    if (!widget.hasSampleContent) {
-      return _LibraryEmptyState(section: _section);
-    }
+    final library = _WorksLibrary(
+      groups: _workGroups,
+      filter: _selectedFilter,
+      selecting: _selectingWorks,
+      selected: _selectedWorks,
+      onToggle: _toggleWork,
+      onPreview: _previewWork,
+      onLongPress: (index) => setState(() {
+        if (_loading || _loadingMore || _deleting) return;
+        _selectingWorks = true;
+        _selectedWorks.add(index);
+      }),
+      onDownload: _downloadSelected,
+      onDelete: _deleteSelected,
+      scrollController: _scroll,
+      loadingMore: _loadingMore,
+      error: _error,
+      onRetry: () => _page == 0 ? _refreshWorks() : _loadMoreWorks(),
+      actionsEnabled: !_deleting,
+    );
+    if (widget.hasSampleContent) return library;
+    return RefreshIndicator(onRefresh: _refreshWorks, child: library);
+  }
 
-    return switch (_section) {
-      AssetLibrarySection.works => _WorksLibrary(
-        groups: _workGroups,
-        filter: _selectedFilter,
-        selecting: _selectingWorks,
-        selected: _selectedWorks,
-        onToggle: _toggleWork,
-        onPreview: _previewWork,
-        onLongPress: (index) => setState(() {
-          _selectingWorks = true;
-          _selectedWorks.add(index);
-        }),
-        onDownload: _downloadSelected,
-        onDelete: _deleteSelected,
-      ),
-      AssetLibrarySection.roles => throw StateError('Roles handled above'),
-    };
+  void _changeFilter(int index) {
+    if (index == _selectedFilter || _deleting) return;
+    setState(() {
+      _selectedFilter = index;
+      _selectingWorks = false;
+      _selectedWorks.clear();
+    });
+    if (_section == AssetLibrarySection.works && !widget.hasSampleContent) {
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+      _refreshWorks(clear: true);
+    }
   }
 
   void _changeSection(AssetLibrarySection section) {
-    if (_section == section) return;
+    if (_section == section || _deleting) return;
     setState(() {
       _section = section;
       _selectedFilter = 0;
       _selectingWorks = false;
       _selectedWorks.clear();
     });
+    if (!widget.hasSampleContent) _refreshWorks(clear: true);
   }
 
   void _goBack() {
@@ -163,6 +334,7 @@ class _AssetsPageState extends State<AssetsPage> {
   }
 
   void _toggleSelectionMode() {
+    if (_deleting || _loading || _loadingMore) return;
     setState(() {
       _selectingWorks = !_selectingWorks;
       _selectedWorks.clear();
@@ -170,7 +342,7 @@ class _AssetsPageState extends State<AssetsPage> {
   }
 
   void _toggleWork(int index) {
-    if (!_selectingWorks) return;
+    if (!_selectingWorks || _deleting) return;
     setState(() {
       if (!_selectedWorks.add(index)) _selectedWorks.remove(index);
     });
@@ -178,16 +350,18 @@ class _AssetsPageState extends State<AssetsPage> {
 
   void _downloadSelected() {
     if (_selectedWorks.isEmpty) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)!.assetDownloadUnavailable),
-      ),
+    AppToast.info(
+      context,
+      AppLocalizations.of(context)!.assetDownloadUnavailable,
     );
   }
 
   Future<void> _deleteSelected() async {
-    if (_selectedWorks.isEmpty) return;
+    if (_selectedWorks.isEmpty || _deleting) return;
     final l10n = AppLocalizations.of(context)!;
+    final generation = _generation;
+    final selectedItems = _workGroups.expand((group) => group.items).toList();
+    final selected = Set.of(_selectedWorks);
     final confirmed = await AppDialog.confirm(
       context: context,
       title: l10n.deleteAssetsTitle,
@@ -197,13 +371,37 @@ class _AssetsPageState extends State<AssetsPage> {
       confirmKey: const Key('confirm-delete-assets'),
       destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || generation != _generation) return;
+    if (!widget.hasSampleContent) {
+      setState(() => _deleting = true);
+      final token = CancelToken();
+      _requestToken?.cancel();
+      _requestToken = token;
+      try {
+        for (final index in selected) {
+          await _repository.delete(
+            selectedItems[index].id!,
+            cancelToken: token,
+          );
+        }
+      } catch (_) {
+        if (mounted && generation == _generation) {
+          AppToast.error(context, l10n.networkRequestFailed);
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _deleting = false);
+          if (generation == _generation) await _refreshWorks();
+        }
+      }
+      return;
+    }
     var flatIndex = 0;
     final groups = <_WorkGroup>[];
     for (final group in _workGroups) {
       final kept = <_WorkItem>[];
       for (final item in group.items) {
-        if (!_selectedWorks.contains(flatIndex)) kept.add(item);
+        if (!selected.contains(flatIndex)) kept.add(item);
         flatIndex++;
       }
       if (kept.isNotEmpty) groups.add(_WorkGroup(group.date, kept));
@@ -217,12 +415,15 @@ class _AssetsPageState extends State<AssetsPage> {
 
   void _previewWork(int index) {
     final item = _workGroups.expand((group) => group.items).elementAt(index);
-    final l10n = AppLocalizations.of(context)!;
+    if (item.isVideo && item.videoUrl.isNotEmpty) {
+      AppVideoPreview.show(context: context, url: Uri.parse(item.videoUrl));
+      return;
+    }
+    if (item.asset.isEmpty) return;
     AppImagePreview.show(
       context: context,
-      image: AssetImage(item.asset),
+      image: item.image,
       heroTag: 'work-preview-$index',
-      label: item.isVideo ? l10n.videoCoverPreview : null,
     );
   }
 }
@@ -441,54 +642,16 @@ class _SectionFilters extends StatelessWidget {
   }
 }
 
-class _LibraryEmptyState extends StatelessWidget {
-  const _LibraryEmptyState({required this.section});
-
-  final AssetLibrarySection section;
+class _WorksEmptyState extends StatelessWidget {
+  const _WorksEmptyState();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (section == AssetLibrarySection.roles) {
-      return Center(
-        child: Transform.translate(
-          offset: const Offset(0, -55),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'assets/images/assets_roles_empty_art.png',
-                width: 296.05,
-                height: 186.1,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.noRoles,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: AppTypeSizes.pageTitle,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.noRolesDescription,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 16,
-                  height: 30 / 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     final colors = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Padding(
@@ -573,6 +736,11 @@ class _WorksLibrary extends StatelessWidget {
     required this.onLongPress,
     required this.onDownload,
     required this.onDelete,
+    required this.scrollController,
+    required this.loadingMore,
+    required this.error,
+    required this.onRetry,
+    required this.actionsEnabled,
   });
 
   final List<_WorkGroup> groups;
@@ -584,11 +752,53 @@ class _WorksLibrary extends StatelessWidget {
   final ValueChanged<int> onLongPress;
   final VoidCallback onDownload;
   final VoidCallback onDelete;
+  final ScrollController scrollController;
+  final bool loadingMore;
+  final Object? error;
+  final VoidCallback onRetry;
+  final bool actionsEnabled;
+
+  Widget _retry(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      key: const Key('assets-works-error'),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.networkRequestFailed, textAlign: TextAlign.center),
+          TextButton(onPressed: onRetry, child: Text(l10n.retry)),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     if (groups.isEmpty) {
-      return const _LibraryEmptyState(section: AssetLibrarySection.works);
+      if (error != null || loadingMore) {
+        return ListView(
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            if (error != null) _retry(context),
+            if (loadingMore) const Center(child: CircularProgressIndicator()),
+          ],
+        );
+      }
+      // Keep a scroll position even when a page contains only unsupported media.
+      return LayoutBuilder(
+        builder: (context, constraints) => ListView(
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: constraints.maxHeight,
+              child: const _WorksEmptyState(),
+            ),
+          ],
+        ),
+      );
     }
 
     var offset = 0;
@@ -649,13 +859,19 @@ class _WorksLibrary extends StatelessWidget {
     }
 
     if (sections.isEmpty) {
-      return const _LibraryEmptyState(section: AssetLibrarySection.works);
+      return const _WorksEmptyState();
     }
+    if (loadingMore) {
+      sections.add(const Center(child: CircularProgressIndicator()));
+    }
+    if (error != null) sections.add(_retry(context));
 
     return Stack(
       children: [
         ListView(
           key: const Key('assets-works-grid'),
+          controller: scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(20, 10, 20, selecting ? 120 : 20),
           children: sections,
         ),
@@ -663,7 +879,7 @@ class _WorksLibrary extends StatelessWidget {
           Align(
             alignment: Alignment.bottomCenter,
             child: _SelectionActions(
-              hasSelection: selected.isNotEmpty,
+              hasSelection: selected.isNotEmpty && actionsEnabled,
               selectionCount: selected.length,
               onDownload: onDownload,
               onDelete: onDelete,
@@ -704,8 +920,24 @@ class _WorkTile extends StatelessWidget {
           children: [
             Hero(
               tag: heroTag,
-              child: Image.asset(item.asset, fit: BoxFit.cover),
+              child: item.asset.isEmpty
+                  ? const ColoredBox(
+                      color: AppColors.surfaceTint,
+                      child: Icon(Icons.videocam_outlined),
+                    )
+                  : Image(
+                      image: item.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: AppColors.surfaceTint,
+                        child: Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
             ),
+            if (item.isNetwork && item.isVideo)
+              const Center(
+                child: Icon(Icons.play_circle_fill, color: Colors.white),
+              ),
             if (selecting)
               Positioned(
                 right: 8,
@@ -852,11 +1084,19 @@ class _WorkItem {
     this.asset, {
     required this.selectionAsset,
     this.isVideo = false,
+    this.id,
+    this.isNetwork = false,
+    this.videoUrl = '',
   });
 
   final String asset;
   final String selectionAsset;
   final bool isVideo;
+  final String? id;
+  final bool isNetwork;
+  final String videoUrl;
+  ImageProvider get image =>
+      isNetwork ? NetworkImage(asset) : AssetImage(asset);
 }
 
 const _sampleWorkGroups = [

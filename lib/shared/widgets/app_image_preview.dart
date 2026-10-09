@@ -6,6 +6,7 @@ import 'package:gal/gal.dart';
 
 import '../../core/storage/gallery_image_storage.dart';
 import '../../l10n/generated/app_localizations.dart';
+import 'app_svg_icon.dart';
 import 'app_toast.dart';
 
 /// Displays an image above the current screen with a shared thumbnail transition.
@@ -301,7 +302,7 @@ class _ImagePreviewState extends State<_ImagePreview>
                       tooltip: l10n.download,
                       onPressed: _saving ? null : _download,
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: .15),
+                        padding: const EdgeInsets.all(4),
                       ),
                       icon: _saving
                           ? const SizedBox.square(
@@ -311,9 +312,9 @@ class _ImagePreviewState extends State<_ImagePreview>
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(
-                              Icons.download_outlined,
-                              color: Colors.white,
+                          : const AppSvgIcon.asset(
+                              'image_preview_download',
+                              size: 40,
                             ),
                     ),
                   ),

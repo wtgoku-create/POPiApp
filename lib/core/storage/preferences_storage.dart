@@ -9,6 +9,4 @@ class PreferencesStorage {
 
   Future<void> setString(String key, String value) =>
       preferences.setString(key, value);
-
-  Future<void> remove(String key) => preferences.remove(key);
 }

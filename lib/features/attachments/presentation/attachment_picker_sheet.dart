@@ -3,16 +3,15 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../shared/providers/media_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
+import '../data/device_gallery_repository.dart';
 import '../domain/gallery_repository.dart';
 
 enum AttachmentLibrary { roles, assets }
@@ -25,20 +24,23 @@ class AttachmentPickerResult {
   final AttachmentLibrary? library;
 }
 
-class AttachmentPickerSheet extends ConsumerStatefulWidget {
+class AttachmentPickerSheet extends StatefulWidget {
   const AttachmentPickerSheet({
     required this.limit,
     this.pickImages,
+    this.repository,
     super.key,
   });
 
   final int limit;
   final Future<List<XFile>> Function()? pickImages;
+  final GalleryRepository? repository;
 
   static Future<AttachmentPickerResult?> show({
     required BuildContext context,
     required int limit,
     Future<List<XFile>> Function()? pickImages,
+    GalleryRepository? repository,
   }) => AppSheet.show<AttachmentPickerResult>(
     context: context,
     isScrollControlled: true,
@@ -47,15 +49,18 @@ class AttachmentPickerSheet extends ConsumerStatefulWidget {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
     ),
-    builder: (_) => AttachmentPickerSheet(limit: limit, pickImages: pickImages),
+    builder: (_) => AttachmentPickerSheet(
+      limit: limit,
+      pickImages: pickImages,
+      repository: repository,
+    ),
   );
 
   @override
-  ConsumerState<AttachmentPickerSheet> createState() =>
-      _AttachmentPickerSheetState();
+  State<AttachmentPickerSheet> createState() => _AttachmentPickerSheetState();
 }
 
-class _AttachmentPickerSheetState extends ConsumerState<AttachmentPickerSheet>
+class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     with WidgetsBindingObserver {
   static const _pageSize = 60;
   final _scroll = ScrollController();
@@ -81,7 +86,7 @@ class _AttachmentPickerSheetState extends ConsumerState<AttachmentPickerSheet>
   @override
   void initState() {
     super.initState();
-    _repository = ref.read(galleryRepositoryProvider);
+    _repository = widget.repository ?? DeviceGalleryRepository();
     WidgetsBinding.instance.addObserver(this);
     _scroll.addListener(_loadNearEnd);
     if (_usesLibrary) {

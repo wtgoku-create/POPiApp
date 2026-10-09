@@ -1,14 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/projects/data/project_api.dart';
+import '../../core/network/network_api.dart';
 import '../../features/projects/data/project_repository.dart';
 import '../../features/projects/domain/project.dart';
 import 'network_provider.dart';
 import 'user_provider.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => ProjectRepository(ProjectApi(ref.watch(dioProvider))),
+  (ref) => ProjectRepository(NetworkApi(ref.watch(dioProvider))),
 );
 
 /// Account-scoped, in-memory lists; disposal cancels obsolete HTTP requests.
@@ -68,7 +68,10 @@ class ProjectActionsController extends AutoDisposeNotifier<bool> {
     final success = await _run(projectId, true, (repository, token) async {
       final pending = _pendingSessionRequests.putIfAbsent(
         projectId,
-        () => (requestId: ProjectApi.createClientRequestId(), title: title),
+        () => (
+          requestId: ProjectRepository.createClientRequestId(),
+          title: title,
+        ),
       );
       session = await repository.createSession(
         projectId,
