@@ -55,6 +55,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final memberLevel = ref.watch(userProvider)?.memberLevel ?? 0;
     final topPadding = math
         .max(MediaQuery.paddingOf(context).top, 52)
         .toDouble();
@@ -62,8 +63,16 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedLevel = plans != null && plans.isNotEmpty
-        ? plans[_selectedPlan].level
+        ? plans[_selectedPlan].variants[_selectedVariant].level
         : 1;
+    final membershipDisabled = memberLevel > 0 && selectedLevel <= memberLevel;
+    final memberName = switch (memberLevel) {
+      1 => 'Starter',
+      2 => 'Plus',
+      3 => 'Pro',
+      4 => 'Max',
+      _ => '$memberLevel',
+    };
     final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 20.0);
 
     return Scaffold(
@@ -144,11 +153,13 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                             style: FilledButton.styleFrom(
                               backgroundColor: colorScheme.onSurface,
                               foregroundColor: colorScheme.surface,
+                              disabledBackgroundColor: const Color(0xFFD9D9D9),
+                              disabledForegroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 20,
                               ),
                             ),
-                            onPressed: _isPurchasing
+                            onPressed: _isPurchasing || membershipDisabled
                                 ? null
                                 : () => _purchaseMembership(
                                     plans[_selectedPlan]
@@ -163,9 +174,15 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                     ),
                                   )
                                 : Text(
-                                    plans[_selectedPlan]
-                                        .variants[_selectedVariant]
-                                        .buttonText,
+                                    membershipDisabled
+                                        ? selectedLevel == memberLevel
+                                              ? l10n.membershipCurrentPlan
+                                              : l10n.membershipAlreadyMember(
+                                                  memberName,
+                                                )
+                                        : plans[_selectedPlan]
+                                              .variants[_selectedVariant]
+                                              .buttonText,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
@@ -194,6 +211,10 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   Future<void> _loadPlans() async {
     try {
+      if (ref.read(userProvider) != null) {
+        await ref.read(userProvider.notifier).refreshUser();
+        if (!mounted) return;
+      }
       final loader =
           widget.planLoader ??
           ProductPlanRepository(NetworkApi(ref.read(dioProvider))).fetchAll;

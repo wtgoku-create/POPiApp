@@ -1922,6 +1922,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Purchases and membership benefits synced from your account';
 
   @override
+  String get membershipCurrentPlan => 'Current plan';
+
+  @override
+  String membershipAlreadyMember(String level) {
+    return 'You\'re already $level';
+  }
+
+  @override
   String get membershipPlansEmpty => 'No membership plans available';
 
   @override

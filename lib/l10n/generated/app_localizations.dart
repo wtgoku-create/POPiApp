@@ -3577,6 +3577,18 @@ abstract class AppLocalizations {
   /// **'Purchases and membership benefits synced from your account'**
   String get restorePurchasesRequested;
 
+  /// No description provided for @membershipCurrentPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Current plan'**
+  String get membershipCurrentPlan;
+
+  /// No description provided for @membershipAlreadyMember.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already {level}'**
+  String membershipAlreadyMember(String level);
+
   /// No description provided for @membershipPlansEmpty.
   ///
   /// In en, this message translates to:

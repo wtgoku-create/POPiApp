@@ -1840,6 +1840,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restorePurchasesRequested => '已从账户同步购买记录和会员权益';
 
   @override
+  String get membershipCurrentPlan => '当前计划';
+
+  @override
+  String membershipAlreadyMember(String level) {
+    return '你已是$level';
+  }
+
+  @override
   String get membershipPlansEmpty => '暂无可用会员方案';
 
   @override
