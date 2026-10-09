@@ -22,7 +22,7 @@ class RoleGuideAction extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final int? count;
   final bool secondary;
   final bool showArrow;
@@ -37,7 +37,11 @@ class RoleGuideAction extends StatelessWidget {
         onPressed: onPressed,
         style: TextButton.styleFrom(
           foregroundColor: foreground,
-          backgroundColor: secondary ? roleGuideTint(context) : AppColors.brand,
+          backgroundColor: onPressed == null
+              ? colors.onSurface.withValues(alpha: .08)
+              : secondary
+              ? roleGuideTint(context)
+              : AppColors.brand,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: const StadiumBorder(),
         ),
@@ -62,7 +66,9 @@ class RoleGuideAction extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: secondary ? FontWeight.w400 : FontWeight.w600,
-                  color: foreground,
+                  color: onPressed == null
+                      ? Theme.of(context).disabledColor
+                      : foreground,
                 ),
               ),
             ),
@@ -73,7 +79,9 @@ class RoleGuideAction extends StatelessWidget {
                 height: 14,
                 child: AppSvgIcon.asset(
                   'role_guide_forward',
-                  color: foreground,
+                  color: onPressed == null
+                      ? Theme.of(context).disabledColor
+                      : foreground,
                 ),
               ),
             ],

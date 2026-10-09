@@ -81,6 +81,12 @@ void main() {
     await openPreview(tester);
     expect(find.byKey(const Key('asset-preview-image')), findsOneWidget);
     expect(find.byKey(const Key('underlying-screen')), findsOneWidget);
+    final route = ModalRoute.of(
+      tester.element(find.byKey(const Key('asset-preview-image'))),
+    )!;
+    expect(route.opaque, isFalse);
+    expect(route.transitionDuration, const Duration(milliseconds: 300));
+    expect(route.reverseTransitionDuration, const Duration(milliseconds: 220));
     expect(find.byType(Scaffold), findsOneWidget);
     expect(find.byType(Hero), findsNWidgets(2));
     if (const bool.fromEnvironment('CAPTURE_IMAGE_PREVIEW')) {

@@ -5,12 +5,12 @@ class ConversationSession {
     required this.title,
     required this.updatedAt,
     this.pinnedAt,
-    this.avatarAsset,
+    this.avatarIcon,
   });
 
   final String id;
   final String title;
   final DateTime updatedAt;
   final DateTime? pinnedAt;
-  final String? avatarAsset;
+  final String? avatarIcon;
 }

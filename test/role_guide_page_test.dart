@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,11 @@ import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/role_guide/data/role_guide_examples.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
+import 'package:popi_ai_app/features/role_guide/data/role_generation_repository.dart';
+import 'package:popi_ai_app/features/role_guide/domain/role_generation.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/projects/data/project_repository.dart';
+import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
@@ -30,6 +35,8 @@ void main() {
     double scale = 1,
     double systemTopInset = 0,
     RolePageLoader? loader,
+    RoleGenerationRepository? generationRepository,
+    ProjectRepository? projectRepository,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -42,7 +49,9 @@ void main() {
     final roles = roleGuideExamples(lookupAppLocalizations(locale));
     final container = ProviderContainer(
       overrides: [
-        projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
+        projectRepositoryProvider.overrideWithValue(
+          projectRepository ?? FixtureProjectRepository(),
+        ),
         dioProvider.overrideWithValue(
           roleLibraryDio(
             loadPage:
@@ -90,6 +99,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (generationRepository != null) {
+      unawaited(
+        Navigator.of(tester.element(find.byType(RoleGuidePage))).push<void>(
+          MaterialPageRoute(
+            builder: (_) =>
+                RoleGuidePage(generationRepository: generationRepository),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
     return container;
   }
 
@@ -123,10 +143,6 @@ void main() {
 
   Future<void> chooseStory(WidgetTester tester) async {
     await selectProject(tester);
-    for (final i in [1, 2, 4]) {
-      await tap(tester, 'role-guide-select-preview-role-$i');
-    }
-    await tap(tester, 'role-guide-confirm-cast');
     await tap(tester, 'role-guide-choose-story');
   }
 
@@ -147,7 +163,7 @@ void main() {
     await tester.pumpAndSettle();
     await tap(tester, 'home-start-1');
     expect(find.byType(RoleGuidePage), findsOneWidget);
-    expect(find.text('从角色出发～'), findsOneWidget);
+    expect(find.text('从角色出发'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -157,17 +173,14 @@ void main() {
       await pumpGuide(tester);
       await selectProject(tester);
       expect(find.text('爱丽丝的项目'), findsOneWidget);
-      expect(find.text('共有4个角色'), findsOneWidget);
-      for (final i in [1, 2, 4]) {
-        await tap(tester, 'role-guide-select-preview-role-$i');
-      }
-      await tap(tester, 'role-guide-confirm-cast');
+      expect(find.text('共4个角色'), findsOneWidget);
       await tap(tester, 'role-guide-next-story');
       expect(find.text('室友的秘密计划'), findsOneWidget);
       await tap(tester, 'role-guide-previous-story');
       await tap(tester, 'role-guide-edit-cast');
+      await tap(tester, 'role-library-select-preview-role-3');
       expect(find.textContaining('已选3个角色'), findsOneWidget);
-      await tap(tester, 'role-guide-confirm-cast');
+      await tap(tester, 'role-library-create-project');
       await tap(tester, 'role-guide-choose-story');
       await tap(tester, 'role-guide-configure');
       await tap(tester, 'role-model-veo');
@@ -180,6 +193,9 @@ void main() {
       await tap(tester, 'role-generation-confirm');
       expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
       await tap(tester, 'role-guide-produce');
+      expect(find.text('生成成功！'), findsOneWidget);
+      expect(find.text('交互演示 · 不消耗积分'), findsOneWidget);
+      await tap(tester, 'role-guide-view-plan');
       final session = tester.widget<SessionPage>(find.byType(SessionPage));
       expect(session.initialPrompt, contains('爱丽丝的项目'));
       expect(session.initialPrompt, contains('视频模型：Veo 3.1'));
@@ -210,7 +226,7 @@ void main() {
       await tap(tester, 'role-guide-more');
       await tap(tester, 'role-library-create-project');
       expect(find.byKey(const Key('role-guide-library-sheet')), findsNothing);
-      expect(find.text('共有2个角色'), findsOneWidget);
+      expect(find.text('共2个角色'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -224,14 +240,10 @@ void main() {
     for (var i = 1; i <= 7; i++) {
       await tap(tester, 'role-guide-select-preview-role-$i');
     }
-    expect(find.textContaining('已选6个角色'), findsOneWidget);
+    expect(find.textContaining('已选5个角色'), findsOneWidget);
     await tap(tester, 'role-guide-create-project');
-    await tap(tester, 'role-guide-confirm-cast');
-    expect(find.text('为TA们匹配选题'), findsNothing);
-    for (var i = 1; i <= 4; i++) {
-      await tap(tester, 'role-guide-select-preview-role-$i');
-    }
-    expect(find.textContaining('已选3个角色'), findsOneWidget);
+    expect(find.text('匹配选题'), findsOneWidget);
+    expect(find.text('共5个角色'), findsOneWidget);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -289,9 +301,6 @@ void main() {
       expect(find.text('第一次勇敢说出心里话'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.textContaining('已选3个角色'), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
       expect(find.textContaining('已选4个角色'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -308,6 +317,142 @@ void main() {
     expect(container.read(routerProvider(false)).canPop(), isFalse);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('project role edits cancel without changing the selected story', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await selectProject(tester);
+    await tap(tester, 'role-guide-next-story');
+    await tap(tester, 'role-guide-edit-cast');
+    await tap(tester, 'role-library-select-preview-role-1');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('共4个角色'), findsOneWidget);
+    expect(find.text('室友的秘密计划'), findsOneWidget);
+    expect(find.text('爱丽丝的项目'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'character profiles paginate and full profile returns to the story',
+    (tester) async {
+      await pumpGuide(tester);
+      await selectProject(tester);
+      await tap(tester, 'role-guide-view-profiles');
+      expect(find.text('角色档案 1/4'), findsOneWidget);
+      await tap(tester, 'role-profile-next');
+      expect(find.text('角色档案 2/4'), findsOneWidget);
+      expect(find.text('人物定位'), findsOneWidget);
+      await tap(tester, 'role-guide-full-profile');
+      final page = tester.widget<RoleDetailPage>(find.byType(RoleDetailPage));
+      expect(page.role.id, 'preview-role-2');
+      await tap(tester, 'role-profile-back');
+      expect(find.byKey(const Key('role-guide-profile-sheet')), findsNothing);
+      expect(find.text('匹配选题'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('detailed story exposes the plot and complete storyboard', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await chooseStory(tester);
+    await tap(tester, 'role-guide-story-details');
+    expect(find.byKey(const Key('role-guide-story-sheet')), findsOneWidget);
+    expect(find.text('主要内容'), findsOneWidget);
+    final story = roleGuideStories(
+      lookupAppLocalizations(const Locale('zh')),
+      0,
+    ).first;
+    expect(find.text(story.content), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('role-guide-produce')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'stop confirmation cancels generation and retains model settings',
+    (tester) async {
+      await pumpGuide(tester);
+      await chooseStory(tester);
+      await tap(tester, 'role-guide-configure');
+      await tap(tester, 'role-model-veo');
+      await tap(tester, 'role-generation-confirm');
+      await tester.ensureVisible(find.byKey(const Key('role-guide-produce')));
+      await tester.tap(find.byKey(const Key('role-guide-produce')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('努力生成中...'), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const Key('role-guide-generation-action')),
+      );
+      await tester.tap(find.byKey(const Key('role-guide-generation-action')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(const Key('role-guide-confirm-stop')));
+      await tester.pumpAndSettle();
+      expect(find.text('已停止制作'), findsOneWidget);
+      await tap(tester, 'role-guide-back');
+      expect(find.text('Veo 3.1 / 720P / 16:9'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'failed generation can retry the same plan and continue creating',
+    (tester) async {
+      final repository = _RetryGenerationRepository();
+      await pumpGuide(tester, generationRepository: repository);
+      await chooseStory(tester);
+      await tap(tester, 'role-guide-configure');
+      await tap(tester, 'role-generation-confirm');
+      await tap(tester, 'role-guide-produce');
+      expect(find.text('生成未完成'), findsOneWidget);
+      await tap(tester, 'role-guide-generation-action');
+      expect(find.text('生成成功！'), findsOneWidget);
+      expect(repository.plans.length, 2);
+      expect(repository.plans[0], repository.plans[1]);
+      await tap(tester, 'role-guide-generation-action');
+      expect(find.text('第一次勇敢说出心里话'), findsOneWidget);
+      expect(find.text('共4个角色'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('switching projects opens an existing project conversation', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await tap(tester, 'role-guide-switch-project');
+    expect(find.text('我的IP项目'), findsOneWidget);
+    await tap(tester, 'role-project-select-0');
+    await tap(tester, 'role-project-confirm');
+    expect(tester.widget<SessionPage>(find.byType(SessionPage)).sessionId, '0');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'an empty project creates one conversation and waits for it to finish',
+    (tester) async {
+      final repository = _EmptyProjectRepository();
+      await pumpGuide(tester, projectRepository: repository);
+      await tap(tester, 'role-guide-switch-project');
+      await tap(tester, 'role-project-select-0');
+      await tap(tester, 'role-project-confirm');
+      expect(repository.requestIds, hasLength(1));
+      expect(find.byType(SessionPage), findsNothing);
+      repository.pending.complete(
+        const ProjectSession(id: 'new-session', title: 'New'),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SessionPage>(find.byType(SessionPage)).sessionId,
+        'new-session',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'failed role request retries and full library can fetch another page',
@@ -393,7 +538,59 @@ void main() {
       await tap(tester, 'role-ratio-portrait');
       await tap(tester, 'role-generation-confirm');
       expect(find.text('Sora 2 / 720P / 9:16'), findsOneWidget);
+      await tap(tester, 'role-guide-story-details');
+      expect(tester.takeException(), isNull);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tap(tester, 'role-guide-produce');
+      expect(find.text('Creation complete!'), findsOneWidget);
+      await tap(tester, 'role-guide-view-profiles');
+      expect(tester.takeException(), isNull);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
+  }
+}
+
+class _RetryGenerationRepository extends RoleGenerationRepository {
+  final plans = <String>[];
+
+  @override
+  bool get isPreview => true;
+
+  @override
+  Stream<RoleGenerationProgress> generate(String plan) {
+    plans.add(plan);
+    if (plans.length == 1) return Stream.error(StateError('Offline'));
+    return Stream.value(
+      const RoleGenerationProgress(
+        status: RoleGenerationStatus.completed,
+        stage: 5,
+        cover: 'assets/images/role_guide_result_preview.png',
+      ),
+    );
+  }
+}
+
+class _EmptyProjectRepository extends FixtureProjectRepository {
+  final pending = Completer<ProjectSession>();
+  final requestIds = <String>[];
+
+  @override
+  Future<List<ProjectSession>> listSessions(
+    String projectId, {
+    CancelToken? cancelToken,
+  }) async => [];
+
+  @override
+  Future<ProjectSession> createSession(
+    String projectId,
+    String title, {
+    required String clientRequestId,
+    CancelToken? cancelToken,
+  }) {
+    requestIds.add(clientRequestId);
+    return pending.future;
   }
 }

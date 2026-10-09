@@ -9,6 +9,7 @@ import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/shared/widgets/popi_drawer_projects.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -490,7 +491,7 @@ void main() {
 User _user(String id) => User(id: id, name: id, email: '');
 
 class _Repository extends ProjectRepository {
-  _Repository() : super(NetworkApi(Dio()));
+  _Repository() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
 
   final projects = <Project>[
     const Project(id: 'p', title: '原项目'),

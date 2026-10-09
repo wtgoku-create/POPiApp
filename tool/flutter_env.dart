@@ -31,6 +31,7 @@ Future<void> main(List<String> args) async {
     const requiredKeys = [
       'APP_ENV',
       'API_BASE_URL',
+      'AGENT_API_BASE_URL',
       'WECHAT_APP_ID',
       'WECHAT_UNIVERSAL_LINK',
       'USER_AGREEMENT_URL',
@@ -46,6 +47,7 @@ Future<void> main(List<String> args) async {
     }
     for (final key in [
       'API_BASE_URL',
+      'AGENT_API_BASE_URL',
       'WECHAT_UNIVERSAL_LINK',
       'USER_AGREEMENT_URL',
       'PRIVACY_POLICY_URL',
@@ -53,6 +55,20 @@ Future<void> main(List<String> args) async {
       final uri = Uri.parse(config[key] as String);
       if (!uri.hasAuthority || !['https', 'http'].contains(uri.scheme)) {
         throw FormatException('$key must be an HTTP(S) URL');
+      }
+    }
+    final configuredAgentOrigin = config['AGENT_API_ORIGIN'] ?? '';
+    if (configuredAgentOrigin is! String) {
+      throw const FormatException('AGENT_API_ORIGIN must be a string');
+    }
+    if (configuredAgentOrigin.isNotEmpty) {
+      final agentOrigin = Uri.parse(configuredAgentOrigin);
+      if (!agentOrigin.hasAuthority ||
+          !['https', 'http'].contains(agentOrigin.scheme) ||
+          configuredAgentOrigin != agentOrigin.origin) {
+        throw const FormatException(
+          'AGENT_API_ORIGIN must be an HTTP(S) origin without a path',
+        );
       }
     }
     final appId = config['WECHAT_APP_ID'] as String;

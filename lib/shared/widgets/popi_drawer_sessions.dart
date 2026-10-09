@@ -25,11 +25,17 @@ class PopiDrawerSessions extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          child: Text(
-            l10n.drawerSessions,
-            style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
+        SizedBox(
+          height: 40,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                l10n.drawerSessions,
+                style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
+              ),
+            ),
           ),
         ),
         Expanded(
@@ -79,22 +85,10 @@ class _SessionItem extends ConsumerWidget {
         AppSvgIcon.asset(name, size: size, color: colors.onSurface);
     Widget label() => Row(
       children: [
-        ClipOval(
+        AppSvgIcon.asset(
+          session.avatarIcon ?? 'home_drawer_session_neutral',
           key: Key('drawer-session-avatar-${session.id}'),
-          child: Image.asset(
-            session.avatarAsset ?? 'assets/icons/common_user_avatar.png',
-            width: 30,
-            height: 30,
-            fit: BoxFit.cover,
-            excludeFromSemantics: true,
-            errorBuilder: (_, _, _) => Image.asset(
-              'assets/icons/common_user_avatar.png',
-              width: 30,
-              height: 30,
-              fit: BoxFit.cover,
-              excludeFromSemantics: true,
-            ),
-          ),
+          size: 30,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -104,7 +98,7 @@ class _SessionItem extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w400,
               color: colors.onSurface,
             ),
           ),
@@ -123,7 +117,7 @@ class _SessionItem extends ConsumerWidget {
       enabled: userId != null,
       label: l10n.sessionItemOptions(session.title),
       preview: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 35),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         child: label(),
       ),
       entries: [
@@ -191,9 +185,9 @@ class _SessionItem extends ConsumerWidget {
           ),
           onTap: onTap,
           child: SizedBox(
-            height: 42,
+            height: 40,
             child: Padding(
-              padding: const EdgeInsets.only(left: 10, right: 35),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               child: label(),
             ),
           ),

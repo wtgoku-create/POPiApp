@@ -1,6 +1,8 @@
 {
   "APP_ENV": "development",
   "API_BASE_URL": "https://wwwtest.popi.art",
+  "AGENT_API_BASE_URL": "http://192.168.77.249:3100",
+  "AGENT_API_ORIGIN": "",
   "API_ENABLE_LOGGING": false,
   "WECHAT_APP_ID": "wxf99ad5d5c7b4fe37",
   "WECHAT_UNIVERSAL_LINK": "https://app.popi.art/WeChat/",

@@ -14,6 +14,11 @@ abstract final class AppConfig {
     'API_ENABLE_LOGGING',
     defaultValue: false,
   );
+  static const agentApiBaseUrl = String.fromEnvironment(
+    'AGENT_API_BASE_URL',
+    defaultValue: apiBaseUrl,
+  );
+  static const agentApiOrigin = String.fromEnvironment('AGENT_API_ORIGIN');
   static const wechatAppId = String.fromEnvironment(
     'WECHAT_APP_ID',
     defaultValue: 'wxf99ad5d5c7b4fe37',

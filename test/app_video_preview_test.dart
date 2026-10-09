@@ -17,15 +17,22 @@ void main() {
     addTearDown(() => VideoPlayerPlatform.instance = original);
   });
 
-  Future<void> open(WidgetTester tester) async {
+  Future<void> open(WidgetTester tester, {bool reduceMotion = false}) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
         locale: const Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: reduceMotion),
+          child: child!,
+        ),
         home: Builder(
           builder: (context) => Scaffold(
+            key: const Key('underlying-screen'),
             body: TextButton(
               onPressed: () => AppVideoPreview.show(
                 context: context,
@@ -40,6 +47,42 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pump();
   }
+
+  testWidgets('opens above the current screen on a preview overlay', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('underlying-screen')), findsOneWidget);
+    expect(find.byIcon(Icons.close), findsOneWidget);
+    final videoBounds = tester.getRect(find.byType(VideoPlayer));
+    await tester.tapAt(videoBounds.center);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('asset-preview-video')), findsOneWidget);
+    expect(platform.playing, isTrue);
+    expect(tester.getRect(find.byType(VideoPlayer)), videoBounds);
+    final route = ModalRoute.of(
+      tester.element(find.byKey(const Key('asset-preview-video'))),
+    )!;
+    expect(route.opaque, isFalse);
+    expect(route.transitionDuration, const Duration(milliseconds: 300));
+    expect(route.reverseTransitionDuration, const Duration(milliseconds: 220));
+    await tester.tap(find.byKey(const Key('video-preview-close')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('underlying-screen')), findsOneWidget);
+  });
+
+  testWidgets('preview respects reduced motion', (tester) async {
+    await open(tester, reduceMotion: true);
+    await tester.pumpAndSettle();
+    final route = ModalRoute.of(
+      tester.element(find.byKey(const Key('asset-preview-video'))),
+    )!;
+    expect(route.transitionDuration, Duration.zero);
+    expect(route.reverseTransitionDuration, Duration.zero);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+  });
 
   testWidgets('loads, plays, seeks, mutes and releases video on close', (
     tester,

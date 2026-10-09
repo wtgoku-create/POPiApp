@@ -1,6 +1,6 @@
 import '../../assets/domain/library_role.dart';
 
-enum RoleGuideStep { roles, cast, story, production }
+enum RoleGuideStep { roles, story, production, generation }
 
 enum GenerationModel {
   sora('Sora 2'),
@@ -72,57 +72,49 @@ class RoleGenerationSettings {
   }
 }
 
-/// A route-local plan; choices are ordered and the cast stays within the project.
+/// A route-local plan. The selected project characters are also its cast.
 class RoleGuideDraft {
+  static const maxRoles = 5;
   final _roles = <LibraryRole>[];
-  final _cast = <LibraryRole>[];
   RoleGuideStep step = RoleGuideStep.roles;
   int storyIndex = 0;
   int storyBatch = 0;
   RoleGenerationSettings? settings;
 
   List<LibraryRole> get roles => List.unmodifiable(_roles);
-  List<LibraryRole> get cast => List.unmodifiable(_cast);
+  List<LibraryRole> get cast => roles;
 
   bool toggleRole(LibraryRole role) {
     final index = _roles.indexWhere((item) => item.id == role.id);
     if (index >= 0) {
       _roles.removeAt(index);
-      _cast.removeWhere((item) => item.id == role.id);
       return true;
     }
-    if (_roles.length >= 6) return false;
+    if (_roles.length >= maxRoles) return false;
     _roles.add(role);
     return true;
   }
 
-  bool toggleCast(LibraryRole role) {
-    if (!_roles.any((item) => item.id == role.id)) return false;
-    final index = _cast.indexWhere((item) => item.id == role.id);
-    if (index >= 0) {
-      _cast.removeAt(index);
-      return true;
-    }
-    if (_cast.length >= 3) return false;
-    _cast.add(role);
-    return true;
+  void updateRole(LibraryRole role) {
+    final index = _roles.indexWhere((item) => item.id == role.id);
+    if (index >= 0) _roles[index] = role;
   }
 
-  void updateRole(LibraryRole role) {
-    for (final list in [_roles, _cast]) {
-      final index = list.indexWhere((item) => item.id == role.id);
-      if (index >= 0) list[index] = role;
-    }
+  /// Commits a sheet's selection atomically; dismissing it leaves the draft intact.
+  bool replaceRoles(List<LibraryRole> roles) {
+    final unique = {for (final role in roles) role.id: role}.values.toList();
+    if (unique.isEmpty || unique.length > maxRoles) return false;
+    _roles
+      ..clear()
+      ..addAll(unique);
+    storyIndex = 0;
+    storyBatch = 0;
+    step = RoleGuideStep.story;
+    return true;
   }
 
   bool startProject() {
     if (_roles.isEmpty) return false;
-    step = RoleGuideStep.cast;
-    return true;
-  }
-
-  bool matchStories() {
-    if (_cast.isEmpty) return false;
     step = RoleGuideStep.story;
     return true;
   }
@@ -135,7 +127,6 @@ class RoleGuideDraft {
 
   void clear() {
     _roles.clear();
-    _cast.clear();
     step = RoleGuideStep.roles;
     storyIndex = 0;
     storyBatch = 0;

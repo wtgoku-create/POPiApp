@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 
 /// Backend-shaped fixtures kept outside production widgets and localization.
 class FixtureProjectRepository extends ProjectRepository {
-  FixtureProjectRepository() : super(NetworkApi(Dio()));
+  FixtureProjectRepository() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
 
   @override
   Future<List<Project>> listProjects({CancelToken? cancelToken}) async => [

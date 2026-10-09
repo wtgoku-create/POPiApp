@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// No description provided for @roleGuideDescription.
   ///
   /// In en, this message translates to:
-  /// **'Choose up to 6 characters\nto start a new project:'**
+  /// **'Choose up to 5 characters\nto start a project conversation'**
   String get roleGuideDescription;
 
   /// No description provided for @roleCastTitle.
@@ -191,7 +191,7 @@ abstract class AppLocalizations {
   /// No description provided for @roleProjectLimit.
   ///
   /// In en, this message translates to:
-  /// **'Choose up to 6 project characters'**
+  /// **'Choose up to 5 project characters'**
   String get roleProjectLimit;
 
   /// No description provided for @roleCastLimit.
@@ -247,6 +247,372 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Story overview'**
   String get roleStoryOverview;
+
+  /// No description provided for @roleSwitchProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch project'**
+  String get roleSwitchProject;
+
+  /// No description provided for @roleMyProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'My IP projects'**
+  String get roleMyProjects;
+
+  /// No description provided for @roleEditProjectRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit project characters'**
+  String get roleEditProjectRoles;
+
+  /// No description provided for @roleViewProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'View character profiles'**
+  String get roleViewProfiles;
+
+  /// No description provided for @roleProfilePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Character profile {index}/{total}'**
+  String roleProfilePage(int index, int total);
+
+  /// No description provided for @roleFullProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View full character profile'**
+  String get roleFullProfile;
+
+  /// No description provided for @rolePreviousProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous character profile'**
+  String get rolePreviousProfile;
+
+  /// No description provided for @roleNextProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Next character profile'**
+  String get roleNextProfile;
+
+  /// No description provided for @roleDetailedStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Full story'**
+  String get roleDetailedStory;
+
+  /// No description provided for @roleStoryDevelopment.
+  ///
+  /// In en, this message translates to:
+  /// **'Plot development'**
+  String get roleStoryDevelopment;
+
+  /// No description provided for @roleStoryContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Main content'**
+  String get roleStoryContent;
+
+  /// No description provided for @roleProduceVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Create video'**
+  String get roleProduceVideo;
+
+  /// No description provided for @roleViewPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'View plan'**
+  String get roleViewPlan;
+
+  /// No description provided for @roleGeneratingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your video...'**
+  String get roleGeneratingTitle;
+
+  /// No description provided for @roleGeneratingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay here to wait\nor view the plan in chat'**
+  String get roleGeneratingDescription;
+
+  /// No description provided for @roleGeneratedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation complete!'**
+  String get roleGeneratedTitle;
+
+  /// No description provided for @roleGeneratedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Refine it in chat\nor explore a new idea with Agent'**
+  String get roleGeneratedDescription;
+
+  /// No description provided for @roleGenerationFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation interrupted'**
+  String get roleGenerationFailedTitle;
+
+  /// No description provided for @roleGenerationFailedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan is saved\nRetry or adjust it to continue'**
+  String get roleGenerationFailedDescription;
+
+  /// No description provided for @roleGenerationCanceledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Production stopped'**
+  String get roleGenerationCanceledTitle;
+
+  /// No description provided for @roleGenerationCanceledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan is saved\nAdjust it and start again'**
+  String get roleGenerationCanceledDescription;
+
+  /// No description provided for @roleTaskRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your video...'**
+  String get roleTaskRunning;
+
+  /// No description provided for @roleTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Task completed'**
+  String get roleTaskCompleted;
+
+  /// No description provided for @roleTaskFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation failed. Try again.'**
+  String get roleTaskFailed;
+
+  /// No description provided for @roleTaskCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Task stopped'**
+  String get roleTaskCanceled;
+
+  /// No description provided for @roleTaskExecuting.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get roleTaskExecuting;
+
+  /// No description provided for @roleStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get roleStatusCompleted;
+
+  /// No description provided for @roleStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get roleStatusFailed;
+
+  /// No description provided for @roleStatusCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get roleStatusCanceled;
+
+  /// No description provided for @roleStageCharacters.
+  ///
+  /// In en, this message translates to:
+  /// **'Characters'**
+  String get roleStageCharacters;
+
+  /// No description provided for @roleStageScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Script'**
+  String get roleStageScript;
+
+  /// No description provided for @roleStageStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard'**
+  String get roleStageStoryboard;
+
+  /// No description provided for @roleStageVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get roleStageVideo;
+
+  /// No description provided for @roleStageReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get roleStageReview;
+
+  /// No description provided for @roleWorkGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your video...'**
+  String get roleWorkGenerating;
+
+  /// No description provided for @roleStopProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop production'**
+  String get roleStopProduction;
+
+  /// No description provided for @roleStopProductionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop this production?'**
+  String get roleStopProductionTitle;
+
+  /// No description provided for @roleStopProductionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your characters, story and model settings will be kept so you can start again.'**
+  String get roleStopProductionDescription;
+
+  /// No description provided for @roleKeepGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep waiting'**
+  String get roleKeepGenerating;
+
+  /// No description provided for @roleContinueCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue creating'**
+  String get roleContinueCreating;
+
+  /// No description provided for @roleChatInSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat with Agent'**
+  String get roleChatInSession;
+
+  /// No description provided for @roleProjectSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Project conversation'**
+  String get roleProjectSession;
+
+  /// No description provided for @roleScriptContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Script'**
+  String get roleScriptContent;
+
+  /// No description provided for @roleStoryboardContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard'**
+  String get roleStoryboardContent;
+
+  /// No description provided for @rolePreviewNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Interaction preview · No points charged'**
+  String get rolePreviewNotice;
+
+  /// No description provided for @rolePreviewCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Example cover'**
+  String get rolePreviewCover;
+
+  /// No description provided for @roleEstimatePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a model and settings to see a points estimate'**
+  String get roleEstimatePending;
+
+  /// No description provided for @roleEstimatePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'The final quote applies when production is connected'**
+  String get roleEstimatePreview;
+
+  /// No description provided for @roleStoryPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{index}/{total}'**
+  String roleStoryPosition(int index, int total);
+
+  /// No description provided for @roleExampleDevelopment1.
+  ///
+  /// In en, this message translates to:
+  /// **'An unwritten graduation plan leads to a friend\'s sketchbook and a decision to make a short film. Revisiting those memories helps the character find a passion.'**
+  String get roleExampleDevelopment1;
+
+  /// No description provided for @roleExampleDevelopment2.
+  ///
+  /// In en, this message translates to:
+  /// **'A roommate\'s strange behavior prompts a secret investigation. A series of comic misunderstandings ends with a surprise farewell party in their classroom.'**
+  String get roleExampleDevelopment2;
+
+  /// No description provided for @roleExampleDevelopment3.
+  ///
+  /// In en, this message translates to:
+  /// **'A setback breaks through her usual brave face. Her friends support her in small everyday ways until she feels ready to share how tired she is.'**
+  String get roleExampleDevelopment3;
+
+  /// No description provided for @roleExampleDevelopment4.
+  ///
+  /// In en, this message translates to:
+  /// **'Dinner-table jokes give way to attentive listening. She shares her dream, the others share theirs, and they make a promise to meet again in a year.'**
+  String get roleExampleDevelopment4;
+
+  /// No description provided for @roleExampleDevelopment5.
+  ///
+  /// In en, this message translates to:
+  /// **'A misunderstanding pulls two friends apart and well-meant interventions make it worse. A rainy-day encounter over hot cocoa finally gives them space to talk.'**
+  String get roleExampleDevelopment5;
+
+  /// No description provided for @roleExampleDevelopment6.
+  ///
+  /// In en, this message translates to:
+  /// **'Watching a sunrise is the last wish before moving away. Small mishaps bring the friends closer, and their goodbye becomes a promise to meet again.'**
+  String get roleExampleDevelopment6;
+
+  /// No description provided for @roleExampleContent1.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: A pen hovers over a blank graduation plan beside the window.\nShot 2: Sketchbook photographs alternate with campus memories.\nShot 3: The friends raise a camera and film their first scene at sunset.'**
+  String get roleExampleContent1;
+
+  /// No description provided for @roleExampleContent2.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: The roommate slips out as friends peek around the door.\nShot 2: Their clumsy investigation takes them across campus.\nShot 3: A classroom door opens onto photographs and party lights.'**
+  String get roleExampleContent2;
+
+  /// No description provided for @roleExampleContent3.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: She sits at a desk and lets her forced smile fade.\nShot 2: Breakfast, patient waiting and notes show her friends\' care.\nShot 3: Surrounded by friends, she rests her head on a shoulder.'**
+  String get roleExampleContent3;
+
+  /// No description provided for @roleExampleContent4.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: Dinner-table laughter settles as everyone listens.\nShot 2: Each friend writes a dream on a slip of paper.\nShot 3: They seal the notes in a box dated one year from today.'**
+  String get roleExampleContent4;
+
+  /// No description provided for @roleExampleContent5.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: Two friends pass silently in a hallway.\nShot 2: Rain falls outside a cafe while cocoa steams on the table.\nShot 3: After an honest conversation, they leave under one umbrella.'**
+  String get roleExampleContent5;
+
+  /// No description provided for @roleExampleContent6.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot 1: A wish list has one unchecked item: watch a sunrise.\nShot 2: Forgotten keys and wrong turns turn into shared laughter.\nShot 3: They stand together in morning light and promise to reunite.'**
+  String get roleExampleContent6;
 
   /// No description provided for @roleModelParameters.
   ///

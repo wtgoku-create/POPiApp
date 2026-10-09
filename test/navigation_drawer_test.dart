@@ -10,6 +10,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 void main() {
   Future<ProviderContainer> pumpDrawer(
@@ -124,14 +125,25 @@ void main() {
     await pumpDrawer(tester);
     final avatar = find.byKey(const Key('drawer-session-avatar-mock-1'));
     expect(tester.getSize(avatar), const Size(30, 30));
+    final icon = tester.widget<AppSvgIcon>(avatar);
+    expect(icon.assetName, 'home_drawer_session_pink');
+    expect(icon.color, isNull);
     expect(
-      tester
-          .widget<Image>(
-            find.descendant(of: avatar, matching: find.byType(Image)),
-          )
-          .image,
-      const AssetImage('assets/images/role_guide_avatar_1.png'),
+      tester.getSize(find.byKey(const Key('drawer-session-mock-1'))).height,
+      40,
     );
+    for (final (id, name) in [
+      ('mock-2', 'home_drawer_session_blue'),
+      ('mock-3', 'home_drawer_session_peach'),
+      ('mock-4', 'home_drawer_session_neutral'),
+    ]) {
+      expect(
+        tester
+            .widget<AppSvgIcon>(find.byKey(Key('drawer-session-avatar-$id')))
+            .assetName,
+        name,
+      );
+    }
     await openMenu(tester, 'mock-1');
     final preview = find.byKey(const Key('app-context-menu-preview'));
     expect(find.descendant(of: preview, matching: avatar), findsOneWidget);
@@ -144,12 +156,8 @@ void main() {
     final fallback = find.byKey(const Key('drawer-session-avatar-mock-new-1'));
     expect(tester.getSize(fallback), const Size(30, 30));
     expect(
-      tester
-          .widget<Image>(
-            find.descendant(of: fallback, matching: find.byType(Image)),
-          )
-          .image,
-      const AssetImage('assets/icons/common_user_avatar.png'),
+      tester.widget<AppSvgIcon>(fallback).assetName,
+      'home_drawer_session_neutral',
     );
     expect(tester.takeException(), isNull);
   });

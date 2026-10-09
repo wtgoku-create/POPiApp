@@ -10,6 +10,7 @@ class DioClient {
     required TokenStorage secureStorage,
     String baseUrl = AppConfig.apiBaseUrl,
     bool enableLogging = AppConfig.enableApiLogging,
+    Map<String, Object?> headers = const {},
   }) : dio = Dio(
          BaseOptions(
            baseUrl: baseUrl,
@@ -18,6 +19,7 @@ class DioClient {
            headers: {
              'Accept': 'application/json',
              'Content-Type': 'application/json',
+             ...headers,
            },
          ),
        ) {

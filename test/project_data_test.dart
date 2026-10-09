@@ -8,6 +8,7 @@ import 'package:popi_ai_app/core/network/auth_interceptor.dart';
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
@@ -50,7 +51,10 @@ void main() {
         },
       ),
     );
-    final projects = await ProjectRepository(NetworkApi(dio)).listProjects();
+    final projects = await ProjectRepository(
+      NetworkApi(dio),
+      NetworkAgentApi(dio),
+    ).listProjects();
     expect(projects.map((item) => item.id), ['project-1', 'project-2']);
     expect(requests.length, 2);
     for (final request in requests) {
@@ -106,6 +110,7 @@ void main() {
       );
       final sessions = await ProjectRepository(
         NetworkApi(dio),
+        NetworkAgentApi(dio),
       ).listSessions('project / 1');
       expect(sessions.map((item) => item.id), [
         'pinned-new',
@@ -141,7 +146,7 @@ void main() {
         ),
       );
       await expectLater(
-        ProjectRepository(NetworkApi(dio)).listProjects(),
+        ProjectRepository(NetworkApi(dio), NetworkAgentApi(dio)).listProjects(),
         throwsA(isA<ApiException>()),
       );
     }
@@ -171,7 +176,7 @@ void main() {
       ),
     );
     await expectLater(
-      ProjectRepository(NetworkApi(dio)).listProjects(),
+      ProjectRepository(NetworkApi(dio), NetworkAgentApi(dio)).listProjects(),
       throwsA(isA<DioException>()),
     );
   });
@@ -298,7 +303,7 @@ class _LocalUser extends UserController {
 }
 
 class _ControlledRepository extends ProjectRepository {
-  _ControlledRepository() : super(NetworkApi(Dio()));
+  _ControlledRepository() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
 
   final projects = <Completer<List<Project>>>[];
   final sessions = <Completer<List<ProjectSession>>>[];

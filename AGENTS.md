@@ -67,10 +67,12 @@ lib/shared/type/
 ## 网络层
 
 - 页面和 Provider 不直接拼接 Dio 请求。
-- 所有后端请求 URL、HTTP 方法和请求参数统一在 `lib/core/network/network_api.dart` 的 `NetworkApi` 中定义，feature 文件不得直接发起 Dio 请求或定义接口路径。
-- feature 专属的 API 适配和业务数据转换放在对应 feature 的 `data/` 目录，通过 `NetworkApi` 调用接口。
+- 后端请求 URL、HTTP 方法和请求参数按接口路径前缀统一管理，feature 文件不得直接发起 Dio 请求或定义接口路径。
+- `/api_agent` 开头的接口统一在 `lib/core/network/network_agent_api.dart` 的 `NetworkAgentApi` 中定义，不放入 `NetworkApi`。
+- 其他后端接口统一在 `lib/core/network/network_api.dart` 的 `NetworkApi` 中定义。
+- feature 专属的 API 适配和业务数据转换放在对应 feature 的 `data/` 目录，通过对应的 `NetworkAgentApi` 或 `NetworkApi` 调用接口。
 - 业务调用通过 Repository 暴露。
-- 统一使用 `dioProvider` 获取 Dio。
+- 普通业务接口使用 `dioProvider`，`/api_agent` 接口使用 `agentDioProvider` 获取独立 Dio；Agent 服务地址和 Origin 通过 `AppConfig` 和环境文件管理。
 - Token 由 `AuthInterceptor` 自动添加。
 - 生产环境不要默认打开请求体和响应体日志。
 - 正式接入后，将 `DioClient` 的 `baseUrl` 改为环境配置，不要硬编码生产地址。

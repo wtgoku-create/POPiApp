@@ -3,12 +3,14 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/network/network_agent_api.dart';
 import '../domain/project.dart';
 
 class ProjectRepository {
-  const ProjectRepository(this._api);
+  const ProjectRepository(this._api, this._agentApi);
 
   final NetworkApi _api;
+  final NetworkAgentApi _agentApi;
 
   /// Creates an idempotency key that can be retained across command retries.
   static String createClientRequestId() => const Uuid().v4();
@@ -19,7 +21,7 @@ class ProjectRepository {
     required String clientRequestId,
     CancelToken? cancelToken,
   }) => _mutate(() async {
-    final value = await _api.createProjectSession(
+    final value = await _agentApi.createProjectSession(
       projectId,
       _title(title),
       clientRequestId: clientRequestId,
@@ -60,7 +62,7 @@ class ProjectRepository {
     String title, {
     CancelToken? cancelToken,
   }) => _mutate(
-    () => _api.updateProjectSession(
+    () => _agentApi.updateProjectSession(
       id,
       clientRequestId: createClientRequestId(),
       title: _title(title),
@@ -69,7 +71,7 @@ class ProjectRepository {
   );
 
   Future<void> deleteSession(String id, {CancelToken? cancelToken}) => _mutate(
-    () => _api.updateProjectSession(
+    () => _agentApi.updateProjectSession(
       id,
       clientRequestId: createClientRequestId(),
       archived: true,
@@ -82,7 +84,7 @@ class ProjectRepository {
     bool pinned, {
     CancelToken? cancelToken,
   }) => _mutate(
-    () => _api.updateProjectSession(
+    () => _agentApi.updateProjectSession(
       id,
       clientRequestId: createClientRequestId(),
       pinned: pinned,
@@ -124,8 +126,11 @@ class ProjectRepository {
     CancelToken? cancelToken,
   }) async {
     final items = await _pages(
-      (page) =>
-          _api.projectSessionsPage(projectId, page, cancelToken: cancelToken),
+      (page) => _agentApi.projectSessionsPage(
+        projectId,
+        page,
+        cancelToken: cancelToken,
+      ),
     );
     final sessions = {
       for (final item in items)

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 
 void main() {
@@ -29,11 +30,15 @@ void main() {
       ),
     );
     final requestId = ProjectRepository.createClientRequestId();
-    final session = await ProjectRepository(NetworkApi(dio)).createSession(
-      'project / 1',
-      ' New conversation ',
-      clientRequestId: requestId,
-    );
+    final session =
+        await ProjectRepository(
+          NetworkApi(dio),
+          NetworkAgentApi(dio),
+        ).createSession(
+          'project / 1',
+          ' New conversation ',
+          clientRequestId: requestId,
+        );
     expect(request.method, 'POST');
     expect(request.path, '/api_agent/v2/sessions/resolve');
     expect(request.data, {
@@ -61,6 +66,7 @@ void main() {
     await expectLater(
       ProjectRepository(
         NetworkApi(dio),
+        NetworkAgentApi(dio),
       ).createSession('p', 'New', clientRequestId: 'key'),
       throwsA(isA<ApiException>()),
     );
@@ -87,6 +93,7 @@ void main() {
     await expectLater(
       ProjectRepository(
         NetworkApi(dio),
+        NetworkAgentApi(dio),
       ).createSession('p', 'New', clientRequestId: 'key'),
       throwsA(
         isA<ApiException>().having(
@@ -138,7 +145,10 @@ void main() {
               },
             ),
           );
-          final repository = ProjectRepository(NetworkApi(dio));
+          final repository = ProjectRepository(
+            NetworkApi(dio),
+            NetworkAgentApi(dio),
+          );
           if (project) {
             if (change.containsKey('title')) {
               await repository.renameProject('id / 1', ' Renamed ');
@@ -199,8 +209,14 @@ void main() {
           );
           await expectLater(
             project
-                ? ProjectRepository(NetworkApi(dio)).deleteProject('1')
-                : ProjectRepository(NetworkApi(dio)).deleteSession('1'),
+                ? ProjectRepository(
+                    NetworkApi(dio),
+                    NetworkAgentApi(dio),
+                  ).deleteProject('1')
+                : ProjectRepository(
+                    NetworkApi(dio),
+                    NetworkAgentApi(dio),
+                  ).deleteSession('1'),
             throwsA(isA<ApiException>()),
           );
           expect(requests.map((request) => request.method), ['GET']);
@@ -242,7 +258,10 @@ void main() {
       ),
     );
     await expectLater(
-      ProjectRepository(NetworkApi(dio)).setSessionPinned('1', true),
+      ProjectRepository(
+        NetworkApi(dio),
+        NetworkAgentApi(dio),
+      ).setSessionPinned('1', true),
       throwsA(
         isA<ApiException>()
             .having((error) => error.statusCode, 'status', 409)
@@ -269,7 +288,7 @@ void main() {
         },
       ),
     );
-    final repository = ProjectRepository(NetworkApi(dio));
+    final repository = ProjectRepository(NetworkApi(dio), NetworkAgentApi(dio));
     for (final title in [
       '   ',
       List.filled(201, 'a').join(),

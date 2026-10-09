@@ -7,8 +7,13 @@ import '../../../assets/domain/library_role.dart';
 import 'role_guide_controls.dart';
 
 class RoleProjectSummary extends StatelessWidget {
-  const RoleProjectSummary({required this.roles, super.key});
+  const RoleProjectSummary({
+    required this.roles,
+    this.showStatus = false,
+    super.key,
+  });
   final List<LibraryRole> roles;
+  final bool showStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +46,7 @@ class RoleProjectSummary extends StatelessWidget {
               constraints.maxWidth < 290 ||
               MediaQuery.textScalerOf(context).scale(16) > 20;
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               RoleGuideAvatar(role: roles.first),
               const SizedBox(width: 10),
@@ -56,16 +61,14 @@ class RoleProjectSummary extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      l10n.roleProjectCount(roles.length),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    if (stacked) ...[const SizedBox(height: 8), status],
+                    if (showStatus && stacked) ...[
+                      const SizedBox(height: 8),
+                      status,
+                    ],
                   ],
                 ),
               ),
-              if (!stacked) ...[const SizedBox(width: 5), status],
+              if (showStatus && !stacked) ...[const SizedBox(width: 5), status],
             ],
           );
         },
@@ -75,9 +78,15 @@ class RoleProjectSummary extends StatelessWidget {
 }
 
 class RoleCastSummary extends StatelessWidget {
-  const RoleCastSummary({required this.cast, required this.onEdit, super.key});
+  const RoleCastSummary({
+    required this.cast,
+    required this.onViewProfiles,
+    this.onEdit,
+    super.key,
+  });
   final List<LibraryRole> cast;
-  final VoidCallback onEdit;
+  final VoidCallback onViewProfiles;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -86,19 +95,19 @@ class RoleCastSummary extends StatelessWidget {
       color: roleGuideTint(context),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        key: const Key('role-guide-edit-cast'),
-        onTap: onEdit,
+        key: const Key('role-guide-view-profiles'),
+        onTap: onViewProfiles,
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Row(
             children: [
               SizedBox(
-                width: 50 + (cast.length - 1) * 16,
+                width: 50 + (cast.length.clamp(1, 3) - 1) * 16,
                 height: 50,
                 child: Stack(
                   children: [
-                    for (var i = cast.length - 1; i >= 0; i--)
+                    for (var i = cast.length.clamp(0, 3) - 1; i >= 0; i--)
                       Positioned(
                         left: i * 16,
                         top: 0,
@@ -148,6 +157,17 @@ class RoleCastSummary extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null)
+                IconButton(
+                  key: const Key('role-guide-edit-cast'),
+                  tooltip: l10n.roleEditProjectRoles,
+                  onPressed: onEdit,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: 20,
+                    color: AppColors.brand,
+                  ),
+                ),
             ],
           ),
         ),

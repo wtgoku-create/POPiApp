@@ -71,15 +71,15 @@ void main() {
   test('sample avatar survives rename, pinning and reload', () async {
     await signIn('a');
     final sample = container.read(sessionsProvider).first;
-    expect(sample.avatarAsset, 'assets/images/role_guide_avatar_1.png');
+    expect(sample.avatarIcon, 'home_drawer_session_pink');
     final actions = container.read(sessionsProvider.notifier);
     actions.rename(sample.id, 'Updated title');
     actions.setPinned(sample.id, false);
     actions.setPinned(sample.id, true);
     container.invalidate(sessionsProvider);
     expect(
-      container.read(sessionsProvider).first.avatarAsset,
-      sample.avatarAsset,
+      container.read(sessionsProvider).first.avatarIcon,
+      sample.avatarIcon,
     );
   });
 

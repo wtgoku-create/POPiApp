@@ -16,7 +16,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleGuideDescription =>
-      'Choose up to 6 characters\nto start a new project:';
+      'Choose up to 5 characters\nto start a project conversation';
 
   @override
   String get roleCastTitle => 'Choose your cast';
@@ -61,7 +61,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleSelectCastFirst => 'Choose your cast first';
 
   @override
-  String get roleProjectLimit => 'Choose up to 6 project characters';
+  String get roleProjectLimit => 'Choose up to 5 project characters';
 
   @override
   String get roleCastLimit => 'Choose up to 3 cast members';
@@ -95,6 +95,212 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleStoryOverview => 'Story overview';
+
+  @override
+  String get roleSwitchProject => 'Switch project';
+
+  @override
+  String get roleMyProjects => 'My IP projects';
+
+  @override
+  String get roleEditProjectRoles => 'Edit project characters';
+
+  @override
+  String get roleViewProfiles => 'View character profiles';
+
+  @override
+  String roleProfilePage(int index, int total) {
+    return 'Character profile $index/$total';
+  }
+
+  @override
+  String get roleFullProfile => 'View full character profile';
+
+  @override
+  String get rolePreviousProfile => 'Previous character profile';
+
+  @override
+  String get roleNextProfile => 'Next character profile';
+
+  @override
+  String get roleDetailedStory => 'Full story';
+
+  @override
+  String get roleStoryDevelopment => 'Plot development';
+
+  @override
+  String get roleStoryContent => 'Main content';
+
+  @override
+  String get roleProduceVideo => 'Create video';
+
+  @override
+  String get roleViewPlan => 'View plan';
+
+  @override
+  String get roleGeneratingTitle => 'Creating your video...';
+
+  @override
+  String get roleGeneratingDescription =>
+      'Stay here to wait\nor view the plan in chat';
+
+  @override
+  String get roleGeneratedTitle => 'Creation complete!';
+
+  @override
+  String get roleGeneratedDescription =>
+      'Refine it in chat\nor explore a new idea with Agent';
+
+  @override
+  String get roleGenerationFailedTitle => 'Creation interrupted';
+
+  @override
+  String get roleGenerationFailedDescription =>
+      'Your plan is saved\nRetry or adjust it to continue';
+
+  @override
+  String get roleGenerationCanceledTitle => 'Production stopped';
+
+  @override
+  String get roleGenerationCanceledDescription =>
+      'Your plan is saved\nAdjust it and start again';
+
+  @override
+  String get roleTaskRunning => 'Creating your video...';
+
+  @override
+  String get roleTaskCompleted => 'Task completed';
+
+  @override
+  String get roleTaskFailed => 'Creation failed. Try again.';
+
+  @override
+  String get roleTaskCanceled => 'Task stopped';
+
+  @override
+  String get roleTaskExecuting => 'Running';
+
+  @override
+  String get roleStatusCompleted => 'Completed';
+
+  @override
+  String get roleStatusFailed => 'Failed';
+
+  @override
+  String get roleStatusCanceled => 'Stopped';
+
+  @override
+  String get roleStageCharacters => 'Characters';
+
+  @override
+  String get roleStageScript => 'Script';
+
+  @override
+  String get roleStageStoryboard => 'Storyboard';
+
+  @override
+  String get roleStageVideo => 'Video';
+
+  @override
+  String get roleStageReview => 'Review';
+
+  @override
+  String get roleWorkGenerating => 'Creating your video...';
+
+  @override
+  String get roleStopProduction => 'Stop production';
+
+  @override
+  String get roleStopProductionTitle => 'Stop this production?';
+
+  @override
+  String get roleStopProductionDescription =>
+      'Your characters, story and model settings will be kept so you can start again.';
+
+  @override
+  String get roleKeepGenerating => 'Keep waiting';
+
+  @override
+  String get roleContinueCreating => 'Continue creating';
+
+  @override
+  String get roleChatInSession => 'Chat with Agent';
+
+  @override
+  String get roleProjectSession => 'Project conversation';
+
+  @override
+  String get roleScriptContent => 'Script';
+
+  @override
+  String get roleStoryboardContent => 'Storyboard';
+
+  @override
+  String get rolePreviewNotice => 'Interaction preview · No points charged';
+
+  @override
+  String get rolePreviewCover => 'Example cover';
+
+  @override
+  String get roleEstimatePending =>
+      'Choose a model and settings to see a points estimate';
+
+  @override
+  String get roleEstimatePreview =>
+      'The final quote applies when production is connected';
+
+  @override
+  String roleStoryPosition(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get roleExampleDevelopment1 =>
+      'An unwritten graduation plan leads to a friend\'s sketchbook and a decision to make a short film. Revisiting those memories helps the character find a passion.';
+
+  @override
+  String get roleExampleDevelopment2 =>
+      'A roommate\'s strange behavior prompts a secret investigation. A series of comic misunderstandings ends with a surprise farewell party in their classroom.';
+
+  @override
+  String get roleExampleDevelopment3 =>
+      'A setback breaks through her usual brave face. Her friends support her in small everyday ways until she feels ready to share how tired she is.';
+
+  @override
+  String get roleExampleDevelopment4 =>
+      'Dinner-table jokes give way to attentive listening. She shares her dream, the others share theirs, and they make a promise to meet again in a year.';
+
+  @override
+  String get roleExampleDevelopment5 =>
+      'A misunderstanding pulls two friends apart and well-meant interventions make it worse. A rainy-day encounter over hot cocoa finally gives them space to talk.';
+
+  @override
+  String get roleExampleDevelopment6 =>
+      'Watching a sunrise is the last wish before moving away. Small mishaps bring the friends closer, and their goodbye becomes a promise to meet again.';
+
+  @override
+  String get roleExampleContent1 =>
+      'Shot 1: A pen hovers over a blank graduation plan beside the window.\nShot 2: Sketchbook photographs alternate with campus memories.\nShot 3: The friends raise a camera and film their first scene at sunset.';
+
+  @override
+  String get roleExampleContent2 =>
+      'Shot 1: The roommate slips out as friends peek around the door.\nShot 2: Their clumsy investigation takes them across campus.\nShot 3: A classroom door opens onto photographs and party lights.';
+
+  @override
+  String get roleExampleContent3 =>
+      'Shot 1: She sits at a desk and lets her forced smile fade.\nShot 2: Breakfast, patient waiting and notes show her friends\' care.\nShot 3: Surrounded by friends, she rests her head on a shoulder.';
+
+  @override
+  String get roleExampleContent4 =>
+      'Shot 1: Dinner-table laughter settles as everyone listens.\nShot 2: Each friend writes a dream on a slip of paper.\nShot 3: They seal the notes in a box dated one year from today.';
+
+  @override
+  String get roleExampleContent5 =>
+      'Shot 1: Two friends pass silently in a hallway.\nShot 2: Rain falls outside a cafe while cocoa steams on the table.\nShot 3: After an honest conversation, they leave under one umbrella.';
+
+  @override
+  String get roleExampleContent6 =>
+      'Shot 1: A wish list has one unchecked item: watch a sunrise.\nShot 2: Forgotten keys and wrong turns turn into shared laughter.\nShot 3: They stand together in morning light and promise to reunite.';
 
   @override
   String get roleModelParameters => 'Model / settings';

@@ -88,27 +88,6 @@ class NetworkApi {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> createProjectSession(
-    String projectId,
-    String title, {
-    required String clientRequestId,
-    CancelToken? cancelToken,
-  }) async {
-    final response = await dio.post<Map<String, dynamic>>(
-      '/api_agent/v2/sessions/resolve',
-      data: {
-        'clientRequestId': clientRequestId,
-        'mode': 'new',
-        'title': title,
-        'contextRef': {'kind': 'account', 'id': projectId},
-      },
-      cancelToken: cancelToken,
-    );
-    final body = response.data;
-    if (body == null) throw const ApiException();
-    return body;
-  }
-
   Future<void> updateProject(
     String id, {
     required String clientRequestId,
@@ -133,35 +112,6 @@ class NetworkApi {
       cancelToken: cancelToken,
     );
     _projectData(response.data);
-  }
-
-  Future<void> updateProjectSession(
-    String id, {
-    required String clientRequestId,
-    String? title,
-    bool? archived,
-    bool? pinned,
-    CancelToken? cancelToken,
-  }) async {
-    final path = '/api_agent/v2/sessions/${Uri.encodeComponent(id)}';
-    final detail = await dio.get<Map<String, dynamic>>(
-      '$path/snapshot',
-      cancelToken: cancelToken,
-    );
-    final session = detail.data?['session'];
-    if (session is! Map<String, dynamic>) throw const ApiException();
-    final response = await dio.patch<Map<String, dynamic>>(
-      path,
-      data: {
-        'clientRequestId': clientRequestId,
-        'expectedRevision': _revision(session),
-        if (title != null) 'title': title,
-        if (archived != null) 'archived': archived,
-        if (pinned != null) 'pinned': pinned,
-      },
-      cancelToken: cancelToken,
-    );
-    if (response.data == null) throw const ApiException();
   }
 
   int _revision(Map<String, dynamic> value) {
@@ -190,26 +140,6 @@ class NetworkApi {
       cancelToken: cancelToken,
     );
     return _projectData(response.data);
-  }
-
-  Future<Map<String, dynamic>> projectSessionsPage(
-    String projectId,
-    int page, {
-    CancelToken? cancelToken,
-  }) async {
-    final response = await dio.get<Map<String, dynamic>>(
-      '/api_agent/v2/sessions',
-      queryParameters: {
-        'contextKind': 'account',
-        'contextId': projectId,
-        'page': page,
-        'pageSize': 100,
-      },
-      cancelToken: cancelToken,
-    );
-    final body = response.data;
-    if (body == null) throw const ApiException();
-    return body;
   }
 
   Future<Map<String, dynamic>> libraryRoleDetail(String id) async {

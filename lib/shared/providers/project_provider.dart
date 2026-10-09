@@ -2,13 +2,17 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/network/network_api.dart';
+import '../../core/network/network_agent_api.dart';
 import '../../features/projects/data/project_repository.dart';
 import '../../features/projects/domain/project.dart';
 import 'network_provider.dart';
 import 'user_provider.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => ProjectRepository(NetworkApi(ref.watch(dioProvider))),
+  (ref) => ProjectRepository(
+    NetworkApi(ref.watch(dioProvider)),
+    NetworkAgentApi(ref.watch(agentDioProvider)),
+  ),
 );
 
 /// Account-scoped, in-memory lists; disposal cancels obsolete HTTP requests.

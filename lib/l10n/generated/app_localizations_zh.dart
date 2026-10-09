@@ -12,10 +12,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
-  String get roleGuideTitle => '从角色出发～';
+  String get roleGuideTitle => '从角色出发';
 
   @override
-  String get roleGuideDescription => '选择至多6个角色\n组建一个新项目：';
+  String get roleGuideDescription => '选择至多5个角色\n组建一个新项目会话';
 
   @override
   String get roleCastTitle => '选择出场角色';
@@ -24,16 +24,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleCastDescription => '选择你项目内\n至多3个角色参演视频：';
 
   @override
-  String get roleTopicTitle => '为TA们匹配选题';
+  String get roleTopicTitle => '匹配选题';
 
   @override
-  String get roleTopicDescription => 'POPi根据角色人设\n推荐合适的3个选题：';
+  String get roleTopicDescription => 'POPi根据角色人设\n推荐合适的3个选题';
 
   @override
-  String get roleProductionTitle => '开始制作视频';
+  String get roleProductionTitle => '制作视频';
 
   @override
-  String get roleProductionDescription => '选择模型与参数\n让角色与剧情动起来：';
+  String get roleProductionDescription => '选择模型与参数\n让你的故事栩栩如生';
 
   @override
   String get roleCreateProject => '创建项目';
@@ -56,7 +56,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleSelectCastFirst => '请先选择出场角色';
 
   @override
-  String get roleProjectLimit => '至多选择6个项目角色';
+  String get roleProjectLimit => '至多选择5个项目角色';
 
   @override
   String get roleCastLimit => '至多选择3个出场角色';
@@ -90,6 +90,205 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get roleStoryOverview => '故事概况';
+
+  @override
+  String get roleSwitchProject => '切换项目';
+
+  @override
+  String get roleMyProjects => '我的IP项目';
+
+  @override
+  String get roleEditProjectRoles => '修改项目角色';
+
+  @override
+  String get roleViewProfiles => '查看角色档案';
+
+  @override
+  String roleProfilePage(int index, int total) {
+    return '角色档案 $index/$total';
+  }
+
+  @override
+  String get roleFullProfile => '查看完整角色档案';
+
+  @override
+  String get rolePreviousProfile => '上一个角色档案';
+
+  @override
+  String get roleNextProfile => '下一个角色档案';
+
+  @override
+  String get roleDetailedStory => '详细故事';
+
+  @override
+  String get roleStoryDevelopment => '情节发展';
+
+  @override
+  String get roleStoryContent => '主要内容';
+
+  @override
+  String get roleProduceVideo => '制作视频';
+
+  @override
+  String get roleViewPlan => '查看方案';
+
+  @override
+  String get roleGeneratingTitle => '努力生成中...';
+
+  @override
+  String get roleGeneratingDescription => '你可以在此界面停留\n或去会话查看方案';
+
+  @override
+  String get roleGeneratedTitle => '生成成功！';
+
+  @override
+  String get roleGeneratedDescription => '去会话修改生成\n或和Agent聊聊新思路';
+
+  @override
+  String get roleGenerationFailedTitle => '生成未完成';
+
+  @override
+  String get roleGenerationFailedDescription => '保留当前方案\n重试或调整后继续';
+
+  @override
+  String get roleGenerationCanceledTitle => '已停止制作';
+
+  @override
+  String get roleGenerationCanceledDescription => '当前方案已保留\n调整后可以重新制作';
+
+  @override
+  String get roleTaskRunning => '任务正在生成...';
+
+  @override
+  String get roleTaskCompleted => '任务已完成';
+
+  @override
+  String get roleTaskFailed => '生成失败，请重试';
+
+  @override
+  String get roleTaskCanceled => '任务已停止';
+
+  @override
+  String get roleTaskExecuting => '执行中';
+
+  @override
+  String get roleStatusCompleted => '已完成';
+
+  @override
+  String get roleStatusFailed => '失败';
+
+  @override
+  String get roleStatusCanceled => '已停止';
+
+  @override
+  String get roleStageCharacters => '理解人设';
+
+  @override
+  String get roleStageScript => '撰写剧本';
+
+  @override
+  String get roleStageStoryboard => '编排分镜';
+
+  @override
+  String get roleStageVideo => '合成视频';
+
+  @override
+  String get roleStageReview => '检查结果';
+
+  @override
+  String get roleWorkGenerating => '作品努力生成中...';
+
+  @override
+  String get roleStopProduction => '停止制作';
+
+  @override
+  String get roleStopProductionTitle => '停止当前制作？';
+
+  @override
+  String get roleStopProductionDescription => '停止后会保留角色、故事和模型参数，可以重新制作。';
+
+  @override
+  String get roleKeepGenerating => '继续等待';
+
+  @override
+  String get roleContinueCreating => '继续创作';
+
+  @override
+  String get roleChatInSession => '去会话聊聊';
+
+  @override
+  String get roleProjectSession => '项目会话';
+
+  @override
+  String get roleScriptContent => '脚本内容';
+
+  @override
+  String get roleStoryboardContent => '分镜内容';
+
+  @override
+  String get rolePreviewNotice => '交互演示 · 不消耗积分';
+
+  @override
+  String get rolePreviewCover => '示例封面';
+
+  @override
+  String get roleEstimatePending => '选择模型与参数后查看积分预估';
+
+  @override
+  String get roleEstimatePreview => '积分以正式生成时的报价为准';
+
+  @override
+  String roleStoryPosition(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String get roleExampleDevelopment1 =>
+      '从迟迟无法落笔的毕业计划，到翻开朋友送来的画册，再到决定拍摄短片，角色在一次次回忆中找到自己的热爱。';
+
+  @override
+  String get roleExampleDevelopment2 =>
+      '室友的反常举动引发调查，跟踪途中接连发生误会，最终在教室里的告别派对揭开惊喜。';
+
+  @override
+  String get roleExampleDevelopment3 =>
+      '一次挫折让她习惯性的坚强出现裂缝。朋友从日常小事开始接住她，直到她愿意坦诚说出自己的疲惫。';
+
+  @override
+  String get roleExampleDevelopment4 =>
+      '聚餐从轻松的玩笑转向认真倾听。她终于说出梦想，伙伴们也分享各自的心愿，一起定下一年之约。';
+
+  @override
+  String get roleExampleDevelopment5 =>
+      '误会让两人疏远，伙伴的撮合适得其反。雨天的一次偶遇，让她们借一杯热可可说清了心里的委屈。';
+
+  @override
+  String get roleExampleDevelopment6 =>
+      '搬家前的愿望清单只剩看日出。一路的小意外让大家互相照应，赶到山顶时，告别变成了下一次相聚的约定。';
+
+  @override
+  String get roleExampleContent1 =>
+      '镜头一：窗边，笔尖停在空白的毕业计划上。\n镜头二：画册里的日常照片与校园回忆交错出现。\n镜头三：伙伴们举起相机，在夕阳下拍下短片的第一个镜头。';
+
+  @override
+  String get roleExampleContent2 =>
+      '镜头一：室友悄悄离开，伙伴们探头张望。\n镜头二：一路跟踪，手忙脚乱地藏到门后。\n镜头三：教室门打开，合影与灯光映出惊喜派对。';
+
+  @override
+  String get roleExampleContent3 =>
+      '镜头一：她坐在桌前，收起勉强的笑容。\n镜头二：早餐、等待和小纸条串起朋友们的关心。\n镜头三：伙伴围坐在一起，她终于放松地靠在朋友肩上。';
+
+  @override
+  String get roleExampleContent4 =>
+      '镜头一：餐桌上的笑声渐渐安静，大家认真听她说话。\n镜头二：她写下梦想，伙伴们依次写下心愿。\n镜头三：纸条放进盒子，大家一起在封口写下一年后的日期。';
+
+  @override
+  String get roleExampleContent5 =>
+      '镜头一：两人在走廊擦肩而过，没有说话。\n镜头二：小店窗外下着雨，热可可冒着白气。\n镜头三：坦诚交谈后，两人共撑一把伞离开。';
+
+  @override
+  String get roleExampleContent6 =>
+      '镜头一：大家勾选愿望清单，指向最后的看日出。\n镜头二：忘带钥匙、走错路，一路笑着互相帮忙。\n镜头三：晨光里并肩站着，约好下一次相聚。';
 
   @override
   String get roleModelParameters => '模型/参数';

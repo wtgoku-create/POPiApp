@@ -39,7 +39,7 @@ class MockSessionRepository {
         title: name,
         updatedAt: DateTime.now(),
         pinnedAt: session.pinnedAt,
-        avatarAsset: session.avatarAsset,
+        avatarIcon: session.avatarIcon,
       ),
     );
   }
@@ -52,7 +52,7 @@ class MockSessionRepository {
       title: session.title,
       updatedAt: session.updatedAt,
       pinnedAt: pinned ? DateTime.now() : null,
-      avatarAsset: session.avatarAsset,
+      avatarIcon: session.avatarIcon,
     ),
   );
 
@@ -100,7 +100,12 @@ class MockSessionRepository {
         ConversationSession(
           id: 'mock-${index + 1}',
           title: title,
-          avatarAsset: 'assets/images/role_guide_avatar_${index + 1}.png',
+          avatarIcon: switch (index) {
+            0 => 'home_drawer_session_pink',
+            1 => 'home_drawer_session_blue',
+            2 => 'home_drawer_session_peach',
+            _ => 'home_drawer_session_neutral',
+          },
           updatedAt: now.subtract(Duration(hours: index + 1)),
           pinnedAt: index == 0 ? now : null,
         ),
