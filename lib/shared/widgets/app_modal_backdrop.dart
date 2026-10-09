@@ -2,13 +2,14 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
-/// Shared background treatment for modal menus and centered dialogs.
+/// Shared Figma background treatment for dialogs, context menus and sheets.
 class AppModalBackdrop extends StatelessWidget {
   const AppModalBackdrop({this.progress = 1, super.key})
     : assert(progress >= 0 && progress <= 1);
 
-  static const blurSigma = 12.0;
-  static const dimColor = Color(0x29000000);
+  // Figma background blur 20 exports as CSS blur 10px (Gaussian sigma).
+  static const blurSigma = 10.0;
+  static const dimColor = Color(0x33AFAFAF);
   static const enterDuration = Duration(milliseconds: 260);
   static const exitDuration = Duration(milliseconds: 180);
 

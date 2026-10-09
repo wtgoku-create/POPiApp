@@ -19,6 +19,7 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
     required this.keyPrefix,
     this.icon,
     this.description,
+    this.showAvatar = true,
     super.key,
   });
 
@@ -29,6 +30,7 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
   final String Function(T)? description;
   final ValueChanged<T> onSelected;
   final String keyPrefix;
+  final bool showAvatar;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -95,16 +97,17 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
                               padding: const EdgeInsets.only(right: 20),
                               child: Row(
                                 children: [
-                                  ClipOval(
-                                    child: Image.asset(
-                                      'assets/images/ip_guide_feeling_avatar.png',
-                                      width: 30,
-                                      height: 30,
-                                      fit: BoxFit.cover,
-                                      excludeFromSemantics: true,
+                                  if (showAvatar)
+                                    ClipOval(
+                                      child: Image.asset(
+                                        'assets/images/ip_guide_feeling_avatar.png',
+                                        width: 30,
+                                        height: 30,
+                                        fit: BoxFit.cover,
+                                        excludeFromSemantics: true,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 5),
+                                  if (showAvatar) const SizedBox(width: 5),
                                   Expanded(
                                     child: Text(
                                       label(value),
@@ -179,6 +182,9 @@ class IpGuidePresentationChoices extends StatelessWidget {
     IpPresentation.animation2d: 'assets/images/ip_guide_2d.png',
     IpPresentation.animation3d: 'assets/images/ip_guide_3d.png',
     IpPresentation.liveAction: 'assets/images/ip_guide_live.png',
+    IpPresentation.pets: 'assets/images/ip_guide_pets.png',
+    IpPresentation.clay: 'assets/images/ip_guide_clay.png',
+    IpPresentation.ink: 'assets/images/ip_guide_ink.png',
   };
 
   @override
@@ -191,7 +197,7 @@ class IpGuidePresentationChoices extends StatelessWidget {
           : 2;
       return Column(
         children: [
-          for (var row = 0; row < 4 ~/ columns; row++) ...[
+          for (var row = 0; row < 6 ~/ columns; row++) ...[
             if (row > 0) const SizedBox(height: 15),
             Row(
               children: [

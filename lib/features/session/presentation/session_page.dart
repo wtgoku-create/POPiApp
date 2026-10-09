@@ -19,6 +19,8 @@ import '../../attachments/presentation/attachment_picker_sheet.dart';
 import '../../role_guide/domain/role_guide_draft.dart';
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'widgets/popi_message_composer.dart';
+import 'conversation_controller.dart';
+import 'widgets/conversation_timeline.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 
@@ -52,6 +54,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
   String? _activeSessionId;
+  ConversationController? _conversation;
 
   static const _maxImageCount = 5;
   static const _maxImageBytes = 6 * 1024 * 1024;
@@ -60,6 +63,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   void initState() {
     super.initState();
     _activeSessionId = widget.sessionId;
+    _bindConversation();
     if (widget.initialPrompt != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _selectPrompt(widget.initialPrompt!);
@@ -71,7 +75,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   void didUpdateWidget(SessionPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.sessionId != widget.sessionId) {
+      // 新建会话写回路由时沿用正在发送的控制器，避免取消首条消息。
+      if (widget.sessionId == _activeSessionId) return;
       _activeSessionId = widget.sessionId;
+      _conversation?.open(_activeSessionId);
       _resetComposer();
     }
   }
@@ -85,6 +92,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   @override
   void dispose() {
+    _conversation?.dispose();
     _messageController.dispose();
     _bodyScrollController.dispose();
     super.dispose();
@@ -118,6 +126,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       setState(() {
         _activeSessionId = null;
         _resetComposer();
+        _bindConversation();
       });
     });
     final l10n = AppLocalizations.of(context)!;
@@ -137,10 +146,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final user = ref.watch(userProvider);
     final isLoggedIn = user != null;
     final pointsBalance = user?.allCoins ?? 0;
-    final activeSession = ref
-        .watch(sessionsProvider)
-        .where((session) => session.id == _activeSessionId)
-        .firstOrNull;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -165,6 +170,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
             onOpenConversation: (session) {
               setState(() {
                 _activeSessionId = session.id;
+                _conversation?.open(session.id);
                 _resetComposer();
               });
               GoRouter.maybeOf(context)?.replace(
@@ -196,15 +202,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     elevation: 0,
                     toolbarHeight: 56,
                     leadingWidth: 80,
-                    title: activeSession == null
-                        ? null
-                        : Text(
-                            activeSession.title,
-                            key: const Key('session-active-title'),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 16),
-                          ),
                     leading: Align(
                       alignment: Alignment.centerLeft,
                       child: Padding(
@@ -253,45 +250,59 @@ class _SessionPageState extends ConsumerState<SessionPage> {
             Stack(
               fit: StackFit.expand,
               children: [
-                SingleChildScrollView(
-                  key: const Key('popi-home-scroll'),
-                  controller: _bodyScrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    50,
-                    20,
-                    contentBottomPadding,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: Column(
-                        children: [
-                          _WelcomeCards(
-                            prompts: [
-                              (
-                                l10n.homePromptCreateIp,
-                                const Color(0xFFEDE7FD),
-                              ),
-                              (
-                                l10n.homePromptImproveAccount,
-                                const Color(0xFFFEF4E8),
-                              ),
-                              (
-                                l10n.homePromptHasReference,
-                                const Color(0xFFFEEEF6),
-                              ),
-                              (l10n.homePromptUnsure, const Color(0xFFE5FBFA)),
-                            ],
-                            onPromptSelected: _selectPrompt,
-                          ),
-                        ],
+                if (_activeSessionId != null && _conversation != null)
+                  Positioned.fill(
+                    bottom: composerInset,
+                    child: ConversationTimeline(
+                      key: ValueKey(
+                        '${_conversation!.userId}:$_activeSessionId',
+                      ),
+                      controller: _conversation!,
+                    ),
+                  )
+                else
+                  SingleChildScrollView(
+                    key: const Key('popi-home-scroll'),
+                    controller: _bodyScrollController,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      50,
+                      20,
+                      contentBottomPadding,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Column(
+                          children: [
+                            _WelcomeCards(
+                              prompts: [
+                                (
+                                  l10n.homePromptCreateIp,
+                                  const Color(0xFFEDE7FD),
+                                ),
+                                (
+                                  l10n.homePromptImproveAccount,
+                                  const Color(0xFFFEF4E8),
+                                ),
+                                (
+                                  l10n.homePromptHasReference,
+                                  const Color(0xFFFEEEF6),
+                                ),
+                                (
+                                  l10n.homePromptUnsure,
+                                  const Color(0xFFE5FBFA),
+                                ),
+                              ],
+                              onPromptSelected: _selectPrompt,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
                 Positioned(
                   left: 0,
                   right: 0,
@@ -349,12 +360,18 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         child: Center(
                           heightFactor: 1,
                           child: PopiMessageComposer(
+                            conversationMode: _activeSessionId != null,
                             controller: _messageController,
                             selectedImages: _selectedImages,
                             onAttachment: _showAttachmentSheet,
                             onRemoveImage: _removeSelectedImage,
                             onHeightChanged: _handleComposerHeightChanged,
                             onSubmitted: _openConversation,
+                            sending:
+                                (_conversation?.pending ?? false) ||
+                                (_conversation?.loading ?? false),
+                            running: _conversation?.running ?? false,
+                            onStop: () => _conversation?.stop(),
                             onMentionRequested: _showMentionSheet,
                             onModelParametersRequested: _showModelParameters,
                             modelParametersDescription: [
@@ -385,9 +402,68 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     );
   }
 
-  void _openConversation(String value) {
-    if (value.trim().isEmpty) return;
-    AppToast.info(context, AppLocalizations.of(context)!.conversationPending);
+  void _bindConversation() {
+    _conversation?.dispose();
+    final userId = ref.read(userProvider)?.id;
+    _conversation = userId == null
+        ? null
+        : ConversationController(
+            ref.read(sessionRepositoryProvider),
+            userId,
+            onSessionChanged: (session) {
+              if (!mounted || ref.read(userProvider)?.id != userId) return;
+              final changed = _activeSessionId != session.id;
+              _activeSessionId = session.id;
+              ref.read(sessionsProvider.notifier).upsert(session);
+              // 先保存新会话的路由，首条消息超时后仍能回到同一会话重试。
+              if (changed) {
+                GoRouter.maybeOf(context)?.replace(
+                  Uri(
+                    path: '/session',
+                    queryParameters: {'sessionId': session.id},
+                  ).toString(),
+                );
+              }
+            },
+          );
+    _conversation?.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _conversation?.open(_activeSessionId);
+  }
+
+  Future<void> _openConversation(String value) async {
+    if (value.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (ref.read(userProvider) == null) {
+      GoRouter.maybeOf(context)?.push('/login');
+      return;
+    }
+    final conversation = _conversation;
+    if (conversation == null || conversation.pending || conversation.running) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final success = await conversation.send(
+      value.trim(),
+      [
+        for (final image in _selectedImages)
+          (name: image.name, bytes: image.bytes),
+      ],
+      l10n.newSessionTitle,
+      l10n.chatMediaPrompt,
+    );
+    if (!mounted || !identical(conversation, _conversation)) return;
+    if (success) {
+      setState(_resetComposer);
+      GoRouter.maybeOf(context)?.replace(
+        Uri(
+          path: '/session',
+          queryParameters: {'sessionId': conversation.sessionId!},
+        ).toString(),
+      );
+    } else if (conversation.error != null) {
+      AppToast.error(context, conversationErrorText(conversation.error, l10n));
+    }
   }
 
   Future<void> _showModelParameters() async {
@@ -400,7 +476,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         isScrollControlled: true,
         showDragHandle: false,
         backgroundColor: Colors.transparent,
-        barrierColor: const Color(0x22000000),
         builder: (_) =>
             RoleGenerationSheet(initialSettings: _generationSettings),
       );
@@ -423,6 +498,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   Future<void> _addImages(List<XFile> images) async {
+    if (_conversation?.pending ?? false) return;
     final remaining = _maxImageCount - _selectedImages.length;
     if (remaining <= 0) {
       AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
@@ -478,11 +554,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   void _removeSelectedImage(int index) {
+    if (_conversation?.pending ?? false) return;
     if (index < 0 || index >= _selectedImages.length) return;
     setState(() => _selectedImages.removeAt(index));
   }
 
   Future<void> _showAttachmentSheet() async {
+    if (_conversation?.pending ?? false) return;
     final remaining = _maxImageCount - _selectedImages.length;
     if (remaining <= 0) {
       AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
@@ -495,13 +573,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       pickImages: widget.pickImages,
     );
     if (!mounted || result == null) return;
-    if (result.library != null) {
-      await context.push(
-        '/assets?section=${result.library == AttachmentLibrary.roles ? 'roles' : 'works'}',
-      );
-    } else {
-      await _addImages(result.images);
-    }
+    await _addImages(result.images);
   }
 
   void _showMentionSheet() {

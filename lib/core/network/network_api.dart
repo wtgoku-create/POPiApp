@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+import 'dart:typed_data';
 
 import '../config/app_config.dart';
 import 'api_exception.dart';
+import 'payment_exception.dart';
 import '../../features/auth/domain/captcha_challenge.dart';
 import '../../shared/type/social_app_type.dart';
+import '../../shared/type/payment_type.dart';
 
 /// Centralizes concrete HTTP contracts shared by feature data sources.
 class NetworkApi {
@@ -12,6 +15,83 @@ class NetworkApi {
   final Dio dio;
 
   String get mediaBaseUrl => dio.options.baseUrl;
+
+  Future<Map<String, Object?>> createStudioUpload(
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _studioRequest('/api_client/agent/v2/uploads', input, cancelToken);
+
+  Future<Map<String, Object?>> completeStudioUpload(
+    String id,
+    String clientRequestId, {
+    CancelToken? cancelToken,
+  }) => _studioRequest(
+    '/api_client/agent/v2/uploads/${Uri.encodeComponent(id)}/complete',
+    {'clientRequestId': clientRequestId},
+    cancelToken,
+  );
+
+  Future<Map<String, Object?>> studioMedia(
+    String id, {
+    CancelToken? cancelToken,
+  }) => _studioRequest(
+    '/api_client/agent/v2/media/${Uri.encodeComponent(id)}',
+    null,
+    cancelToken,
+  );
+
+  /// Signed storage requests must not inherit the application's Bearer token.
+  Future<void> uploadStudioBytes(
+    String url,
+    Map<String, Object?> headers,
+    Uint8List bytes, {
+    CancelToken? cancelToken,
+  }) async {
+    final transport = Dio();
+    try {
+      await transport.put<Object?>(
+        Uri.parse(mediaBaseUrl).resolve(url).toString(),
+        data: bytes,
+        options: Options(
+          headers: headers,
+          contentType: headers['Content-Type']?.toString(),
+        ),
+        cancelToken: cancelToken,
+      );
+    } finally {
+      transport.close(force: true);
+    }
+  }
+
+  /// Only server-defined generation confirmation routes may be executed.
+  Future<Map<String, Object?>> confirmStudioGeneration(
+    String path,
+    Map<String, Object?> body, {
+    CancelToken? cancelToken,
+  }) {
+    if (!RegExp(
+      r'^/api_client/agent/v2/(generation/confirmations|roles/[1-9][0-9]*/activate)$',
+    ).hasMatch(path)) {
+      throw const ApiException(message: 'Invalid generation confirmation');
+    }
+    return _studioRequest(path, body, cancelToken);
+  }
+
+  Future<Map<String, Object?>> _studioRequest(
+    String path,
+    Map<String, Object?>? body,
+    CancelToken? cancelToken,
+  ) async {
+    final response = await dio.request<Object?>(
+      path,
+      data: body,
+      options: Options(method: body == null ? 'GET' : 'POST'),
+      cancelToken: cancelToken,
+    );
+    final data = _workBody(response.data)['data'];
+    if (data is! Map) throw const ApiException();
+    return Map<String, Object?>.from(data);
+  }
 
   Future<Map<String, Object?>> listLibraryWorks({
     required int type,
@@ -88,26 +168,114 @@ class NetworkApi {
     return _data(response);
   }
 
+  Future<(String, int)> createIpAccount({
+    required String title,
+    required String clientRequestId,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts',
+      cancelToken: cancelToken,
+      data: {
+        'clientRequestId': clientRequestId,
+        'expectedRevision': 0,
+        'title': title,
+        'accountType': 'ip_character',
+      },
+    );
+    final account = _projectData(response.data);
+    final id = account['id'];
+    if (id is! String || id.isEmpty) throw const ApiException();
+    return (id, _revision(account));
+  }
+
+  Future<void> saveIpAccountProfile(
+    String id, {
+    required int revision,
+    required String clientRequestId,
+    required Map<String, Object?> profile,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/profile-versions',
+      cancelToken: cancelToken,
+      data: {
+        'clientRequestId': clientRequestId,
+        'expectedRevision': revision,
+        'profile': profile,
+        'activate': true,
+      },
+    );
+    final version = _projectData(response.data);
+    if (version['id'] is! String || (version['id'] as String).isEmpty) {
+      throw const ApiException();
+    }
+  }
+
   Future<void> updateProject(
     String id, {
     required String clientRequestId,
+    int? expectedRevision,
     String? title,
     bool archive = false,
     CancelToken? cancelToken,
   }) async {
     final path = '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}';
-    final detail = await dio.get<Map<String, dynamic>>(
-      path,
-      cancelToken: cancelToken,
-    );
-    final account = _projectData(detail.data);
+    final revision =
+        expectedRevision ??
+        _revision(await ipAccountDetail(id, cancelToken: cancelToken));
     final response = await dio.patch<Map<String, dynamic>>(
       path,
       data: {
         'clientRequestId': clientRequestId,
-        'expectedRevision': _revision(account),
+        'expectedRevision': revision,
         if (title != null) 'title': title,
         if (archive) 'action': 'archive',
+      },
+      cancelToken: cancelToken,
+    );
+    _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> ipAccountDetail(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}',
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> ipAccountResourcesPage(
+    String id, {
+    required bool profiles,
+    required int page,
+    CancelToken? cancelToken,
+  }) async {
+    final resource = profiles ? 'profile-versions' : 'creations';
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/$resource',
+      queryParameters: {'page': page, 'pageSize': 100},
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<void> saveIpAccountRoles(
+    String id, {
+    required int revision,
+    required String clientRequestId,
+    required List<Map<String, Object?>> items,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.put<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/resident-roles',
+      data: {
+        'clientRequestId': clientRequestId,
+        'expectedRevision': revision,
+        'items': items,
       },
       cancelToken: cancelToken,
     );
@@ -142,9 +310,13 @@ class NetworkApi {
     return _projectData(response.data);
   }
 
-  Future<Map<String, dynamic>> libraryRoleDetail(String id) async {
+  Future<Map<String, dynamic>> libraryRoleDetail(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/roles/${Uri.encodeComponent(id)}',
+      cancelToken: cancelToken,
     );
     final data = response.data?['data'];
     if (data is! Map<String, dynamic>) throw const ApiException();
@@ -162,9 +334,11 @@ class NetworkApi {
     required String category,
     required int page,
     required int pageSize,
+    CancelToken? cancelToken,
   }) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/roles',
+      cancelToken: cancelToken,
       queryParameters: {
         'category': category,
         'page': page,
@@ -342,6 +516,89 @@ class NetworkApi {
     final list = data['list'];
     if (list is! List) throw const ApiException();
     return list;
+  }
+
+  Future<Map<String, Object?>> previewAppSubscription(int subscriptionId) =>
+      _paymentRequest(
+        '/api_client/trade/subscription/previewApp',
+        data: {'subscriptionId': subscriptionId},
+      );
+
+  Future<Map<String, Object?>> createAppPayment({
+    required PaymentProductKind kind,
+    required PaymentChannel channel,
+    required int productId,
+  }) {
+    final base = switch (kind) {
+      PaymentProductKind.subscription => '/api_client/trade/subscription',
+      PaymentProductKind.points => '/api_client/users/pointPackage',
+    };
+    final method = switch (channel) {
+      PaymentChannel.wechat => 'payByGatewayAppWxPay',
+      PaymentChannel.alipay => 'payByGatewayAppAliPay',
+    };
+    return _paymentRequest(
+      '$base/$method',
+      data: {
+        if (kind == PaymentProductKind.subscription)
+          'subscriptionId': productId,
+        if (kind == PaymentProductKind.points) 'packageId': productId,
+      },
+    );
+  }
+
+  Future<Map<String, Object?>> appPaymentOrder(String tradeNo) =>
+      _paymentRequest(
+        '/api_client/trade/payment/app/orders/${Uri.encodeComponent(tradeNo)}',
+      );
+
+  /// Payment failures may contain a created order, including HTTP errors.
+  Future<Map<String, Object?>> _paymentRequest(
+    String path, {
+    Map<String, Object?>? data,
+  }) async {
+    try {
+      final response = await dio.request<Object?>(
+        path,
+        data: data,
+        options: Options(
+          method: data == null ? 'GET' : 'POST',
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      return _paymentData(response.data, response.statusCode);
+    } on DioException catch (error) {
+      if (error.response?.data is Map) {
+        _paymentData(
+          error.response!.data,
+          error.response!.statusCode,
+          httpFailed: true,
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Map<String, Object?> _paymentData(
+    Object? body,
+    int? statusCode, {
+    bool httpFailed = false,
+  }) {
+    final envelope = body is Map ? Map<String, Object?>.from(body) : null;
+    final value = envelope?['data'];
+    final data = value is Map
+        ? Map<String, Object?>.from(value)
+        : <String, Object?>{};
+    final code = envelope?['status']?.toString();
+    if (httpFailed || code != '0000' || value is! Map) {
+      throw PaymentException(
+        code: code,
+        message: envelope?['message']?.toString(),
+        statusCode: statusCode,
+        data: data,
+      );
+    }
+    return data;
   }
 
   Future<void> verifyApplePurchase({

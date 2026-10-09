@@ -20,6 +20,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
     required this.onCategoryChanged,
     this.initialCategory = 'official',
     this.fullLibrary = false,
+    this.scrollController,
     this.onMore,
     super.key,
   });
@@ -31,6 +32,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
   final ValueChanged<String> onCategoryChanged;
   final String initialCategory;
   final bool fullLibrary;
+  final ScrollController? scrollController;
   final VoidCallback? onMore;
 
   @override
@@ -112,22 +114,52 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final categories = RoleGuideSegments(
-              labels: [l10n.officialRoles, l10n.myRoles],
-              selected: _category == 'official' ? 0 : 1,
-              filledTrack: !widget.fullLibrary,
-              onSelected: (i) =>
-                  _changeCategory(i == 0 ? 'official' : 'personal'),
-            );
-            final create = TextButton.icon(
-              key: const Key('role-guide-create-role'),
-              onPressed: widget.onCreate,
-              icon: Container(
+    final controls = LayoutBuilder(
+      builder: (context, constraints) {
+        double labelWidth(String label) {
+          final painter = TextPainter(
+            text: TextSpan(
+              text: label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            textDirection: Directionality.of(context),
+            textScaler: MediaQuery.textScalerOf(context),
+            locale: Localizations.localeOf(context),
+          )..layout();
+          final width = painter.width;
+          painter.dispose();
+          return width;
+        }
+
+        // Reserve intrinsic label widths before choosing a compact row.
+        final createWidth = labelWidth(l10n.createNewRole) + 20 + 5 + 36;
+        final categoryLabelWidth = labelWidth(
+          l10n.officialRoles,
+        ).clamp(labelWidth(l10n.myRoles), double.infinity);
+        final categoriesWidth = (categoryLabelWidth + 14) * 2 + 6;
+        final categories = RoleGuideSegments(
+          labels: [l10n.officialRoles, l10n.myRoles],
+          selected: _category == 'official' ? 0 : 1,
+          filledTrack: !widget.fullLibrary,
+          onSelected: (i) => _changeCategory(i == 0 ? 'official' : 'personal'),
+        );
+        final create = TextButton(
+          key: const Key('role-guide-create-role'),
+          onPressed: widget.onCreate,
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.standard,
+            backgroundColor: AppColors.brand.withValues(alpha: .1),
+            foregroundColor: AppColors.brand,
+            minimumSize: const Size(117, 40),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+            shape: const StadiumBorder(),
+            textStyle: const TextStyle(fontSize: 14),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
                 width: 20,
                 height: 20,
                 padding: const EdgeInsets.all(4),
@@ -137,37 +169,40 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
                 ),
                 child: const AppSvgIcon.asset('role_guide_add'),
               ),
-              label: Text(l10n.createNewRole, textAlign: TextAlign.center),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.standard,
-                backgroundColor: AppColors.brand.withValues(alpha: .1),
-                foregroundColor: AppColors.brand,
-                minimumSize: const Size(0, 40),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  l10n.createNewRole,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                shape: const StadiumBorder(),
-                textStyle: const TextStyle(fontSize: 14),
               ),
-            );
-            if (constraints.maxWidth < 300 ||
-                MediaQuery.textScalerOf(context).scale(14) > 18) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [categories, const SizedBox(height: 8), create],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(flex: 2, child: categories),
-                const SizedBox(width: 5),
-                Expanded(child: create),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 20),
+            ],
+          ),
+        );
+        if (constraints.maxWidth < createWidth + categoriesWidth + 5) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              categories,
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: create),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: categories),
+            const SizedBox(width: 5),
+            create,
+          ],
+        );
+      },
+    );
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         if (_roles.isNotEmpty)
           if (widget.fullLibrary)
             Column(
@@ -212,6 +247,31 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
             onPressed: _load,
             child: Text(l10n.roleGuideViewMore),
           ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.fullLibrary)
+          Padding(
+            key: const Key('role-guide-library-controls'),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: controls,
+          )
+        else
+          controls,
+        const SizedBox(height: 20),
+        if (widget.fullLibrary)
+          Expanded(
+            child: SingleChildScrollView(
+              key: const Key('role-guide-library-scroll'),
+              controller: widget.scrollController,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: content,
+            ),
+          )
+        else
+          content,
       ],
     );
   }

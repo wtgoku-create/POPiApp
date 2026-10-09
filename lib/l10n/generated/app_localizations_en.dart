@@ -135,6 +135,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleProduceVideo => 'Create video';
 
   @override
+  String get roleStartCreating => 'Start creating';
+
+  @override
   String get roleViewPlan => 'View plan';
 
   @override
@@ -650,6 +653,84 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipAccountDetailsPending => 'Account details are not available yet';
 
   @override
+  String get ipAccountHomeTitle => 'Account Home';
+
+  @override
+  String get ipAccountPreferences => 'Account Preferences';
+
+  @override
+  String get ipAccountPositioning => 'Account Positioning';
+
+  @override
+  String get ipAccountFieldEmpty => 'Not set';
+
+  @override
+  String get ipAccountEdit => 'Edit';
+
+  @override
+  String get ipAccountSave => 'Save';
+
+  @override
+  String get ipAccountSaved => 'Account details saved';
+
+  @override
+  String get ipAccountLoadFailed =>
+      'Could not load account details. Please retry.';
+
+  @override
+  String get ipAccountResourcesFailed =>
+      'Could not load project assets and roles';
+
+  @override
+  String get ipAccountAssets => 'Project Assets';
+
+  @override
+  String get ipAccountRoles => 'Project Roles';
+
+  @override
+  String get ipAccountNoAssets => 'No creations yet';
+
+  @override
+  String get ipAccountNoRoles => 'No project roles yet';
+
+  @override
+  String get ipAccountCountSeparator => ': ';
+
+  @override
+  String get ipAccountAssetsEmptyPrompt =>
+      'No creations yet. Start creating with your Agent.';
+
+  @override
+  String get ipAccountRolesEmptyPrompt =>
+      'Add roles to build your creative world.';
+
+  @override
+  String get ipAccountManageRoles => 'Manage Project Roles';
+
+  @override
+  String get ipAccountRoleLimit => 'Add up to 20 roles';
+
+  @override
+  String get ipAccountPublish => 'Create Content';
+
+  @override
+  String get ipAccountPublishEstimate => 'About 1 min';
+
+  @override
+  String get ipAccountPublishReady =>
+      'Your account is ready. Start with a topic, idea, script, or material.';
+
+  @override
+  String get ipAccountStartContent => 'Start New Content';
+
+  @override
+  String get ipAccountStartPrompt =>
+      'Help me create new content based on this account\'s positioning.';
+
+  @override
+  String get ipAccountUnavailable => 'Account is paused';
+
+  @override
   String get ipAccountsPending => 'IP accounts are not available yet';
 
   @override
@@ -944,7 +1025,122 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipGuideIntroBefore => 'Just ';
 
   @override
-  String get ipGuideIntroFourSteps => '4 steps';
+  String get ipGuideIntroFiveSteps => '5 steps';
+
+  @override
+  String get ipDraftTitle => 'Continue your draft or create a new IP?';
+
+  @override
+  String get ipDraftDetected => 'An account positioning draft was found.';
+
+  @override
+  String get ipDraftDescription =>
+      'Continue to return to your saved step. Starting again replaces this draft. Existing projects, content, and assets will be kept.';
+
+  @override
+  String get ipDraftRestart => 'Start again';
+
+  @override
+  String get ipDraftResume => 'Continue draft';
+
+  @override
+  String get ipDraftSaveFailed => 'Could not save your draft. Please retry.';
+
+  @override
+  String get ipNextAudience => 'Next: Target audience';
+
+  @override
+  String get ipAudienceQuestion => 'Who is your account for?';
+
+  @override
+  String get ipSelectAudience => 'Choose an audience or enter your own';
+
+  @override
+  String get ipSelectNickname => 'Enter a name for your account';
+
+  @override
+  String get ipReselect => 'Choose again';
+
+  @override
+  String get ipCreating => 'Creating...';
+
+  @override
+  String get ipCreateFailed =>
+      'Creation is incomplete. Your draft is saved. Please retry.';
+
+  @override
+  String get ipCreateSuccess => 'Account created!';
+
+  @override
+  String get ipCreateSuccessDescription =>
+      'Every piece of content you publish will build your account here.';
+
+  @override
+  String get ipCreateFirstRole => 'Create your first character';
+
+  @override
+  String get ipCreateFirstContent => 'Make your first content';
+
+  @override
+  String get ipOpenProject => 'Open account project';
+
+  @override
+  String get ipFirstContentPrompt =>
+      'Help me make the first piece of content based on this account\'s positioning.';
+
+  @override
+  String get ipAudienceStudents => 'Students';
+
+  @override
+  String get ipAudienceWorkers => 'Professionals';
+
+  @override
+  String get ipAudienceFamilies => 'Families';
+
+  @override
+  String get ipAudienceAnimeFans => 'Anime fans';
+
+  @override
+  String get ipAudiencePetLovers => 'Pet lovers';
+
+  @override
+  String get ipAudienceSeniors => 'Seniors';
+
+  @override
+  String get ipAudienceStudentsDescription =>
+      'Campus life, learning, and the interests of young people';
+
+  @override
+  String get ipAudienceWorkersDescription =>
+      'Work life, career growth, and everyday pressures';
+
+  @override
+  String get ipAudienceFamiliesDescription =>
+      'Parenting, family life, and spending time with children';
+
+  @override
+  String get ipAudienceAnimeFansDescription =>
+      'Anime characters, fantasy stories, and creative worlds';
+
+  @override
+  String get ipAudiencePetLoversDescription =>
+      'Pets, playful moments, and comforting characters';
+
+  @override
+  String get ipAudienceSeniorsDescription =>
+      'Healthy living, hobbies, and life after retirement';
+
+  @override
+  String get ipPresentationPets => 'Anthropomorphic pets';
+
+  @override
+  String get ipPresentationClay => 'Clay animation';
+
+  @override
+  String get ipPresentationInk => 'Chinese ink painting';
+
+  @override
+  String get ipVisualStyle => 'Visual style';
 
   @override
   String get ipGuideIntroAfter => '\nto create your IP account';
@@ -1177,6 +1373,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get composerPlaceholder => 'Say something to POPi...';
+
+  @override
+  String get composerExpandInput => 'Expand input';
 
   @override
   String selectedImageLabel(String name) {
@@ -1475,6 +1674,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Allow adding photos in system settings to save images.';
 
   @override
+  String get videoSavedToPhotos => 'Video saved to Photos';
+
+  @override
+  String get videoSaveFailed => 'Could not save the video. Try again later.';
+
+  @override
+  String get videoSaveAccessDenied =>
+      'Allow adding photos in system settings to save videos.';
+
+  @override
   String get delete => 'Delete';
 
   @override
@@ -1606,6 +1815,79 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restorePurchases => 'Restore purchases';
+
+  @override
+  String get paymentTitle => 'Confirm payment';
+
+  @override
+  String get paymentChooseMethod => 'Payment method';
+
+  @override
+  String get paymentWechat => 'WeChat Pay';
+
+  @override
+  String get paymentAlipay => 'Alipay';
+
+  @override
+  String get paymentConfirm => 'Confirm payment';
+
+  @override
+  String get paymentAmount => 'Payment amount';
+
+  @override
+  String get paymentCatalogPrice =>
+      'Plan price. Your order determines the final charge';
+
+  @override
+  String get paymentCheckAgain => 'Check again';
+
+  @override
+  String get paymentProcessing =>
+      'Payment is processing. Benefits will update once delivered';
+
+  @override
+  String get paymentCanceledPending =>
+      'Payment canceled. Order status is awaiting confirmation';
+
+  @override
+  String get paymentUnknown =>
+      'Payment status is unavailable. Check your bill before paying again';
+
+  @override
+  String get paymentNotCompleted =>
+      'Order incomplete or refunded. Benefits have not been confirmed';
+
+  @override
+  String get paymentUnavailable =>
+      'Payment service is unavailable. Try again later';
+
+  @override
+  String get paymentAppNotInstalled => 'Not installed or unavailable';
+
+  @override
+  String get paymentRetry => 'Retry';
+
+  @override
+  String get paymentDone => 'Done';
+
+  @override
+  String get paymentOrderNumber => 'Order number';
+
+  @override
+  String get paymentCopyOrder => 'Copy order number';
+
+  @override
+  String get paymentOrderCopied => 'Order number copied';
+
+  @override
+  String get paymentPendingOrders => 'Other unconfirmed orders';
+
+  @override
+  String get paymentNewPurchase => 'Buy again';
+
+  @override
+  String get paymentNewPurchaseWarning =>
+      'The original order may still be processing. Check your WeChat or Alipay bill first. Buying again creates a new order and may result in a duplicate charge.';
 
   @override
   String get purchaseProcessing => 'Connecting to the App Store…';
@@ -1753,4 +2035,121 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get splashTagline => '“Helping people express themselves better”';
+
+  @override
+  String get chatThinking => 'POPi is working…';
+
+  @override
+  String get chatRoleCreated => 'Character draft created';
+
+  @override
+  String get chatRoleUpdated => 'Character draft updated';
+
+  @override
+  String get chatRolePublished => 'Character published';
+
+  @override
+  String get chatExpandProgress => 'Expand progress';
+
+  @override
+  String get chatCollapseProgress => 'Collapse progress';
+
+  @override
+  String get chatPreparing => 'Preparing';
+
+  @override
+  String get chatProcessing => 'Processing your request';
+
+  @override
+  String get chatGeneratingReply => 'Generating a reply';
+
+  @override
+  String get chatSavingArtifact => 'Saving content';
+
+  @override
+  String get chatPlanningGeneration => 'Preparing a generation plan';
+
+  @override
+  String get chatReadRole => 'Reading character profiles';
+
+  @override
+  String get chatReadContext => 'Reading the creative context';
+
+  @override
+  String get chatTopics => 'Suggesting topics';
+
+  @override
+  String get chatPrepareRole => 'Preparing a character plan';
+
+  @override
+  String get chatAskUser => 'Waiting for more details';
+
+  @override
+  String get chatSaveRole => 'Saving the character draft';
+
+  @override
+  String get chatPublishRole => 'Publishing the character';
+
+  @override
+  String get chatPreviewImage => 'Preview image';
+
+  @override
+  String get chatCollapseProfile => 'Collapse profile';
+
+  @override
+  String get chatConfirmGeneration => 'Generate';
+
+  @override
+  String get chatRoleName => 'Name';
+
+  @override
+  String get chatReconnecting => 'Connection lost. Reconnecting…';
+
+  @override
+  String get chatRequestFailed => 'Request failed. Please try again';
+
+  @override
+  String get chatInsufficientPoints =>
+      'Not enough points. Top up and try again';
+
+  @override
+  String get chatRunFailed => 'This request failed';
+
+  @override
+  String get chatStopped => 'Stopped';
+
+  @override
+  String get chatCompleted => 'Completed';
+
+  @override
+  String get chatExpired => 'Expired';
+
+  @override
+  String get chatAwaitingConfirmation => 'Awaiting confirmation';
+
+  @override
+  String get chatStop => 'Stop reply';
+
+  @override
+  String get chatSending => 'Sending';
+
+  @override
+  String get chatPlayVideo => 'Play video';
+
+  @override
+  String get chatPlayAudio => 'Play audio';
+
+  @override
+  String get chatCustomAnswer => 'Add your own answer';
+
+  @override
+  String get chatMediaPrompt => 'Please use these images as references';
+
+  @override
+  String get chatHistoryLoadFailed => 'Unable to load conversations';
+
+  @override
+  String chatEstimatedPoints(String points) {
+    return 'Estimated cost: $points points';
+  }
 }

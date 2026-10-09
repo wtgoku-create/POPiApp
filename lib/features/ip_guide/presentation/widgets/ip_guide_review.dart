@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/ip_guide_draft.dart';
 import '../ip_guide_copy.dart';
 import 'ip_guide_controls.dart';
@@ -13,12 +14,26 @@ class IpGuideReview extends StatelessWidget {
     required this.draft,
     required this.nicknameController,
     required this.onConfirm,
+    required this.onReselect,
+    required this.onCreateRole,
+    required this.onCreateContent,
+    required this.onOpenProject,
+    this.busy = false,
+    this.submitted = false,
+    this.completed = false,
     super.key,
   });
 
   final IpGuideDraft draft;
   final TextEditingController nicknameController;
   final VoidCallback onConfirm;
+  final VoidCallback onReselect;
+  final VoidCallback onCreateRole;
+  final VoidCallback onCreateContent;
+  final VoidCallback onOpenProject;
+  final bool busy;
+  final bool submitted;
+  final bool completed;
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +63,16 @@ class IpGuideReview extends StatelessWidget {
     final summaries = [
       (l10n.ipContentDirection, direction),
       (l10n.ipAudienceFeeling, feeling),
-      (l10n.ipContentFormat, '$presentation · $format'),
-      (l10n.ipTargetAudience, l10n.ipTargetAudienceValue),
+      (l10n.ipPresentation, '$presentation · $format'),
+      (
+        l10n.ipTargetAudience,
+        selectionLabel(
+          draft.audience,
+          (value) => audienceLabel(value, l10n),
+          ' × ',
+          l10n,
+        ),
+      ),
     ];
 
     return Padding(
@@ -89,22 +112,7 @@ class IpGuideReview extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: colors.primary.withValues(alpha: .1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              l10n.ipAccountAvatar,
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: colors.primary,
-                              ),
-                            ),
-                          ),
+                          const AppSvgIcon.asset('ip_guide_account', size: 50),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -145,56 +153,53 @@ class IpGuideReview extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 30),
-                Text(
-                  l10n.ipAccountNickname,
-                  style: TextStyle(
-                    fontSize: 16,
-                    height: 1.25,
-                    color: colors.onSurface,
+                if (!completed) ...[
+                  const SizedBox(height: 30),
+                  Text(
+                    l10n.ipAccountNickname,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.25,
+                      color: colors.onSurface,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 5),
-                IpGuideTextField(
-                  key: const Key('ip-nickname'),
-                  controller: nicknameController,
-                  hint: l10n.ipNicknameHint,
-                  limit: 15,
-                  nickname: true,
-                ),
+                  const SizedBox(height: 5),
+                  IpGuideTextField(
+                    key: const Key('ip-nickname'),
+                    controller: nicknameController,
+                    hint: l10n.ipNicknameHint,
+                    limit: 15,
+                    nickname: true,
+                    readOnly: submitted,
+                  ),
+                ],
                 const SizedBox(height: 20),
                 for (var i = 0; i < summaries.length; i++) ...[
                   ConstrainedBox(
                     constraints: const BoxConstraints(minHeight: 49),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Flexible(
-                            flex: 2,
-                            child: Text(
-                              summaries[i].$1,
-                              style: TextStyle(
-                                fontSize: 16,
-                                height: 1.5,
-                                color: colors.onSurface,
-                              ),
+                          Text(
+                            summaries[i].$1,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              height: 1.5,
+                              color: colors.onSurface,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 5,
-                            child: Text(
-                              summaries[i].$2,
-                              key: Key('ip-review-value-$i'),
-                              textAlign: TextAlign.right,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                height: 1.5,
-                                color: colors.onSurface,
-                              ),
+                          const SizedBox(height: 8),
+                          Text(
+                            summaries[i].$2,
+                            key: Key('ip-review-value-$i'),
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                              color: colors.onSurface,
                             ),
                           ),
                         ],
@@ -205,11 +210,39 @@ class IpGuideReview extends StatelessWidget {
                     Divider(height: 1, thickness: 1, color: colors.outline),
                 ],
                 const SizedBox(height: 20),
-                IpGuideNextButton(
-                  key: const Key('ip-confirm'),
-                  label: l10n.ipConfirmCreate,
-                  onPressed: onConfirm,
-                ),
+                if (completed) ...[
+                  IpGuideNextButton(
+                    key: const Key('ip-create-role'),
+                    label: l10n.ipCreateFirstRole,
+                    onPressed: busy ? null : onCreateRole,
+                  ),
+                  const SizedBox(height: 10),
+                  IpGuideNextButton(
+                    key: const Key('ip-create-content'),
+                    label: l10n.ipCreateFirstContent,
+                    onPressed: busy ? null : onCreateContent,
+                  ),
+                  const SizedBox(height: 10),
+                  _SecondaryAction(
+                    key: const Key('ip-open-project'),
+                    label: l10n.ipOpenProject,
+                    onPressed: busy ? null : onOpenProject,
+                  ),
+                ] else ...[
+                  IpGuideNextButton(
+                    key: const Key('ip-confirm'),
+                    label: busy ? l10n.ipCreating : l10n.ipConfirmCreate,
+                    onPressed: busy ? null : onConfirm,
+                  ),
+                  if (!submitted) ...[
+                    const SizedBox(height: 10),
+                    _SecondaryAction(
+                      key: const Key('ip-reselect'),
+                      label: l10n.ipReselect,
+                      onPressed: busy ? null : onReselect,
+                    ),
+                  ],
+                ],
               ],
             ),
           ),
@@ -217,6 +250,31 @@ class IpGuideReview extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SecondaryAction extends StatelessWidget {
+  const _SecondaryAction({
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(
+      minimumSize: const Size(0, 50),
+      shape: const StadiumBorder(),
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.primary.withValues(alpha: .05),
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
+      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 18),
+    ),
+    child: Text(label, textAlign: TextAlign.center),
+  );
 }
 
 class _AccountBadge extends StatelessWidget {

@@ -162,10 +162,14 @@ class RoleCastSummary extends StatelessWidget {
                   key: const Key('role-guide-edit-cast'),
                   tooltip: l10n.roleEditProjectRoles,
                   onPressed: onEdit,
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    size: 20,
-                    color: AppColors.brand,
+                  // Figma exports this rotated frame in its local orientation.
+                  icon: const RotatedBox(
+                    quarterTurns: 1,
+                    child: AppSvgIcon.asset(
+                      'role_guide_edit',
+                      size: 20,
+                      color: AppColors.brand,
+                    ),
                   ),
                 ),
             ],

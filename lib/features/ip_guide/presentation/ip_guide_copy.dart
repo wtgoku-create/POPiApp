@@ -39,6 +39,9 @@ String presentationLabel(IpPresentation value, AppLocalizations l10n) =>
       IpPresentation.aiReal => l10n.ipPresentationAiReal,
       IpPresentation.animation2d => l10n.ipPresentation2d,
       IpPresentation.animation3d => l10n.ipPresentation3d,
+      IpPresentation.pets => l10n.ipPresentationPets,
+      IpPresentation.clay => l10n.ipPresentationClay,
+      IpPresentation.ink => l10n.ipPresentationInk,
       IpPresentation.liveAction => l10n.ipPresentationLive,
     };
 
@@ -49,6 +52,54 @@ String formatLabel(IpContentFormat value, AppLocalizations l10n) =>
       IpContentFormat.interactiveDrama => l10n.ipFormatInteractiveDrama,
       IpContentFormat.talkingHead => l10n.ipFormatTalkingHead,
     };
+
+String audienceLabel(IpTargetAudience value, AppLocalizations l10n) =>
+    switch (value) {
+      IpTargetAudience.students => l10n.ipAudienceStudents,
+      IpTargetAudience.workers => l10n.ipAudienceWorkers,
+      IpTargetAudience.families => l10n.ipAudienceFamilies,
+      IpTargetAudience.animeFans => l10n.ipAudienceAnimeFans,
+      IpTargetAudience.petLovers => l10n.ipAudiencePetLovers,
+      IpTargetAudience.seniors => l10n.ipAudienceSeniors,
+    };
+
+String audienceDescription(IpTargetAudience value, AppLocalizations l10n) =>
+    switch (value) {
+      IpTargetAudience.students => l10n.ipAudienceStudentsDescription,
+      IpTargetAudience.workers => l10n.ipAudienceWorkersDescription,
+      IpTargetAudience.families => l10n.ipAudienceFamiliesDescription,
+      IpTargetAudience.animeFans => l10n.ipAudienceAnimeFansDescription,
+      IpTargetAudience.petLovers => l10n.ipAudiencePetLoversDescription,
+      IpTargetAudience.seniors => l10n.ipAudienceSeniorsDescription,
+    };
+
+Map<String, Object?> guideAccountProfile(
+  IpGuideDraft draft,
+  AppLocalizations l10n,
+) => {
+  'contentDirection': selectionLabel(
+    draft.directions,
+    (value) => directionLabel(value, l10n),
+    ' × ',
+    l10n,
+  ),
+  'audienceFeeling': selectionLabel(
+    draft.feelings,
+    (value) => feelingLabel(value, l10n),
+    ' / ',
+    l10n,
+  ),
+  'presentation': presentationLabel(draft.presentation!, l10n),
+  'contentFormat': draft.customFormat.trim().isEmpty
+      ? formatLabel(draft.format, l10n)
+      : draft.customFormat.trim(),
+  'targetAudience': selectionLabel(
+    draft.audience,
+    (value) => audienceLabel(value, l10n),
+    ' × ',
+    l10n,
+  ),
+};
 
 String selectionLabel<T extends Enum>(
   IpGuideSelection<T> selection,
@@ -85,5 +136,10 @@ String guideSessionPrompt(IpGuideDraft draft, AppLocalizations l10n) =>
       draft.customFormat.trim().isEmpty
           ? formatLabel(draft.format, l10n)
           : draft.customFormat.trim(),
-      l10n.ipTargetAudienceValue,
+      selectionLabel(
+        draft.audience,
+        (value) => audienceLabel(value, l10n),
+        ' × ',
+        l10n,
+      ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
@@ -8,12 +9,25 @@ import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
-import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
+import 'package:popi_ai_app/features/ip_guide/data/ip_guide_repository.dart';
+import 'package:popi_ai_app/features/ip_guide/domain/ip_guide_draft.dart';
+import 'package:popi_ai_app/shared/providers/ip_guide_provider.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'support/ip_guide_fixtures.dart';
 
 void main() {
+  late MemoryGuideStorage storage;
+  late FixtureIpGuideApi api;
+  late IpGuideRepository repository;
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    storage = MemoryGuideStorage(await SharedPreferences.getInstance());
+    api = FixtureIpGuideApi();
+    repository = IpGuideRepository(storage, api, userId: '1');
+  });
+
   Future<void> pumpGuide(
     WidgetTester tester, {
     Size size = const Size(440, 956),
@@ -29,7 +43,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPadding);
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [ipGuideRepositoryProvider.overrideWithValue(repository)],
+    );
     addTearDown(container.dispose);
     await container
         .read(userProvider.notifier)
@@ -90,6 +106,124 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'start and next actions stay at the bottom while content scrolls',
+    (tester) async {
+      await pumpGuide(tester, size: const Size(320, 640));
+      const choices = [
+        'ip-direction-campus',
+        'ip-feeling-authentic',
+        'ip-presentation-animation3d',
+        'ip-audience-students',
+      ];
+      for (var step = 0; step <= 4; step++) {
+        final actionKey = step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step';
+        final action = find.byKey(Key(actionKey));
+        expect(action.hitTestable(), findsOneWidget);
+        expect(tester.getBottomLeft(action).dy, closeTo(640 - 34 - 20, .01));
+        final position = tester.getTopLeft(action);
+        await tester.drag(
+          find.byKey(Key('ip-guide-scroll-$step')),
+          const Offset(0, -200),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(action), position);
+        if (step > 0) await tap(tester, choices[step - 1]);
+        await tap(tester, actionKey);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'next action stays above the keyboard and custom input is reachable',
+    (tester) async {
+      await pumpGuide(tester, size: const Size(320, 640));
+      await tap(tester, 'ip-guide-start');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      final action = find.byKey(const Key('ip-guide-next-1'));
+      expect(action.hitTestable(), findsOneWidget);
+      expect(tester.getBottomLeft(action).dy, closeTo(640 - 240 - 20, .01));
+      final input = field('ip-custom-direction');
+      await tester.ensureVisible(input);
+      await tester.pumpAndSettle();
+      expect(input.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(input).dy,
+        lessThan(tester.getTopLeft(action).dy),
+      );
+      await tester.enterText(input, '独立音乐');
+      await tap(tester, 'ip-guide-next-1');
+      expect(find.text('你想让观众看完有什么感受？'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'checks on entry, resumes saved step and replaces the single draft',
+    (tester) async {
+      final draft = IpGuideDraft()..step = 2;
+      draft.directions.toggle(IpContentDirection.campus);
+      draft.feelings.customText = '温暖';
+      await repository.save(draft);
+      await pumpGuide(tester);
+      expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
+      await tap(tester, 'ip-draft-resume');
+      expect(find.text('你想让观众看完有什么感受？'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(field('ip-custom-feeling')).controller!.text,
+        '温暖',
+      );
+      for (var i = 0; i < 3; i++) {
+        await tap(tester, 'ip-guide-back');
+      }
+      await tap(tester, 'home-start-0');
+      expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
+      await tap(tester, 'ip-draft-restart');
+      expect(find.text('你想长期分享什么？'), findsOneWidget);
+      expect(repository.load()!.directions.isEmpty, isTrue);
+      expect(repository.load()!.feelings.isEmpty, isTrue);
+      expect(storage.values.length, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'dismissal keeps the saved draft and retry clears it after success',
+    (tester) async {
+      final draft = IpGuideDraft()
+        ..step = 5
+        ..presentation = IpPresentation.clay
+        ..nickname = '校园故事';
+      draft.directions.toggle(IpContentDirection.campus);
+      draft.feelings.toggle(IpAudienceFeeling.authentic);
+      draft.audience.toggle(IpTargetAudience.students);
+      await repository.save(draft);
+      await pumpGuide(tester);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(repository.load()!.nickname, '校园故事');
+      await tap(tester, 'ip-guide-start');
+      await tap(tester, 'ip-draft-resume');
+      api.failProfile = true;
+      await tap(tester, 'ip-confirm');
+      expect(repository.load()!.accountId, 'created-account');
+      expect(find.text('创建成功！'), findsNothing);
+      expect(find.byKey(const Key('ip-reselect')), findsNothing);
+      api.failProfile = false;
+      await tap(tester, 'ip-confirm');
+      expect(find.text('创建成功！'), findsOneWidget);
+      expect(repository.load(), isNull);
+      expect(api.accountRequests, hasLength(1));
+      expect(api.profileRequests[0], api.profileRequests[1]);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('progress only displays the current step and cannot navigate', (
     tester,
   ) async {
@@ -97,7 +231,7 @@ void main() {
     for (var step = 0; step < 5; step++) {
       final indicator = find.byKey(Key('ip-guide-progress-$step'));
       final semantics = tester.widget<Semantics>(indicator).properties;
-      expect(semantics.selected, step == 0);
+      expect(semantics.selected, isFalse);
       expect(semantics.button, isNot(true));
       expect(semantics.onTap, isNull);
       await tester.tap(indicator);
@@ -110,7 +244,7 @@ void main() {
     expect(find.text('你想长期分享什么？'), findsOneWidget);
     expect(
       tester
-          .widget<Semantics>(find.byKey(const Key('ip-guide-progress-1')))
+          .widget<Semantics>(find.byKey(const Key('ip-guide-progress-0')))
           .properties
           .selected,
       isTrue,
@@ -119,7 +253,7 @@ void main() {
   });
 
   testWidgets(
-    'all four steps preserve selections and confirm the exact plan into a session',
+    'all five steps preserve selections and save the exact account profile',
     (tester) async {
       await pumpGuide(tester);
       expect(find.byType(IpGuidePage), findsOneWidget);
@@ -140,6 +274,9 @@ void main() {
       await tap(tester, 'ip-presentation-animation3d');
       await tap(tester, 'ip-format-comicDrama');
       await tap(tester, 'ip-guide-next-3');
+      await tap(tester, 'ip-audience-students');
+      await tap(tester, 'ip-audience-workers');
+      await tap(tester, 'ip-guide-next-4');
       expect(find.text('校园 × 情感'), findsOneWidget);
       expect(find.text('真实 / 治愈'), findsOneWidget);
       expect(find.text('3D动漫 · 漫剧'), findsOneWidget);
@@ -147,19 +284,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('校园小故事'), findsNWidgets(2));
       await tap(tester, 'ip-confirm');
-      final session = tester.widget<SessionPage>(find.byType(SessionPage));
-      expect(session.initialPrompt, contains('账号昵称：校园小故事'));
-      expect(session.initialPrompt, contains('内容方向：校园 × 情感'));
-      expect(session.initialPrompt, contains('观众感受：真实 / 治愈'));
-      expect(session.initialPrompt, contains('呈现形态：3D动漫'));
-      expect(session.initialPrompt, contains('内容形式：漫剧'));
-      expect(
-        tester
-            .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
-            .controller
-            .markdown,
-        session.initialPrompt,
-      );
+      expect(find.text('创建成功！'), findsOneWidget);
+      expect(api.savedProfile, {
+        'contentDirection': '校园 × 情感',
+        'audienceFeeling': '真实 / 治愈',
+        'presentation': '3D动漫',
+        'contentFormat': '漫剧',
+        'targetAudience': '学生群体 × 职场人群',
+      });
+      expect(repository.load(), isNull);
       expect(tester.takeException(), isNull);
     },
   );
@@ -179,6 +312,8 @@ void main() {
       await tap(tester, 'ip-presentation-aiReal');
       await tester.enterText(field('ip-custom-format'), '音乐故事');
       await tap(tester, 'ip-guide-next-3');
+      await tester.enterText(field('ip-custom-audience'), '独立音乐爱好者');
+      await tap(tester, 'ip-guide-next-4');
       expect(find.text('独立音乐'), findsOneWidget);
       expect(find.text('好奇而轻松'), findsOneWidget);
       expect(find.text('AI真人 · 音乐故事'), findsOneWidget);
@@ -188,7 +323,7 @@ void main() {
         tester.widget<TextField>(field('ip-nickname')).controller!.text,
         'abcdefghijklmno',
       );
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 4; i++) {
         await tap(tester, 'ip-guide-back');
       }
       expect(
@@ -197,7 +332,7 @@ void main() {
       );
       await tester.enterText(
         field('ip-custom-direction'),
-        '123456789012345678901',
+        List.filled(51, 'a').join(),
       );
       await tester.pump();
       expect(
@@ -206,7 +341,7 @@ void main() {
             .controller!
             .text
             .length,
-        20,
+        50,
       );
       await tap(tester, 'ip-direction-emotion');
       expect(
@@ -297,20 +432,21 @@ void main() {
               .animationDuration,
           Duration.zero,
         );
-        for (var step = 0; step < 5; step++) {
+        for (var step = 0; step < 6; step++) {
           final key = step == 0
               ? 'ip-guide-start'
-              : step == 4
+              : step == 5
               ? 'ip-confirm'
               : 'ip-guide-next-$step';
           await tester.ensureVisible(find.byKey(Key(key)));
           await tester.pumpAndSettle();
           expect(find.byKey(Key(key)).hitTestable(), findsOneWidget);
           expect(tester.takeException(), isNull);
-          if (step == 4) continue;
+          if (step == 5) continue;
           if (step == 1) await tap(tester, 'ip-direction-campus');
           if (step == 2) await tap(tester, 'ip-feeling-authentic');
           if (step == 3) await tap(tester, 'ip-presentation-animation3d');
+          if (step == 4) await tap(tester, 'ip-audience-students');
           await tap(tester, key);
         }
       },

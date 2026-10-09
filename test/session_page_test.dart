@@ -18,6 +18,8 @@ import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 
 import 'support/project_fixtures.dart';
+import 'support/session_fixtures.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   test('message composer controller exports markdown', () async {
@@ -52,6 +54,7 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
       ],
     );
@@ -168,15 +171,15 @@ void main() {
         .getSize(find.byKey(const Key('popi-message-composer')))
         .height;
     expect(growingHeight, greaterThan(112));
-    expect(growingHeight, lessThan(154));
+    expect(growingHeight, lessThan(133));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      154,
+      133,
     );
     expect(
       tester.getSize(find.byKey(const Key('popi-message-input'))).height,
-      84,
+      63,
     );
     tester.testTextInput.enterText('');
     await tester.pump();
@@ -185,7 +188,7 @@ void main() {
         .getSize(find.byKey(const Key('popi-message-composer')))
         .height;
     expect(shrinkingHeight, greaterThan(112));
-    expect(shrinkingHeight, lessThan(154));
+    expect(shrinkingHeight, lessThan(133));
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
@@ -322,8 +325,8 @@ void main() {
     expect(drawer.clipBehavior, Clip.antiAlias);
     await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
     await tester.pumpAndSettle();
-    expect(find.text('校园野餐vlog'), findsOneWidget);
-    expect(find.byKey(const Key('session-active-title')), findsOneWidget);
+    expect(find.text('校园野餐vlog'), findsNothing);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
   });
 
   testWidgets('renders home content in English', (tester) async {
@@ -551,6 +554,7 @@ void main() {
   ) async {
     final container = ProviderContainer(
       overrides: [
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
       ],
     );

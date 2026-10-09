@@ -11,17 +11,14 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
+import '../../assets/presentation/assets_page.dart';
 import '../data/device_gallery_repository.dart';
 import '../domain/gallery_repository.dart';
 
-enum AttachmentLibrary { roles, assets }
-
 class AttachmentPickerResult {
-  const AttachmentPickerResult.images(this.images) : library = null;
-  const AttachmentPickerResult.library(this.library) : images = const [];
+  const AttachmentPickerResult.images(this.images);
 
   final List<XFile> images;
-  final AttachmentLibrary? library;
 }
 
 class AttachmentPickerSheet extends StatefulWidget {
@@ -219,7 +216,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
-  Future<void> _import({bool camera = false}) async {
+  Future<void> _import() async {
     if (_busy) return;
     final remaining = widget.limit - _selected.length;
     if (remaining <= 0) {
@@ -228,10 +225,9 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
     setState(() => _busy = true);
     try {
-      final files = camera
-          ? [if (await _repository.takePhoto() case final XFile file) file]
-          : await (widget.pickImages?.call() ??
-                _repository.pickImages(remaining));
+      final files =
+          await (widget.pickImages?.call() ??
+              _repository.pickImages(remaining));
       if (!mounted) return;
       setState(() {
         for (final file in files.take(remaining)) {
@@ -257,15 +253,11 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
-  Future<void> _manageAccess() async {
+  Future<void> _openSettings() async {
     if (_busy || _loading) return;
     setState(() => _busy = true);
     try {
-      if (_access == GalleryAccess.limited) {
-        await _repository.manageLimitedAccess();
-      } else {
-        await _repository.openSettings();
-      }
+      await _repository.openSettings();
     } catch (_) {
       if (mounted) {
         AppToast.error(
@@ -318,7 +310,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     return LayoutBuilder(
       builder: (context, constraints) => SizedBox(
         height: math.min(
-          MediaQuery.sizeOf(context).height * .92,
+          MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
           (constraints.maxWidth - 56) / 3 * 4 +
               254 +
               MediaQuery.paddingOf(context).bottom,
@@ -347,32 +339,46 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                           spacing: 8,
                           children: [
                             _SourceTile(
-                              label: l10n.attachmentCamera,
-                              icon: 'attachment_camera',
-                              onTap: _busy ? null : () => _import(camera: true),
+                              key: const Key('attachment-source-gallery'),
+                              label: l10n.gallery,
+                              icon: Icon(
+                                Icons.photo_library_outlined,
+                                size: 24,
+                                color: scheme.onSurface,
+                              ),
+                              onTap: _busy ? null : _import,
                             ),
                             _SourceTile(
+                              key: const Key('attachment-source-roles'),
                               label: l10n.roles,
-                              icon: 'attachment_role',
+                              icon: Transform.flip(
+                                flipY: true,
+                                child: AppSvgIcon.asset(
+                                  'attachment_role',
+                                  size: 24,
+                                  color: scheme.onSurface,
+                                ),
+                              ),
                               onTap: _busy
                                   ? null
-                                  : () => Navigator.pop(
-                                      context,
-                                      const AttachmentPickerResult.library(
-                                        AttachmentLibrary.roles,
-                                      ),
+                                  : () => AssetsPage.showSheet(
+                                      context: context,
+                                      initialSection: AssetLibrarySection.roles,
                                     ),
                             ),
                             _SourceTile(
+                              key: const Key('attachment-source-assets'),
                               label: l10n.assets,
-                              icon: 'attachment_asset',
+                              icon: AppSvgIcon.asset(
+                                'attachment_asset',
+                                size: 28,
+                                color: scheme.onSurface,
+                              ),
                               onTap: _busy
                                   ? null
-                                  : () => Navigator.pop(
-                                      context,
-                                      const AttachmentPickerResult.library(
-                                        AttachmentLibrary.assets,
-                                      ),
+                                  : () => AssetsPage.showSheet(
+                                      context: context,
+                                      initialSection: AssetLibrarySection.works,
                                     ),
                             ),
                           ],
@@ -382,26 +388,17 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                       if (_usesLibrary &&
                           !_loading &&
                           !_failed &&
-                          _access != GalleryAccess.restricted)
-                        if (_access == GalleryAccess.limited || accessDenied)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: TextButton.icon(
-                                onPressed: _busy ? null : _manageAccess,
-                                icon: Icon(
-                                  accessDenied
-                                      ? Icons.settings_outlined
-                                      : Icons.add_photo_alternate_outlined,
-                                ),
-                                label: Text(
-                                  accessDenied
-                                      ? l10n.galleryOpenSettings
-                                      : l10n.galleryManageAccess,
-                                ),
-                              ),
+                          _access == GalleryAccess.denied)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: TextButton.icon(
+                              onPressed: _busy ? null : _openSettings,
+                              icon: const Icon(Icons.settings_outlined),
+                              label: Text(l10n.galleryOpenSettings),
                             ),
                           ),
+                        ),
                       if (_loading)
                         const SliverToBoxAdapter(
                           child: Padding(
@@ -436,14 +433,8 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                               mainAxisSpacing: 8,
                               crossAxisSpacing: 8,
                             ),
-                        itemCount: photos.length + (_usesLibrary ? 0 : 1),
+                        itemCount: photos.length,
                         itemBuilder: (context, index) {
-                          if (index == photos.length) {
-                            return _ImportTile(
-                              label: l10n.gallery,
-                              onTap: _busy ? null : () => _import(),
-                            );
-                          }
                           final photo = photos[index];
                           return _PhotoTile(
                             key: ValueKey(photo.id),
@@ -551,50 +542,33 @@ class _SourceTile extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
+    super.key,
   });
   final String label;
-  final String icon;
+  final Widget icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Expanded(
-    child: AspectRatio(
-      aspectRatio: 1,
+    child: SizedBox(
+      height: 72,
       child: Material(
         color: AppColors.brand.withValues(alpha: .05),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox.square(
-                dimension: 44,
-                child: Center(
-                  child: icon == 'attachment_role'
-                      ? Transform.flip(
-                          flipY: true,
-                          child: AppSvgIcon.asset(
-                            icon,
-                            size: 30.5,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        )
-                      : AppSvgIcon.asset(
-                          icon,
-                          size: 44,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                ),
-              ),
+              SizedBox.square(dimension: 28, child: Center(child: icon)),
               const SizedBox(height: 4),
               Flexible(
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -602,30 +576,6 @@ class _SourceTile extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    ),
-  );
-}
-
-class _ImportTile extends StatelessWidget {
-  const _ImportTile({required this.label, required this.onTap});
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Theme.of(context).colorScheme.surfaceContainerLow,
-    borderRadius: BorderRadius.circular(20),
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.add_photo_alternate_outlined, size: 32),
-          const SizedBox(height: 8),
-          Text(label),
-        ],
       ),
     ),
   );

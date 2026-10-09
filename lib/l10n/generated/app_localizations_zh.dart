@@ -130,6 +130,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleProduceVideo => '制作视频';
 
   @override
+  String get roleStartCreating => '开始创作';
+
+  @override
   String get roleViewPlan => '查看方案';
 
   @override
@@ -625,6 +628,78 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipAccountDetailsPending => '账号详情页待接入';
 
   @override
+  String get ipAccountHomeTitle => '账号主页';
+
+  @override
+  String get ipAccountPreferences => '账号偏好';
+
+  @override
+  String get ipAccountPositioning => '账号定位';
+
+  @override
+  String get ipAccountFieldEmpty => '尚未填写';
+
+  @override
+  String get ipAccountEdit => '编辑';
+
+  @override
+  String get ipAccountSave => '保存';
+
+  @override
+  String get ipAccountSaved => '账号资料已保存';
+
+  @override
+  String get ipAccountLoadFailed => '账号资料加载失败，请重试';
+
+  @override
+  String get ipAccountResourcesFailed => '项目资产和角色加载失败';
+
+  @override
+  String get ipAccountAssets => '项目资产';
+
+  @override
+  String get ipAccountRoles => '项目角色';
+
+  @override
+  String get ipAccountNoAssets => '暂无作品';
+
+  @override
+  String get ipAccountNoRoles => '暂无项目角色';
+
+  @override
+  String get ipAccountCountSeparator => '：';
+
+  @override
+  String get ipAccountAssetsEmptyPrompt => '暂无作品，去和Agent聊聊做些什么';
+
+  @override
+  String get ipAccountRolesEmptyPrompt => '添加角色，建立自己的创作世界';
+
+  @override
+  String get ipAccountManageRoles => '管理项目角色';
+
+  @override
+  String get ipAccountRoleLimit => '最多添加20个角色';
+
+  @override
+  String get ipAccountPublish => '发布内容';
+
+  @override
+  String get ipAccountPublishEstimate => '约1分钟';
+
+  @override
+  String get ipAccountPublishReady => '账号已经准备好，可以从选题、想法、脚本或素材开始。';
+
+  @override
+  String get ipAccountStartContent => '开始一条新内容';
+
+  @override
+  String get ipAccountStartPrompt => '请根据这个账号的定位，帮我制作一条新内容。';
+
+  @override
+  String get ipAccountUnavailable => '账号已暂停';
+
+  @override
   String get ipAccountsPending => 'IP账号功能待接入';
 
   @override
@@ -910,7 +985,112 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipGuideIntroBefore => '简单';
 
   @override
-  String get ipGuideIntroFourSteps => '4步';
+  String get ipGuideIntroFiveSteps => '5步';
+
+  @override
+  String get ipDraftTitle => '继续草稿，还是新建IP？';
+
+  @override
+  String get ipDraftDetected => '系统识别到一份新建定位草稿。';
+
+  @override
+  String get ipDraftDescription => '继续会恢复原步骤。重新创建会放弃这份定位草稿；已有IP项目的作品和素材会保留。';
+
+  @override
+  String get ipDraftRestart => '重新创建';
+
+  @override
+  String get ipDraftResume => '继续草稿';
+
+  @override
+  String get ipDraftSaveFailed => '草稿保存失败，请重试';
+
+  @override
+  String get ipNextAudience => '下一步：目标受众';
+
+  @override
+  String get ipAudienceQuestion => '你账号的目标受众是？';
+
+  @override
+  String get ipSelectAudience => '请选择目标受众或填写自己的受众';
+
+  @override
+  String get ipSelectNickname => '请为账号取一个名字';
+
+  @override
+  String get ipReselect => '重新选择';
+
+  @override
+  String get ipCreating => '正在创建…';
+
+  @override
+  String get ipCreateFailed => '创建未完成，草稿已保留，请重试';
+
+  @override
+  String get ipCreateSuccess => '创建成功！';
+
+  @override
+  String get ipCreateSuccessDescription => '从现在开始，每一次发布的内容都会积累在这里';
+
+  @override
+  String get ipCreateFirstRole => '创建第一个角色';
+
+  @override
+  String get ipCreateFirstContent => '制作第一条内容';
+
+  @override
+  String get ipOpenProject => '前往账号项目';
+
+  @override
+  String get ipFirstContentPrompt => '请根据这个账号的定位，帮我制作第一条内容。';
+
+  @override
+  String get ipAudienceStudents => '学生群体';
+
+  @override
+  String get ipAudienceWorkers => '职场人群';
+
+  @override
+  String get ipAudienceFamilies => '亲子家庭';
+
+  @override
+  String get ipAudienceAnimeFans => '漫剧迷';
+
+  @override
+  String get ipAudiencePetLovers => '萌宠爱好者';
+
+  @override
+  String get ipAudienceSeniors => '老年群体';
+
+  @override
+  String get ipAudienceStudentsDescription => '校园日常、学习成长，贴近年轻人的兴趣爱好与生活';
+
+  @override
+  String get ipAudienceWorkersDescription => '工作日常、职场进阶，关注打工人的心理压力与成长';
+
+  @override
+  String get ipAudienceFamiliesDescription => '育儿经验、亲子互动，关注家庭生活与孩子的陪伴话题';
+
+  @override
+  String get ipAudienceAnimeFansDescription => '动漫角色、二次元、幻想故事，热爱脑洞与创意表达';
+
+  @override
+  String get ipAudiencePetLoversDescription => '萌宠日常、养宠趣事，喜欢可爱又治愈的形象与内容';
+
+  @override
+  String get ipAudienceSeniorsDescription => '健康生活、兴趣休闲，关注退休后的品质与乐趣';
+
+  @override
+  String get ipPresentationPets => '拟人萌宠';
+
+  @override
+  String get ipPresentationClay => '粘土动画';
+
+  @override
+  String get ipPresentationInk => '国风水墨';
+
+  @override
+  String get ipVisualStyle => '视觉风格';
 
   @override
   String get ipGuideIntroAfter => '\n帮你创建IP账号';
@@ -927,10 +1107,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipDirectionQuestion => '你想长期分享什么？';
 
   @override
-  String get ipFeelingQuestion => '你想让观众有什么感受？';
+  String get ipFeelingQuestion => '你想让观众看完有什么感受？';
 
   @override
-  String get ipPresentationQuestion => '你的账号，想以什么样子出现？';
+  String get ipPresentationQuestion => '你的账号，想以什么样子呈现？';
 
   @override
   String get ipReviewQuestion => '一份独属你的方案待你确认~';
@@ -957,19 +1137,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipAudienceFeeling => '观众感受';
 
   @override
-  String get ipPresentation => '呈现形态';
+  String get ipPresentation => '表现形式';
 
   @override
   String get ipContentFormat => '内容形式';
 
   @override
-  String get ipTargetAudience => '目标观众';
+  String get ipTargetAudience => '目标受众';
 
   @override
   String get ipTargetAudienceValue => '愿意与你分享这种感受的人';
 
   @override
-  String get ipCustomHint => '以上都不满意，我要自己填写';
+  String get ipCustomHint => '我要自己填写';
 
   @override
   String ipPrimarySelection(String label) {
@@ -1133,6 +1313,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get composerPlaceholder => '跟POPi说点什么...';
+
+  @override
+  String get composerExpandInput => '展开输入框';
 
   @override
   String selectedImageLabel(String name) {
@@ -1423,6 +1606,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get imageSaveAccessDenied => '无法保存图片，请在系统设置中允许添加照片';
 
   @override
+  String get videoSavedToPhotos => '视频已保存到相册';
+
+  @override
+  String get videoSaveFailed => '视频保存失败，请稍后重试';
+
+  @override
+  String get videoSaveAccessDenied => '无法保存视频，请在系统设置中允许添加照片';
+
+  @override
   String get delete => '删除';
 
   @override
@@ -1552,6 +1744,73 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restorePurchases => '恢复购买';
+
+  @override
+  String get paymentTitle => '确认支付';
+
+  @override
+  String get paymentChooseMethod => '支付方式';
+
+  @override
+  String get paymentWechat => '微信支付';
+
+  @override
+  String get paymentAlipay => '支付宝';
+
+  @override
+  String get paymentConfirm => '确认支付';
+
+  @override
+  String get paymentAmount => '支付金额';
+
+  @override
+  String get paymentCatalogPrice => '套餐价格，实际支付金额以订单为准';
+
+  @override
+  String get paymentCheckAgain => '再次查询';
+
+  @override
+  String get paymentProcessing => '支付处理中，到账后将更新权益';
+
+  @override
+  String get paymentCanceledPending => '已取消支付，订单状态待确认';
+
+  @override
+  String get paymentUnknown => '支付结果暂不可用，请先核对账单，避免重复付款';
+
+  @override
+  String get paymentNotCompleted => '订单未完成或已退款，未确认权益到账';
+
+  @override
+  String get paymentUnavailable => '支付服务暂不可用，请稍后重试';
+
+  @override
+  String get paymentAppNotInstalled => '未安装或暂不可用';
+
+  @override
+  String get paymentRetry => '重试';
+
+  @override
+  String get paymentDone => '完成';
+
+  @override
+  String get paymentOrderNumber => '订单号';
+
+  @override
+  String get paymentCopyOrder => '复制订单号';
+
+  @override
+  String get paymentOrderCopied => '订单号已复制';
+
+  @override
+  String get paymentPendingOrders => '其他待确认订单';
+
+  @override
+  String get paymentNewPurchase => '重新购买';
+
+  @override
+  String get paymentNewPurchaseWarning =>
+      '原订单可能仍在支付中。请先核对微信或支付宝账单，重新购买会创建新的订单，可能导致重复付款。';
 
   @override
   String get purchaseProcessing => '正在连接 App Store…';
@@ -1692,4 +1951,120 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get splashTagline => '“帮助人类更好的表达”';
+
+  @override
+  String get chatThinking => 'POPi正在思考你的内容';
+
+  @override
+  String get chatRoleCreated => '角色草案已创建';
+
+  @override
+  String get chatRoleUpdated => '角色草案已更新';
+
+  @override
+  String get chatRolePublished => '角色已发布';
+
+  @override
+  String get chatExpandProgress => '展开进度';
+
+  @override
+  String get chatCollapseProgress => '收起进度';
+
+  @override
+  String get chatPreparing => '正在准备';
+
+  @override
+  String get chatProcessing => '正在处理你的需求';
+
+  @override
+  String get chatGeneratingReply => '正在生成回复';
+
+  @override
+  String get chatSavingArtifact => '正在保存内容';
+
+  @override
+  String get chatPlanningGeneration => '正在整理生成方案';
+
+  @override
+  String get chatReadRole => '正在读取角色档案';
+
+  @override
+  String get chatReadContext => '正在理解创作背景';
+
+  @override
+  String get chatTopics => '正在推荐选题';
+
+  @override
+  String get chatPrepareRole => '正在整理角色方案';
+
+  @override
+  String get chatAskUser => '等待补充信息';
+
+  @override
+  String get chatSaveRole => '正在保存角色草案';
+
+  @override
+  String get chatPublishRole => '正在发布角色';
+
+  @override
+  String get chatPreviewImage => '预览图片';
+
+  @override
+  String get chatCollapseProfile => '收起档案';
+
+  @override
+  String get chatConfirmGeneration => '确认生成';
+
+  @override
+  String get chatRoleName => '名称';
+
+  @override
+  String get chatReconnecting => '连接中断，正在重新连接…';
+
+  @override
+  String get chatRequestFailed => '请求失败，请稍后重试';
+
+  @override
+  String get chatInsufficientPoints => '积分不足，请充值后重试';
+
+  @override
+  String get chatRunFailed => '本次处理失败';
+
+  @override
+  String get chatStopped => '已停止';
+
+  @override
+  String get chatCompleted => '已完成';
+
+  @override
+  String get chatExpired => '已过期';
+
+  @override
+  String get chatAwaitingConfirmation => '等待确认';
+
+  @override
+  String get chatStop => '停止回复';
+
+  @override
+  String get chatSending => '正在发送';
+
+  @override
+  String get chatPlayVideo => '播放视频';
+
+  @override
+  String get chatPlayAudio => '播放音频';
+
+  @override
+  String get chatCustomAnswer => '补充你的想法';
+
+  @override
+  String get chatMediaPrompt => '请参考这些图片';
+
+  @override
+  String get chatHistoryLoadFailed => '会话记录加载失败';
+
+  @override
+  String chatEstimatedPoints(String points) {
+    return '预计消耗 $points 积分';
+  }
 }

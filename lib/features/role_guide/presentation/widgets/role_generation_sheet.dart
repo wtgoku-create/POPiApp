@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_sheet.dart';
 import '../../domain/role_guide_draft.dart';
 import 'role_guide_controls.dart';
 
@@ -37,9 +38,9 @@ class _RoleGenerationSheetState extends State<RoleGenerationSheet> {
     final dimensions = _settings.dimensions(image: _image);
 
     return DraggableScrollableSheet(
-      initialChildSize: .875,
-      minChildSize: .5,
-      maxChildSize: .96,
+      initialChildSize: AppSheet.relativeExtent(.875),
+      minChildSize: AppSheet.relativeExtent(.5),
+      maxChildSize: 1,
       expand: false,
       builder: (context, scrollController) => Material(
         key: const Key('role-generation-sheet'),

@@ -10,10 +10,13 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../features/payments/data/apple_purchase_service.dart';
 import '../../../features/payments/domain/apple_product_catalog.dart';
+import '../../../features/payments/domain/mobile_payment.dart';
+import '../../../features/payments/presentation/android_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
@@ -40,7 +43,6 @@ Future<PointPackage?> showRechargePointsSheet({
     isScrollControlled: true,
     showDragHandle: false,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x33333333),
     builder: (context) => _RechargePointsSheet(
       totalPoints: totalPoints,
       loadPackages: loadPackages,
@@ -756,6 +758,18 @@ Future<bool> purchasePointPackage(
   WidgetRef ref,
   PointPackage package,
 ) async {
+  if (usesAndroidPayments) {
+    return openAndroidPayment(
+      context,
+      ref,
+      PaymentProduct(
+        id: package.id,
+        kind: PaymentProductKind.points,
+        title: package.name,
+        priceLabel: _formatPackagePrice(package),
+      ),
+    );
+  }
   final l10n = AppLocalizations.of(context)!;
   final outcome = await ref
       .read(applePurchaseServiceProvider)

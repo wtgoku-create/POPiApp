@@ -104,6 +104,16 @@ void main() {
     }
     expect(find.byKey(const Key('asset-preview-back')), findsNothing);
     expect(find.byKey(const Key('asset-preview-download')), findsOneWidget);
+    final download = tester.getRect(
+      find.byKey(const Key('asset-preview-download')),
+    );
+    expect(download.right, 370);
+    expect(download.bottom, 824);
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('asset-preview-download')),
+    );
+    final shape = button.style!.shape!.resolve({})! as RoundedRectangleBorder;
+    expect(shape.borderRadius, BorderRadius.circular(12));
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('asset-preview-image')), findsNothing);

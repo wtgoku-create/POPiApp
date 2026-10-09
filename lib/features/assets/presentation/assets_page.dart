@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_skeleton.dart';
@@ -30,15 +31,43 @@ class AssetsPage extends ConsumerStatefulWidget {
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
     this.repository,
-  });
+  }) : _isSheet = false;
+
+  const AssetsPage._sheet({required this.initialSection})
+    : _isSheet = true,
+      hasSampleContent = false,
+      isLoadingWorks = false,
+      repository = null;
 
   const AssetsPage.sample({
     super.key,
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
     this.repository,
-  }) : hasSampleContent = true;
+  }) : hasSampleContent = true,
+       _isSheet = false;
 
+  static Future<void> showSheet({
+    required BuildContext context,
+    required AssetLibrarySection initialSection,
+  }) => AppSheet.show<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: false,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+    ),
+    builder: (context) => SizedBox(
+      height: MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
+        child: AssetsPage._sheet(initialSection: initialSection),
+      ),
+    ),
+  );
+
+  final bool _isSheet;
   final bool hasSampleContent;
 
   /// Allows previews to demonstrate the loading state.
@@ -218,44 +247,50 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final statusBarHeight = math
-        .max(MediaQuery.paddingOf(context).top, 52)
-        .toDouble();
+    final statusBarHeight = widget._isSheet
+        ? 12.0
+        : math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: const PopiNavigationDrawer(),
-      backgroundColor: Theme.of(context).brightness == Brightness.light
+      drawer: widget._isSheet ? null : const PopiNavigationDrawer(),
+      backgroundColor:
+          !widget._isSheet && Theme.of(context).brightness == Brightness.light
           ? const Color(0xFFF5F4FA)
           : Theme.of(context).colorScheme.surface,
-      body: Column(
-        children: [
-          SizedBox(height: statusBarHeight),
-          _LibraryNavigation(
-            selected: _section,
-            onBackPressed: _goBack,
-            onSelected: _changeSection,
-          ),
-          ...[
-            const SizedBox(height: 10),
-            _SectionFilters(
-              section: _section,
-              selected: _selectedFilter,
-              selectingWorks: _selectingWorks,
-              hasWorks: _workGroups.any(
-                (group) => group.items.any(
-                  (item) =>
-                      _selectedFilter == 0 ||
-                      (_selectedFilter == 2) == item.isVideo,
-                ),
-              ),
-              onSelected: _changeFilter,
-              onToggleSelection: _toggleSelectionMode,
+      body: SafeArea(
+        top: false,
+        bottom: widget._isSheet,
+        child: Column(
+          children: [
+            SizedBox(height: statusBarHeight),
+            _LibraryNavigation(
+              selected: _section,
+              onBackPressed: _goBack,
+              onSelected: _changeSection,
             ),
+            ...[
+              const SizedBox(height: 10),
+              _SectionFilters(
+                section: _section,
+                selected: _selectedFilter,
+                selectingWorks: _selectingWorks,
+                hasWorks: _workGroups.any(
+                  (group) => group.items.any(
+                    (item) =>
+                        _selectedFilter == 0 ||
+                        (_selectedFilter == 2) == item.isVideo,
+                  ),
+                ),
+                onSelected: _changeFilter,
+                onToggleSelection: _toggleSelectionMode,
+              ),
+            ],
+            if (_section == AssetLibrarySection.roles)
+              const SizedBox(height: 16),
+            Expanded(child: _buildSection()),
           ],
-          if (_section == AssetLibrarySection.roles) const SizedBox(height: 16),
-          Expanded(child: _buildSection()),
-        ],
+        ),
       ),
     );
   }

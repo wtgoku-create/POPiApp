@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:popi_ai_app/features/ip_guide/data/ip_guide_repository.dart';
+import 'package:popi_ai_app/shared/providers/ip_guide_provider.dart';
+import 'support/ip_guide_fixtures.dart';
 
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
@@ -19,6 +23,8 @@ import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'support/project_fixtures.dart';
 import 'support/role_library_fixtures.dart';
+import 'support/session_fixtures.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   Future<ProviderContainer> pumpHome(
@@ -38,8 +44,20 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPadding);
+    SharedPreferences.setMockInitialValues({});
+    final guideStorage = MemoryGuideStorage(
+      await SharedPreferences.getInstance(),
+    );
     final container = ProviderContainer(
       overrides: [
+        ipGuideRepositoryProvider.overrideWithValue(
+          IpGuideRepository(
+            guideStorage,
+            FixtureIpGuideApi(),
+            userId: user?.id,
+          ),
+        ),
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
         dioProvider.overrideWithValue(roleLibraryDio()),
       ],
@@ -268,7 +286,7 @@ void main() {
   });
 
   testWidgets('home drawer starts a new mock conversation', (tester) async {
-    await pumpHome(
+    final container = await pumpHome(
       tester,
       user: const User(id: '1', name: '用户', email: ''),
     );
@@ -277,8 +295,18 @@ void main() {
     await tester.tap(find.byKey(const Key('drawer-new-session')));
     await tester.pumpAndSettle();
     expect(find.byType(SessionPage), findsOneWidget);
-    expect(find.byKey(const Key('session-active-title')), findsOneWidget);
-    expect(find.text('新会话'), findsOneWidget);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
+    final sessionId = tester
+        .widget<SessionPage>(find.byType(SessionPage))
+        .sessionId;
+    expect(sessionId, isNotEmpty);
+    expect(
+      container
+          .read(sessionsProvider)
+          .requireValue
+          .any((session) => session.id == sessionId),
+      isTrue,
+    );
     expect(tester.takeException(), isNull);
   });
 

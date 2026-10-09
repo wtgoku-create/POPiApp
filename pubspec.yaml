@@ -9,12 +9,15 @@ environment:
 dependencies:
   cupertino_context_menu_plus: ^1.0.3
   dio: ^5.8.0+1
+  crypto: ^3.0.7
   extended_text_field: ^17.0.0
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
   flutter_markdown: ^0.7.7+1
+  flutter_chat_core: ^2.9.0
+  flutter_chat_ui: ^2.11.1
   flutter_riverpod: ^2.6.1
   flutter_slidable: ^4.0.3
   flutter_secure_storage: ^9.2.4
@@ -22,10 +25,12 @@ dependencies:
   fluwx: ^6.0.2
   go_router: ^14.8.1
   image_picker: ^1.2.1
+  mime: ^2.0.0
   photo_manager: ^3.12.0
   in_app_purchase: ^3.2.3
   shared_preferences: ^2.5.3
   toastification: ^3.2.0
+  tobias: ^5.3.4
   url_launcher: ^6.3.2
   webview_flutter: ^4.14.1
   uuid: ^4.6.0
@@ -38,6 +43,13 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   webview_flutter_platform_interface: ^2.15.1
   video_player_platform_interface: ^6.3.0
+
+# Required by the plugin's podspec even while checkout is Android-only.
+tobias:
+  url_scheme: popi-alipay
+  ios:
+    ignore_security: true
+    universal_link: https://app.popi.art/WeChat/
 
 flutter:
   uses-material-design: true

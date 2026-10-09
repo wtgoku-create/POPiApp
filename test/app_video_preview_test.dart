@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -9,6 +12,7 @@ import 'package:popi_ai_app/shared/widgets/app_video_preview.dart';
 import 'support/fake_video_player.dart';
 
 void main() {
+  const galleryChannel = MethodChannel('gal');
   late FakeVideoPlayer platform;
   setUp(() {
     final original = VideoPlayerPlatform.instance;
@@ -16,6 +20,10 @@ void main() {
     VideoPlayerPlatform.instance = platform;
     addTearDown(() => VideoPlayerPlatform.instance = original);
   });
+  tearDown(
+    () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(galleryChannel, null),
+  );
 
   Future<void> open(WidgetTester tester, {bool reduceMotion = false}) async {
     await tester.pumpWidget(
@@ -59,6 +67,10 @@ void main() {
     await tester.tapAt(videoBounds.center);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('asset-preview-video')), findsOneWidget);
+    expect(platform.playing, isFalse);
+    expect(find.byTooltip('Play'), findsOneWidget);
+    await tester.tapAt(videoBounds.center);
+    await tester.pumpAndSettle();
     expect(platform.playing, isTrue);
     expect(tester.getRect(find.byType(VideoPlayer)), videoBounds);
     final route = ModalRoute.of(
@@ -161,8 +173,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final size in [const Size(320, 568), const Size(1024, 600)]) {
-    testWidgets('player and controls fit $size', (tester) async {
+  testWidgets('denied download permission reports the error and allows retry', (
+    tester,
+  ) async {
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(galleryChannel, (call) async {
+          calls.add(call.method);
+          return false;
+        });
+    await open(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('video-preview-download')));
+    await tester.pumpAndSettle();
+    expect(calls, ['hasAccess', 'requestAccess']);
+    expect(
+      find.text('Allow adding photos in system settings to save videos.'),
+      findsOneWidget,
+    );
+    expect(find.byType(VideoPlayer), findsOneWidget);
+    expect(platform.playing, isTrue);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('video-preview-download')))
+          .onPressed,
+      isNotNull,
+    );
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'download prevents duplicate saves and can finish after closing',
+    (tester) async {
+      final access = Completer<bool>();
+      var requests = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(galleryChannel, (call) async {
+            if (call.method == 'hasAccess') {
+              requests++;
+              return access.future;
+            }
+            return false;
+          });
+      await open(tester);
+      await tester.pumpAndSettle();
+      final download = find.byKey(const Key('video-preview-download'));
+      await tester.tap(download);
+      await tester.pump();
+      expect(tester.widget<IconButton>(download).onPressed, isNull);
+      await tester.tap(download);
+      await tester.pump();
+      expect(requests, 1);
+      await tester.tap(find.byKey(const Key('video-preview-close')));
+      await tester.pumpAndSettle();
+      access.complete(true);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('asset-preview-video')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final (size, videoSize) in [
+    (const Size(320, 568), const Size(1920, 1080)),
+    (const Size(1024, 600), const Size(1920, 1080)),
+    (const Size(320, 568), const Size(1080, 1920)),
+    (const Size(1024, 600), const Size(1080, 1920)),
+  ]) {
+    testWidgets('player and floating controls fit $size / $videoSize', (
+      tester,
+    ) async {
+      platform.videoSize = videoSize;
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
@@ -175,7 +258,36 @@ void main() {
       final controls = tester.getRect(
         find.byKey(const Key('video-preview-seek')),
       );
-      expect(video.bottom, lessThanOrEqualTo(controls.top));
+      final toolbar = tester.getRect(
+        find.byKey(const Key('video-preview-controls')),
+      );
+      expect(video.contains(controls.topLeft), isTrue);
+      expect(video.contains(controls.bottomRight), isTrue);
+      expect(toolbar.bottom, closeTo(video.bottom - 8, .01));
+      expect(video.contains(toolbar.topLeft), isTrue);
+      expect(video.contains(toolbar.bottomRight), isTrue);
+      final play = tester.getRect(find.byKey(const Key('video-preview-play')));
+      expect(play.center.dx, closeTo(video.center.dx, .01));
+      expect(play.center.dy, closeTo(video.center.dy, .01));
+      final mute = tester.getRect(find.byKey(const Key('video-preview-mute')));
+      expect(mute.center.dy, closeTo(controls.center.dy, .01));
+      expect(
+        tester
+            .widget<SizedBox>(find.byKey(const Key('video-preview-controls')))
+            .height,
+        48,
+      );
+      final download = tester.getRect(
+        find.byKey(const Key('video-preview-download')),
+      );
+      expect(download.right, closeTo(size.width - 20, .01));
+      expect(download.bottom, closeTo(size.height - 20, .01));
+      expect(download.overlaps(toolbar), isFalse);
+      final button = tester.widget<IconButton>(
+        find.byKey(const Key('video-preview-download')),
+      );
+      final shape = button.style!.shape!.resolve({})! as RoundedRectangleBorder;
+      expect(shape.borderRadius, BorderRadius.circular(12));
       expect(video.width, lessThanOrEqualTo(size.width));
       expect(tester.takeException(), isNull);
       await tester.binding.handlePopRoute();

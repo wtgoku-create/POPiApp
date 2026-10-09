@@ -13,7 +13,7 @@ class IpGuideNextButton extends StatelessWidget {
   });
 
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -51,8 +51,9 @@ class IpGuideTextField extends StatelessWidget {
   const IpGuideTextField({
     required this.controller,
     required this.hint,
-    this.limit = 20,
+    this.limit = 50,
     this.nickname = false,
+    this.readOnly = false,
     super.key,
   });
 
@@ -60,6 +61,7 @@ class IpGuideTextField extends StatelessWidget {
   final String hint;
   final int limit;
   final bool nickname;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +71,7 @@ class IpGuideTextField extends StatelessWidget {
       valueListenable: controller,
       builder: (context, value, _) => TextField(
         controller: controller,
+        readOnly: readOnly,
         maxLength: limit,
         maxLines: 1,
         style: TextStyle(fontSize: 14, color: colors.onSurface, height: 1.4),

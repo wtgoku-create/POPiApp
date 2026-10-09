@@ -125,7 +125,7 @@ class _AppContextMenuState extends State<AppContextMenu> {
                   showGrowAnimation: !reduceMotion,
                   previewLongPressTimeout: const Duration(milliseconds: 500),
                   backdropBlurSigma: AppModalBackdrop.blurSigma,
-                  barrierColor: AppModalBackdrop.dimColor.withValues(alpha: .1),
+                  barrierColor: AppModalBackdrop.dimColor,
                   modalTransitionDuration: reduceMotion
                       ? instantTransition
                       : AppModalBackdrop.enterDuration,

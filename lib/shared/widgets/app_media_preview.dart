@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/storage/gallery_image_storage.dart';
+import '../../core/storage/gallery_video_storage.dart';
 import '../../l10n/generated/app_localizations.dart';
 import 'app_media_preview_route.dart';
-import 'app_svg_icon.dart';
 import 'app_toast.dart';
 
 /// Displays images and videos on one preview page above the current screen.
@@ -83,31 +84,51 @@ class _MediaPreviewState extends State<_MediaPreview>
   bool _closing = false;
   bool _canDragDismiss = false;
   bool _saving = false;
+  CancelToken? _downloadCancellation;
 
   Future<void> _download() async {
     if (_saving || _closing) return;
     final l10n = AppLocalizations.of(context)!;
+    final video = widget.url != null;
+    final accessDenied = video
+        ? l10n.videoSaveAccessDenied
+        : l10n.imageSaveAccessDenied;
+    final failed = video ? l10n.videoSaveFailed : l10n.imageSaveFailed;
     setState(() => _saving = true);
     try {
-      await GalleryImageStorage.save(
-        widget.image!,
-        createLocalImageConfiguration(context),
-      );
-      if (mounted) AppToast.success(context, l10n.imageSavedToPhotos);
+      if (video) {
+        final cancellation = CancelToken();
+        _downloadCancellation = cancellation;
+        await GalleryVideoStorage.save(widget.url!, cancelToken: cancellation);
+      } else {
+        await GalleryImageStorage.save(
+          widget.image!,
+          createLocalImageConfiguration(context),
+        );
+      }
+      if (mounted) {
+        AppToast.success(
+          context,
+          video ? l10n.videoSavedToPhotos : l10n.imageSavedToPhotos,
+        );
+      }
     } on GalleryAccessDenied {
-      if (mounted) AppToast.error(context, l10n.imageSaveAccessDenied);
+      if (mounted) AppToast.error(context, accessDenied);
     } on GalException catch (error) {
       if (mounted) {
         AppToast.error(
           context,
-          error.type == GalExceptionType.accessDenied
-              ? l10n.imageSaveAccessDenied
-              : l10n.imageSaveFailed,
+          error.type == GalExceptionType.accessDenied ? accessDenied : failed,
         );
       }
+    } on DioException catch (error) {
+      if (mounted && !CancelToken.isCancel(error)) {
+        AppToast.error(context, failed);
+      }
     } catch (_) {
-      if (mounted) AppToast.error(context, l10n.imageSaveFailed);
+      if (mounted) AppToast.error(context, failed);
     } finally {
+      _downloadCancellation = null;
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -208,6 +229,7 @@ class _MediaPreviewState extends State<_MediaPreview>
 
   @override
   void dispose() {
+    _downloadCancellation?.cancel();
     _imageStream?.removeListener(_imageListener);
     _transform.removeListener(_onTransform);
     _transform.dispose();
@@ -299,41 +321,49 @@ class _MediaPreviewState extends State<_MediaPreview>
                   ),
                 ),
               ),
-            if (widget.image != null)
-              Positioned(
-                bottom: 20,
-                right: 20,
-                child: SafeArea(
-                  top: false,
-                  left: false,
-                  child: Opacity(
-                    opacity: 1 - progress,
-                    child: SizedBox.square(
-                      dimension: 48,
-                      child: IconButton(
-                        key: const Key('asset-preview-download'),
-                        tooltip: l10n.download,
-                        onPressed: _saving ? null : _download,
-                        style: IconButton.styleFrom(
-                          padding: const EdgeInsets.all(4),
-                        ),
-                        icon: _saving
-                            ? const SizedBox.square(
-                                dimension: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const AppSvgIcon.asset(
-                                'image_preview_download',
-                                size: 40,
-                              ),
+            Positioned(
+              bottom: 20,
+              right: 20,
+              child: SafeArea(
+                top: false,
+                left: false,
+                child: Opacity(
+                  opacity: 1 - progress,
+                  child: SizedBox.square(
+                    dimension: 48,
+                    child: IconButton(
+                      key: Key(
+                        widget.url == null
+                            ? 'asset-preview-download'
+                            : 'video-preview-download',
                       ),
+                      tooltip: l10n.download,
+                      onPressed: _saving ? null : _download,
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(12),
+                        backgroundColor: const Color(0x80333333),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: _saving
+                          ? const SizedBox.square(
+                              dimension: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.file_download_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                     ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
@@ -451,23 +481,11 @@ class _VideoPreviewContentState extends State<_VideoPreviewContent>
                     0.0,
                     total,
                   );
-              return Column(
+              return Stack(
+                fit: StackFit.expand,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: IconButton(
-                        key: const Key('video-preview-close'),
-                        tooltip: MaterialLocalizations.of(
-                          context,
-                        ).closeButtonTooltip,
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  Expanded(
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 88),
                     child: Center(
                       child: failed
                           ? Column(
@@ -492,101 +510,150 @@ class _VideoPreviewContentState extends State<_VideoPreviewContent>
                                 fit: StackFit.expand,
                                 children: [
                                   VideoPlayer(controller),
+                                  if (!value.isBuffering)
+                                    Center(
+                                      child: SizedBox.square(
+                                        dimension: 64,
+                                        child: IconButton(
+                                          key: const Key('video-preview-play'),
+                                          tooltip: value.isPlaying
+                                              ? l10n.videoPause
+                                              : l10n.videoPlay,
+                                          iconSize: 48,
+                                          onPressed: () =>
+                                              _command((controller) async {
+                                                if (value.isPlaying) {
+                                                  await controller.pause();
+                                                } else {
+                                                  if (value.isCompleted) {
+                                                    await controller.seekTo(
+                                                      Duration.zero,
+                                                    );
+                                                  }
+                                                  await controller.play();
+                                                }
+                                              }),
+                                          icon: Icon(
+                                            value.isPlaying
+                                                ? Icons.pause
+                                                : Icons.play_arrow,
+                                            color: Colors.white,
+                                            shadows: const [
+                                              Shadow(
+                                                blurRadius: 4,
+                                                color: Colors.black54,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   if (value.isBuffering)
                                     const Center(
                                       child: CircularProgressIndicator(
                                         color: Colors.white,
                                       ),
                                     ),
+                                  Positioned(
+                                    left: 8,
+                                    right: 8,
+                                    bottom: 8,
+                                    child: _buildControls(
+                                      context,
+                                      value,
+                                      seconds,
+                                      total,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                     ),
                   ),
-                  if (ready)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Slider(
-                            key: const Key('video-preview-seek'),
-                            value: seconds,
-                            max: total > 0 ? total : 1,
-                            semanticFormatterCallback: (value) =>
-                                '${l10n.videoSeek}: ${_time(Duration(seconds: value.toInt()))}',
-                            onChanged: total > 0
-                                ? (value) =>
-                                      setState(() => _seekSeconds = value)
-                                : null,
-                            onChangeEnd: (value) async {
-                              await _command(
-                                (controller) => controller.seekTo(
-                                  Duration(
-                                    milliseconds: (value * 1000).round(),
-                                  ),
-                                ),
-                              );
-                              if (mounted) setState(() => _seekSeconds = null);
-                            },
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                key: const Key('video-preview-play'),
-                                tooltip: value.isPlaying
-                                    ? l10n.videoPause
-                                    : l10n.videoPlay,
-                                onPressed: () => _command((controller) async {
-                                  if (value.isPlaying) {
-                                    await controller.pause();
-                                  } else {
-                                    if (value.isCompleted) {
-                                      await controller.seekTo(Duration.zero);
-                                    }
-                                    await controller.play();
-                                  }
-                                }),
-                                icon: Icon(
-                                  value.isPlaying
-                                      ? Icons.pause
-                                      : Icons.play_arrow,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  '${_time(Duration(milliseconds: (seconds * 1000).round()))} / ${_time(value.duration)}',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              IconButton(
-                                key: const Key('video-preview-mute'),
-                                tooltip: value.volume == 0
-                                    ? l10n.videoUnmute
-                                    : l10n.videoMute,
-                                onPressed: () => _command(
-                                  (controller) => controller.setVolume(
-                                    value.volume == 0 ? 1 : 0,
-                                  ),
-                                ),
-                                icon: Icon(
-                                  value.volume == 0
-                                      ? Icons.volume_off
-                                      : Icons.volume_up,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: IconButton(
+                      key: const Key('video-preview-close'),
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close, color: Colors.white),
                     ),
+                  ),
                 ],
               );
             },
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildControls(
+    BuildContext context,
+    VideoPlayerValue value,
+    double seconds,
+    double total,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      key: const Key('video-preview-controls'),
+      height: 48,
+      child: Row(
+        children: [
+          Text(
+            '${_time(Duration(milliseconds: (seconds * 1000).round()))} / ${_time(value.duration)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+            ),
+          ),
+          Expanded(
+            child: SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: Colors.white,
+                inactiveTrackColor: Colors.white.withValues(alpha: .3),
+                thumbColor: Colors.white,
+                overlayColor: Colors.white.withValues(alpha: .12),
+                trackHeight: 3,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+              ),
+              child: Slider(
+                key: const Key('video-preview-seek'),
+                value: seconds,
+                max: total > 0 ? total : 1,
+                semanticFormatterCallback: (value) =>
+                    '${l10n.videoSeek}: ${_time(Duration(seconds: value.toInt()))}',
+                onChanged: total > 0
+                    ? (value) => setState(() => _seekSeconds = value)
+                    : null,
+                onChangeEnd: (value) async {
+                  await _command(
+                    (controller) => controller.seekTo(
+                      Duration(milliseconds: (value * 1000).round()),
+                    ),
+                  );
+                  if (mounted) setState(() => _seekSeconds = null);
+                },
+              ),
+            ),
+          ),
+          IconButton(
+            key: const Key('video-preview-mute'),
+            tooltip: value.volume == 0 ? l10n.videoUnmute : l10n.videoMute,
+            onPressed: () => _command(
+              (controller) => controller.setVolume(value.volume == 0 ? 1 : 0),
+            ),
+            icon: Icon(
+              value.volume == 0 ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white,
+              shadows: const [Shadow(blurRadius: 4, color: Colors.black54)],
+            ),
+          ),
+        ],
       ),
     );
   }

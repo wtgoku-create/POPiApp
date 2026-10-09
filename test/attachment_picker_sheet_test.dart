@@ -11,10 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
 import 'package:popi_ai_app/features/attachments/data/device_gallery_repository.dart';
 import 'package:popi_ai_app/features/attachments/domain/gallery_repository.dart';
 import 'package:popi_ai_app/features/attachments/presentation/attachment_picker_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
+
+import 'support/role_library_fixtures.dart';
 
 final _png = Uint8List.fromList(
   base64Decode(
@@ -78,6 +82,7 @@ void main() {
     final appTheme = theme ?? AppTheme.light;
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [dioProvider.overrideWithValue(roleLibraryDio())],
         child: RepaintBoundary(
           key: const Key('attachment-screenshot'),
           child: MaterialApp(
@@ -167,18 +172,20 @@ void main() {
     },
   );
 
-  testWidgets('limited access management refreshes accessible photos', (
+  testWidgets('limited access shows album entry without access management', (
     tester,
   ) async {
     final repository = _Gallery()
       ..access = GalleryAccess.limited
       ..count = 1;
     await open(tester, repository);
+    expect(find.text('相册'), findsOneWidget);
+    expect(find.text('拍摄'), findsNothing);
+    expect(find.text('管理可访问照片'), findsNothing);
+    expect(find.text('相册权限设置'), findsNothing);
+    expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+    expect(find.byKey(const ValueKey('gallery:0')), findsOneWidget);
     expect(find.byKey(const ValueKey('gallery:1')), findsNothing);
-    await tester.tap(find.text('管理可访问照片'));
-    await tester.pumpAndSettle();
-    expect(repository.manageCount, 1);
-    expect(find.byKey(const ValueKey('gallery:1')), findsOneWidget);
   });
 
   testWidgets('permission revocation clears gallery selection on resume', (
@@ -226,19 +233,58 @@ void main() {
     },
   );
 
-  testWidgets('camera adds a selected image that still requires confirmation', (
+  testWidgets('album adds selected images that still require confirmation', (
     tester,
   ) async {
-    final repository = _Gallery()..access = GalleryAccess.denied;
+    final repository = _Gallery()
+      ..access = GalleryAccess.denied
+      ..pickedImages = [
+        XFile.fromData(_png, path: 'album.png', name: 'album.png'),
+      ];
     AttachmentPickerResult? result;
     await open(tester, repository, onResult: (value) => result = value);
-    await tester.tap(find.text('拍摄'));
+    await tester.tap(find.text('相册'));
     await tester.pumpAndSettle();
+    expect(repository.pickLimits, [5]);
+    expect(repository.cameraCount, 0);
     expect(result, isNull);
     await tester.tap(find.byKey(const Key('attachment-confirm')));
     await tester.pumpAndSettle();
-    expect(result!.images.single.name, 'camera.png');
+    expect(result!.images.single.name, 'album.png');
   });
+
+  testWidgets(
+    'album respects remaining slots and cancellation keeps selection',
+    (tester) async {
+      final repository = _Gallery();
+      AttachmentPickerResult? result;
+      await open(
+        tester,
+        repository,
+        limit: 2,
+        onResult: (value) => result = value,
+      );
+      await tester.tap(find.byKey(const ValueKey('gallery:0')));
+      await tester.tap(find.text('相册'));
+      await tester.pumpAndSettle();
+      expect(repository.pickLimits, [1]);
+      expect(find.byType(AttachmentPickerSheet), findsOneWidget);
+      repository.pickedImages = [
+        XFile.fromData(_png, path: 'album.png', name: 'album.png'),
+        XFile.fromData(_png, path: 'extra.png', name: 'extra.png'),
+      ];
+      await tester.tap(find.text('相册'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('attachment-confirm')));
+      await tester.pumpAndSettle();
+      expect(result!.images.map((file) => file.name), [
+        'photo-0.png',
+        'album.png',
+      ]);
+      expect(repository.pickLimits, [1, 1]);
+      await tester.pump(const Duration(seconds: 4));
+    },
+  );
 
   testWidgets(
     'missing selected photo reports failure without returning partial files',
@@ -277,18 +323,44 @@ void main() {
     expect(find.byKey(const ValueKey('gallery:64')), findsOneWidget);
   });
 
-  for (final library in AttachmentLibrary.values) {
-    testWidgets('${library.name} opens the existing library entry', (
+  for (final section in AssetLibrarySection.values) {
+    testWidgets('${section.name} opens a sheet and preserves photo selection', (
       tester,
     ) async {
       AttachmentPickerResult? result;
       await open(tester, _Gallery(), onResult: (value) => result = value);
+      await tester.tap(find.byKey(const ValueKey('gallery:0')));
       await tester.tap(
-        find.text(library == AttachmentLibrary.roles ? '角色' : '资产'),
+        find.byKey(
+          Key(
+            section == AssetLibrarySection.roles
+                ? 'attachment-source-roles'
+                : 'attachment-source-assets',
+          ),
+        ),
       );
       await tester.pumpAndSettle();
-      expect(result!.library, library);
-      expect(result!.images, isEmpty);
+      expect(result, isNull);
+      expect(find.byType(AssetsPage), findsOneWidget);
+      expect(
+        tester.widget<AssetsPage>(find.byType(AssetsPage)).initialSection,
+        section,
+      );
+      expect(find.byType(AttachmentPickerSheet), findsOneWidget);
+      final route = ModalRoute.of(tester.element(find.byType(AssetsPage)));
+      expect(route, isA<ModalBottomSheetRoute<void>>());
+      expect(
+        tester.getRect(find.byType(AssetsPage)).height,
+        lessThanOrEqualTo(956 * .8),
+      );
+      await tester.tap(find.byKey(const Key('assets-navigation-back')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AssetsPage), findsNothing);
+      expect(find.byType(AttachmentPickerSheet), findsOneWidget);
+      await tester.tap(find.byKey(const Key('attachment-confirm')));
+      await tester.pumpAndSettle();
+      expect(result!.images.map((file) => file.name), ['photo-0.png']);
+      expect(tester.takeException(), isNull);
     });
   }
 
@@ -308,6 +380,9 @@ void main() {
               ),
             );
           await loader.load();
+          final icons = FontLoader('MaterialIcons')
+            ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+          await icons.load();
         });
         repository.thumbnails = List.generate(
           9,
@@ -338,6 +413,12 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(tester.takeException(), isNull);
+      for (final source in ['gallery', 'roles', 'assets']) {
+        expect(
+          tester.getSize(find.byKey(Key('attachment-source-$source'))).height,
+          72,
+        );
+      }
       final confirm = tester.getRect(
         find.byKey(const Key('attachment-confirm')),
       );
@@ -373,11 +454,14 @@ class _Gallery implements GalleryRepository {
   final reads = <String>[];
   final pages = <int>[];
   final unavailable = <String>{};
+  final pickLimits = <int>[];
+  List<XFile> pickedImages = [];
   List<Uint8List>? thumbnails;
   GalleryAccess access = GalleryAccess.full;
   int count = 9;
   int manageCount = 0;
   int settingsCount = 0;
+  int cameraCount = 0;
   bool failLoad = false;
 
   @override
@@ -429,8 +513,14 @@ class _Gallery implements GalleryRepository {
   }
 
   @override
-  Future<List<XFile>> pickImages(int limit) async => [];
+  Future<List<XFile>> pickImages(int limit) async {
+    pickLimits.add(limit);
+    return pickedImages;
+  }
+
   @override
-  Future<XFile?> takePhoto() async =>
-      XFile.fromData(_png, path: 'camera.png', name: 'camera.png');
+  Future<XFile?> takePhoto() async {
+    cameraCount++;
+    return XFile.fromData(_png, path: 'camera.png', name: 'camera.png');
+  }
 }

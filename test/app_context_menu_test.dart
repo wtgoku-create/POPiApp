@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/shared/widgets/app_menu.dart';
+import 'package:popi_ai_app/shared/widgets/app_modal_backdrop.dart';
 
 void main() {
   Future<void> pumpMenu(
@@ -68,7 +69,8 @@ void main() {
       find.byType(CupertinoContextMenuPlus),
     );
     expect(menu.showGrowAnimation, isTrue);
-    expect(menu.backdropBlurSigma, greaterThan(0));
+    expect(menu.backdropBlurSigma, AppModalBackdrop.blurSigma);
+    expect(menu.barrierColor, AppModalBackdrop.dimColor);
     expect(
       find.descendant(
         of: find.byKey(const Key('app-context-menu-panel')),

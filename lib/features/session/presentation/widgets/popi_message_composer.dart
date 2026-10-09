@@ -9,7 +9,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
+import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import 'popi_expanded_message_editor.dart';
 
 class PopiComposerImage {
   const PopiComposerImage({required this.name, required this.bytes});
@@ -175,6 +177,10 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.onModelParametersRequested,
     this.modelParametersDescription = '',
     this.onMentionRequested,
+    this.sending = false,
+    this.running = false,
+    this.conversationMode = false,
+    this.onStop,
     super.key,
   });
 
@@ -187,6 +193,12 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
   final VoidCallback? onMentionRequested;
+  final bool sending;
+  final bool running;
+
+  /// Active conversations use a wider editor and larger text.
+  final bool conversationMode;
+  final VoidCallback? onStop;
 
   @override
   ConsumerState<PopiMessageComposer> createState() =>
@@ -201,10 +213,16 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   bool _isExpanded = false;
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
+  bool _expandedEditorOpen = false;
+  late final ValueNotifier<({bool sending, bool running})> _editorStatus;
 
   @override
   void initState() {
     super.initState();
+    _editorStatus = ValueNotifier((
+      sending: widget.sending,
+      running: widget.running,
+    ));
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
     _isExpanded = widget.controller.textController.text.isNotEmpty;
     _composerAnimationController = AnimationController(
@@ -227,7 +245,79 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       ..dispose();
     widget.controller.textNotifier.removeListener(_handleTextChanged);
     widget.controller.textController.removeListener(_syncExpansion);
+    _editorStatus.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(PopiMessageComposer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncExpansion();
+    if (oldWidget.sending != widget.sending ||
+        oldWidget.running != widget.running) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _editorStatus.value = (
+            sending: widget.sending,
+            running: widget.running,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _openExpandedEditor() async {
+    if (_expandedEditorOpen || widget.sending) return;
+    _expandedEditorOpen = true;
+    try {
+      final submitted = await AppSheet.show<bool>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        backgroundColor: Colors.transparent,
+        shape: PopiExpandedMessageEditor.shape,
+        builder: (sheetContext) => ValueListenableBuilder(
+          valueListenable: _editorStatus,
+          builder: (context, status, _) => ValueListenableBuilder(
+            valueListenable: widget.controller.textController,
+            builder: (context, value, _) => Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: PopiExpandedMessageEditor(
+                input: _buildInput(
+                  Theme.of(context).colorScheme,
+                  placeholderFontSize: 18,
+                  expandedEditor: true,
+                  readOnly: status.sending,
+                ),
+                action: _SendButton(
+                  sending: status.sending,
+                  running: status.running,
+                  onPressed: status.sending
+                      ? null
+                      : status.running
+                      ? widget.onStop
+                      : widget.controller.markdown.isNotEmpty ||
+                            widget.selectedImages.isNotEmpty
+                      ? () => Navigator.of(sheetContext).pop(true)
+                      : null,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (submitted == true) {
+        _dismissEditor();
+        widget.onSubmitted(widget.controller.markdown);
+      } else {
+        _focusNode.requestFocus();
+      }
+    } finally {
+      _expandedEditorOpen = false;
+    }
   }
 
   void _handleTextChanged() {
@@ -320,7 +410,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
             child: ConstrainedBox(
               // Figma's 376px measurement is the content box. The visible frame
               // also includes 10px padding and a 2px border on each side.
-              constraints: const BoxConstraints(maxWidth: 400),
+              constraints: BoxConstraints(
+                maxWidth: widget.conversationMode ? 640 : 400,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -330,20 +422,24 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                         valueListenable: widget.controller.textController,
                         builder: (context, value, _) {
                           final text = widget.controller.markdown;
-                          final inputHeight = _expandedInputHeight(
+                          final inputLayout = _measureInput(
                             value.text,
                             constraints.maxWidth - 20,
                             Directionality.of(context),
                           );
                           return TweenAnimationBuilder<double>(
-                            tween: Tween(end: inputHeight),
+                            tween: Tween(end: inputLayout.height),
                             duration: _composerAnimationController.isCompleted
                                 ? const Duration(milliseconds: 180)
                                 : Duration.zero,
                             curve: Curves.easeOutCubic,
                             builder: (context, animatedInputHeight, _) {
                               final expandedHeight =
-                                  (hasImages ? 136.0 : 70.0) +
+                                  (hasImages
+                                      ? 136.0
+                                      : widget.conversationMode
+                                      ? 78.0
+                                      : 70.0) +
                                   animatedInputHeight;
                               final contentHeight = _isExpanded
                                   ? expandedHeight
@@ -351,11 +447,19 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                               final content = _ComposerContent(
                                 isExpanded: _isExpanded,
                                 hasText: text.isNotEmpty,
+                                sending: widget.sending,
+                                running: widget.running,
+                                onStop: widget.onStop,
                                 images: widget.selectedImages,
                                 expandedInputHeight: animatedInputHeight,
+                                onExpand: inputLayout.overflows
+                                    ? _openExpandedEditor
+                                    : null,
                                 input: _buildInput(
                                   colorScheme,
-                                  placeholderFontSize: 14,
+                                  placeholderFontSize: widget.conversationMode
+                                      ? 18
+                                      : 14,
                                 ),
                                 colorScheme: colorScheme,
                                 onAttachment: widget.onAttachment,
@@ -479,6 +583,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   Widget _buildInput(
     ColorScheme colorScheme, {
     required double placeholderFontSize,
+    bool expandedEditor = false,
+    bool? readOnly,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final placeholderStyle = TextStyle(
@@ -487,16 +593,25 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       fontWeight: FontWeight.w400,
     );
     return ExtendedTextField(
-      key: const Key('popi-message-input'),
-      focusNode: _focusNode,
+      key: Key(
+        expandedEditor ? 'popi-expanded-message-input' : 'popi-message-input',
+      ),
+      focusNode: expandedEditor ? null : _focusNode,
+      autofocus: expandedEditor,
       controller: widget.controller.textController,
+      readOnly: readOnly ?? widget.sending,
       specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
-      minLines: _isExpanded ? 2 : 1,
-      maxLines: 4,
+      minLines: expandedEditor
+          ? null
+          : _isExpanded && !widget.conversationMode
+          ? 2
+          : 1,
+      maxLines: expandedEditor ? null : 3,
+      expands: expandedEditor,
       cursorColor: colorScheme.primary,
       style: TextStyle(
         color: colorScheme.onSurface,
-        fontSize: 14,
+        fontSize: expandedEditor || widget.conversationMode ? 18 : 14,
         fontWeight: FontWeight.w400,
         height: 1.5,
       ),
@@ -514,7 +629,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     );
   }
 
-  double _expandedInputHeight(
+  ({double height, bool overflows}) _measureInput(
     String rawText,
     double maxWidth,
     TextDirection textDirection,
@@ -527,14 +642,31 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final painter = TextPainter(
       text: TextSpan(
         text: displayText,
-        style: const TextStyle(fontSize: 14, height: 1.5),
+        style: TextStyle(
+          fontSize: widget.conversationMode ? 18 : 14,
+          height: 1.5,
+        ),
       ),
-      maxLines: 4,
+      maxLines: 3,
       textDirection: textDirection,
+      textScaler: MediaQuery.textScalerOf(context),
     )..layout(maxWidth: maxWidth);
-    final lines = painter.computeLineMetrics().length.clamp(2, 4);
+    final lines = painter.computeLineMetrics().length.clamp(
+      widget.conversationMode ? 1 : 2,
+      3,
+    );
+    final overflows = painter.didExceedMaxLines;
     painter.dispose();
-    return lines * 21.0;
+    // Match the editor's scaled line height so accessibility fonts are not clipped.
+    return (
+      height:
+          lines *
+          MediaQuery.textScalerOf(
+            context,
+          ).scale(widget.conversationMode ? 18 : 14) *
+          1.5,
+      overflows: overflows,
+    );
   }
 }
 
@@ -635,6 +767,7 @@ class _ComposerContent extends StatelessWidget {
     required this.hasText,
     required this.images,
     required this.expandedInputHeight,
+    required this.onExpand,
     required this.input,
     required this.colorScheme,
     required this.onAttachment,
@@ -642,12 +775,16 @@ class _ComposerContent extends StatelessWidget {
     required this.onSubmitted,
     required this.onModelParametersRequested,
     required this.modelParametersDescription,
+    required this.sending,
+    required this.running,
+    required this.onStop,
   });
 
   final bool isExpanded;
   final bool hasText;
   final List<PopiComposerImage> images;
   final double expandedInputHeight;
+  final VoidCallback? onExpand;
   final Widget input;
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
@@ -655,12 +792,16 @@ class _ComposerContent extends StatelessWidget {
   final VoidCallback onSubmitted;
   final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
+  final bool sending;
+  final bool running;
+  final VoidCallback? onStop;
 
   @override
   Widget build(BuildContext context) {
     const duration = Duration(milliseconds: 220);
     const curve = Curves.easeOutCubic;
     final hasImages = images.isNotEmpty;
+    final showAction = isExpanded || running || sending;
     final compactImageStripWidth = images.isEmpty
         ? 0.0
         : images.length * 28.0 + (images.length - 1) * 6.0;
@@ -690,11 +831,18 @@ class _ComposerContent extends StatelessWidget {
           child: Padding(
             padding: hasImages
                 ? isExpanded
-                      ? EdgeInsets.only(top: 66, bottom: 50)
-                      : EdgeInsets.only(left: 58 + compactImageStripWidth)
+                      ? EdgeInsets.only(
+                          top: 66,
+                          bottom: 50,
+                          right: onExpand != null ? 36 : 0,
+                        )
+                      : EdgeInsets.only(
+                          left: 58 + compactImageStripWidth,
+                          right: showAction ? 48 : 0,
+                        )
                 : isExpanded
-                ? const EdgeInsets.only(bottom: 50)
-                : const EdgeInsets.only(left: 50),
+                ? EdgeInsets.only(bottom: 50, right: onExpand != null ? 36 : 0)
+                : EdgeInsets.only(left: 50, right: showAction ? 48 : 0),
             child: Align(
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
@@ -705,6 +853,21 @@ class _ComposerContent extends StatelessWidget {
             ),
           ),
         ),
+        if (isExpanded && onExpand != null)
+          Positioned(
+            top: hasImages ? 66 : 0,
+            right: 0,
+            child: SizedBox.square(
+              dimension: 32,
+              child: IconButton(
+                key: const Key('popi-expand-input'),
+                tooltip: AppLocalizations.of(context)!.composerExpandInput,
+                onPressed: sending ? null : onExpand,
+                padding: const EdgeInsets.all(5),
+                icon: const AppSvgIcon.asset('chat_expand_input', size: 22),
+              ),
+            ),
+          ),
         Positioned(
           left: 0,
           top: isExpanded ? null : 10,
@@ -738,18 +901,26 @@ class _ComposerContent extends StatelessWidget {
           ),
         Positioned(
           right: 0,
-          bottom: 0,
+          bottom: isExpanded ? 0 : 10,
           child: IgnorePointer(
-            ignoring: !isExpanded,
+            ignoring: !showAction,
             child: AnimatedOpacity(
               duration: duration,
               curve: curve,
-              opacity: isExpanded ? 1 : 0,
+              opacity: showAction ? 1 : 0,
               child: AnimatedSize(
                 duration: duration,
                 curve: curve,
-                child: hasText
-                    ? _SendButton(onPressed: onSubmitted)
+                child: hasText || hasImages || running || sending
+                    ? _SendButton(
+                        onPressed: sending
+                            ? null
+                            : running
+                            ? onStop
+                            : onSubmitted,
+                        sending: sending,
+                        running: running,
+                      )
                     : const SizedBox.shrink(),
               ),
             ),
@@ -851,9 +1022,15 @@ class _AttachmentButton extends StatelessWidget {
 }
 
 class _SendButton extends StatelessWidget {
-  const _SendButton({required this.onPressed});
+  const _SendButton({
+    required this.onPressed,
+    this.sending = false,
+    this.running = false,
+  });
 
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool sending;
+  final bool running;
 
   @override
   Widget build(BuildContext context) {
@@ -861,7 +1038,11 @@ class _SendButton extends StatelessWidget {
       dimension: 40,
       child: IconButton(
         key: const Key('popi-send-button'),
-        tooltip: AppLocalizations.of(context)!.sendMessage,
+        tooltip: sending
+            ? AppLocalizations.of(context)!.chatSending
+            : running
+            ? AppLocalizations.of(context)!.chatStop
+            : AppLocalizations.of(context)!.sendMessage,
         constraints: const BoxConstraints.tightFor(width: 40, height: 40),
         padding: EdgeInsets.zero,
         style: IconButton.styleFrom(
@@ -870,12 +1051,19 @@ class _SendButton extends StatelessWidget {
           shape: const CircleBorder(),
         ),
         onPressed: onPressed,
-        icon: AppSvgIcon.asset(
-          'home_composer_send',
-          size: 25,
-          color: Colors.white,
-          semanticsLabel: AppLocalizations.of(context)!.sendMessage,
-        ),
+        icon: sending
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : running
+            ? const Icon(Icons.stop_rounded, size: 24)
+            : AppSvgIcon.asset(
+                'home_composer_send',
+                size: 25,
+                color: Colors.white,
+                semanticsLabel: AppLocalizations.of(context)!.sendMessage,
+              ),
       ),
     );
   }

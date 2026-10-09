@@ -11,6 +11,7 @@ import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
+import 'support/session_fixtures.dart';
 
 void main() {
   Future<ProviderContainer> pumpDrawer(
@@ -26,6 +27,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final container = ProviderContainer(
       overrides: [
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWith(
           (ref) => throw StateError('Sidebar must not use project APIs'),
         ),
@@ -93,7 +95,7 @@ void main() {
     final container = await pumpDrawer(tester);
     await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
     await tester.pumpAndSettle();
-    expect(find.text('校园野餐vlog'), findsOneWidget);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
     expect(
       container
           .read(routerProvider(false))
@@ -107,8 +109,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('drawer-new-session')));
     await tester.pumpAndSettle();
-    expect(container.read(sessionsProvider).length, 9);
-    expect(find.text('新会话'), findsOneWidget);
+    expect(container.read(sessionsProvider).requireValue.length, 9);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
+    expect(
+      container
+          .read(sessionsProvider)
+          .requireValue
+          .any((session) => session.title == '新会话'),
+      isTrue,
+    );
     expect(
       tester
           .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
@@ -169,7 +178,7 @@ void main() {
     await openMenu(tester, 'mock-2');
     await tester.tap(find.text('置顶会话'));
     await tester.pumpAndSettle();
-    expect(container.read(sessionsProvider).first.id, 'mock-2');
+    expect(container.read(sessionsProvider).requireValue.first.id, 'mock-2');
     await openMenu(tester, 'mock-2');
     await tester.tap(find.text('重命名'));
     await tester.pumpAndSettle();
@@ -199,7 +208,7 @@ void main() {
     await tester.tap(find.byKey(const Key('session-delete-confirm')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('drawer-session-mock-2')), findsNothing);
-    expect(container.read(sessionsProvider).length, 7);
+    expect(container.read(sessionsProvider).requireValue.length, 7);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

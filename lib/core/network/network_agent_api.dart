@@ -158,6 +158,53 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
+  Future<Map<String, dynamic>> retryRun(
+    String runId, {
+    required String clientRequestId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/runs/${Uri.encodeComponent(runId)}/retry',
+    method: 'POST',
+    data: {'clientRequestId': clientRequestId},
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> respondQuestion(
+    String sessionId,
+    String questionId, {
+    required int revision,
+    required String action,
+    Map<String, Object?>? answer,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/questions/${Uri.encodeComponent(questionId)}/respond',
+    method: 'POST',
+    data: {
+      'revision': revision,
+      'action': action,
+      if (answer != null) 'answer': answer,
+    },
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> respondConfirmation(
+    String sessionId,
+    String confirmationId, {
+    required String clientRequestId,
+    required int revision,
+    required String action,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/confirmations/${Uri.encodeComponent(confirmationId)}/respond',
+    method: 'POST',
+    data: {
+      'clientRequestId': clientRequestId,
+      'revision': revision,
+      'action': action,
+    },
+    cancelToken: cancelToken,
+  );
+
   /// Returns raw SSE bytes; event parsing and message updates belong outside UI.
   Future<ResponseBody> openSessionEvents(
     String id, {

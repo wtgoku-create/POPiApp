@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/router.dart';
@@ -24,6 +25,8 @@ import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'support/project_fixtures.dart';
 import 'support/role_library_fixtures.dart';
+import 'support/session_fixtures.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   WidgetController.hitTestWarningShouldBeFatal = true;
@@ -49,6 +52,7 @@ void main() {
     final roles = roleGuideExamples(lookupAppLocalizations(locale));
     final container = ProviderContainer(
       overrides: [
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(
           projectRepository ?? FixtureProjectRepository(),
         ),
@@ -157,6 +161,72 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'step actions stay at the bottom while planning content scrolls',
+    (tester) async {
+      await pumpGuide(tester, size: const Size(320, 640));
+
+      Future<void> checkFooter(
+        String bottomAction,
+        List<String> actions,
+      ) async {
+        final bottom = find.byKey(Key(bottomAction));
+        expect(tester.getBottomLeft(bottom).dy, closeTo(640 - 34 - 20, .01));
+        final positions = {
+          for (final key in actions)
+            key: tester.getTopLeft(find.byKey(Key(key))),
+        };
+        await tester.drag(
+          find.byKey(const Key('role-guide-scroll')),
+          const Offset(0, -200),
+        );
+        await tester.pumpAndSettle();
+        for (final key in actions) {
+          final action = find.byKey(Key(key));
+          expect(action.hitTestable(), findsOneWidget);
+          expect(tester.getTopLeft(action), positions[key]);
+        }
+        expect(tester.takeException(), isNull);
+      }
+
+      await checkFooter('role-guide-create-project', [
+        'role-guide-create-project',
+      ]);
+      await selectProject(tester);
+      await checkFooter('role-guide-refresh-stories', [
+        'role-guide-choose-story',
+        'role-guide-refresh-stories',
+      ]);
+      await tap(tester, 'role-guide-refresh-stories');
+      await tap(tester, 'role-guide-choose-story');
+      await checkFooter('role-guide-produce', ['role-guide-produce']);
+      await tap(tester, 'role-guide-produce');
+      expect(find.byKey(const Key('role-generation-scroll')), findsOneWidget);
+      await tap(tester, 'role-generation-confirm');
+      await checkFooter('role-guide-produce', ['role-guide-produce']);
+      await tap(tester, 'role-guide-produce');
+      expect(find.text('生成成功！'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('step action stays above the keyboard inset', (tester) async {
+    await pumpGuide(tester, size: const Size(320, 640));
+    await tap(tester, 'role-guide-select-preview-role-1');
+    tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    final action = find.byKey(const Key('role-guide-create-project'));
+    expect(action.hitTestable(), findsOneWidget);
+    expect(tester.getBottomLeft(action).dy, closeTo(640 - 240 - 20, .01));
+    await tap(tester, 'role-guide-create-project');
+    expect(
+      find.byKey(const Key('role-guide-choose-story')).hitTestable(),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('home character entry opens the guide', (tester) async {
     final container = await pumpGuide(tester);
     container.read(routerProvider(false)).go('/');
@@ -182,6 +252,9 @@ void main() {
       expect(find.textContaining('已选3个角色'), findsOneWidget);
       await tap(tester, 'role-library-create-project');
       await tap(tester, 'role-guide-choose-story');
+      expect(find.text('开始创作'), findsOneWidget);
+      expect(find.byKey(const Key('role-guide-refresh-stories')), findsNothing);
+      expect(find.text('查看方案'), findsNothing);
       await tap(tester, 'role-guide-configure');
       await tap(tester, 'role-model-veo');
       await tap(tester, 'role-resolution-1080');
@@ -227,6 +300,51 @@ void main() {
       await tap(tester, 'role-library-create-project');
       expect(find.byKey(const Key('role-guide-library-sheet')), findsNothing);
       expect(find.text('共2个角色'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'role library title and controls remain fixed while roles scroll',
+    (tester) async {
+      await pumpGuide(tester);
+      await tap(tester, 'role-guide-more');
+      final title = find.text('角色库');
+      final controls = find.byKey(const Key('role-guide-library-controls'));
+      final create = find.descendant(
+        of: controls,
+        matching: find.byKey(const Key('role-guide-create-role')),
+      );
+      final first = find.byKey(const Key('role-library-select-preview-role-1'));
+      final titleBounds = tester.getRect(title);
+      final controlsBounds = tester.getRect(controls);
+      final createBounds = tester.getRect(create);
+      final firstY = tester.getTopLeft(first).dy;
+      await tester.drag(
+        find.byKey(const Key('role-guide-library-scroll')),
+        const Offset(0, -320),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(title), titleBounds);
+      expect(tester.getRect(controls), controlsBounds);
+      expect(tester.getRect(create), createBounds);
+      expect(tester.getTopLeft(first).dy, lessThan(firstY));
+      await tester.tap(
+        find.descendant(
+          of: controls,
+          matching: find.byKey(const Key('role-segment-1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(controls), controlsBounds);
+      expect(
+        find.byKey(const Key('role-library-select-preview-role-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('role-library-select-preview-role-3')),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -353,6 +471,42 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final width in [292.0, 390.0, 440.0]) {
+    testWidgets('story title stays on one line at width $width', (
+      tester,
+    ) async {
+      await pumpGuide(tester, size: Size(width, 956));
+      await selectProject(tester);
+      final title = lookupAppLocalizations(
+        const Locale('zh'),
+      ).roleExampleStoryTitle1;
+      final heading = find.text(title);
+
+      void expectSingleLine() {
+        final paragraph = tester.renderObject<RenderParagraph>(heading);
+        final boxes = paragraph.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: title.length),
+        );
+        expect(boxes, isNotEmpty);
+        expect(boxes.map((box) => box.top).toSet(), hasLength(1));
+        expect(tester.getSize(heading).height, lessThan(30));
+      }
+
+      expectSingleLine();
+      await tap(tester, 'role-guide-choose-story');
+      expectSingleLine();
+      expect(
+        tester.getRect(heading).right,
+        lessThanOrEqualTo(
+          tester
+              .getRect(find.byKey(const Key('role-guide-story-details')))
+              .left,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('detailed story exposes the plot and complete storyboard', (
     tester,
@@ -517,6 +671,32 @@ void main() {
     expect(find.text('暂无我的角色'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [320.0, 390.0, 440.0]) {
+    testWidgets('create role stays on one line at width $width', (
+      tester,
+    ) async {
+      await pumpGuide(tester, size: Size(width, 956));
+      final create = find.byKey(const Key('role-guide-create-role'));
+      final label = find.descendant(of: create, matching: find.text('创建角色'));
+      final buttonRect = tester.getRect(create);
+      expect(buttonRect.width, 117);
+      expect(buttonRect.height, 40);
+      expect(tester.getSize(label).height, lessThan(25));
+      expect(buttonRect.contains(tester.getCenter(label)), isTrue);
+      final categoriesRect = tester.getRect(
+        find.byKey(const Key('role-segment-0')),
+      );
+      if (width >= 390) {
+        expect(buttonRect.center.dy, categoriesRect.center.dy);
+      } else {
+        expect(buttonRect.top, greaterThan(categoriesRect.bottom));
+      }
+      await tap(tester, 'role-guide-create-role');
+      expect(find.byType(SessionPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final size in [
     const Size(320, 640),

@@ -19,7 +19,24 @@ enum IpAudienceFeeling {
   surprising,
 }
 
-enum IpPresentation { aiReal, animation2d, animation3d, liveAction }
+enum IpPresentation {
+  aiReal,
+  animation2d,
+  animation3d,
+  pets,
+  clay,
+  ink,
+  liveAction,
+}
+
+enum IpTargetAudience {
+  students,
+  workers,
+  families,
+  animeFans,
+  petLovers,
+  seniors,
+}
 
 enum IpContentFormat { shortFilm, comicDrama, interactiveDrama, talkingHead }
 
@@ -46,19 +63,29 @@ class IpGuideSelection<T extends Enum> {
   }
 }
 
-/// Local form draft; no account is persisted until a backend creation flow exists.
+/// One resumable account plan, including idempotent creation progress.
 class IpGuideDraft {
   final directions = IpGuideSelection<IpContentDirection>();
   final feelings = IpGuideSelection<IpAudienceFeeling>();
+  final audience = IpGuideSelection<IpTargetAudience>();
   IpPresentation? presentation;
   IpContentFormat format = IpContentFormat.shortFilm;
   String customFormat = '';
   String nickname = '';
+  int step = 1;
+  String? creationRequestId;
+  String? profileRequestId;
+  String? accountId;
+  int? accountRevision;
+  Map<String, Object?>? submittedProfile;
+
+  bool get submitted => creationRequestId != null;
 
   int? get firstIncompleteStep {
     if (directions.isEmpty) return 1;
     if (feelings.isEmpty) return 2;
     if (presentation == null) return 3;
+    if (audience.isEmpty) return 4;
     return null;
   }
 }

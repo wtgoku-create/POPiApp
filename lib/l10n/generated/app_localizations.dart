@@ -320,6 +320,12 @@ abstract class AppLocalizations {
   /// **'Create video'**
   String get roleProduceVideo;
 
+  /// No description provided for @roleStartCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Start creating'**
+  String get roleStartCreating;
+
   /// No description provided for @roleViewPlan.
   ///
   /// In en, this message translates to:
@@ -1236,6 +1242,150 @@ abstract class AppLocalizations {
   /// **'Account details are not available yet'**
   String get ipAccountDetailsPending;
 
+  /// No description provided for @ipAccountHomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Home'**
+  String get ipAccountHomeTitle;
+
+  /// No description provided for @ipAccountPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Preferences'**
+  String get ipAccountPreferences;
+
+  /// No description provided for @ipAccountPositioning.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Positioning'**
+  String get ipAccountPositioning;
+
+  /// No description provided for @ipAccountFieldEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get ipAccountFieldEmpty;
+
+  /// No description provided for @ipAccountEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get ipAccountEdit;
+
+  /// No description provided for @ipAccountSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get ipAccountSave;
+
+  /// No description provided for @ipAccountSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Account details saved'**
+  String get ipAccountSaved;
+
+  /// No description provided for @ipAccountLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load account details. Please retry.'**
+  String get ipAccountLoadFailed;
+
+  /// No description provided for @ipAccountResourcesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load project assets and roles'**
+  String get ipAccountResourcesFailed;
+
+  /// No description provided for @ipAccountAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Project Assets'**
+  String get ipAccountAssets;
+
+  /// No description provided for @ipAccountRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Project Roles'**
+  String get ipAccountRoles;
+
+  /// No description provided for @ipAccountNoAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'No creations yet'**
+  String get ipAccountNoAssets;
+
+  /// No description provided for @ipAccountNoRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'No project roles yet'**
+  String get ipAccountNoRoles;
+
+  /// No description provided for @ipAccountCountSeparator.
+  ///
+  /// In en, this message translates to:
+  /// **': '**
+  String get ipAccountCountSeparator;
+
+  /// No description provided for @ipAccountAssetsEmptyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'No creations yet. Start creating with your Agent.'**
+  String get ipAccountAssetsEmptyPrompt;
+
+  /// No description provided for @ipAccountRolesEmptyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add roles to build your creative world.'**
+  String get ipAccountRolesEmptyPrompt;
+
+  /// No description provided for @ipAccountManageRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Project Roles'**
+  String get ipAccountManageRoles;
+
+  /// No description provided for @ipAccountRoleLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add up to 20 roles'**
+  String get ipAccountRoleLimit;
+
+  /// No description provided for @ipAccountPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Content'**
+  String get ipAccountPublish;
+
+  /// No description provided for @ipAccountPublishEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'About 1 min'**
+  String get ipAccountPublishEstimate;
+
+  /// No description provided for @ipAccountPublishReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is ready. Start with a topic, idea, script, or material.'**
+  String get ipAccountPublishReady;
+
+  /// No description provided for @ipAccountStartContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Start New Content'**
+  String get ipAccountStartContent;
+
+  /// No description provided for @ipAccountStartPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me create new content based on this account\'s positioning.'**
+  String get ipAccountStartPrompt;
+
+  /// No description provided for @ipAccountUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Account is paused'**
+  String get ipAccountUnavailable;
+
   /// No description provided for @ipAccountsPending.
   ///
   /// In en, this message translates to:
@@ -1794,11 +1944,221 @@ abstract class AppLocalizations {
   /// **'Just '**
   String get ipGuideIntroBefore;
 
-  /// No description provided for @ipGuideIntroFourSteps.
+  /// No description provided for @ipGuideIntroFiveSteps.
   ///
   /// In en, this message translates to:
-  /// **'4 steps'**
-  String get ipGuideIntroFourSteps;
+  /// **'5 steps'**
+  String get ipGuideIntroFiveSteps;
+
+  /// No description provided for @ipDraftTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your draft or create a new IP?'**
+  String get ipDraftTitle;
+
+  /// No description provided for @ipDraftDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'An account positioning draft was found.'**
+  String get ipDraftDetected;
+
+  /// No description provided for @ipDraftDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to return to your saved step. Starting again replaces this draft. Existing projects, content, and assets will be kept.'**
+  String get ipDraftDescription;
+
+  /// No description provided for @ipDraftRestart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start again'**
+  String get ipDraftRestart;
+
+  /// No description provided for @ipDraftResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue draft'**
+  String get ipDraftResume;
+
+  /// No description provided for @ipDraftSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save your draft. Please retry.'**
+  String get ipDraftSaveFailed;
+
+  /// No description provided for @ipNextAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: Target audience'**
+  String get ipNextAudience;
+
+  /// No description provided for @ipAudienceQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Who is your account for?'**
+  String get ipAudienceQuestion;
+
+  /// No description provided for @ipSelectAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an audience or enter your own'**
+  String get ipSelectAudience;
+
+  /// No description provided for @ipSelectNickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name for your account'**
+  String get ipSelectNickname;
+
+  /// No description provided for @ipReselect.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose again'**
+  String get ipReselect;
+
+  /// No description provided for @ipCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating...'**
+  String get ipCreating;
+
+  /// No description provided for @ipCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation is incomplete. Your draft is saved. Please retry.'**
+  String get ipCreateFailed;
+
+  /// No description provided for @ipCreateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created!'**
+  String get ipCreateSuccess;
+
+  /// No description provided for @ipCreateSuccessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Every piece of content you publish will build your account here.'**
+  String get ipCreateSuccessDescription;
+
+  /// No description provided for @ipCreateFirstRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first character'**
+  String get ipCreateFirstRole;
+
+  /// No description provided for @ipCreateFirstContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Make your first content'**
+  String get ipCreateFirstContent;
+
+  /// No description provided for @ipOpenProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Open account project'**
+  String get ipOpenProject;
+
+  /// No description provided for @ipFirstContentPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me make the first piece of content based on this account\'s positioning.'**
+  String get ipFirstContentPrompt;
+
+  /// No description provided for @ipAudienceStudents.
+  ///
+  /// In en, this message translates to:
+  /// **'Students'**
+  String get ipAudienceStudents;
+
+  /// No description provided for @ipAudienceWorkers.
+  ///
+  /// In en, this message translates to:
+  /// **'Professionals'**
+  String get ipAudienceWorkers;
+
+  /// No description provided for @ipAudienceFamilies.
+  ///
+  /// In en, this message translates to:
+  /// **'Families'**
+  String get ipAudienceFamilies;
+
+  /// No description provided for @ipAudienceAnimeFans.
+  ///
+  /// In en, this message translates to:
+  /// **'Anime fans'**
+  String get ipAudienceAnimeFans;
+
+  /// No description provided for @ipAudiencePetLovers.
+  ///
+  /// In en, this message translates to:
+  /// **'Pet lovers'**
+  String get ipAudiencePetLovers;
+
+  /// No description provided for @ipAudienceSeniors.
+  ///
+  /// In en, this message translates to:
+  /// **'Seniors'**
+  String get ipAudienceSeniors;
+
+  /// No description provided for @ipAudienceStudentsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Campus life, learning, and the interests of young people'**
+  String get ipAudienceStudentsDescription;
+
+  /// No description provided for @ipAudienceWorkersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Work life, career growth, and everyday pressures'**
+  String get ipAudienceWorkersDescription;
+
+  /// No description provided for @ipAudienceFamiliesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Parenting, family life, and spending time with children'**
+  String get ipAudienceFamiliesDescription;
+
+  /// No description provided for @ipAudienceAnimeFansDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Anime characters, fantasy stories, and creative worlds'**
+  String get ipAudienceAnimeFansDescription;
+
+  /// No description provided for @ipAudiencePetLoversDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Pets, playful moments, and comforting characters'**
+  String get ipAudiencePetLoversDescription;
+
+  /// No description provided for @ipAudienceSeniorsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Healthy living, hobbies, and life after retirement'**
+  String get ipAudienceSeniorsDescription;
+
+  /// No description provided for @ipPresentationPets.
+  ///
+  /// In en, this message translates to:
+  /// **'Anthropomorphic pets'**
+  String get ipPresentationPets;
+
+  /// No description provided for @ipPresentationClay.
+  ///
+  /// In en, this message translates to:
+  /// **'Clay animation'**
+  String get ipPresentationClay;
+
+  /// No description provided for @ipPresentationInk.
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese ink painting'**
+  String get ipPresentationInk;
+
+  /// No description provided for @ipVisualStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Visual style'**
+  String get ipVisualStyle;
 
   /// No description provided for @ipGuideIntroAfter.
   ///
@@ -2220,6 +2580,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Say something to POPi...'**
   String get composerPlaceholder;
+
+  /// No description provided for @composerExpandInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand input'**
+  String get composerExpandInput;
 
   /// No description provided for @selectedImageLabel.
   ///
@@ -2761,6 +3127,24 @@ abstract class AppLocalizations {
   /// **'Allow adding photos in system settings to save images.'**
   String get imageSaveAccessDenied;
 
+  /// No description provided for @videoSavedToPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Video saved to Photos'**
+  String get videoSavedToPhotos;
+
+  /// No description provided for @videoSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the video. Try again later.'**
+  String get videoSaveFailed;
+
+  /// No description provided for @videoSaveAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow adding photos in system settings to save videos.'**
+  String get videoSaveAccessDenied;
+
   /// No description provided for @delete.
   ///
   /// In en, this message translates to:
@@ -3006,6 +3390,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore purchases'**
   String get restorePurchases;
+
+  /// No description provided for @paymentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm payment'**
+  String get paymentTitle;
+
+  /// No description provided for @paymentChooseMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get paymentChooseMethod;
+
+  /// No description provided for @paymentWechat.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat Pay'**
+  String get paymentWechat;
+
+  /// No description provided for @paymentAlipay.
+  ///
+  /// In en, this message translates to:
+  /// **'Alipay'**
+  String get paymentAlipay;
+
+  /// No description provided for @paymentConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm payment'**
+  String get paymentConfirm;
+
+  /// No description provided for @paymentAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment amount'**
+  String get paymentAmount;
+
+  /// No description provided for @paymentCatalogPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan price. Your order determines the final charge'**
+  String get paymentCatalogPrice;
+
+  /// No description provided for @paymentCheckAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Check again'**
+  String get paymentCheckAgain;
+
+  /// No description provided for @paymentProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment is processing. Benefits will update once delivered'**
+  String get paymentProcessing;
+
+  /// No description provided for @paymentCanceledPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment canceled. Order status is awaiting confirmation'**
+  String get paymentCanceledPending;
+
+  /// No description provided for @paymentUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment status is unavailable. Check your bill before paying again'**
+  String get paymentUnknown;
+
+  /// No description provided for @paymentNotCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Order incomplete or refunded. Benefits have not been confirmed'**
+  String get paymentNotCompleted;
+
+  /// No description provided for @paymentUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment service is unavailable. Try again later'**
+  String get paymentUnavailable;
+
+  /// No description provided for @paymentAppNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Not installed or unavailable'**
+  String get paymentAppNotInstalled;
+
+  /// No description provided for @paymentRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get paymentRetry;
+
+  /// No description provided for @paymentDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get paymentDone;
+
+  /// No description provided for @paymentOrderNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Order number'**
+  String get paymentOrderNumber;
+
+  /// No description provided for @paymentCopyOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy order number'**
+  String get paymentCopyOrder;
+
+  /// No description provided for @paymentOrderCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Order number copied'**
+  String get paymentOrderCopied;
+
+  /// No description provided for @paymentPendingOrders.
+  ///
+  /// In en, this message translates to:
+  /// **'Other unconfirmed orders'**
+  String get paymentPendingOrders;
+
+  /// No description provided for @paymentNewPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy again'**
+  String get paymentNewPurchase;
+
+  /// No description provided for @paymentNewPurchaseWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The original order may still be processing. Check your WeChat or Alipay bill first. Buying again creates a new order and may result in a duplicate charge.'**
+  String get paymentNewPurchaseWarning;
 
   /// No description provided for @purchaseProcessing.
   ///
@@ -3282,6 +3798,234 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'“Helping people express themselves better”'**
   String get splashTagline;
+
+  /// No description provided for @chatThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'POPi is working…'**
+  String get chatThinking;
+
+  /// No description provided for @chatRoleCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Character draft created'**
+  String get chatRoleCreated;
+
+  /// No description provided for @chatRoleUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Character draft updated'**
+  String get chatRoleUpdated;
+
+  /// No description provided for @chatRolePublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Character published'**
+  String get chatRolePublished;
+
+  /// No description provided for @chatExpandProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand progress'**
+  String get chatExpandProgress;
+
+  /// No description provided for @chatCollapseProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse progress'**
+  String get chatCollapseProgress;
+
+  /// No description provided for @chatPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing'**
+  String get chatPreparing;
+
+  /// No description provided for @chatProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your request'**
+  String get chatProcessing;
+
+  /// No description provided for @chatGeneratingReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating a reply'**
+  String get chatGeneratingReply;
+
+  /// No description provided for @chatSavingArtifact.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving content'**
+  String get chatSavingArtifact;
+
+  /// No description provided for @chatPlanningGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing a generation plan'**
+  String get chatPlanningGeneration;
+
+  /// No description provided for @chatReadRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading character profiles'**
+  String get chatReadRole;
+
+  /// No description provided for @chatReadContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the creative context'**
+  String get chatReadContext;
+
+  /// No description provided for @chatTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggesting topics'**
+  String get chatTopics;
+
+  /// No description provided for @chatPrepareRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing a character plan'**
+  String get chatPrepareRole;
+
+  /// No description provided for @chatAskUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for more details'**
+  String get chatAskUser;
+
+  /// No description provided for @chatSaveRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving the character draft'**
+  String get chatSaveRole;
+
+  /// No description provided for @chatPublishRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing the character'**
+  String get chatPublishRole;
+
+  /// No description provided for @chatPreviewImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview image'**
+  String get chatPreviewImage;
+
+  /// No description provided for @chatCollapseProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse profile'**
+  String get chatCollapseProfile;
+
+  /// No description provided for @chatConfirmGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get chatConfirmGeneration;
+
+  /// No description provided for @chatRoleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get chatRoleName;
+
+  /// No description provided for @chatReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection lost. Reconnecting…'**
+  String get chatReconnecting;
+
+  /// No description provided for @chatRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request failed. Please try again'**
+  String get chatRequestFailed;
+
+  /// No description provided for @chatInsufficientPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough points. Top up and try again'**
+  String get chatInsufficientPoints;
+
+  /// No description provided for @chatRunFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This request failed'**
+  String get chatRunFailed;
+
+  /// No description provided for @chatStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped'**
+  String get chatStopped;
+
+  /// No description provided for @chatCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get chatCompleted;
+
+  /// No description provided for @chatExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get chatExpired;
+
+  /// No description provided for @chatAwaitingConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting confirmation'**
+  String get chatAwaitingConfirmation;
+
+  /// No description provided for @chatStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop reply'**
+  String get chatStop;
+
+  /// No description provided for @chatSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending'**
+  String get chatSending;
+
+  /// No description provided for @chatPlayVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Play video'**
+  String get chatPlayVideo;
+
+  /// No description provided for @chatPlayAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Play audio'**
+  String get chatPlayAudio;
+
+  /// No description provided for @chatCustomAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your own answer'**
+  String get chatCustomAnswer;
+
+  /// No description provided for @chatMediaPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please use these images as references'**
+  String get chatMediaPrompt;
+
+  /// No description provided for @chatHistoryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load conversations'**
+  String get chatHistoryLoadFailed;
+
+  /// No description provided for @chatEstimatedPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated cost: {points} points'**
+  String chatEstimatedPoints(String points);
 }
 
 class _AppLocalizationsDelegate

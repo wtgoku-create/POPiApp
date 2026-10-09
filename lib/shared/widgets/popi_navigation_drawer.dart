@@ -10,6 +10,7 @@ import '../providers/safe_area_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/user_provider.dart';
 import 'app_svg_icon.dart';
+import 'app_toast.dart';
 import '../../features/session/domain/conversation_session.dart';
 import 'popi_drawer_sessions.dart';
 
@@ -24,6 +25,7 @@ class PopiNavigationDrawer extends ConsumerStatefulWidget {
 }
 
 class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
+  bool _creatingSession = false;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -70,16 +72,37 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                     height: 50,
                     child: OutlinedButton(
                       key: const Key('drawer-new-session'),
-                      onPressed: () {
-                        if (!isLoggedIn) {
-                          _openRoute(context, '/login');
-                        } else {
-                          final session = ref
-                              .read(sessionsProvider.notifier)
-                              .create(l10n.newSessionTitle);
-                          _openConversation(context, session);
-                        }
-                      },
+                      onPressed: _creatingSession
+                          ? null
+                          : () async {
+                              if (!isLoggedIn) {
+                                _openRoute(context, '/login');
+                              } else {
+                                final userId = ref.read(userProvider)?.id;
+                                setState(() => _creatingSession = true);
+                                try {
+                                  final session = await ref
+                                      .read(sessionsProvider.notifier)
+                                      .create(l10n.newSessionTitle);
+                                  if (context.mounted &&
+                                      session != null &&
+                                      ref.read(userProvider)?.id == userId) {
+                                    _openConversation(context, session);
+                                  }
+                                } catch (_) {
+                                  if (context.mounted) {
+                                    AppToast.error(
+                                      context,
+                                      l10n.chatRequestFailed,
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _creatingSession = false);
+                                  }
+                                }
+                              }
+                            },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.only(left: 20, right: 10),
                         foregroundColor: colorScheme.onSurface,
@@ -120,9 +143,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                     children: [
                       _NavigationItem(
                         key: const Key('drawer-nav-home'),
-                        icon: Icons.home_outlined,
-                        iconWidth: 24,
-                        iconHeight: 24,
+                        iconAsset: 'home_drawer_nav_home',
+                        iconWidth: 19.25,
+                        iconHeight: 20.25,
                         label: l10n.home,
                         onTap: () {
                           final router = GoRouter.of(context);
@@ -134,7 +157,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         key: const Key('drawer-nav-ip-accounts'),
                         iconAsset: 'home_drawer_nav_ip_account',
                         label: l10n.myIpAccounts,
-                        selected: route == '/ip-accounts',
+                        selected: route.startsWith('/ip-accounts'),
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,

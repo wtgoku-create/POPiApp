@@ -13,6 +13,8 @@ import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
 import 'package:popi_ai_app/shared/widgets/popi_navigation_drawer.dart';
 
 import 'support/project_fixtures.dart';
+import 'support/session_fixtures.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   Future<GoRouter> pumpPage(
@@ -31,6 +33,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final container = ProviderContainer(
       overrides: [
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
       ],
     );

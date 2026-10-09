@@ -11,7 +11,7 @@ import 'app_menu.dart';
 import 'app_svg_icon.dart';
 import 'app_toast.dart';
 
-/// Flat conversation history backed by the temporary session repository.
+/// Flat conversation history shared with the active Agent conversation.
 class PopiDrawerSessions extends ConsumerWidget {
   const PopiDrawerSessions({required this.onOpenConversation, super.key});
 
@@ -19,7 +19,11 @@ class PopiDrawerSessions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sessions = ref.watch(sessionsProvider);
+    final history = ref.watch(sessionsProvider);
+    // 切换账号时 AsyncValue 可能保留上一次的数据，加载期间不展示旧账号历史。
+    final sessions = history.isLoading || history.hasError
+        ? const <ConversationSession>[]
+        : history.valueOrNull ?? const <ConversationSession>[];
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     return Column(
@@ -43,7 +47,22 @@ class PopiDrawerSessions extends ConsumerWidget {
             key: const Key('drawer-session-list'),
             padding: EdgeInsets.zero,
             children: [
-              if (sessions.isEmpty)
+              if (history.isLoading) const LinearProgressIndicator(),
+              if (history.hasError)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(l10n.chatHistoryLoadFailed)),
+                      IconButton(
+                        tooltip: l10n.retry,
+                        onPressed: () => ref.invalidate(sessionsProvider),
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                ),
+              if (sessions.isEmpty && !history.isLoading && !history.hasError)
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Text(
@@ -124,9 +143,17 @@ class _SessionItem extends ConsumerWidget {
         AppMenuItem(
           label: pinned ? l10n.unpinSession : l10n.pinSession,
           icon: menuIcon('menu_pin', 15),
-          onSelected: () {
+          onSelected: () async {
             if (ref.read(userProvider)?.id != userId) return;
-            ref.read(sessionsProvider.notifier).setPinned(session.id, !pinned);
+            try {
+              await ref
+                  .read(sessionsProvider.notifier)
+                  .setPinned(session.id, !pinned);
+            } catch (_) {
+              if (context.mounted && ref.read(userProvider)?.id == userId) {
+                AppToast.error(context, l10n.chatRequestFailed);
+              }
+            }
           },
         ),
         AppMenuItem(
@@ -167,8 +194,16 @@ class _SessionItem extends ConsumerWidget {
                 ref.read(userProvider)?.id != userId) {
               return;
             }
-            ref.read(sessionsProvider.notifier).delete(session.id);
-            AppToast.success(context, l10n.projectItemDeleted);
+            try {
+              await ref.read(sessionsProvider.notifier).delete(session.id);
+              if (context.mounted && ref.read(userProvider)?.id == userId) {
+                AppToast.success(context, l10n.projectItemDeleted);
+              }
+            } catch (_) {
+              if (context.mounted && ref.read(userProvider)?.id == userId) {
+                AppToast.error(context, l10n.chatRequestFailed);
+              }
+            }
           },
         ),
       ],
@@ -210,6 +245,7 @@ class _RenameSessionDialog extends ConsumerStatefulWidget {
 class _RenameSessionDialogState extends ConsumerState<_RenameSessionDialog> {
   late final _name = TextEditingController(text: widget.session.title);
   bool _closing = false;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -217,15 +253,34 @@ class _RenameSessionDialogState extends ConsumerState<_RenameSessionDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_saving) return;
     if (_name.text.trim().isEmpty ||
         _name.text.trim().runes.length > 200 ||
         ref.read(userProvider)?.id != widget.userId) {
       return;
     }
-    ref.read(sessionsProvider.notifier).rename(widget.session.id, _name.text);
-    AppToast.success(context, AppLocalizations.of(context)!.projectItemRenamed);
-    Navigator.of(context).pop();
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(sessionsProvider.notifier)
+          .rename(widget.session.id, _name.text);
+      if (!mounted || ref.read(userProvider)?.id != widget.userId) return;
+      AppToast.success(
+        context,
+        AppLocalizations.of(context)!.projectItemRenamed,
+      );
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.chatRequestFailed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -243,6 +298,7 @@ class _RenameSessionDialogState extends ConsumerState<_RenameSessionDialog> {
     }
     final valid =
         !_closing &&
+        !_saving &&
         _name.text.trim().isNotEmpty &&
         _name.text.trim().runes.length <= 200;
     return AppDialog(

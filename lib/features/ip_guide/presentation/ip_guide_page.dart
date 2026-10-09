@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -8,18 +9,23 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
+import '../../../shared/providers/ip_guide_provider.dart';
+import '../../../shared/providers/project_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../domain/ip_guide_draft.dart';
+import '../data/ip_guide_repository.dart';
+import '../../projects/data/project_repository.dart';
 import 'ip_guide_copy.dart';
 import 'widgets/ip_guide_choices.dart';
 import 'widgets/ip_guide_controls.dart';
 import 'widgets/ip_guide_review.dart';
+import 'widgets/ip_guide_draft_sheet.dart';
 
-/// Introduction and four creation steps share one local draft and tab controller.
+/// Five creation steps autosave one resumable account plan.
 class IpGuidePage extends ConsumerStatefulWidget {
   const IpGuidePage({super.key});
 
@@ -30,23 +36,39 @@ class IpGuidePage extends ConsumerStatefulWidget {
 class _IpGuidePageState extends ConsumerState<IpGuidePage>
     with TickerProviderStateMixin {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
-  final _draft = IpGuideDraft();
+  IpGuideDraft _draft = IpGuideDraft();
+  late final IpGuideRepository _repository;
+  late final String? _ownerId;
   final _directionInput = TextEditingController();
   final _feelingInput = TextEditingController();
   final _formatInput = TextEditingController();
   final _nicknameInput = TextEditingController();
+  final _audienceInput = TextEditingController();
   late TabController _tabs;
   bool? _reducedMotion;
   int _step = 0;
   bool _drawerOpen = false;
+  bool _restoring = false;
+  bool _busy = false;
+  bool _completed = false;
+  bool _saveErrorShown = false;
+  bool _draftSheetOpen = false;
+  String? _projectSessionId;
+  String? _sessionRequestId;
 
   @override
   void initState() {
     super.initState();
+    _repository = ref.read(ipGuideRepositoryProvider);
+    _ownerId = ref.read(userProvider)?.id;
     _directionInput.addListener(_updateDraft);
     _feelingInput.addListener(_updateDraft);
     _formatInput.addListener(_updateDraft);
     _nicknameInput.addListener(_updateDraft);
+    _audienceInput.addListener(_updateDraft);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _repository.load() != null) unawaited(_start());
+    });
   }
 
   @override
@@ -59,7 +81,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       _tabs.dispose();
     }
     _tabs = TabController(
-      length: 5,
+      length: 6,
       initialIndex: _step,
       vsync: this,
       animationDuration: reducedMotion
@@ -69,17 +91,75 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _reducedMotion = reducedMotion;
   }
 
-  void _updateDraft() => setState(() {
-    _draft.directions.customText = _directionInput.text;
-    _draft.feelings.customText = _feelingInput.text;
-    _draft.customFormat = _formatInput.text;
-    _draft.nickname = _nicknameInput.text;
-  });
+  void _updateDraft() {
+    if (_restoring || _completed || _draft.submitted) return;
+    setState(() {
+      _draft.directions.customText = _directionInput.text;
+      _draft.feelings.customText = _feelingInput.text;
+      _draft.customFormat = _formatInput.text;
+      _draft.nickname = _nicknameInput.text;
+      _draft.audience.customText = _audienceInput.text;
+    });
+    _save();
+  }
+
+  void _save() {
+    if (_completed || _step == 0 || _draft.submitted) return;
+    unawaited(
+      _repository.save(_draft).catchError((Object error) {
+        if (!mounted || _saveErrorShown) return;
+        _saveErrorShown = true;
+        AppToast.info(context, AppLocalizations.of(context)!.ipDraftSaveFailed);
+      }),
+    );
+  }
+
+  Future<void> _start() async {
+    if (_draftSheetOpen || _busy) return;
+    final saved = _repository.load();
+    if (saved != null) {
+      _draftSheetOpen = true;
+      final resume = await IpGuideDraftSheet.show(context);
+      _draftSheetOpen = false;
+      if (!mounted || resume == null) return;
+      if (resume) {
+        _restore(saved);
+        _goToStep(saved.step);
+        return;
+      }
+    }
+    _restore(IpGuideDraft());
+    setState(() => _busy = true);
+    try {
+      await _repository.save(_draft);
+      if (mounted) _goToStep(1);
+    } catch (_) {
+      if (mounted) {
+        AppToast.info(context, AppLocalizations.of(context)!.ipDraftSaveFailed);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _restore(IpGuideDraft draft) {
+    _restoring = true;
+    _draft = draft;
+    _directionInput.text = draft.directions.customText;
+    _feelingInput.text = draft.feelings.customText;
+    _formatInput.text = draft.customFormat;
+    _nicknameInput.text = draft.nickname;
+    _audienceInput.text = draft.audience.customText;
+    _restoring = false;
+    setState(() {});
+  }
 
   void _onTabChanged() {
     if (_step == _tabs.index) return;
     FocusScope.of(context).unfocus();
     setState(() => _step = _tabs.index);
+    if (_step > 0) _draft.step = _step;
+    _save();
   }
 
   void _goToStep(int step) {
@@ -97,6 +177,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       1 => _draft.directions.isEmpty,
       2 => _draft.feelings.isEmpty,
       3 => _draft.presentation == null,
+      4 => _draft.audience.isEmpty,
       _ => false,
     };
     if (invalid) {
@@ -109,6 +190,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   String _validationMessage(int step, AppLocalizations l10n) => switch (step) {
     1 => l10n.ipSelectDirection,
     2 => l10n.ipSelectFeeling,
+    4 => l10n.ipSelectAudience,
     _ => l10n.ipSelectPresentation,
   };
 
@@ -121,12 +203,14 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     final changed = selection.toggle(value);
     if (changed) {
       setState(() {});
+      _save();
     } else {
       AppToast.info(context, AppLocalizations.of(context)!.ipMaximumSelections);
     }
   }
 
-  void _confirm() {
+  Future<void> _confirm() async {
+    if (_busy || _completed) return;
     final l10n = AppLocalizations.of(context)!;
     final missing = _draft.firstIncompleteStep;
     if (missing != null) {
@@ -134,22 +218,86 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       AppToast.info(context, _validationMessage(missing, l10n));
       return;
     }
+    if (_draft.nickname.trim().isEmpty) {
+      AppToast.info(context, l10n.ipSelectNickname);
+      return;
+    }
+    if (ref.read(userProvider) == null) {
+      await context.push('/login');
+      return;
+    }
     FocusScope.of(context).unfocus();
-    context.push(
-      Uri(
-        path: '/session',
-        queryParameters: {'prompt': guideSessionPrompt(_draft, l10n)},
-      ).toString(),
-    );
+    setState(() => _busy = true);
+    try {
+      if (ref.read(userProvider)?.id != _ownerId) {
+        context.go('/');
+        return;
+      }
+      await _repository.create(_draft, guideAccountProfile(_draft, l10n));
+      if (!mounted || ref.read(userProvider)?.id != _ownerId) return;
+      ref.invalidate(projectsProvider);
+      if (mounted) setState(() => _completed = true);
+    } catch (_) {
+      if (mounted) AppToast.info(context, l10n.ipCreateFailed);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   void _back() {
-    if (_step > 0) {
+    if (_busy) return;
+    if (_step > 0 && !_completed && !_draft.submitted) {
       _goToStep(_step - 1);
     } else if (context.canPop()) {
       context.pop();
     } else {
       context.go('/');
+    }
+  }
+
+  Future<void> _openProject({bool createContent = false}) async {
+    if (_busy || _draft.accountId == null) return;
+    if (ref.read(userProvider)?.id != _ownerId) {
+      context.go('/');
+      return;
+    }
+    if (!createContent) {
+      await context.push(
+        '/ip-accounts/${Uri.encodeComponent(_draft.accountId!)}',
+      );
+      return;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _busy = true);
+    try {
+      if (_projectSessionId == null) {
+        _sessionRequestId ??= ProjectRepository.createClientRequestId();
+        final session = await ref
+            .read(projectRepositoryProvider)
+            .createSession(
+              _draft.accountId!,
+              _draft.nickname,
+              clientRequestId: _sessionRequestId!,
+            );
+        _projectSessionId = session.id;
+      }
+      if (mounted && ref.read(userProvider)?.id == _ownerId) {
+        unawaited(
+          context.push(
+            Uri(
+              path: '/session',
+              queryParameters: {
+                'sessionId': _projectSessionId!,
+                if (createContent) 'prompt': l10n.ipFirstContentPrompt,
+              },
+            ).toString(),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) AppToast.info(context, l10n.chatRequestFailed);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -161,6 +309,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _feelingInput.dispose();
     _formatInput.dispose();
     _nicknameInput.dispose();
+    _audienceInput.dispose();
     super.dispose();
   }
 
@@ -179,10 +328,10 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final tabLabels = [
-      l10n.ipGuideIntroduction,
       l10n.ipContentDirection,
       l10n.ipAudienceFeeling,
       l10n.ipPresentation,
+      l10n.ipTargetAudience,
       l10n.ipReview,
     ];
 
@@ -282,58 +431,99 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 children: [
-                  SizedBox(
-                    key: const Key('ip-guide-progress'),
-                    height: 25,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 54),
-                      child: Row(
-                        children: [
-                          for (var i = 0; i < 5; i++)
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                ),
-                                child: Semantics(
-                                  key: Key('ip-guide-progress-$i'),
-                                  label: tabLabels[i],
-                                  selected: _step == i,
-                                  child: Container(
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.brand.withValues(
-                                        alpha: _step == i ? 1 : .2,
+                  if (!_completed)
+                    SizedBox(
+                      key: const Key('ip-guide-progress'),
+                      height: 25,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 54),
+                        child: Row(
+                          children: [
+                            for (var i = 0; i < 5; i++)
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                  ),
+                                  child: Semantics(
+                                    key: Key('ip-guide-progress-$i'),
+                                    label: tabLabels[i],
+                                    selected: _step == i + 1,
+                                    child: Container(
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.brand.withValues(
+                                          alpha: _step == i + 1 ? 1 : .2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(100),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   Expanded(
                     child: TabBarView(
                       controller: _tabs,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _scroll(0, _introduction(l10n), top: 102),
-                        _scroll(1, _selectionStep(l10n, feelings: false)),
-                        _scroll(2, _selectionStep(l10n, feelings: true)),
-                        _scroll(3, _presentationStep(l10n)),
-                        _scroll(
+                        _stepWithAction(
+                          0,
+                          _introduction(l10n),
+                          label: l10n.ipGuideStart,
+                          onPressed: _busy ? null : _start,
+                          top: 102,
+                        ),
+                        _stepWithAction(
+                          1,
+                          _selectionStep(l10n, feelings: false),
+                          label: l10n.ipNextFeelings,
+                          onPressed: _next,
+                        ),
+                        _stepWithAction(
+                          2,
+                          _selectionStep(l10n, feelings: true),
+                          label: l10n.ipNextPresentation,
+                          onPressed: _next,
+                        ),
+                        _stepWithAction(
+                          3,
+                          _presentationStep(l10n),
+                          label: l10n.ipNextAudience,
+                          onPressed: _next,
+                        ),
+                        _stepWithAction(
                           4,
+                          _audienceStep(l10n),
+                          label: l10n.ipNextReview,
+                          onPressed: _next,
+                        ),
+                        _scroll(
+                          5,
                           Column(
                             children: [
-                              _heading(4, l10n.ipReviewQuestion),
+                              if (_completed)
+                                _successHeading(l10n)
+                              else
+                                _heading(5, l10n.ipReviewQuestion),
                               const SizedBox(height: 20),
                               IpGuideReview(
                                 draft: _draft,
                                 nicknameController: _nicknameInput,
                                 onConfirm: _confirm,
+                                onReselect: () => _goToStep(1),
+                                submitted: _draft.submitted,
+                                busy: _busy,
+                                completed: _completed,
+                                onCreateRole: () => context.push('/role-guide'),
+                                onCreateContent: () =>
+                                    _openProject(createContent: true),
+                                onOpenProject: _openProject,
                               ),
                             ],
                           ),
@@ -349,7 +539,9 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       ),
     );
     return PopScope<void>(
-      canPop: _step == 0 || _drawerOpen,
+      canPop:
+          !_busy &&
+          (_step == 0 || _completed || _draft.submitted || _drawerOpen),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
@@ -357,7 +549,33 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     );
   }
 
-  Widget _scroll(int step, Widget child, {double top = 30}) =>
+  // Keep the action outside scrolling content and above the keyboard or safe area.
+  Widget _stepWithAction(
+    int step,
+    Widget child, {
+    required String label,
+    required VoidCallback? onPressed,
+    double top = 30,
+  }) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom > 0
+        ? 0.0
+        : ref.watch(safeAreaInsetsProvider).bottom;
+    return Column(
+      children: [
+        Expanded(child: _scroll(step, child, top: top, bottom: 20)),
+        Padding(
+          padding: EdgeInsets.fromLTRB(40, 12, 40, bottomInset + 20),
+          child: IpGuideNextButton(
+            key: Key(step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step'),
+            label: label,
+            onPressed: onPressed,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _scroll(int step, Widget child, {double top = 30, double? bottom}) =>
       SingleChildScrollView(
         key: Key('ip-guide-scroll-$step'),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -365,7 +583,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
           20,
           top,
           20,
-          ref.watch(safeAreaInsetsProvider).bottom + 20,
+          bottom ?? ref.watch(safeAreaInsetsProvider).bottom + 20,
         ),
         child: child,
       );
@@ -418,7 +636,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
           children: [
             TextSpan(text: l10n.ipGuideIntroBefore),
             TextSpan(
-              text: l10n.ipGuideIntroFourSteps,
+              text: l10n.ipGuideIntroFiveSteps,
               style: const TextStyle(color: AppColors.brand),
             ),
             TextSpan(text: l10n.ipGuideIntroAfter),
@@ -451,15 +669,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               ),
             ),
           ],
-        ),
-      ),
-      const SizedBox(height: 20),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: IpGuideNextButton(
-          key: const Key('ip-guide-start'),
-          label: l10n.ipGuideStart,
-          onPressed: _next,
         ),
       ),
     ],
@@ -507,11 +716,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
             controller: feelings ? _feelingInput : _directionInput,
             hint: l10n.ipCustomHint,
           ),
-          IpGuideNextButton(
-            key: Key('ip-guide-next-${feelings ? 2 : 1}'),
-            label: feelings ? l10n.ipNextPresentation : l10n.ipNextFeelings,
-            onPressed: _next,
-          ),
         ]),
       ],
     );
@@ -529,10 +733,13 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         _heading(3, l10n.ipPresentationQuestion),
         const SizedBox(height: 20),
         _panel([
-          Text(l10n.ipPresentation, style: style),
+          Text(l10n.ipVisualStyle, style: style),
           IpGuidePresentationChoices(
             selected: _draft.presentation,
-            onSelected: (value) => setState(() => _draft.presentation = value),
+            onSelected: (value) {
+              setState(() => _draft.presentation = value);
+              _save();
+            },
           ),
           Text(l10n.ipContentFormat, style: style),
           Wrap(
@@ -563,6 +770,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                   onSelected: (_) {
                     _formatInput.clear();
                     setState(() => _draft.format = format);
+                    _save();
                   },
                 ),
             ],
@@ -572,13 +780,64 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
             controller: _formatInput,
             hint: l10n.ipCustomHint,
           ),
-          IpGuideNextButton(
-            key: const Key('ip-guide-next-3'),
-            label: l10n.ipNextReview,
-            onPressed: _next,
-          ),
         ]),
       ],
     );
   }
+
+  Widget _audienceStep(AppLocalizations l10n) => Column(
+    children: [
+      _heading(4, l10n.ipAudienceQuestion),
+      const SizedBox(height: 20),
+      _panel([
+        IpGuideChoiceGrid<IpTargetAudience>(
+          values: IpTargetAudience.values,
+          selection: _draft.audience,
+          label: (value) => audienceLabel(value, l10n),
+          description: (value) => audienceDescription(value, l10n),
+          showAvatar: false,
+          onSelected: (value) =>
+              _toggle(_draft.audience, value, _audienceInput),
+          keyPrefix: 'ip-audience',
+        ),
+        IpGuideSelectionSummary(
+          labels: _draft.audience.values
+              .map((value) => audienceLabel(value, l10n))
+              .toList(),
+        ),
+        IpGuideTextField(
+          key: const Key('ip-custom-audience'),
+          controller: _audienceInput,
+          hint: l10n.ipCustomHint,
+        ),
+      ]),
+    ],
+  );
+
+  Widget _successHeading(AppLocalizations l10n) => Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.ipCreateSuccess,
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l10n.ipCreateSuccessDescription,
+              style: const TextStyle(fontSize: 16, height: 1.4),
+            ),
+          ],
+        ),
+      ),
+      Image.asset(
+        'assets/images/ip_guide_success.png',
+        width: 135,
+        height: 135,
+        fit: BoxFit.contain,
+      ),
+    ],
+  );
 }

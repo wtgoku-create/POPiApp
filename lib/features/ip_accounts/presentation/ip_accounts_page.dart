@@ -8,7 +8,6 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
-import '../../../shared/widgets/app_toast.dart';
 import '../data/ip_account_examples.dart';
 import '../domain/ip_account.dart';
 import 'widgets/ip_accounts_skeleton.dart';
@@ -19,18 +18,21 @@ class IpAccountsPage extends ConsumerWidget {
     this.accounts = const [],
     this.isLoading = false,
     this.onOpenAccount,
+    this.onRetry,
     super.key,
   });
 
   const IpAccountsPage.sample({
     this.isLoading = false,
     this.onOpenAccount,
+    this.onRetry,
     super.key,
   }) : accounts = ipAccountExamples;
 
   final List<IpAccount> accounts;
   final bool isLoading;
   final ValueChanged<IpAccount>? onOpenAccount;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,6 +102,19 @@ class IpAccountsPage extends ConsumerWidget {
                           key: const Key('ip-accounts-skeleton'),
                           padding: listPadding,
                         )
+                      : onRetry != null
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(l10n.ipAccountLoadFailed),
+                              TextButton(
+                                onPressed: onRetry,
+                                child: Text(l10n.retry),
+                              ),
+                            ],
+                          ),
+                        )
                       : Center(
                           child: Text(
                             l10n.noIpAccounts,
@@ -121,9 +136,8 @@ class IpAccountsPage extends ConsumerWidget {
                           if (onOpenAccount case final callback?) {
                             callback(account);
                           } else {
-                            AppToast.info(
-                              context,
-                              l10n.ipAccountDetailsPending,
+                            context.push(
+                              '/ip-accounts/${Uri.encodeComponent(account.id)}',
                             );
                           }
                         },

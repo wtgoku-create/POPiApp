@@ -13,6 +13,7 @@ class FakeVideoPlayer extends VideoPlayerPlatform {
   bool failNext = false;
   bool playing = false;
   double volume = 1;
+  Size videoSize = const Size(1920, 1080);
 
   @override
   Future<void> init() async {}
@@ -37,7 +38,7 @@ class FakeVideoPlayer extends VideoPlayerPlatform {
     VideoEvent(
       eventType: VideoEventType.initialized,
       duration: const Duration(seconds: 60),
-      size: const Size(1920, 1080),
+      size: videoSize,
     ),
   );
 

@@ -11,8 +11,11 @@ void main() {
 
   Future<void> pumpComposer(
     WidgetTester tester,
-    PopiMessageComposerController controller,
-  ) async {
+    PopiMessageComposerController controller, {
+    bool conversationMode = false,
+    bool running = false,
+    VoidCallback? onStop,
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
@@ -24,6 +27,9 @@ void main() {
               alignment: Alignment.bottomCenter,
               child: PopiMessageComposer(
                 controller: controller,
+                conversationMode: conversationMode,
+                running: running,
+                onStop: onStop,
                 selectedImages: const [],
                 onAttachment: () {},
                 onRemoveImage: (_) {},
@@ -66,7 +72,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(10, 20));
     await tester.pumpAndSettle();
-    expect(tester.getSize(frame).height, 154);
+    expect(tester.getSize(frame).height, 133);
+    expect(tester.widget<ExtendedTextField>(input).maxLines, 3);
 
     await tester.tap(input);
     await tester.pumpAndSettle();
@@ -87,6 +94,69 @@ void main() {
     await controller.setText('');
     await tester.pumpAndSettle();
     expect(tester.getSize(frame).height, 60);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('active conversation expands only for focus or draft content', (
+    tester,
+  ) async {
+    final controller = PopiMessageComposerController();
+    addTearDown(controller.dispose);
+    await pumpComposer(tester, controller, conversationMode: true);
+    expect(tester.getSize(frame).height, 60);
+    await tester.tap(input);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 105);
+    tester.testTextInput.enterText('First\nSecond\nThird');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 159);
+    tester.testTextInput.enterText('First\nSecond\nThird\nFourth\nFifth');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 159);
+    expect(tester.widget<ExtendedTextField>(input).maxLines, 3);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 159);
+    await controller.setText('');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 60);
+    await controller.setText('Draft');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 105);
+    await tester.tap(input);
+    await tester.pumpAndSettle();
+    tester.testTextInput.enterText('');
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 105);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 60);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('running reply keeps stop accessible in a collapsed composer', (
+    tester,
+  ) async {
+    final controller = PopiMessageComposerController();
+    addTearDown(controller.dispose);
+    var stopped = false;
+    await pumpComposer(tester, controller, conversationMode: true);
+    await pumpComposer(
+      tester,
+      controller,
+      conversationMode: true,
+      running: true,
+      onStop: () => stopped = true,
+    );
+    expect(tester.getSize(frame).height, 60);
+    final stop = find.byKey(const Key('popi-send-button'));
+    final stopRect = tester.getRect(stop);
+    final inputRect = tester.getRect(input);
+    expect(inputRect.overlaps(stopRect), isFalse);
+    expect(tester.getRect(frame).contains(stopRect.center), isTrue);
+    await tester.tap(stop);
+    await tester.pumpAndSettle();
+    expect(stopped, isTrue);
     await tester.pumpWidget(const SizedBox());
   });
 

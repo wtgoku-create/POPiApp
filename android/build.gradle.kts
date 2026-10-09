@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.LibraryExtension
+
 allprojects {
     repositories {
         google()
@@ -24,6 +26,15 @@ subprojects {
     if (name == "fluwx") {
         pluginManager.withPlugin("com.android.library") {
             pluginManager.apply("org.jetbrains.kotlin.android")
+        }
+    }
+    if (name == "tobias") {
+        // Tobias 5.3.4 bundles global ProGuard flags rejected by AGP 9.
+        afterEvaluate {
+            extensions.getByType<LibraryExtension>().defaultConfig.apply {
+                consumerProguardFiles.clear()
+                consumerProguardFiles(rootProject.file("alipay-consumer-rules.pro"))
+            }
         }
     }
 }

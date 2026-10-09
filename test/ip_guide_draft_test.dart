@@ -59,6 +59,8 @@ void main() {
     draft.feelings.toggle(IpAudienceFeeling.healing);
     expect(draft.firstIncompleteStep, 3);
     draft.presentation = IpPresentation.animation3d;
+    expect(draft.firstIncompleteStep, 4);
+    draft.audience.toggle(IpTargetAudience.students);
     expect(draft.firstIncompleteStep, isNull);
     draft.directions.customText = '';
     expect(draft.firstIncompleteStep, 1);

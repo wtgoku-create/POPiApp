@@ -25,6 +25,8 @@ import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
 
 import 'support/role_library_fixtures.dart';
+import 'support/session_fixtures.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   setUp(() {
@@ -74,6 +76,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          sessionRepositoryProvider.overrideWithValue(
+            FixtureSessionRepository(),
+          ),
           sharedPreferencesProvider.overrideWithValue(preferences),
           dioProvider.overrideWithValue(roleLibraryDio()),
         ],

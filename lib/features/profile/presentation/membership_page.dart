@@ -9,10 +9,13 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../features/payments/data/apple_purchase_service.dart';
 import '../../../features/payments/domain/apple_product_catalog.dart';
+import '../../../features/payments/domain/mobile_payment.dart';
+import '../../../features/payments/presentation/android_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/product_plan_repository.dart';
@@ -212,6 +215,23 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 
   Future<void> _purchaseMembership(_MembershipPlan plan) async {
     setState(() => _isPurchasing = true);
+    if (usesAndroidPayments) {
+      try {
+        await openAndroidPayment(
+          context,
+          ref,
+          PaymentProduct(
+            id: plan.id,
+            kind: PaymentProductKind.subscription,
+            title: plan.title,
+            priceLabel: '¥${plan.price}',
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isPurchasing = false);
+      }
+      return;
+    }
     final outcome = await ref
         .read(applePurchaseServiceProvider)
         .purchase(
