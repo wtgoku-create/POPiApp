@@ -1,5 +1,6 @@
 {
   "APP_ENV": "development",
+  "APPLE_PAYMENT_ENVIRONMENT": "Sandbox",
   "API_BASE_URL": "https://wwwtest.popi.art",
   "AGENT_API_BASE_URL": "http://192.168.77.249:3100",
   "AGENT_API_ORIGIN": "",

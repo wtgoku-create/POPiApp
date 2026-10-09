@@ -177,6 +177,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.onModelParametersRequested,
     this.modelParametersDescription = '',
     this.onMentionRequested,
+    this.enableMentions = false,
     this.sending = false,
     this.running = false,
     this.conversationMode = false,
@@ -193,6 +194,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
   final VoidCallback? onMentionRequested;
+
+  /// Enables the image picker triggered by typing @.
+  final bool enableMentions;
   final bool sending;
   final bool running;
 
@@ -292,6 +296,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                   readOnly: status.sending,
                 ),
                 action: _SendButton(
+                  icon: Icons.check_rounded,
                   sending: status.sending,
                   running: status.running,
                   onPressed: status.sending
@@ -321,7 +326,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   }
 
   void _handleTextChanged() {
-    if (_mentionSheetOpen || !mounted) return;
+    if (!widget.enableMentions || _mentionSheetOpen || !mounted) return;
     if (widget.controller.markdown.endsWith('@')) {
       _mentionSheetOpen = true;
       widget.onMentionRequested?.call();
@@ -1026,11 +1031,13 @@ class _SendButton extends StatelessWidget {
     required this.onPressed,
     this.sending = false,
     this.running = false,
+    this.icon,
   });
 
   final VoidCallback? onPressed;
   final bool sending;
   final bool running;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -1058,6 +1065,8 @@ class _SendButton extends StatelessWidget {
               )
             : running
             ? const Icon(Icons.stop_rounded, size: 24)
+            : icon != null
+            ? Icon(icon, size: 24)
             : AppSvgIcon.asset(
                 'home_composer_send',
                 size: 25,

@@ -601,26 +601,70 @@ class NetworkApi {
     return data;
   }
 
-  Future<void> verifyApplePurchase({
-    required String productId,
-    required String businessProductId,
-    required String businessProductType,
-    required String? purchaseId,
-    required String verificationData,
-    required String transactionDate,
-  }) async {
-    final response = await dio.post<Map<String, dynamic>>(
-      '/api_client/payments/apple/verify',
-      data: {
-        'product_id': productId,
-        'business_product_id': businessProductId,
-        'business_product_type': businessProductType,
-        'purchase_id': purchaseId,
-        'verification_data': verificationData,
-        'transaction_date': transactionDate,
-      },
+  Future<List<Object?>> appleProducts(String environment) => _appleListRequest(
+    '/api_client/trade/payment/apple/products',
+    query: {'environment': environment},
+  );
+
+  Future<Map<String, Object?>> previewApplePurchase({
+    required int productVersionId,
+    required String environment,
+  }) => _paymentRequest(
+    '/api_client/trade/payment/apple/preview',
+    data: {'productVersionId': productVersionId, 'environment': environment},
+  );
+
+  Future<Map<String, Object?>> createApplePurchase(String quoteId) =>
+      _paymentRequest(
+        '/api_client/trade/payment/apple/purchases',
+        data: {'quoteId': quoteId},
+      );
+
+  Future<Map<String, Object?>> verifyApplePurchase({
+    required String purchaseId,
+    required String signedTransaction,
+  }) => _paymentRequest(
+    '/api_client/trade/payment/apple/transactions/verify',
+    data: {'purchaseId': purchaseId, 'signedTransaction': signedTransaction},
+  );
+
+  Future<Map<String, Object?>> applePurchase(
+    String purchaseId,
+  ) => _paymentRequest(
+    '/api_client/trade/payment/apple/purchases/${Uri.encodeComponent(purchaseId)}',
+  );
+
+  Future<List<Object?>> restoreApplePurchases(List<String> transactions) {
+    if (transactions.isEmpty || transactions.length > 10) {
+      throw ArgumentError.value(transactions.length, 'transactions');
+    }
+    return _appleListRequest(
+      '/api_client/trade/payment/apple/restore',
+      data: {'signedTransactions': transactions},
     );
-    _data(response);
+  }
+
+  Future<List<Object?>> _appleListRequest(
+    String path, {
+    Map<String, Object?>? query,
+    Map<String, Object?>? data,
+  }) async {
+    final response = await dio.request<Object?>(
+      path,
+      queryParameters: query,
+      data: data,
+      options: Options(method: data == null ? 'GET' : 'POST'),
+    );
+    final body = response.data;
+    if (body is! Map || body['status']?.toString() != '0000') {
+      throw ApiException(
+        message: body is Map ? body['message']?.toString() : null,
+        statusCode: response.statusCode,
+      );
+    }
+    final value = body['data'];
+    if (value is! List) throw const ApiException();
+    return List<Object?>.from(value);
   }
 
   Future<Map<String, dynamic>> updateUser({

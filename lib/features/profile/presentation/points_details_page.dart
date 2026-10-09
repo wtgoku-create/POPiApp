@@ -8,13 +8,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
-import '../../../features/payments/data/apple_purchase_service.dart';
-import '../../../features/payments/domain/apple_product_catalog.dart';
 import '../../../features/payments/domain/mobile_payment.dart';
 import '../../../features/payments/presentation/android_payment_entry.dart';
+import '../../../features/payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
-import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_sheet.dart';
@@ -771,23 +769,22 @@ Future<bool> purchasePointPackage(
     );
   }
   final l10n = AppLocalizations.of(context)!;
-  final outcome = await ref
-      .read(applePurchaseServiceProvider)
-      .purchase(
-        productId: resolveAppleProductId(package.appleProductId),
-        businessProductId: package.id.toString(),
-        businessProductType: appleTestProductType,
-        // Every entry temporarily points to the same non-renewing subscription.
-        consumable: false,
-      );
+  final outcome = await openApplePayment(
+    context,
+    ref,
+    productId: package.id,
+    kind: PaymentProductKind.points,
+  );
   if (!context.mounted) return false;
   switch (outcome) {
     case StorePurchaseOutcome.purchased:
-      await ref.read(userProvider.notifier).refreshUser();
       if (context.mounted) AppToast.success(context, l10n.purchaseSuccess);
       return true;
     case StorePurchaseOutcome.canceled:
       AppToast.info(context, l10n.purchaseCanceled);
+      return false;
+    case StorePurchaseOutcome.processing:
+      AppToast.info(context, l10n.paymentProcessing);
       return false;
     case StorePurchaseOutcome.unavailable:
       AppToast.error(context, l10n.storeUnavailable);

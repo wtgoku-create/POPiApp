@@ -3391,6 +3391,12 @@ abstract class AppLocalizations {
   /// **'Restore purchases'**
   String get restorePurchases;
 
+  /// No description provided for @appleRestoreIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Some purchases could not be restored. Please try again later'**
+  String get appleRestoreIncomplete;
+
   /// No description provided for @paymentTitle.
   ///
   /// In en, this message translates to:

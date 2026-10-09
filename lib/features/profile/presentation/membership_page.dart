@@ -7,14 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
-import '../../../features/payments/data/apple_purchase_service.dart';
-import '../../../features/payments/domain/apple_product_catalog.dart';
 import '../../../features/payments/domain/mobile_payment.dart';
 import '../../../features/payments/presentation/android_payment_entry.dart';
+import '../../../features/payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/purchase_provider.dart';
-import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -180,6 +178,12 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                   },
                 ),
               ),
+              if (usesApplePayments)
+                TextButton(
+                  key: const Key('membership-restore-purchases'),
+                  onPressed: _isPurchasing ? null : _restorePurchases,
+                  child: Text(l10n.restorePurchases),
+                ),
               SizedBox(height: bottomPadding),
             ],
           ],
@@ -232,25 +236,38 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       }
       return;
     }
-    final outcome = await ref
-        .read(applePurchaseServiceProvider)
-        .purchase(
-          productId: resolveAppleProductId(plan.appleProductId),
-          businessProductId: plan.id.toString(),
-          businessProductType: appleTestProductType,
-          consumable: false,
-        );
+    final outcome = await openApplePayment(
+      context,
+      ref,
+      productId: plan.id,
+      kind: PaymentProductKind.subscription,
+    );
     if (!mounted) return;
     setState(() => _isPurchasing = false);
     await _showPurchaseOutcome(outcome);
+  }
+
+  Future<void> _restorePurchases() async {
+    setState(() => _isPurchasing = true);
+    final succeeded = await ref.read(applePurchaseServiceProvider).restore();
+    if (!mounted) return;
+    setState(() => _isPurchasing = false);
+    final l10n = AppLocalizations.of(context)!;
+    if (succeeded) {
+      AppToast.success(context, l10n.restorePurchasesRequested);
+    } else {
+      AppToast.error(context, l10n.appleRestoreIncomplete);
+    }
   }
 
   Future<void> _showPurchaseOutcome(StorePurchaseOutcome outcome) async {
     final l10n = AppLocalizations.of(context)!;
     switch (outcome) {
       case StorePurchaseOutcome.purchased:
-        await ref.read(userProvider.notifier).refreshUser();
         if (mounted) AppToast.success(context, l10n.purchaseSuccess);
+        return;
+      case StorePurchaseOutcome.processing:
+        AppToast.info(context, l10n.paymentProcessing);
         return;
       case StorePurchaseOutcome.canceled:
         AppToast.info(context, l10n.purchaseCanceled);

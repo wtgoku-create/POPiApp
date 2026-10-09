@@ -14,6 +14,10 @@ abstract final class AppConfig {
     'API_ENABLE_LOGGING',
     defaultValue: false,
   );
+  static const applePaymentEnvironment = String.fromEnvironment(
+    'APPLE_PAYMENT_ENVIRONMENT',
+    defaultValue: 'Production',
+  );
   static const agentApiBaseUrl = String.fromEnvironment(
     'AGENT_API_BASE_URL',
     defaultValue: apiBaseUrl,

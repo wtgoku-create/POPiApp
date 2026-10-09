@@ -1746,6 +1746,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restorePurchases => '恢复购买';
 
   @override
+  String get appleRestoreIncomplete => '部分购买尚未恢复成功，请稍后重试';
+
+  @override
   String get paymentTitle => '确认支付';
 
   @override

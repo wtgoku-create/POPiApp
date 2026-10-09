@@ -1817,6 +1817,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restorePurchases => 'Restore purchases';
 
   @override
+  String get appleRestoreIncomplete =>
+      'Some purchases could not be restored. Please try again later';
+
+  @override
   String get paymentTitle => 'Confirm payment';
 
   @override

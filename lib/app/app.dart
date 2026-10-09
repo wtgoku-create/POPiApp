@@ -57,10 +57,6 @@ class _StarterAppState extends ConsumerState<StarterApp> {
           );
         }
 
-        // Start listening before any purchase screen opens so interrupted
-        // StoreKit transactions can be verified after an app restart.
-        ref.watch(applePurchaseServiceProvider);
-
         final bootstrap = ref.watch(userBootstrapProvider);
         return bootstrap.when(
           loading: () => _StartupApp(themeMode: themeMode, locale: locale),
@@ -73,6 +69,8 @@ class _StarterAppState extends ConsumerState<StarterApp> {
             );
           },
           data: (_) {
+            // Recover unfinished StoreKit transactions for the signed-in user.
+            ref.watch(applePurchaseServiceProvider);
             _notifyReady();
             return _RouterApp(
               themeMode: themeMode,

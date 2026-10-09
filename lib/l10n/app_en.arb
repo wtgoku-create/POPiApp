@@ -584,6 +584,7 @@
   "openMembership": "Subscribe now",
   "membershipComingSoon": "Membership purchases are coming soon",
   "restorePurchases": "Restore purchases",
+  "appleRestoreIncomplete": "Some purchases could not be restored. Please try again later",
   "paymentTitle": "Confirm payment",
   "paymentChooseMethod": "Payment method",
   "paymentWechat": "WeChat Pay",
