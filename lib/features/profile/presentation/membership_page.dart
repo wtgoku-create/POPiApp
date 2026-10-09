@@ -874,8 +874,13 @@ List<_MembershipPlanGroup> _groupPlans(List<ProductPlan> products) {
   _MembershipPlanGroup? plusGroup;
 
   for (final product in products.reversed) {
-    // Temporarily hide Core from the membership page.
-    if (product.id == 9) continue;
+    // Hide the Core offering, not an ID that can belong to another plan.
+    if (RegExp(
+      r'^core\b',
+      caseSensitive: false,
+    ).hasMatch(product.title.trim())) {
+      continue;
+    }
     final plan = _planFromProduct(product);
     if (_isPlusProduct(product)) {
       if (plusGroup == null) {

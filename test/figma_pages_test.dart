@@ -477,66 +477,77 @@ void main() {
   });
 
   for (final reverseOrder in [false, true]) {
-    testWidgets('hides Core by ID with reversed input: $reverseOrder', (
-      tester,
-    ) async {
-      final plans = [
-        for (final values in [
-          (9, 'Core-高效创作', 66000, 0, 251900),
-          (18, 'Plus 高频生成', 14400, 300, 59900),
-          (3, 'Plus 创作进阶', 5500, 200, 29900),
-        ])
-          _membershipPlan(
-            id: values.$1,
-            level: 2,
-            title: values.$2,
-            coins: values.$3,
-            bonusPoints: values.$4,
-            price: values.$5,
-            originalPrice: 879,
-            discount: '限时活动',
-            pointAmount: '每100积分≈￥4.16元',
-            concurrentTasks: 4,
-            storageMb: 5000,
+    testWidgets(
+      'keeps Plus ID 9 and hides Core with reversed input: $reverseOrder',
+      (tester) async {
+        final plans = [
+          for (final values in [
+            (19, 'Core-高效创作', 66000, 0, 251900),
+            (4, 'Plus 高频生成', 14400, 300, 59900),
+            (9, 'Plus 创作进阶', 5500, 200, 29900),
+          ])
+            _membershipPlan(
+              id: values.$1,
+              level: 2,
+              title: values.$2,
+              coins: values.$3,
+              bonusPoints: values.$4,
+              price: values.$5,
+              originalPrice: 879,
+              discount: '限时活动',
+              pointAmount: '每100积分≈￥4.16元',
+              concurrentTasks: 4,
+              storageMb: 5000,
+            ),
+        ];
+        await pumpPage(
+          tester,
+          MembershipPage(
+            initialPlans: reverseOrder ? plans.reversed.toList() : plans,
+            loadPlansOnOpen: false,
           ),
-      ];
-      await pumpPage(
-        tester,
-        MembershipPage(
-          initialPlans: reverseOrder ? plans.reversed.toList() : plans,
-          loadPlansOnOpen: false,
-        ),
-      );
-
-      expect(find.text('Core-高效创作'), findsNothing);
-      expect(find.text('66000'), findsNothing);
-      expect(find.byKey(const Key('membership-plan-tab-1')), findsNothing);
-      expect(find.byKey(const Key('membership-points-option-2')), findsNothing);
-      expect(find.text('5700'), findsOneWidget);
-      expect(find.text('14700'), findsOneWidget);
-
-      for (final coins in [5700, 14700]) {
-        await tester.tap(find.text('$coins'));
-        await tester.pumpAndSettle();
-        final isEntryPlan = coins == 5700;
-        expect(find.text(isEntryPlan ? '299' : '599'), findsOneWidget);
-        expect(
-          find.text(
-            isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分',
-          ),
-          findsOneWidget,
         );
+
+        expect(find.text('Core-高效创作'), findsNothing);
+        expect(find.text('66000'), findsNothing);
+        expect(find.byKey(const Key('membership-plan-tab-1')), findsNothing);
         expect(
-          tester
-              .widget<MarkdownBody>(
-                find.byKey(const Key('membership-description-markdown')),
-              )
-              .data,
-          contains('Plus ${isEntryPlan ? 5500 : 14400} 专属权益'),
+          find.byKey(const Key('membership-points-option-2')),
+          findsNothing,
         );
-      }
-      expect(tester.takeException(), isNull);
-    });
+        expect(find.text('5700'), findsOneWidget);
+        expect(find.text('14700'), findsOneWidget);
+
+        for (final coins in [5700, 14700]) {
+          await tester.tap(find.text('$coins'));
+          await tester.pumpAndSettle();
+          final isEntryPlan = coins == 5700;
+          expect(
+            find.descendant(
+              of: find.byKey(const Key('membership-plan-card')),
+              matching: find.text(isEntryPlan ? 'Plus 创作进阶' : 'Plus 高频生成'),
+            ),
+            findsOneWidget,
+          );
+          expect(find.text(isEntryPlan ? '299' : '599'), findsOneWidget);
+          expect(
+            find.text(
+              isEntryPlan ? '包含：5500/套餐积分+200/赠送积分' : '包含：14400/套餐积分+300/赠送积分',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<MarkdownBody>(
+                  find.byKey(const Key('membership-description-markdown')),
+                )
+                .data,
+            contains('Plus ${isEntryPlan ? 5500 : 14400} 专属权益'),
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets('keeps spacing between the membership card and bottom button', (
