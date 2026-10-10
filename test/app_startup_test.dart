@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:popi_ai_app/app/app.dart';
@@ -108,7 +109,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(LoginPage), findsOneWidget, reason: entryKey);
-      Navigator.of(tester.element(find.byType(LoginPage))).pop();
+      final router = GoRouter.of(tester.element(find.byType(LoginPage)));
+      expect(router.canPop(), isFalse, reason: entryKey);
+      await tester.tap(find.byKey(const Key('login-back-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(HomePage), findsOneWidget, reason: entryKey);
@@ -149,7 +152,9 @@ void main() {
     expect(find.byType(LoginPage), findsNothing);
   });
 
-  testWidgets('drawer routes preserve a back stack', (tester) async {
+  testWidgets('drawer routes replace the root and keep the drawer accessible', (
+    tester,
+  ) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
 
@@ -182,9 +187,11 @@ void main() {
 
     expect(find.byType(ProfilePage), findsOneWidget);
     final profileContext = tester.element(find.byType(ProfilePage));
-    expect(Navigator.of(profileContext).canPop(), isTrue);
+    expect(Navigator.of(profileContext).canPop(), isFalse);
 
-    Navigator.of(profileContext).pop();
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('drawer-nav-home')));
     await tester.pumpAndSettle();
     expect(find.byType(HomePage), findsOneWidget);
   });

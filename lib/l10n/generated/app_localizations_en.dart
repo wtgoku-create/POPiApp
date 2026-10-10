@@ -117,6 +117,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleFullProfile => 'View full character profile';
 
   @override
+  String get roleCollapseProfile => 'Collapse full character profile';
+
+  @override
+  String roleFullProfileVersion(String version) {
+    return 'View full character profile $version';
+  }
+
+  @override
   String get rolePreviousProfile => 'Previous character profile';
 
   @override

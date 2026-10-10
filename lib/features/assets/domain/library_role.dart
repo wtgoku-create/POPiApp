@@ -9,6 +9,7 @@ class LibraryRole {
     this.canCreate = false,
     this.isCertified = false,
     this.profileComplete = false,
+    this.profileVersion,
   });
 
   final String id;
@@ -20,12 +21,32 @@ class LibraryRole {
   final bool canCreate;
   final bool isCertified;
   final bool profileComplete;
+  final num? profileVersion;
+
+  LibraryRole withFallbackAvatar(String fallback) => LibraryRole(
+    id: id,
+    title: title,
+    description: description,
+    avatar: avatar.isEmpty ? fallback : avatar,
+    profile: profile,
+    canEdit: canEdit,
+    canCreate: canCreate,
+    isCertified: isCertified,
+    profileComplete: profileComplete,
+    profileVersion: profileVersion,
+  );
 
   factory LibraryRole.fromJson(Map<String, dynamic> json) {
     final version = json['profileVersion'];
     final candidate =
         json['profile'] ?? (version is Map ? version['profile'] : null);
     final profile = candidate is Map ? candidate : const {};
+    final rawVersion =
+        (version is Map ? version['version'] : version) ??
+        profile['schemaVersion'];
+    final profileVersion = rawVersion is num
+        ? rawVersion
+        : num.tryParse(rawVersion?.toString() ?? '');
     String firstText(List<dynamic> values) => values
         .map((value) => value?.toString().trim() ?? '')
         .firstWhere((value) => value.isNotEmpty, orElse: () => '');
@@ -43,6 +64,12 @@ class LibraryRole {
       canCreate: json['canUseText'] == true || json['canUseVideo'] == true,
       isCertified: json['isCertified'] == true,
       profileComplete: json['profileComplete'] == true,
+      profileVersion:
+          profileVersion != null &&
+              profileVersion.isFinite &&
+              profileVersion > 0
+          ? profileVersion
+          : null,
     );
   }
 }

@@ -119,18 +119,6 @@ class _RoleProfileSheetState extends ConsumerState<RoleProfileSheet> {
                                   ? l10n.roleProfileReady
                                   : l10n.roleProfilePending,
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              loaded.isCertified
-                                  ? l10n.roleCertified
-                                  : l10n.roleUncertified,
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -138,6 +126,15 @@ class _RoleProfileSheetState extends ConsumerState<RoleProfileSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (!fields.any(
+                  (field) => field.type == RoleProfileFieldType.positioning,
+                ))
+                  RoleGuideTextSection(
+                    title: l10n.rolePositioning,
+                    text: loaded.description.isEmpty
+                        ? l10n.roleFieldPending
+                        : loaded.description,
+                  ),
                 for (final field in fields)
                   RoleGuideTextSection(
                     title: switch (field.type) {

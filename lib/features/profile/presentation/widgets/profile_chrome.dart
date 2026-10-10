@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_svg_icon.dart';
 
 class ProfileTopBar extends StatelessWidget {
-  const ProfileTopBar({super.key});
+  const ProfileTopBar({this.showNavigation = false, super.key});
+
+  final bool showNavigation;
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +24,25 @@ class ProfileTopBar extends StatelessWidget {
             SizedBox.square(
               dimension: 40,
               child: IconButton(
-                key: const Key('profile-back'),
-                tooltip: AppLocalizations.of(context)!.back,
-                padding: EdgeInsets.zero,
-                onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+                key: Key(
+                  showNavigation ? 'popi-open-navigation' : 'profile-back',
+                ),
+                tooltip: showNavigation
+                    ? AppLocalizations.of(context)!.openNavigation
+                    : AppLocalizations.of(context)!.back,
+                padding: showNavigation
+                    ? const EdgeInsets.all(5)
+                    : EdgeInsets.zero,
+                onPressed: () => showNavigation
+                    ? Scaffold.of(context).openDrawer()
+                    : context.pop(),
+                icon: showNavigation
+                    ? AppSvgIcon.asset(
+                        'common_navigation_menu',
+                        size: 30,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      )
+                    : const Icon(Icons.arrow_back_ios_new, size: 21),
               ),
             ),
             const Spacer(),

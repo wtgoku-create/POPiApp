@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
@@ -11,7 +12,6 @@ import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../session/presentation/session_page.dart';
 import '../data/role_library_repository.dart';
 import '../domain/library_role.dart';
 import 'role_detail_page.dart';
@@ -415,11 +415,11 @@ class _MyRolesEmptyState extends StatelessWidget {
             child: InkWell(
               key: const Key('my-roles-create'),
               borderRadius: BorderRadius.circular(20),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      SessionPage(initialPrompt: l10n.createNewRolePrompt),
-                ),
+              onTap: () => context.push(
+                Uri(
+                  path: '/session',
+                  queryParameters: {'prompt': l10n.createNewRolePrompt},
+                ).toString(),
               ),
               child: ColoredBox(
                 color: Colors.transparent,

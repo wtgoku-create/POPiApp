@@ -119,6 +119,14 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
   }
 
   @override
+  void didUpdateWidget(AssetsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSection != widget.initialSection) {
+      _changeSection(widget.initialSection, fromNavigation: true);
+    }
+  }
+
+  @override
   void dispose() {
     _generation++;
     _requestToken?.cancel();
@@ -266,7 +274,10 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
             SizedBox(height: statusBarHeight),
             _LibraryNavigation(
               selected: _section,
-              onBackPressed: _goBack,
+              isSheet: widget._isSheet,
+              onLeadingPressed: widget._isSheet
+                  ? () => Navigator.of(context).pop()
+                  : () => _scaffoldKey.currentState?.openDrawer(),
               onSelected: _changeSection,
             ),
             ...[
@@ -348,24 +359,28 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     }
   }
 
-  void _changeSection(AssetLibrarySection section) {
-    if (_section == section || _deleting) return;
+  void _changeSection(
+    AssetLibrarySection section, {
+    bool fromNavigation = false,
+  }) {
+    if (_section == section || (_deleting && !fromNavigation)) return;
     setState(() {
       _section = section;
       _selectedFilter = 0;
       _selectingWorks = false;
       _selectedWorks.clear();
     });
-    if (!widget.hasSampleContent) _refreshWorks(clear: true);
-  }
-
-  void _goBack() {
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      navigator.maybePop();
-      return;
+    final router = GoRouter.maybeOf(context);
+    if (!widget._isSheet && router?.state.uri.path == '/assets') {
+      final location = Uri(
+        path: '/assets',
+        queryParameters: section == AssetLibrarySection.roles
+            ? {'section': 'roles'}
+            : null,
+      ).toString();
+      if (router!.state.uri.toString() != location) router.replace(location);
     }
-    GoRouter.maybeOf(context)?.go('/');
+    if (!widget.hasSampleContent) _refreshWorks(clear: true);
   }
 
   void _toggleSelectionMode() {
@@ -466,12 +481,14 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
 class _LibraryNavigation extends StatelessWidget {
   const _LibraryNavigation({
     required this.selected,
-    required this.onBackPressed,
+    required this.isSheet,
+    required this.onLeadingPressed,
     required this.onSelected,
   });
 
   final AssetLibrarySection selected;
-  final VoidCallback onBackPressed;
+  final bool isSheet;
+  final VoidCallback onLeadingPressed;
   final ValueChanged<AssetLibrarySection> onSelected;
 
   @override
@@ -483,19 +500,27 @@ class _LibraryNavigation extends StatelessWidget {
         children: [
           const SizedBox(width: 20),
           SizedBox.square(
-            dimension: 30,
+            dimension: isSheet ? 30 : 40,
             child: IconButton(
-              key: const Key('assets-navigation-back'),
-              tooltip: l10n.backToPreviousPage,
-              padding: EdgeInsets.zero,
-              onPressed: onBackPressed,
-              icon: Transform.rotate(
-                angle: math.pi / 2,
-                child: const AppSvgIcon.asset(
-                  'assets_history_chevron',
-                  size: 30,
-                ),
+              key: Key(
+                isSheet ? 'assets-navigation-back' : 'popi-open-navigation',
               ),
+              tooltip: isSheet ? l10n.backToPreviousPage : l10n.openNavigation,
+              padding: isSheet ? EdgeInsets.zero : const EdgeInsets.all(5),
+              onPressed: onLeadingPressed,
+              icon: isSheet
+                  ? Transform.rotate(
+                      angle: math.pi / 2,
+                      child: const AppSvgIcon.asset(
+                        'assets_history_chevron',
+                        size: 30,
+                      ),
+                    )
+                  : AppSvgIcon.asset(
+                      'common_navigation_menu',
+                      size: 30,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
             ),
           ),
           const SizedBox(width: 10),

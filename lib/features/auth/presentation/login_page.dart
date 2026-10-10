@@ -213,6 +213,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
       navigator.pop();
+    } else if (GoRouter.maybeOf(context) case final router?) {
+      router.replace('/');
     } else {
       SystemNavigator.pop();
     }

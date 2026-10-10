@@ -99,10 +99,10 @@ void main() {
     expect(find.text('全部'), findsNothing);
     expect(find.text('最近常用'), findsNothing);
     expect(find.text('停滞'), findsNothing);
-    expect(find.byKey(const Key('ip-accounts-open-navigation')), findsNothing);
+    expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
     expect(find.byType(DrawerButton), findsNothing);
     expect(
-      tester.getCenter(find.byKey(const Key('ip-accounts-back'))).dx,
+      tester.getCenter(find.byKey(const Key('popi-open-navigation'))).dx,
       lessThan(tester.getCenter(find.text('IP账号管理')).dx),
     );
     expect(tester.takeException(), isNull);
@@ -123,8 +123,15 @@ void main() {
         signedIn ? find.byType(IpAccountsPage) : find.text('Sign in'),
         findsOneWidget,
       );
+      expect(router.canPop(), isFalse);
       if (signedIn) {
-        await tester.tap(find.byKey(const Key('ip-accounts-back')));
+        await tester.tap(find.byKey(const Key('popi-open-navigation')));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('drawer-nav-ip-accounts')).hitTestable(),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const Key('drawer-nav-home')));
         await tester.pumpAndSettle();
         expect(find.byType(IpAccountsPage), findsNothing);
         expect(router.routeInformationProvider.value.uri.path, '/');
@@ -137,18 +144,18 @@ void main() {
     });
   }
 
-  testWidgets(
-    'back falls back to home when opened without navigation history',
-    (tester) async {
-      final router = await pumpPage(tester);
-      expect(router.canPop(), isFalse);
-      await tester.tap(find.byKey(const Key('ip-accounts-back')));
-      await tester.pumpAndSettle();
-      expect(router.routeInformationProvider.value.uri.path, '/');
-      expect(find.byType(IpAccountsPage), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('root account list opens the drawer without navigation history', (
+    tester,
+  ) async {
+    final router = await pumpPage(tester);
+    expect(router.canPop(), isFalse);
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/ip-accounts');
+    expect(find.byType(IpAccountsPage), findsOneWidget);
+    expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('account opening uses supplied data', (tester) async {
     const account = IpAccount(

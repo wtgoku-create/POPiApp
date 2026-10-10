@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../app/navigation.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
@@ -173,7 +174,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 _conversation?.open(session.id);
                 _resetComposer();
               });
-              GoRouter.maybeOf(context)?.replace(
+              final router = GoRouter.maybeOf(context);
+              if (router == null) return;
+              AppNavigation.replaceRoot(
+                router,
                 Uri(
                   path: '/session',
                   queryParameters: {'sessionId': session.id},

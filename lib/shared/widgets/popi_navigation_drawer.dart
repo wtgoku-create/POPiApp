@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/navigation.dart';
 import '../../app/theme.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../providers/safe_area_provider.dart';
@@ -36,9 +37,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
     );
     final colorScheme = Theme.of(context).colorScheme;
     final isLoggedIn = ref.watch(userProvider) != null;
-    final route = GoRouter.maybeOf(context) == null
-        ? '/'
-        : GoRouterState.of(context).uri.path;
+    final uri = GoRouter.maybeOf(context)?.state.uri ?? Uri(path: '/');
+    final route = uri.path;
+    final showingRoles = uri.queryParameters['section'] == 'roles';
 
     return Container(
       key: const Key('popi-navigation-drawer'),
@@ -147,11 +148,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         iconWidth: 19.25,
                         iconHeight: 20.25,
                         label: l10n.home,
-                        onTap: () {
-                          final router = GoRouter.of(context);
-                          Navigator.pop(context);
-                          if (route != '/') router.go('/');
-                        },
+                        onTap: () => _openRoute(context, '/'),
                       ),
                       _NavigationItem(
                         key: const Key('drawer-nav-ip-accounts'),
@@ -171,6 +168,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         iconHeight: 20.716,
                         flipIconVertically: true,
                         label: l10n.roles,
+                        selected: route == '/assets' && showingRoles,
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,
@@ -181,7 +179,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                         key: const Key('drawer-nav-assets'),
                         iconAsset: 'home_drawer_nav_asset',
                         label: l10n.assets,
-                        selected: route == '/assets',
+                        selected: route == '/assets' && !showingRoles,
                         onTap: () => _openProtectedRoute(
                           context,
                           isLoggedIn: isLoggedIn,
@@ -246,7 +244,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
   void _openRoute(BuildContext context, String route) {
     final router = GoRouter.of(context);
     Navigator.pop(context);
-    router.push(route);
+    AppNavigation.replaceRoot(router, route);
   }
 
   void _openProtectedRoute(

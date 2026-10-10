@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_library_list.dart';
+import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
@@ -35,6 +37,25 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final category = ValueNotifier(initialCategory);
     addTearDown(category.dispose);
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => Scaffold(
+            body: ValueListenableBuilder<String>(
+              valueListenable: category,
+              builder: (_, category, __) => RoleLibraryList(category: category),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/session',
+          builder: (_, state) =>
+              SessionPage(initialPrompt: state.uri.queryParameters['prompt']),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -46,17 +67,12 @@ void main() {
             ),
           ),
         ],
-        child: MaterialApp(
+        child: MaterialApp.router(
           theme: AppTheme.light,
           locale: const Locale('zh'),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: Scaffold(
-            body: ValueListenableBuilder<String>(
-              valueListenable: category,
-              builder: (_, category, __) => RoleLibraryList(category: category),
-            ),
-          ),
+          routerConfig: router,
         ),
       ),
     );
@@ -515,7 +531,11 @@ void main() {
     await tester.tap(find.text('Role 99'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('role-detail-page')), findsOneWidget);
-    expect(find.text('Description 99'), findsWidgets);
+    expect(
+      tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+      '99',
+    );
+    expect(find.byKey(const Key('role-profile-archive')), findsNothing);
     await tester.tap(find.byKey(const Key('role-profile-back')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('role-detail-page')), findsNothing);
@@ -578,6 +598,10 @@ void main() {
         tester.widget<SessionPage>(find.byType(SessionPage)).initialPrompt,
         contains('新角色'),
       );
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 }

@@ -4,14 +4,83 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'conversation_controller_test.dart' show StreamingSessionRepository;
-import 'conversation_events_test.dart' show chatId, chatEvent, chatMessageJson;
+import 'conversation_events_test.dart'
+    show chatId, chatEvent, chatMessageJson, chatSnapshotJson;
 
 void main() {
+  for (final objectId in ['', 'shared-topic']) {
+    testWidgets('renders repeated object blocks with ID "$objectId"', (
+      tester,
+    ) async {
+      Map<String, Object?> message(int revision, {bool insertText = false}) => {
+        ...chatMessageJson(revision: revision),
+        'blocks': [
+          if (insertText) {'type': 'text', 'text': 'Updated topics'},
+          for (var i = 0; i < 2; i++)
+            {
+              'type': 'object',
+              'kind': 'topic',
+              'data': {
+                if (objectId.isNotEmpty) 'id': objectId,
+                'title': 'Topic $i revision $revision',
+              },
+            },
+        ],
+      };
+      final repository = StreamingSessionRepository()
+        ..data = chatSnapshotJson(seq: 1, messages: [message(1)]);
+      final container = ProviderContainer(
+        overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(() async {
+        container.dispose();
+        await repository.close();
+      });
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: 'a', name: 'User', email: ''));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const SessionPage(sessionId: chatId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Topic 0 revision 1'), findsOneWidget);
+      expect(find.text('Topic 1 revision 1'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      final states = tester
+          .stateList(find.byType(ConversationObjectView))
+          .toList();
+
+      repository.streams.first.add(
+        chatEvent(2, 'message.updated', {
+          'timelineUpdates': [message(2, insertText: true)],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Topic 0 revision 2'), findsOneWidget);
+      expect(find.text('Topic 1 revision 2'), findsOneWidget);
+      expect(
+        tester.stateList(find.byType(ConversationObjectView)).toList(),
+        orderedEquals(states),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     testWidgets(
       'streams Markdown, stops and renders structured answers at $size',

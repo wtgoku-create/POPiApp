@@ -267,6 +267,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
                 final colors = Theme.of(context).colorScheme;
+                // Objects may omit IDs or reference the same entity more than once.
+                final objectOccurrences = <(String?, String), int>{};
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     color: isSentByMe ? colors.surface : Colors.transparent,
@@ -296,9 +298,16 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                             )
                           else if (block.type == 'object')
                             ConversationObjectView(
-                              key: ValueKey(
-                                '${item.id}:${block.kind}:${block.id}',
-                              ),
+                              key: ValueKey((
+                                item.id,
+                                block.kind,
+                                block.id,
+                                objectOccurrences.update(
+                                  (block.kind, block.id),
+                                  (count) => count + 1,
+                                  ifAbsent: () => 0,
+                                ),
+                              )),
                               block: block,
                               controller: controller,
                             ),

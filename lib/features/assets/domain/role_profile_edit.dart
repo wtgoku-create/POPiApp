@@ -47,17 +47,11 @@ String roleProfileText(Object? value) {
   return '';
 }
 
-/// Builds the editable fields and the same save payload used by the Web app.
+/// Edits the displayed overview and server profile data using the Web save payload.
 class RoleProfileEdit {
   RoleProfileEdit.fromRole(LibraryRole role)
     : profile = role.profile,
       fields = [
-        RoleProfileField(
-          id: 'description',
-          type: RoleProfileFieldType.positioning,
-          value: role.description,
-          profileDataKey: 'positioning',
-        ),
         RoleProfileField(
           id: 'expressionStyle',
           type: RoleProfileFieldType.style,
@@ -79,9 +73,6 @@ class RoleProfileEdit {
       for (final entry in data.entries) {
         final key = entry.key.toString();
         final field = entry.value;
-        if (key == 'positioning' || key == 'description') {
-          fields.removeWhere((field) => field.id == 'description');
-        }
         fields.add(
           RoleProfileField(
             id: 'profileData-$key',
@@ -95,40 +86,12 @@ class RoleProfileEdit {
             },
             profileDataKey: key,
             label: field is Map ? roleProfileText(field['label']) : key,
-            value: field is Map ? field['value'] : field,
+            value: field is Map && field.containsKey('value')
+                ? field['value']
+                : field,
           ),
         );
       }
-    }
-    if (fields.every((field) => field.profileDataKey != 'appearance') &&
-        roleProfileText(profile['appearance']).isNotEmpty) {
-      fields.add(
-        RoleProfileField(
-          id: 'appearance',
-          type: RoleProfileFieldType.appearance,
-          value: profile['appearance'],
-          profileDataKey: 'appearance',
-        ),
-      );
-    }
-    if (fields.every(
-      (field) => ![
-        'boundaries',
-        'expressionBoundaries',
-      ].contains(field.profileDataKey),
-    )) {
-      fields.add(
-        RoleProfileField(
-          id: 'boundaries',
-          type: RoleProfileFieldType.boundaries,
-          value: profile['boundaries'] ?? profile['expressionBoundaries'],
-          profileDataKey:
-              profile.containsKey('expressionBoundaries') &&
-                  !profile.containsKey('boundaries')
-              ? 'expressionBoundaries'
-              : 'boundaries',
-        ),
-      );
     }
   }
 
@@ -140,6 +103,19 @@ class RoleProfileEdit {
       .map((item) => item.trim())
       .where((item) => item.isNotEmpty)
       .toList();
+
+  static Object? _editedValue(String content, RoleProfileField field) {
+    if (content == field.text) return field.value;
+    if (field.value is List) return _splitList(content);
+    if (field.value is num) {
+      final number = num.tryParse(content.trim());
+      return number != null && number.isFinite ? number : field.value;
+    }
+    if (field.value is bool) {
+      return {'true', '1', 'yes', '是'}.contains(content.trim().toLowerCase());
+    }
+    return content.trim();
+  }
 
   Map<String, Object?> savedProfile(
     Map<String, String> values, {
@@ -159,11 +135,7 @@ class RoleProfileEdit {
         'label': field.label.isNotEmpty
             ? field.label
             : fieldLabels[field.id] ?? field.profileDataKey!,
-        'value': content == field.text
-            ? field.value
-            : field.value is List
-            ? _splitList(content)
-            : content.trim(),
+        'value': _editedValue(content, field),
       };
     }
     return {

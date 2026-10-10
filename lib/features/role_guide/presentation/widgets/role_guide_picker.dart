@@ -5,6 +5,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/network/network_api.dart';
 import '../../../../shared/providers/network_provider.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../assets/data/role_library_repository.dart';
 import '../../../assets/domain/library_role.dart';
@@ -42,29 +43,61 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
 class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   late final RoleLibraryRepository _repository;
   late String _category;
+  final _localScroll = ScrollController();
   final _roles = <LibraryRole>[];
-  bool _loading = true;
+  bool _loading = false;
   bool _failed = false;
   bool _hasMore = false;
   int _page = 0;
   int _generation = 0;
+
+  ScrollController get _scroll => widget.scrollController ?? _localScroll;
 
   @override
   void initState() {
     super.initState();
     _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _category = widget.initialCategory;
+    _scroll.addListener(_nearBottom);
     _load();
   }
 
   @override
   void didUpdateWidget(RoleGuidePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.scrollController != oldWidget.scrollController) {
+      (oldWidget.scrollController ?? _localScroll).removeListener(_nearBottom);
+      _scroll.addListener(_nearBottom);
+      _fillViewport();
+    }
+    if (widget.fullLibrary != oldWidget.fullLibrary) _fillViewport();
     if (widget.initialCategory != oldWidget.initialCategory &&
         widget.initialCategory != _category) {
       _changeCategory(widget.initialCategory, notify: false);
     }
   }
+
+  @override
+  void dispose() {
+    _generation++;
+    _scroll.removeListener(_nearBottom);
+    _localScroll.dispose();
+    super.dispose();
+  }
+
+  void _nearBottom() {
+    if (widget.fullLibrary &&
+        !_failed &&
+        _hasMore &&
+        _scroll.hasClients &&
+        _scroll.position.extentAfter < 200) {
+      _load();
+    }
+  }
+
+  void _fillViewport() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) _nearBottom();
+  });
 
   void _changeCategory(String category, {bool notify = true}) {
     if (_category == category) return;
@@ -75,13 +108,15 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       _page = 0;
       _loading = false;
       _hasMore = false;
+      _failed = false;
     });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
     if (notify) widget.onCategoryChanged(category);
     _load();
   }
 
   Future<void> _load() async {
-    if (_loading && _page > 0) return;
+    if (_loading || (_page > 0 && !_hasMore)) return;
     final generation = ++_generation;
     setState(() {
       _loading = true;
@@ -107,6 +142,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
     } finally {
       if (mounted && generation == _generation) {
         setState(() => _loading = false);
+        if (!_failed) _fillViewport();
       }
     }
   }
@@ -204,24 +240,13 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_roles.isNotEmpty)
-          if (widget.fullLibrary)
-            Column(
-              children: [
-                for (final role in _roles)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _row(role),
-                  ),
-              ],
-            )
-          else
-            RoleGuideGrid(
-              roles: _roles.take(8).toList(),
-              selected: widget.selected(),
-              onToggle: _toggle,
-              onDetails: widget.onDetails,
-              onMore: widget.onMore,
-            ),
+          RoleGuideGrid(
+            roles: _roles.take(8).toList(),
+            selected: widget.selected(),
+            onToggle: _toggle,
+            onDetails: widget.onDetails,
+            onMore: widget.onMore,
+          ),
         if (_loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 32),
@@ -240,12 +265,6 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
               _category == 'official' ? l10n.noOfficialRoles : l10n.noMyRoles,
               textAlign: TextAlign.center,
             ),
-          )
-        else if (widget.fullLibrary && _hasMore)
-          TextButton(
-            key: const Key('role-guide-load-more'),
-            onPressed: _load,
-            child: Text(l10n.roleGuideViewMore),
           ),
       ],
     );
@@ -262,19 +281,61 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
           controls,
         const SizedBox(height: 20),
         if (widget.fullLibrary)
-          Expanded(
-            child: SingleChildScrollView(
-              key: const Key('role-guide-library-scroll'),
-              controller: widget.scrollController,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: content,
-            ),
-          )
+          Expanded(child: _libraryList(l10n))
         else
           content,
       ],
     );
   }
+
+  Widget _libraryList(AppLocalizations l10n) =>
+      NotificationListener<ScrollMetricsNotification>(
+        onNotification: (_) {
+          _fillViewport();
+          return false;
+        },
+        child: ListView.separated(
+          key: const Key('role-guide-library-scroll'),
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          itemCount: _roles.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            if (index < _roles.length) return _row(_roles[index]);
+            if (_loading) {
+              return AppSkeletonList(
+                key: Key(
+                  _roles.isEmpty
+                      ? 'role-guide-library-skeleton'
+                      : 'role-guide-library-loading-more',
+                ),
+                label: l10n.loadingRoles,
+                itemCount: _roles.isEmpty ? 5 : 2,
+              );
+            }
+            if (_failed) {
+              return TextButton(
+                key: const Key('role-guide-retry'),
+                onPressed: _load,
+                child: Text(l10n.retryLoadingRoles),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                _roles.isEmpty
+                    ? (_category == 'official'
+                          ? l10n.noOfficialRoles
+                          : l10n.noMyRoles)
+                    : (_hasMore ? '' : l10n.noMoreRoles),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            );
+          },
+        ),
+      );
 
   void _toggle(LibraryRole role) {
     widget.onToggle(role);

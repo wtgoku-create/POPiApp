@@ -89,4 +89,6 @@ Map<String, Object?> _roleJson(LibraryRole role) => {
   'canUseText': role.canCreate,
   'isCertified': role.isCertified,
   'profileComplete': role.profileComplete,
+  if (role.profileVersion != null)
+    'profileVersion': {'version': role.profileVersion},
 };

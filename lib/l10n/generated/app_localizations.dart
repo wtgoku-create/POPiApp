@@ -284,6 +284,18 @@ abstract class AppLocalizations {
   /// **'View full character profile'**
   String get roleFullProfile;
 
+  /// No description provided for @roleCollapseProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse full character profile'**
+  String get roleCollapseProfile;
+
+  /// No description provided for @roleFullProfileVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'View full character profile {version}'**
+  String roleFullProfileVersion(String version);
+
   /// No description provided for @rolePreviousProfile.
   ///
   /// In en, this message translates to:

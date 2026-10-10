@@ -112,6 +112,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleFullProfile => '查看完整角色档案';
 
   @override
+  String get roleCollapseProfile => '收起完整角色档案';
+
+  @override
+  String roleFullProfileVersion(String version) {
+    return '查看完整角色档案$version';
+  }
+
+  @override
   String get rolePreviousProfile => '上一个角色档案';
 
   @override

@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
+import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/providers/ip_account_provider.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
+import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 import 'support/session_fixtures.dart';
+import 'support/ip_account_fixtures.dart';
+import 'support/role_library_fixtures.dart';
 
 void main() {
   Future<ProviderContainer> pumpDrawer(
@@ -25,9 +35,16 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(preferences),
         sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
+        ipAccountRepositoryProvider.overrideWithValue(
+          FixtureIpAccountRepository(),
+        ),
+        dioProvider.overrideWithValue(roleLibraryDio()),
         projectRepositoryProvider.overrideWith(
           (ref) => throw StateError('Sidebar must not use project APIs'),
         ),
@@ -64,6 +81,114 @@ void main() {
     await tester.longPress(find.byKey(Key('drawer-session-$id')));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('sidebar destinations replace pushed pages with one root page', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    final router = container.read(routerProvider(false));
+    tester.state<ScaffoldState>(find.byType(Scaffold).first).closeDrawer();
+    await tester.pumpAndSettle();
+    router.go('/');
+    await tester.pumpAndSettle();
+    router.push('/session?prompt=draft');
+    await tester.pumpAndSettle();
+    expect(router.canPop(), isTrue);
+
+    for (final (entry, location) in [
+      ('drawer-nav-ip-accounts', '/ip-accounts'),
+      ('drawer-nav-role', '/assets?section=roles'),
+      ('drawer-nav-assets', '/assets'),
+      ('drawer-profile-button', '/profile'),
+      ('drawer-session-mock-2', '/session?sessionId=mock-2'),
+      ('drawer-nav-home', '/'),
+    ]) {
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(entry)));
+      await tester.pumpAndSettle();
+      expect(router.state.uri.toString(), location);
+      expect(router.canPop(), isFalse, reason: entry);
+      expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('sidebar sections update a reused asset page and its selection', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    await tester.tap(find.byKey(const Key('drawer-nav-role')));
+    await tester.pumpAndSettle();
+    final assetsState = tester.state(find.byType(AssetsPage));
+    expect(find.text('官方角色'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    final role = find.byKey(const Key('drawer-nav-role'));
+    final works = find.byKey(const Key('drawer-nav-assets'));
+    Color? itemColor(Finder item) => tester
+        .widget<Material>(
+          find.descendant(of: item, matching: find.byType(Material)).first,
+        )
+        .color;
+    expect(itemColor(role), isNot(AppColors.surface));
+    expect(itemColor(works), AppColors.surface);
+    await tester.tap(works);
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(AssetsPage)), same(assetsState));
+    expect(find.text('图片'), findsOneWidget);
+    expect(find.text('官方角色'), findsNothing);
+    expect(container.read(routerProvider(false)).canPop(), isFalse);
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    expect(itemColor(role), AppColors.surface);
+    expect(itemColor(works), isNot(AppColors.surface));
+    await tester.tap(role);
+    await tester.pumpAndSettle();
+    expect(find.text('官方角色'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('sidebar conversation selection clears the old pushed stack', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    final router = container.read(routerProvider(false));
+    tester.state<ScaffoldState>(find.byType(Scaffold).first).closeDrawer();
+    await tester.pumpAndSettle();
+    router.go('/');
+    await tester.pumpAndSettle();
+    router.push('/session?prompt=draft');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.queryParameters['sessionId'], 'mock-2');
+    expect(find.byType(SessionPage), findsOneWidget);
+    expect(router.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile editing keeps its back button beneath a sidebar root', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    final router = container.read(routerProvider(false));
+    await tester.tap(find.byKey(const Key('drawer-profile-button')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
+    expect(router.canPop(), isFalse);
+    router.push('/profile/edit');
+    await tester.pumpAndSettle();
+    expect(find.byType(EditProfilePage), findsOneWidget);
+    expect(router.canPop(), isTrue);
+    await tester.tap(find.byKey(const Key('profile-back')));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
+    expect(router.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('flat mock history has no projects or legacy requests', (
     tester,

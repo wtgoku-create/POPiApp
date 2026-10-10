@@ -315,11 +315,12 @@ void main() {
         of: controls,
         matching: find.byKey(const Key('role-guide-create-role')),
       );
-      final first = find.byKey(const Key('role-library-select-preview-role-1'));
       final titleBounds = tester.getRect(title);
       final controlsBounds = tester.getRect(controls);
       final createBounds = tester.getRect(create);
-      final firstY = tester.getTopLeft(first).dy;
+      final list = find.byKey(const Key('role-guide-library-scroll'));
+      final controller = tester.widget<ListView>(list).controller!;
+      expect(controller.offset, 0);
       await tester.drag(
         find.byKey(const Key('role-guide-library-scroll')),
         const Offset(0, -320),
@@ -328,7 +329,7 @@ void main() {
       expect(tester.getRect(title), titleBounds);
       expect(tester.getRect(controls), controlsBounds);
       expect(tester.getRect(create), createBounds);
-      expect(tester.getTopLeft(first).dy, lessThan(firstY));
+      expect(controller.offset, greaterThan(0));
       await tester.tap(
         find.descendant(
           of: controls,
@@ -609,15 +610,17 @@ void main() {
   );
 
   testWidgets(
-    'failed role request retries and full library can fetch another page',
+    'failed role request retries and full library fills a short first page',
     (tester) async {
       final roles = roleGuideExamples(
         lookupAppLocalizations(const Locale('zh')),
       );
       var failed = false;
+      final pages = <int>[];
       await pumpGuide(
         tester,
         loader: ({required category, required page, required pageSize}) async {
+          pages.add(page);
           if (!failed) {
             failed = true;
             throw StateError('Offline');
@@ -632,7 +635,15 @@ void main() {
       expect(find.byKey(const Key('role-guide-retry')), findsOneWidget);
       await tap(tester, 'role-guide-retry');
       await tap(tester, 'role-guide-more');
-      await tap(tester, 'role-guide-load-more');
+      expect(pages.where((page) => page == 2), hasLength(1));
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('role-library-select-preview-role-8')),
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('role-guide-library-scroll')),
+          matching: find.byType(Scrollable),
+        ),
+      );
       expect(
         find.byKey(const Key('role-library-select-preview-role-8')),
         findsOneWidget,

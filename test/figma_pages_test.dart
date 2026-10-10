@@ -285,23 +285,28 @@ void main() {
     expect(find.text('暂无官方角色'), findsOneWidget);
   });
 
-  testWidgets('asset library back button returns to the previous page', (
+  testWidgets('asset library drawer can open on a native page route', (
     tester,
   ) async {
     await pumpPage(tester, const Scaffold(body: Center(child: Text('上一页'))));
 
     final navigator = Navigator.of(tester.element(find.text('上一页')));
-    final routeClosed = navigator.push(
+    navigator.push(
       MaterialPageRoute<void>(builder: (_) => const AssetsPage.sample()),
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('assets-navigation-back')));
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
-    await routeClosed;
 
+    expect(find.byType(AssetsPage), findsOneWidget);
+    expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('drawer-nav-home')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AssetsPage), findsNothing);
     expect(find.text('上一页'), findsOneWidget);
-    expect(find.byType(Drawer), findsNothing);
+    expect(GoRouter.of(tester.element(find.text('上一页'))).canPop(), isFalse);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('renders profile design', (tester) async {

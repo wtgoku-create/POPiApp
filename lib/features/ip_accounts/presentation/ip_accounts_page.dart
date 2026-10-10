@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/ip_account_examples.dart';
 import '../domain/ip_account.dart';
 import 'widgets/ip_accounts_skeleton.dart';
@@ -51,6 +52,7 @@ class IpAccountsPage extends ConsumerWidget {
     );
 
     return Scaffold(
+      drawer: const PopiNavigationDrawer(),
       backgroundColor: colors.brightness == Brightness.light
           ? const Color(0xFFF5F4FA)
           : colors.surface,
@@ -64,18 +66,18 @@ class IpAccountsPage extends ConsumerWidget {
                 const SizedBox(width: 15),
                 SizedBox.square(
                   dimension: 40,
-                  child: IconButton(
-                    key: const Key('ip-accounts-back'),
-                    tooltip: l10n.back,
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      if (context.canPop()) {
-                        context.pop();
-                      } else {
-                        context.go('/');
-                      }
-                    },
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+                  child: Builder(
+                    builder: (context) => IconButton(
+                      key: const Key('popi-open-navigation'),
+                      tooltip: l10n.openNavigation,
+                      padding: const EdgeInsets.all(5),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      icon: AppSvgIcon.asset(
+                        'common_navigation_menu',
+                        size: 30,
+                        color: colors.onSurface,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

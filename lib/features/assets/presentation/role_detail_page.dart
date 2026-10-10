@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
@@ -9,7 +11,6 @@ import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../session/presentation/session_page.dart';
 import '../data/role_library_repository.dart';
 import '../domain/library_role.dart';
 import '../domain/role_profile_edit.dart';
@@ -30,11 +31,17 @@ class RoleDetailPage extends ConsumerStatefulWidget {
 }
 
 class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
+  static const _overviewTypes = {
+    RoleProfileFieldType.style,
+    RoleProfileFieldType.audience,
+    RoleProfileFieldType.tags,
+  };
   late final RoleLibraryRepository _repository;
   late LibraryRole _role;
   bool _loading = true;
   bool _failed = false;
   bool _saving = false;
+  bool _fullProfile = true;
   RoleProfileEdit? _edit;
   final _controllers = <String, TextEditingController>{};
 
@@ -90,11 +97,11 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
       final updated = await _repository.saveProfile(_role.id, profile);
       if (!mounted) return;
       setState(() {
-        _role = updated;
+        _role = updated.withFallbackAvatar(_role.avatar);
         _saving = false;
       });
       _cancelEditing();
-      widget.onRoleUpdated?.call(updated);
+      widget.onRoleUpdated?.call(_role);
       AppToast.success(context, l10n.roleChangesSaved);
     } catch (_) {
       if (!mounted) return;
@@ -118,7 +125,9 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     });
     try {
       final role = await _repository.fetchDetail(_role.id);
-      if (mounted) setState(() => _role = role);
+      if (mounted) {
+        setState(() => _role = role.withFallbackAvatar(_role.avatar));
+      }
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     } finally {
@@ -129,32 +138,52 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
   void _compose() {
     final l10n = AppLocalizations.of(context)!;
     final prompt = l10n.createRolePrompt(_role.title);
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SessionPage(
-          initialPrompt: '$prompt\nID: ${_role.id}\n${_role.description}',
-        ),
-      ),
+    context.push(
+      Uri(
+        path: '/session',
+        queryParameters: {
+          'prompt': '$prompt\nID: ${_role.id}\n${_role.description}',
+        },
+      ).toString(),
     );
   }
 
-  String _fieldLabel(RoleProfileField field, AppLocalizations l10n) =>
-      switch (field.type) {
-        RoleProfileFieldType.positioning => l10n.rolePositioning,
-        RoleProfileFieldType.style => l10n.roleStyle,
-        RoleProfileFieldType.audience => l10n.roleAudience,
-        RoleProfileFieldType.tags => l10n.roleTags,
-        RoleProfileFieldType.appearance => l10n.roleAppearance,
-        RoleProfileFieldType.boundaries => l10n.roleBoundaries,
-        RoleProfileFieldType.custom =>
-          field.label.isEmpty ? field.profileDataKey! : field.label,
-      };
+  String _fieldLabel(RoleProfileField field, AppLocalizations l10n) {
+    if (field.profileDataKey != null && field.label.isNotEmpty) {
+      return field.label;
+    }
+    return switch (field.type) {
+      RoleProfileFieldType.positioning => l10n.rolePositioning,
+      RoleProfileFieldType.style => l10n.roleStyle,
+      RoleProfileFieldType.audience => l10n.roleAudience,
+      RoleProfileFieldType.tags => l10n.roleTags,
+      RoleProfileFieldType.appearance => l10n.roleAppearance,
+      RoleProfileFieldType.boundaries => l10n.roleBoundaries,
+      RoleProfileFieldType.custom =>
+        field.label.isEmpty ? field.profileDataKey! : field.label,
+    };
+  }
+
+  List<RoleProfileField> get _visibleFields {
+    final fields = (_edit ?? RoleProfileEdit.fromRole(_role)).fields;
+    if (_edit != null) return fields;
+    return fields
+        .where((field) => _overviewTypes.contains(field.type))
+        .toList();
+  }
+
+  List<RoleProfileField> get _fullProfileFields => RoleProfileEdit.fromRole(
+    _role,
+  ).fields.where((field) => field.id.startsWith('profileData-')).toList();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final light = Theme.of(context).brightness == Brightness.light;
+    final panelBackground = light
+        ? Colors.white.withValues(alpha: .5)
+        : colors.surfaceContainerLow;
     final enabled = !_loading && !_failed;
     return PopScope(
       canPop: !_saving && _edit == null,
@@ -196,164 +225,198 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
         ),
         body: SafeArea(
           top: false,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return SingleChildScrollView(
-                key: const Key('role-profile-scroll'),
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _summary(l10n),
-                            if (_loading)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 12),
-                                child: LinearProgressIndicator(minHeight: 2),
-                              ),
-                            if (_failed)
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  onPressed: _load,
-                                  icon: const Icon(Icons.refresh),
-                                  label: Text(l10n.retryLoadingRoles),
+          bottom: false,
+          child: Container(
+            width: double.infinity,
+            height: double.infinity,
+            margin: const EdgeInsets.only(top: 10),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: panelBackground,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(45),
+              ),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  key: const Key('role-profile-scroll'),
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _summary(l10n),
+                              if (_loading)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 12),
+                                  child: LinearProgressIndicator(minHeight: 2),
                                 ),
-                              ),
-                            const SizedBox(height: 20),
-                            for (final field
-                                in (_edit ?? RoleProfileEdit.fromRole(_role))
-                                    .fields)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 18),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text.rich(
-                                      TextSpan(
-                                        text: _fieldLabel(field, l10n),
-                                        children: [
-                                          if (_edit != null && field.editable)
-                                            TextSpan(
-                                              text: ' *',
-                                              style: TextStyle(
-                                                color: colors.error,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        height: 25 / 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5),
-                                    if (_edit != null && field.editable)
-                                      TextFormField(
-                                        key: Key('role-edit-${field.id}'),
-                                        controller: _controllers[field.id],
-                                        enabled: !_saving,
-                                        minLines: 2,
-                                        maxLines: null,
-                                        keyboardType: TextInputType.multiline,
-                                        textCapitalization:
-                                            TextCapitalization.sentences,
-                                        onChanged: (_) => setState(() {}),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          height: 20 / 14,
-                                          color: colors.onSurfaceVariant,
-                                        ),
-                                        decoration: InputDecoration(
-                                          hintText: l10n.roleFieldPending,
-                                          helperText: ' ',
-                                          errorText:
-                                              _controllers[field.id]!.text
-                                                  .trim()
-                                                  .isEmpty
-                                              ? l10n.roleFieldRequired
-                                              : null,
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 11,
-                                                vertical: 9,
-                                              ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: colors.primary.withValues(
-                                                alpha: .18,
-                                              ),
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: colors.primary,
-                                            ),
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                        ),
-                                      )
-                                    else
-                                      SelectableText(
-                                        roleProfileText(field.value).isEmpty
-                                            ? l10n.roleFieldPending
-                                            : roleProfileText(field.value),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          height: 20 / 14,
-                                          color: colors.onSurfaceVariant,
-                                        ),
-                                      ),
-                                  ],
+                              if (_failed)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: _load,
+                                    icon: const Icon(Icons.refresh),
+                                    label: Text(l10n.retryLoadingRoles),
+                                  ),
                                 ),
-                              ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ],
+                              const SizedBox(height: 20),
+                              for (final field in _visibleFields)
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: _edit == null ? 20 : 18,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text.rich(
+                                        TextSpan(
+                                          text: _fieldLabel(field, l10n),
+                                          children: [
+                                            if (_edit != null && field.editable)
+                                              TextSpan(
+                                                text: ' *',
+                                                style: TextStyle(
+                                                  color: colors.error,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      if (_edit != null && field.editable)
+                                        TextFormField(
+                                          key: Key('role-edit-${field.id}'),
+                                          controller: _controllers[field.id],
+                                          enabled: !_saving,
+                                          minLines: 2,
+                                          maxLines: null,
+                                          keyboardType: TextInputType.multiline,
+                                          textCapitalization:
+                                              TextCapitalization.sentences,
+                                          onChanged: (_) => setState(() {}),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 20 / 14,
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: l10n.roleFieldPending,
+                                            helperText: ' ',
+                                            errorText:
+                                                _controllers[field.id]!.text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? l10n.roleFieldRequired
+                                                : null,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 11,
+                                                  vertical: 9,
+                                                ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: colors.primary
+                                                    .withValues(alpha: .18),
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide(
+                                                color: colors.primary,
+                                              ),
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        SelectableText(
+                                          roleProfileText(field.value).isEmpty
+                                              ? l10n.roleFieldPending
+                                              : roleProfileText(field.value),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            height: 20 / 16,
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              if (_edit == null &&
+                                  _fullProfileFields.isNotEmpty)
+                                _profileArchive(l10n, enabled),
+                              const SizedBox(height: 20),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-              child: Center(
-                heightFactor: 1,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 560,
-                    maxHeight: MediaQuery.sizeOf(context).height * .55,
-                  ),
-                  child: SingleChildScrollView(
-                    child: _edit != null
-                        ? _editActions(l10n)
-                        : _actions(l10n, enabled),
+        bottomNavigationBar: ColoredBox(
+          color: panelBackground,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(45),
+              ),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                child: ColoredBox(
+                  color: light
+                      ? AppColors.brand.withValues(alpha: .05)
+                      : colors.surfaceContainer,
+                  child: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        _edit == null ? 40 : 20,
+                        20,
+                        _edit == null ? 40 : 20,
+                        20,
+                      ),
+                      child: Center(
+                        heightFactor: 1,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: 560,
+                            maxHeight: MediaQuery.sizeOf(context).height * .55,
+                          ),
+                          child: SingleChildScrollView(
+                            child: _edit != null
+                                ? _editActions(l10n)
+                                : _actions(l10n, enabled),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -361,6 +424,143 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _profileArchive(AppLocalizations l10n, bool enabled) {
+    final colors = Theme.of(context).colorScheme;
+    final version = _role.profileVersion;
+    final versionLabel = version == null
+        ? ''
+        : 'v${version % 1 == 0 ? version.toStringAsFixed(1) : version.toString()}';
+    final label = version == null
+        ? l10n.roleFullProfile
+        : l10n.roleFullProfileVersion(versionLabel);
+    return Container(
+      key: const Key('role-profile-archive'),
+      decoration: BoxDecoration(
+        color: colors.surface.withValues(alpha: .5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.brand.withValues(alpha: .05),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            expanded: _fullProfile,
+            child: Tooltip(
+              message: _fullProfile ? l10n.roleCollapseProfile : label,
+              child: TextButton(
+                key: const Key('role-profile-toggle'),
+                onPressed: enabled
+                    ? () => setState(() => _fullProfile = !_fullProfile)
+                    : null,
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.onSurface,
+                  minimumSize: const Size.fromHeight(61),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: const EdgeInsets.all(18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    RotatedBox(
+                      quarterTurns: 1,
+                      child: const AppSvgIcon.asset(
+                        'role_profile_arrow',
+                        size: 12,
+                        color: AppColors.brand,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_fullProfile)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (index, field) in _fullProfileFields.indexed) ...[
+                    if (index > 0) const SizedBox(height: 20),
+                    _archiveField(field, l10n),
+                  ],
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _archiveField(RoleProfileField field, AppLocalizations l10n) {
+    final colors = Theme.of(context).colorScheme;
+    final label = Container(
+      key: Key('role-profile-label-${field.id}'),
+      width: 94,
+      constraints: const BoxConstraints(minHeight: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.light
+            ? AppColors.brand.withValues(alpha: .05)
+            : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        _fieldLabel(field, l10n),
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          height: 20 / 16,
+        ),
+      ),
+    );
+    final content = SelectableText(
+      field.text.isEmpty ? l10n.roleFieldPending : roleProfileText(field.value),
+      key: Key('role-profile-value-${field.id}'),
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: 20 / 16,
+        color: colors.onSurfaceVariant,
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 240 ||
+            MediaQuery.textScalerOf(context).scale(16) > 22) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [label, const SizedBox(height: 8), content],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            label,
+            const SizedBox(width: 20),
+            Expanded(child: content),
+          ],
+        );
+      },
     );
   }
 
@@ -374,22 +574,37 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
       key: const Key('role-profile-summary'),
       padding: const EdgeInsets.fromLTRB(10, 10, 20, 10),
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: Theme.of(context).brightness == Brightness.light
+            ? AppColors.brand.withValues(alpha: .05)
+            : colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox.square(
-              dimension: 70,
-              child: _role.avatar.isEmpty
-                  ? placeholder
-                  : Image.network(
-                      _role.avatar,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => placeholder,
-                    ),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: AppColors.brand.withValues(alpha: .1),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: SizedBox.square(
+                dimension: 64,
+                child: _role.avatar.isEmpty
+                    ? placeholder
+                    : _role.avatar.startsWith('assets/')
+                    ? Image.asset(
+                        _role.avatar,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => placeholder,
+                      )
+                    : Image.network(
+                        _role.avatar,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => placeholder,
+                      ),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -397,32 +612,15 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final title = Text(
-                      _role.title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    );
-                    final badge = _certificateBadge(l10n);
-                    if (constraints.maxWidth < 230 ||
-                        MediaQuery.textScalerOf(context).scale(12) > 16) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [title, const SizedBox(height: 5), badge],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: title),
-                        const SizedBox(width: 8),
-                        badge,
-                      ],
-                    );
-                  },
+                Text(
+                  _role.title,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -430,8 +628,8 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                       ? l10n.roleProfileReady
                       : l10n.roleProfilePending,
                   style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
+                    fontSize: 14,
+                    height: 1.25,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
@@ -441,39 +639,12 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
-                      height: 1.4,
+                      fontSize: 14,
+                      height: 1.25,
                       color: colors.onSurfaceVariant,
                     ),
                   ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _certificateBadge(AppLocalizations l10n) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: colors.onSurfaceVariant.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/icons/role_profile_certificate.png',
-            width: 12,
-            height: 12,
-          ),
-          Flexible(
-            child: Text(
-              _role.isCertified ? l10n.roleCertified : l10n.roleUncertified,
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
             ),
           ),
         ],
@@ -523,84 +694,87 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     final colors = Theme.of(context).colorScheme;
     final editable = _role.canEdit;
     final official = widget.category == 'official';
-    return Container(
+    final compact =
+        MediaQuery.sizeOf(context).height < 700 ||
+        MediaQuery.textScalerOf(context).scale(16) > 20;
+    return Column(
       key: const Key('role-profile-actions'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!compact) ...[
           Text(
             l10n.roleStoryTitle,
-            style: const TextStyle(fontSize: 16, height: 1.7),
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 10),
           Text(
             l10n.roleStoryDescription,
-            style: const TextStyle(fontSize: 14, height: 1.5),
+            style: const TextStyle(fontSize: 16, height: 1.35),
           ),
           const SizedBox(height: 10),
-          if (!official) ...[
-            SizedBox(
-              height: 50,
-              child: TextButton(
-                key: const Key('role-improve'),
-                onPressed: enabled && editable ? _startEditing : null,
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.brand.withValues(alpha: .05),
-                  foregroundColor: colors.onSurface,
-                  shape: const StadiumBorder(),
-                  textStyle: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(fontSize: 18),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                ),
-                child: Text(l10n.improveRole, textAlign: TextAlign.center),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-          SizedBox(
-            height: 50,
-            child: FilledButton(
-              key: const Key('role-create'),
-              onPressed: enabled && (official || _role.canCreate)
-                  ? _compose
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.brand,
+        ],
+        if (!official) ...[
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 50),
+            child: TextButton(
+              key: const Key('role-improve'),
+              onPressed: enabled && editable ? _startEditing : null,
+              style: TextButton.styleFrom(
+                backgroundColor: colors.surface,
+                foregroundColor: colors.onSurface,
                 shape: const StadiumBorder(),
-                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                textStyle: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(fontSize: 18),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 12,
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.createWithRole,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                  const AppSvgIcon.asset(
-                    'role_profile_arrow',
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ],
-              ),
+              child: Text(l10n.improveRole, textAlign: TextAlign.center),
             ),
           ),
+          const SizedBox(height: 10),
         ],
-      ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 50),
+          child: FilledButton(
+            key: const Key('role-create'),
+            onPressed: enabled && (official || _role.canCreate)
+                ? _compose
+                : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.brand,
+              foregroundColor: Colors.white,
+              shape: const StadiumBorder(),
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(l10n.createWithRole, textAlign: TextAlign.center),
+                ),
+                const SizedBox(width: 5),
+                const AppSvgIcon.asset(
+                  'role_profile_arrow',
+                  size: 12,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
