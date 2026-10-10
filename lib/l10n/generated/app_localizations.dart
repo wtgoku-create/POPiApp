@@ -3670,7 +3670,7 @@ abstract class AppLocalizations {
   /// No description provided for @pointsUsageDescription.
   ///
   /// In en, this message translates to:
-  /// **'This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.'**
+  /// **'This credit allowance or plan works across POPi mobile, POPi.Art, and POPi.TV, with balances synced in real time.'**
   String get pointsUsageDescription;
 
   /// No description provided for @dailyFreePoints.

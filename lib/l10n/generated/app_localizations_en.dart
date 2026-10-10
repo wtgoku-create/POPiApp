@@ -1972,7 +1972,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pointsUsageDescription =>
-      'This credit allowance or plan works across POPi mobile, POPi.air, and POPi.TV, with balances synced in real time.';
+      'This credit allowance or plan works across POPi mobile, POPi.Art, and POPi.TV, with balances synced in real time.';
 
   @override
   String get dailyFreePoints => 'Daily free points';

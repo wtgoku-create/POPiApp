@@ -1890,7 +1890,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get pointsUsageDescription =>
-      '此信用额度/计划可在POPi移动端、POPi.air跟POPi.TV上使用并且实时互通';
+      '此信用额度/计划可在POPi移动端、POPi.Art跟POPi.TV上使用并且实时互通';
 
   @override
   String get dailyFreePoints => '每日免费积分';
