@@ -4,8 +4,6 @@ abstract final class AppConfig {
     'APP_ENV',
     defaultValue: 'development',
   );
-  static const passwordLoginEnabled =
-      environment == 'development' || environment == 'dev';
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://wwwtest.popi.art',

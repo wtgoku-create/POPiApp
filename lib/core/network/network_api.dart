@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'dart:typed_data';
 
-import '../config/app_config.dart';
 import 'api_exception.dart';
 import 'payment_exception.dart';
 import '../../features/auth/domain/captcha_challenge.dart';
@@ -402,9 +401,6 @@ class NetworkApi {
     required String username,
     required String password,
   }) async {
-    if (!AppConfig.passwordLoginEnabled) {
-      throw UnsupportedError('Password login is only available in development');
-    }
     final response = await dio.post<Map<String, dynamic>>(
       '/api_client/auth/login',
       data: {'username': username, 'password': password},

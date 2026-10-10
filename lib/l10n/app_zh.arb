@@ -561,7 +561,7 @@
   "confirmLogout": "确认退出",
   "logoutFailed": "退出登录失败，请稍后重试",
   "regularUser": "普通用户",
-  "memberLevel": "会员 {level}",
+  "memberLevel": "{level}会员",
   "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
   "upgradeMembership": "升级会员",
   "goToLogin": "前往登录",

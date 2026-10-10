@@ -1,13 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
 
 void main() {
-  test('password login follows the web contract only in development', () async {
+  test('password login follows the web contract', () async {
     RequestOptions? request;
     final dio = Dio();
     dio.interceptors.add(
@@ -36,11 +35,6 @@ void main() {
       username: '13800138000',
       password: ' password ',
     );
-    if (!AppConfig.passwordLoginEnabled) {
-      await expectLater(login, throwsUnsupportedError);
-      expect(request, isNull);
-      return;
-    }
     final session = await login;
     expect(request!.method, 'POST');
     expect(request!.path, '/api_client/auth/login');
@@ -80,5 +74,5 @@ void main() {
         ),
       ),
     );
-  }, skip: !AppConfig.passwordLoginEnabled);
+  });
 }

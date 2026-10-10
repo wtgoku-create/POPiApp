@@ -13,6 +13,7 @@ import '../../../features/payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/purchase_provider.dart';
+import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';

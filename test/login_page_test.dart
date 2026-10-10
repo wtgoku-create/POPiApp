@@ -7,7 +7,6 @@ import 'package:toastification/toastification.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/app/router.dart';
-import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
@@ -103,13 +102,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('password entry is available only in development', (
+  testWidgets('password entry is available', (
     tester,
   ) async {
     await pumpLoginPage(tester);
     expect(
       find.byKey(const Key('login-mode-switch')),
-      AppConfig.passwordLoginEnabled ? findsOneWidget : findsNothing,
+      findsOneWidget,
     );
     expect(find.byKey(const Key('login-password-field')), findsNothing);
   });
@@ -235,7 +234,7 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     });
-  }, skip: !AppConfig.passwordLoginEnabled);
+  });
 
   testWidgets('matches the updated Figma form geometry', (tester) async {
     await pumpLoginPage(tester, size: const Size(440, 956));
@@ -316,10 +315,8 @@ void main() {
       douyinService: const _AuthorizedDouyinService(),
       douyinApi: api,
     );
-    if (AppConfig.passwordLoginEnabled) {
-      await tester.tap(find.byKey(const Key('login-mode-switch')));
-      await tester.pump();
-    }
+    await tester.tap(find.byKey(const Key('login-mode-switch')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('douyin-login-button')));

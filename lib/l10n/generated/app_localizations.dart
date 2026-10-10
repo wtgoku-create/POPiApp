@@ -3274,7 +3274,7 @@ abstract class AppLocalizations {
   /// No description provided for @memberLevel.
   ///
   /// In en, this message translates to:
-  /// **'Member {level}'**
+  /// **'{level} member'**
   String memberLevel(String level);
 
   /// No description provided for @upgradeMembership.

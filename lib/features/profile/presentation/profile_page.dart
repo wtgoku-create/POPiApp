@@ -302,7 +302,7 @@ class MembershipCard extends ConsumerWidget {
     final points = ref.watch(userPointsProvider).valueOrNull;
     final colorScheme = Theme.of(context).colorScheme;
     final memberLabel = user?.isMember == true
-        ? l10n.memberLevel(user!.memberLevel.toString())
+        ? l10n.memberLevel(user!.memberName.trim())
         : l10n.regularUser;
     final totalPoints = user?.allCoins ?? points?.availableTotalPoints;
 

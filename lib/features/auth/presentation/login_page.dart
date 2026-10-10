@@ -9,7 +9,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
@@ -190,8 +189,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   void _toggleLoginMode() {
-    if (!AppConfig.passwordLoginEnabled ||
-        _isLoggingIn ||
+    if (_isLoggingIn ||
         _isWechatLoggingIn ||
         _isDouyinLoggingIn ||
         _isSendingCode ||
@@ -287,7 +285,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return;
     }
     if (_passwordLogin) {
-      if (!AppConfig.passwordLoginEnabled) return;
       if (_passwordController.text.trim().length < 6) {
         AppToast.error(context, l10n.invalidPassword);
         return;
@@ -757,7 +754,7 @@ class _PhoneLoginForm extends StatelessWidget {
               : onLogin,
           loading: loggingIn,
         ),
-        if (AppConfig.passwordLoginEnabled && !phoneBindingRequired) ...[
+        if (!phoneBindingRequired) ...[
           const SizedBox(height: 8),
           TextButton(
             key: const Key('login-mode-switch'),

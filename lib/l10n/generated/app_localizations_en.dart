@@ -1752,7 +1752,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String memberLevel(String level) {
-    return 'Member $level';
+    return '$level member';
   }
 
   @override

@@ -561,7 +561,7 @@
   "confirmLogout": "Confirm sign out",
   "logoutFailed": "Unable to sign out. Try again later",
   "regularUser": "Regular user",
-  "memberLevel": "Member {level}",
+  "memberLevel": "{level} member",
   "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
   "upgradeMembership": "Upgrade",
   "goToLogin": "Sign in",

@@ -1681,7 +1681,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String memberLevel(String level) {
-    return '会员 $level';
+    return '$level会员';
   }
 
   @override
