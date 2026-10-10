@@ -276,48 +276,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('conversation avatars render in rows and long-press previews', (
-    tester,
-  ) async {
-    await pumpDrawer(tester);
-    final avatar = find.byKey(const Key('drawer-session-avatar-mock-1'));
-    expect(tester.getSize(avatar), const Size(30, 30));
-    final icon = tester.widget<AppSvgIcon>(avatar);
-    expect(icon.assetName, 'home_drawer_session_pink');
-    expect(icon.color, isNull);
-    expect(
-      tester.getSize(find.byKey(const Key('drawer-session-mock-1'))).height,
-      40,
-    );
-    for (final (id, name) in [
-      ('mock-2', 'home_drawer_session_blue'),
-      ('mock-3', 'home_drawer_session_peach'),
-      ('mock-4', 'home_drawer_session_neutral'),
-    ]) {
+  testWidgets(
+    'folder icons render in conversation rows and long-press previews',
+    (tester) async {
+      await pumpDrawer(tester);
+      final avatar = find.byKey(const Key('drawer-session-avatar-mock-1'));
+      expect(tester.getSize(avatar), const Size(30, 30));
+      final icon = tester.widget<AppSvgIcon>(avatar);
+      expect(icon.assetName, 'home_drawer_project');
+      expect(icon.color, AppTheme.light.colorScheme.onSurface);
       expect(
-        tester
-            .widget<AppSvgIcon>(find.byKey(Key('drawer-session-avatar-$id')))
-            .assetName,
-        name,
+        tester.getSize(find.byKey(const Key('drawer-session-mock-1'))).height,
+        40,
       );
-    }
-    await openMenu(tester, 'mock-1');
-    final preview = find.byKey(const Key('app-context-menu-preview'));
-    expect(find.descendant(of: preview, matching: avatar), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('drawer-new-session')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('popi-open-navigation')));
-    await tester.pumpAndSettle();
-    final fallback = find.byKey(const Key('drawer-session-avatar-mock-new-1'));
-    expect(tester.getSize(fallback), const Size(30, 30));
-    expect(
-      tester.widget<AppSvgIcon>(fallback).assetName,
-      'home_drawer_session_neutral',
-    );
-    expect(tester.takeException(), isNull);
-  });
+      for (final id in ['mock-2', 'mock-3', 'mock-4']) {
+        expect(
+          tester
+              .widget<AppSvgIcon>(find.byKey(Key('drawer-session-avatar-$id')))
+              .assetName,
+          'home_drawer_project',
+        );
+      }
+      await openMenu(tester, 'mock-1');
+      final preview = find.byKey(const Key('app-context-menu-preview'));
+      expect(find.descendant(of: preview, matching: avatar), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('drawer-new-session')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      final fallback = find.byKey(
+        const Key('drawer-session-avatar-mock-new-1'),
+      );
+      expect(tester.getSize(fallback), const Size(30, 30));
+      expect(
+        tester.widget<AppSvgIcon>(fallback).assetName,
+        'home_drawer_project',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('pin, rename and delete stay updated after reopening', (
     tester,

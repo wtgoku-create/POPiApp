@@ -689,7 +689,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         children: [
           Row(
             children: [
-              const AppSvgIcon.asset('ip_account_home_avatar', size: 50),
+              const AppSvgIcon.asset('ip_guide_account', size: 50),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

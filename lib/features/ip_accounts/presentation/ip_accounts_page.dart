@@ -133,7 +133,6 @@ class IpAccountsPage extends ConsumerWidget {
                       return _AccountCard(
                         key: ValueKey('ip-account-${account.id}'),
                         account: account,
-                        colorIndex: index,
                         onTap: () {
                           if (onOpenAccount case final callback?) {
                             callback(account);
@@ -154,30 +153,15 @@ class IpAccountsPage extends ConsumerWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({
-    required this.account,
-    required this.colorIndex,
-    required this.onTap,
-    super.key,
-  });
+  const _AccountCard({required this.account, required this.onTap, super.key});
 
   final IpAccount account;
-  final int colorIndex;
   final VoidCallback onTap;
-
-  static const _avatarColors = [
-    AppColors.brand,
-    Color(0xFFFA51A2),
-    Color(0xFFFF9A27),
-    Color(0xFF3E975B),
-    Color(0xFF33A0F8),
-  ];
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final avatarColor = _avatarColors[colorIndex % _avatarColors.length];
     final statusColor = account.isPaused
         ? colors.brightness == Brightness.light
               ? AppColors.textTertiary
@@ -198,23 +182,7 @@ class _AccountCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: avatarColor.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  account.title.characters.firstOrNull ?? '',
-                  style: TextStyle(
-                    color: avatarColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
+              const AppSvgIcon.asset('ip_guide_account', size: 50),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

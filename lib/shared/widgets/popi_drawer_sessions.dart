@@ -8,6 +8,7 @@ import '../providers/session_provider.dart';
 import '../providers/user_provider.dart';
 import 'app_dialog.dart';
 import 'app_menu.dart';
+import 'app_skeleton.dart';
 import 'app_svg_icon.dart';
 import 'app_toast.dart';
 
@@ -47,8 +48,9 @@ class PopiDrawerSessions extends ConsumerWidget {
             key: const Key('drawer-session-list'),
             padding: EdgeInsets.zero,
             children: [
-              if (history.isLoading) const LinearProgressIndicator(),
-              if (history.hasError)
+              if (history.isLoading)
+                const _SessionSkeleton(key: Key('drawer-sessions-skeleton')),
+              if (!history.isLoading && history.hasError)
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
@@ -88,6 +90,42 @@ class PopiDrawerSessions extends ConsumerWidget {
   }
 }
 
+class _SessionSkeleton extends StatelessWidget {
+  const _SessionSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) => AppSkeleton(
+    label: AppLocalizations.of(context)!.loadingProjectSessions,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var index = 0; index < 5; index++)
+          SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              child: Row(
+                children: [
+                  const AppSkeletonBox(width: 30, height: 30, radius: 15),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FractionallySizedBox(
+                        widthFactor: index.isEven ? .65 : .45,
+                        child: const AppSkeletonBox(height: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 class _SessionItem extends ConsumerWidget {
   const _SessionItem({required this.session, required this.onTap, super.key});
 
@@ -105,9 +143,10 @@ class _SessionItem extends ConsumerWidget {
     Widget label() => Row(
       children: [
         AppSvgIcon.asset(
-          session.avatarIcon ?? 'home_drawer_session_neutral',
+          'home_drawer_project',
           key: Key('drawer-session-avatar-${session.id}'),
           size: 30,
+          color: colors.onSurface,
         ),
         const SizedBox(width: 10),
         Expanded(
