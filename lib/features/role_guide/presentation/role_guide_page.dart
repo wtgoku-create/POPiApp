@@ -17,7 +17,6 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../assets/domain/library_role.dart';
-import '../../assets/presentation/role_detail_page.dart';
 import '../../projects/domain/project.dart';
 import '../data/role_guide_examples.dart';
 import '../data/role_generation_repository.dart';
@@ -71,7 +70,6 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
 
   void _back() {
     if (_draft.step == RoleGuideStep.generation && _progress?.running == true) {
-      _stopProduction();
       return;
     }
     if (_draft.step != RoleGuideStep.roles) {
@@ -104,20 +102,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     return true;
   }
 
-  Future<void> _details(LibraryRole role) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => RoleDetailPage(
-          role: role,
-          category: role.canEdit ? 'personal' : 'official',
-          onRoleUpdated: (updated) {
-            if (!mounted) return;
-            setState(() => _draft.updateRole(updated));
-          },
-        ),
-      ),
-    );
-  }
+  Future<void> _details(LibraryRole role) =>
+      _showSheet<void>((_) => RoleProfileSheet(roles: [role]));
 
   void _createRole() => context.push(
     Uri(
@@ -325,15 +311,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     }
   }
 
-  Future<void> _profiles() => _showSheet<void>(
-    (sheetContext) => RoleProfileSheet(
-      roles: _draft.roles,
-      onFullProfile: (role) {
-        Navigator.of(sheetContext).pop();
-        _details(role);
-      },
-    ),
-  );
+  Future<void> _profiles() =>
+      _showSheet<void>((_) => RoleProfileSheet(roles: _draft.roles));
 
   Future<void> _storyDetails(RoleGuideStory story) => _showSheet<void>(
     (_) => RoleGuideSheet(
@@ -404,6 +383,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     final user = ref.watch(userProvider);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final hasFooter = _draft.step != RoleGuideStep.generation;
+    final showBack = _draft.step.index >= RoleGuideStep.production.index;
+    final generating =
+        _draft.step == RoleGuideStep.generation && _progress?.running == true;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom > 0
         ? 0.0
         : safeArea.bottom;
@@ -465,21 +447,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                   backgroundColor: Colors.transparent,
                   surfaceTintColor: Colors.transparent,
                   toolbarHeight: 56,
-                  leadingWidth: _draft.step == RoleGuideStep.roles ? 60 : 100,
+                  leadingWidth: showBack ? 100 : 60,
                   leading: Padding(
                     padding: const EdgeInsets.only(left: 15),
                     child: Row(
                       children: [
-                        if (_draft.step != RoleGuideStep.roles)
-                          SizedBox.square(
-                            dimension: 40,
-                            child: IconButton(
-                              key: const Key('role-guide-back'),
-                              tooltip: l10n.backToPreviousPage,
-                              onPressed: _back,
-                              icon: const Icon(Icons.chevron_left),
-                            ),
-                          ),
                         SizedBox.square(
                           dimension: 40,
                           child: IconButton(
@@ -495,6 +467,16 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                             ),
                           ),
                         ),
+                        if (showBack)
+                          SizedBox.square(
+                            dimension: 40,
+                            child: IconButton(
+                              key: const Key('role-guide-back'),
+                              tooltip: l10n.backToPreviousPage,
+                              onPressed: generating ? null : _back,
+                              icon: const Icon(Icons.chevron_left),
+                            ),
+                          ),
                       ],
                     ),
                   ),

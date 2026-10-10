@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/core/config/app_config.dart';
+import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
@@ -340,6 +342,26 @@ void main() {
   });
 
   for (final signedIn in [false, true]) {
+    testWidgets(
+      'teaching center opens and returns home, signed in: $signedIn',
+      (tester) async {
+        final container = await pumpDrawer(tester, signedIn: signedIn);
+        await tester.tap(find.byKey(const Key('drawer-nav-teaching')));
+        await tester.pumpAndSettle();
+        final router = container.read(routerProvider(false));
+        expect(router.state.uri.path, '/teaching');
+        expect(router.canPop(), isFalse);
+        final page = tester.widget<H5Page>(find.byType(H5Page));
+        expect(page.title, '教学中心');
+        expect(page.url.toString(), AppConfig.teachingCenterUrl);
+        await tester.tap(find.byTooltip('返回'));
+        await tester.pumpAndSettle();
+        expect(router.state.uri.path, '/');
+        expect(find.byType(HomePage), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets('home returns to the root without highlighting: $signedIn', (
       tester,
     ) async {
@@ -369,34 +391,73 @@ void main() {
 
   for (final dark in [false, true]) {
     for (final language in ['zh', 'en']) {
-      testWidgets('compact $language drawer supports dark mode: $dark', (
-        tester,
-      ) async {
-        await pumpDrawer(
-          tester,
-          size: const Size(320, 568),
-          theme: dark ? AppTheme.dark : AppTheme.light,
-          locale: Locale(language),
+      for (final height in [568.0, 500.0, 400.0]) {
+        testWidgets(
+          'compact $language drawer at $height supports dark mode: $dark',
+          (tester) async {
+            await pumpDrawer(
+              tester,
+              size: Size(320, height),
+              theme: dark ? AppTheme.dark : AppTheme.light,
+              locale: Locale(language),
+            );
+            final l10n = lookupAppLocalizations(Locale(language));
+            final entries = [
+              ('drawer-nav-home', l10n.home),
+              ('drawer-nav-teaching', l10n.teachingCenter),
+              ('drawer-nav-role', l10n.roles),
+              ('drawer-nav-ip-accounts', l10n.ipProjects),
+              ('drawer-nav-assets', l10n.assets),
+            ];
+            var previousBottom = 0.0;
+            for (final (key, label) in entries) {
+              final item = find.byKey(Key(key));
+              final bounds = tester.getRect(item);
+              expect(bounds.top, greaterThanOrEqualTo(previousBottom));
+              expect(bounds.height, 50);
+              expect(
+                find.descendant(of: item, matching: find.text(label)),
+                findsOneWidget,
+              );
+              previousBottom = bounds.bottom;
+            }
+            expect(
+              tester
+                  .widget<AppSvgIcon>(
+                    find.descendant(
+                      of: find.byKey(const Key('drawer-nav-teaching')),
+                      matching: find.byType(AppSvgIcon),
+                    ),
+                  )
+                  .assetName,
+              'home_drawer_nav_teaching',
+            );
+            final footer = tester.getRect(
+              find.byKey(const Key('drawer-profile-button')),
+            );
+            final bodyScroll = find.byKey(const Key('drawer-body-scroll'));
+            final bodyViewport = bodyScroll.evaluate().isEmpty
+                ? find.byKey(const Key('drawer-session-list'))
+                : bodyScroll;
+            expect(tester.getRect(bodyViewport).bottom, lessThan(footer.top));
+            expect(footer.bottom, lessThanOrEqualTo(height));
+            if (bodyScroll.evaluate().isNotEmpty) {
+              await tester.drag(bodyScroll, const Offset(0, -400));
+              await tester.pumpAndSettle();
+            }
+            await tester.drag(
+              find.byKey(const Key('drawer-session-list')),
+              const Offset(0, -600),
+            );
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const Key('drawer-session-mock-8')).hitTestable(),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+          },
         );
-        final list = tester.getRect(
-          find.byKey(const Key('drawer-session-list')),
-        );
-        final footer = tester.getRect(
-          find.byKey(const Key('drawer-profile-button')),
-        );
-        expect(list.bottom, lessThan(footer.top));
-        expect(footer.bottom, lessThanOrEqualTo(568));
-        await tester.drag(
-          find.byKey(const Key('drawer-session-list')),
-          const Offset(0, -600),
-        );
-        await tester.pumpAndSettle();
-        expect(
-          find.byKey(const Key('drawer-session-mock-8')).hitTestable(),
-          findsOneWidget,
-        );
-        expect(tester.takeException(), isNull);
-      });
+      }
     }
   }
 }

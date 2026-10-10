@@ -17,6 +17,8 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../attachments/presentation/attachment_picker_sheet.dart';
+import '../../assets/domain/library_role.dart';
+import '../../assets/domain/library_work.dart';
 import '../../role_guide/domain/role_guide_draft.dart';
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'widgets/popi_message_composer.dart';
@@ -51,6 +53,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
   final List<PopiComposerImage> _selectedImages = [];
+  final List<LibraryRole> _selectedRoles = [];
+  final List<LibraryWork> _selectedAssets = [];
   bool _mentionMode = false;
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
@@ -86,6 +90,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   void _resetComposer() {
     _selectedImages.clear();
+    _selectedRoles.clear();
+    _selectedAssets.clear();
     _mentionMode = false;
     _messageController.setText('');
     _messageController.dismissKeyboard();
@@ -367,6 +373,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             conversationMode: _activeSessionId != null,
                             controller: _messageController,
                             selectedImages: _selectedImages,
+                            selectedRoles: _selectedRoles,
+                            onRemoveRole: _removeSelectedRole,
+                            selectedAssets: _selectedAssets,
+                            onRemoveAsset: _removeSelectedAsset,
                             onAttachment: _showAttachmentSheet,
                             onRemoveImage: _removeSelectedImage,
                             onHeightChanged: _handleComposerHeightChanged,
@@ -437,7 +447,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   Future<void> _openConversation(String value) async {
-    if (value.trim().isEmpty && _selectedImages.isEmpty) return;
+    if (value.trim().isEmpty &&
+        _selectedImages.isEmpty &&
+        _selectedAssets.isEmpty &&
+        _selectedRoles.isEmpty) {
+      return;
+    }
     if (ref.read(userProvider) == null) {
       GoRouter.maybeOf(context)?.push('/login');
       return;
@@ -454,7 +469,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           (name: image.name, bytes: image.bytes),
       ],
       l10n.newSessionTitle,
-      l10n.chatMediaPrompt,
+      _selectedImages.isEmpty &&
+              _selectedAssets.isEmpty &&
+              _selectedRoles.isNotEmpty
+          ? l10n.chatRolePrompt
+          : l10n.chatMediaPrompt,
+      roleIds: _selectedRoles.map((role) => role.id).toList(),
+      assets: List.of(_selectedAssets),
     );
     if (!mounted || !identical(conversation, _conversation)) return;
     if (success) {
@@ -503,7 +524,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   Future<void> _addImages(List<XFile> images) async {
     if (_conversation?.pending ?? false) return;
-    final remaining = _maxImageCount - _selectedImages.length;
+    final remaining =
+        _maxImageCount - _selectedImages.length - _selectedAssets.length;
     if (remaining <= 0) {
       AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
       return;
@@ -565,19 +587,44 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   Future<void> _showAttachmentSheet() async {
     if (_conversation?.pending ?? false) return;
-    final remaining = _maxImageCount - _selectedImages.length;
-    if (remaining <= 0) {
-      AppToast.info(context, AppLocalizations.of(context)!.maximumImageCount);
-      return;
-    }
+    final remaining =
+        _maxImageCount - _selectedImages.length - _selectedAssets.length;
     _messageController.dismissKeyboard();
     final result = await AttachmentPickerSheet.show(
       context: context,
       limit: remaining,
       pickImages: widget.pickImages,
+      selectedRoles: List.of(_selectedRoles),
+      selectedAssets: List.of(_selectedAssets),
     );
     if (!mounted || result == null) return;
-    await _addImages(result.images);
+    if (result.roles != null) {
+      setState(() {
+        _selectedRoles
+          ..clear()
+          ..addAll(result.roles!);
+      });
+    }
+    if (result.assets != null) {
+      setState(() {
+        _selectedAssets
+          ..clear()
+          ..addAll(result.assets!);
+      });
+    }
+    if (result.images.isNotEmpty) await _addImages(result.images);
+  }
+
+  void _removeSelectedRole(int index) {
+    if (_conversation?.pending ?? false) return;
+    if (index < 0 || index >= _selectedRoles.length) return;
+    setState(() => _selectedRoles.removeAt(index));
+  }
+
+  void _removeSelectedAsset(int index) {
+    if (_conversation?.pending ?? false) return;
+    if (index < 0 || index >= _selectedAssets.length) return;
+    setState(() => _selectedAssets.removeAt(index));
   }
 
   void _showMentionSheet() {

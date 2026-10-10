@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -11,14 +12,26 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
-import '../../assets/presentation/assets_page.dart';
+import '../../assets/domain/library_role.dart';
+import '../../assets/domain/library_work.dart';
+import '../../assets/presentation/asset_selection_sheet.dart';
+import '../../assets/presentation/role_selection_sheet.dart';
 import '../data/device_gallery_repository.dart';
 import '../domain/gallery_repository.dart';
 
 class AttachmentPickerResult {
-  const AttachmentPickerResult.images(this.images);
+  const AttachmentPickerResult.images(this.images)
+    : roles = null,
+      assets = null;
+  const AttachmentPickerResult.selection({
+    required this.images,
+    this.roles,
+    this.assets,
+  });
 
   final List<XFile> images;
+  final List<LibraryRole>? roles;
+  final List<LibraryWork>? assets;
 }
 
 class AttachmentPickerSheet extends StatefulWidget {
@@ -26,23 +39,29 @@ class AttachmentPickerSheet extends StatefulWidget {
     required this.limit,
     this.pickImages,
     this.repository,
+    this.selectedRoles = const [],
+    this.selectedAssets = const [],
     super.key,
   });
 
   final int limit;
   final Future<List<XFile>> Function()? pickImages;
   final GalleryRepository? repository;
+  final List<LibraryRole> selectedRoles;
+  final List<LibraryWork> selectedAssets;
 
   static Future<AttachmentPickerResult?> show({
     required BuildContext context,
     required int limit,
     Future<List<XFile>> Function()? pickImages,
     GalleryRepository? repository,
+    List<LibraryRole> selectedRoles = const [],
+    List<LibraryWork> selectedAssets = const [],
   }) => AppSheet.show<AttachmentPickerResult>(
     context: context,
     isScrollControlled: true,
     showDragHandle: false,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: Colors.transparent,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
     ),
@@ -50,6 +69,8 @@ class AttachmentPickerSheet extends StatefulWidget {
       limit: limit,
       pickImages: pickImages,
       repository: repository,
+      selectedRoles: selectedRoles,
+      selectedAssets: selectedAssets,
     ),
   );
 
@@ -216,7 +237,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
-  Future<void> _import() async {
+  Future<void> _import({bool fromFiles = false}) async {
     if (_busy) return;
     final remaining = widget.limit - _selected.length;
     if (remaining <= 0) {
@@ -225,9 +246,10 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
     setState(() => _busy = true);
     try {
-      final files =
-          await (widget.pickImages?.call() ??
-              _repository.pickImages(remaining));
+      final files = fromFiles
+          ? await _repository.pickImageFiles(remaining)
+          : await (widget.pickImages?.call() ??
+                _repository.pickImages(remaining));
       if (!mounted) return;
       setState(() {
         for (final file in files.take(remaining)) {
@@ -274,8 +296,36 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
-  Future<void> _confirm() async {
-    if (_selected.isEmpty || _busy || _loading) return;
+  Future<void> _selectRoles() async {
+    if (_busy || _loading) return;
+    final roles = await RoleSelectionSheet.show(
+      context: context,
+      selected: widget.selectedRoles,
+    );
+    if (mounted && roles != null) await _confirm(roles: roles);
+  }
+
+  Future<void> _selectAssets() async {
+    if (_busy || _loading) return;
+    final assets = await AssetSelectionSheet.show(
+      context: context,
+      selected: widget.selectedAssets,
+      limit: widget.limit + widget.selectedAssets.length - _selected.length,
+    );
+    if (mounted && assets != null) await _confirm(assets: assets);
+  }
+
+  Future<void> _confirm({
+    List<LibraryRole>? roles,
+    List<LibraryWork>? assets,
+  }) async {
+    if ((_selected.isEmpty &&
+            (roles?.isEmpty ?? true) &&
+            (assets?.isEmpty ?? true)) ||
+        _busy ||
+        (_loading && _selected.isNotEmpty)) {
+      return;
+    }
     setState(() => _busy = true);
     try {
       final files = <XFile>[];
@@ -284,7 +334,16 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
         if (file == null) throw StateError('Photo no longer available');
         files.add(file);
       }
-      if (mounted) Navigator.pop(context, AttachmentPickerResult.images(files));
+      if (mounted) {
+        Navigator.pop(
+          context,
+          AttachmentPickerResult.selection(
+            images: files,
+            roles: roles,
+            assets: assets,
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         AppToast.error(context, AppLocalizations.of(context)!.imageReadFailed);
@@ -298,6 +357,83 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     }
   }
 
+  Widget _sources(AppLocalizations l10n, ColorScheme colors) {
+    final sources = [
+      _SourceTile(
+        key: const Key('attachment-source-gallery'),
+        label: l10n.gallery,
+        icon: AppSvgIcon.asset(
+          'attachment_camera',
+          size: 44,
+          color: colors.onSurface,
+        ),
+        onTap: _busy ? null : _import,
+      ),
+      _SourceTile(
+        key: const Key('attachment-source-files'),
+        label: l10n.file,
+        icon: AppSvgIcon.asset(
+          'attachment_file',
+          size: 44,
+          color: colors.onSurface,
+        ),
+        onTap: _busy ? null : () => _import(fromFiles: true),
+      ),
+      _SourceTile(
+        key: const Key('attachment-source-roles'),
+        label: l10n.roles,
+        icon: AppSvgIcon.asset(
+          'attachment_role_upright',
+          size: 44,
+          color: colors.onSurface,
+        ),
+        onTap: _busy || _loading ? null : _selectRoles,
+      ),
+      _SourceTile(
+        key: const Key('attachment-source-assets'),
+        label: l10n.assets,
+        icon: AppSvgIcon.asset(
+          'attachment_asset',
+          size: 44,
+          color: colors.onSurface,
+        ),
+        onTap: _busy || _loading ? null : _selectAssets,
+      ),
+    ];
+    if (MediaQuery.textScalerOf(context).scale(16) > 22) {
+      return Column(
+        key: const Key('attachment-sources'),
+        spacing: 8,
+        children: [
+          Row(spacing: 8, children: sources.take(2).toList()),
+          Row(spacing: 8, children: sources.skip(2).toList()),
+        ],
+      );
+    }
+    return Row(
+      key: const Key('attachment-sources'),
+      spacing: 8,
+      children: sources,
+    );
+  }
+
+  Widget _legalNotice(AppLocalizations l10n, ColorScheme colors, bool dark) =>
+      LegalDocumentLinks(
+        text: l10n.attachmentLegalNotice,
+        userAgreementLabel: l10n.userAgreement,
+        privacyPolicyLabel: l10n.privacyPolicy,
+        style: TextStyle(
+          fontSize: 14,
+          height: 22 / 14,
+          color: dark ? colors.onSurfaceVariant : const Color(0xFF999999),
+        ),
+        linkStyle: TextStyle(
+          color: dark ? colors.onSurface : const Color(0xFF666666),
+          decoration: TextDecoration.underline,
+        ),
+        openFailedMessage: l10n.webPageLoadFailed,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -307,211 +443,195 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     final accessDenied =
         _access == GalleryAccess.denied || _access == GalleryAccess.restricted;
     final selectedIds = _selected.keys.toList();
-    return LayoutBuilder(
-      builder: (context, constraints) => SizedBox(
-        height: math.min(
-          MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
-          (constraints.maxWidth - 56) / 3 * 4 +
-              254 +
-              MediaQuery.paddingOf(context).bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Text(
-                  l10n.attachmentTitle,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        child: ColoredBox(
+          color: scheme.surface.withValues(alpha: .9),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final scrollSources =
+                  constraints.maxHeight < 600 ||
+                  MediaQuery.textScalerOf(context).scale(16) > 22;
+              final scrollNotice =
+                  MediaQuery.textScalerOf(context).scale(14) > 20;
+              return SizedBox(
+                height: math.min(
+                  MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
+                  (constraints.maxWidth - 56) / 3 * 4 +
+                      276 +
+                      MediaQuery.paddingOf(context).bottom,
                 ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: CustomScrollView(
-                    key: const Key('attachment-photo-scroll'),
-                    controller: _scroll,
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Row(
-                          spacing: 8,
-                          children: [
-                            _SourceTile(
-                              key: const Key('attachment-source-gallery'),
-                              label: l10n.gallery,
-                              icon: Icon(
-                                Icons.photo_library_outlined,
-                                size: 24,
-                                color: scheme.onSurface,
-                              ),
-                              onTap: _busy ? null : _import,
-                            ),
-                            _SourceTile(
-                              key: const Key('attachment-source-roles'),
-                              label: l10n.roles,
-                              icon: Transform.flip(
-                                flipY: true,
-                                child: AppSvgIcon.asset(
-                                  'attachment_role',
-                                  size: 24,
-                                  color: scheme.onSurface,
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        Text(
+                          l10n.attachmentTitle,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (!scrollSources) ...[
+                          _sources(l10n, scheme),
+                          const SizedBox(height: 20),
+                        ],
+                        Expanded(
+                          child: CustomScrollView(
+                            key: const Key('attachment-photo-scroll'),
+                            controller: _scroll,
+                            slivers: [
+                              if (scrollSources) ...[
+                                SliverToBoxAdapter(
+                                  child: _sources(l10n, scheme),
                                 ),
-                              ),
-                              onTap: _busy
-                                  ? null
-                                  : () => AssetsPage.showSheet(
-                                      context: context,
-                                      initialSection: AssetLibrarySection.roles,
+                                const SliverToBoxAdapter(
+                                  child: SizedBox(height: 20),
+                                ),
+                              ],
+                              if (_usesLibrary &&
+                                  !_loading &&
+                                  !_failed &&
+                                  _access == GalleryAccess.denied)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: TextButton.icon(
+                                      onPressed: _busy ? null : _openSettings,
+                                      icon: const Icon(Icons.settings_outlined),
+                                      label: Text(l10n.galleryOpenSettings),
                                     ),
-                            ),
-                            _SourceTile(
-                              key: const Key('attachment-source-assets'),
-                              label: l10n.assets,
-                              icon: AppSvgIcon.asset(
-                                'attachment_asset',
-                                size: 28,
-                                color: scheme.onSurface,
-                              ),
-                              onTap: _busy
-                                  ? null
-                                  : () => AssetsPage.showSheet(
-                                      context: context,
-                                      initialSection: AssetLibrarySection.works,
+                                  ),
+                                ),
+                              if (_loading)
+                                const SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
                                     ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                      if (_usesLibrary &&
-                          !_loading &&
-                          !_failed &&
-                          _access == GalleryAccess.denied)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: TextButton.icon(
-                              onPressed: _busy ? null : _openSettings,
-                              icon: const Icon(Icons.settings_outlined),
-                              label: Text(l10n.galleryOpenSettings),
-                            ),
+                                  ),
+                                )
+                              else if (_failed)
+                                SliverToBoxAdapter(
+                                  child: _GalleryStatus(
+                                    message: l10n.galleryLoadFailed,
+                                    action: l10n.retry,
+                                    onTap: _refresh,
+                                  ),
+                                )
+                              else if (accessDenied)
+                                SliverToBoxAdapter(
+                                  child: _GalleryStatus(
+                                    message: _access == GalleryAccess.restricted
+                                        ? l10n.galleryRestricted
+                                        : l10n.galleryAccessDenied,
+                                  ),
+                                )
+                              else if (_usesLibrary && photos.isEmpty)
+                                SliverToBoxAdapter(
+                                  child: _GalleryStatus(
+                                    message: l10n.galleryEmpty,
+                                  ),
+                                ),
+                              SliverGrid.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 3,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 8,
+                                    ),
+                                itemCount: photos.length,
+                                itemBuilder: (context, index) {
+                                  final photo = photos[index];
+                                  return _PhotoTile(
+                                    key: ValueKey(photo.id),
+                                    photo: photo,
+                                    repository: _repository,
+                                    selectedNumber:
+                                        selectedIds.indexOf(photo.id) + 1,
+                                    onTap: _busy || _loading
+                                        ? null
+                                        : () => _toggle(photo),
+                                  );
+                                },
+                              ),
+                              if (_moreLoading)
+                                const SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                ),
+                              if (_pageFailed)
+                                SliverToBoxAdapter(
+                                  child: TextButton.icon(
+                                    onPressed: _loadMore,
+                                    icon: const Icon(Icons.refresh),
+                                    label: Text(l10n.retry),
+                                  ),
+                                ),
+                              if (scrollNotice)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 20),
+                                    child: _legalNotice(l10n, scheme, dark),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      if (_loading)
-                        const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Center(child: CircularProgressIndicator()),
+                        if (!scrollNotice) ...[
+                          const SizedBox(height: 20),
+                          _legalNotice(l10n, scheme, dark),
+                        ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          height: math.max(
+                            50,
+                            MediaQuery.textScalerOf(context).scale(16) * 1.4 +
+                                16,
                           ),
-                        )
-                      else if (_failed)
-                        SliverToBoxAdapter(
-                          child: _GalleryStatus(
-                            message: l10n.galleryLoadFailed,
-                            action: l10n.retry,
-                            onTap: _refresh,
-                          ),
-                        )
-                      else if (accessDenied)
-                        SliverToBoxAdapter(
-                          child: _GalleryStatus(
-                            message: _access == GalleryAccess.restricted
-                                ? l10n.galleryRestricted
-                                : l10n.galleryAccessDenied,
-                          ),
-                        )
-                      else if (_usesLibrary && photos.isEmpty)
-                        SliverToBoxAdapter(
-                          child: _GalleryStatus(message: l10n.galleryEmpty),
-                        ),
-                      SliverGrid.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              mainAxisSpacing: 8,
-                              crossAxisSpacing: 8,
+                          child: FilledButton(
+                            key: const Key('attachment-confirm'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.brand,
+                              foregroundColor: Colors.white,
+                              shape: const StadiumBorder(),
+                              textStyle: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
-                        itemCount: photos.length,
-                        itemBuilder: (context, index) {
-                          final photo = photos[index];
-                          return _PhotoTile(
-                            key: ValueKey(photo.id),
-                            photo: photo,
-                            repository: _repository,
-                            selectedNumber: selectedIds.indexOf(photo.id) + 1,
-                            onTap: _busy || _loading
+                            onPressed: _selected.isEmpty || _busy || _loading
                                 ? null
-                                : () => _toggle(photo),
-                          );
-                        },
-                      ),
-                      if (_moreLoading)
-                        const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Center(child: CircularProgressIndicator()),
+                                : _confirm,
+                            child: _busy
+                                ? const SizedBox.square(
+                                    dimension: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(l10n.attachmentConfirm),
                           ),
                         ),
-                      if (_pageFailed)
-                        SliverToBoxAdapter(
-                          child: TextButton.icon(
-                            onPressed: _loadMore,
-                            icon: const Icon(Icons.refresh),
-                            label: Text(l10n.retry),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                LegalDocumentLinks(
-                  text: l10n.attachmentLegalNotice,
-                  userAgreementLabel: l10n.userAgreement,
-                  privacyPolicyLabel: l10n.privacyPolicy,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 22 / 14,
-                    color: dark
-                        ? scheme.onSurfaceVariant
-                        : const Color(0xFF999999),
-                  ),
-                  linkStyle: TextStyle(
-                    color: dark ? scheme.onSurface : const Color(0xFF666666),
-                    decoration: TextDecoration.underline,
-                  ),
-                  openFailedMessage: l10n.webPageLoadFailed,
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: FilledButton(
-                    key: const Key('attachment-confirm'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.brand,
-                      foregroundColor: Colors.white,
-                      shape: const StadiumBorder(),
-                      textStyle: Theme.of(context).textTheme.labelLarge
-                          ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                      ],
                     ),
-                    onPressed: _selected.isEmpty || _busy || _loading
-                        ? null
-                        : _confirm,
-                    child: _busy
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(l10n.attachmentConfirm),
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -551,24 +671,27 @@ class _SourceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(
     child: SizedBox(
-      height: 72,
+      height: math.max(
+        94,
+        64 + MediaQuery.textScalerOf(context).scale(16) * 1.4,
+      ),
       child: Material(
         color: AppColors.brand.withValues(alpha: .05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox.square(dimension: 28, child: Center(child: icon)),
-              const SizedBox(height: 4),
+              SizedBox.square(dimension: 44, child: Center(child: icon)),
+              const SizedBox(height: 8),
               Flexible(
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -654,14 +777,7 @@ class _PhotoTileState extends State<_PhotoTile> {
                   ),
                   alignment: Alignment.center,
                   child: selected
-                      ? Text(
-                          '${widget.selectedNumber}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        )
+                      ? const AppSvgIcon.asset('attachment_selected', size: 20)
                       : null,
                 ),
               ),

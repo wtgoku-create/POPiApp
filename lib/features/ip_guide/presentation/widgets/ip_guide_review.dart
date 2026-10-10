@@ -170,6 +170,7 @@ class IpGuideReview extends StatelessWidget {
                     hint: l10n.ipNicknameHint,
                     limit: 15,
                     nickname: true,
+                    editInSheet: false,
                     readOnly: submitted,
                   ),
                 ],

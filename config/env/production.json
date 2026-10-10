@@ -2,6 +2,7 @@
   "APP_ENV": "production",
   "APPLE_PAYMENT_ENVIRONMENT": "Production",
   "API_BASE_URL": "https://www.popi.art",
+  "TEACHING_CENTER_URL": "https://www.popi.art/teaching",
   "AGENT_API_BASE_URL": "https://www.popi.art",
   "AGENT_API_ORIGIN": "",
   "API_ENABLE_LOGGING": false,

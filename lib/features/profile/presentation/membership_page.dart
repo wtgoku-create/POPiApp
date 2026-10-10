@@ -89,7 +89,19 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: Column(
           children: [
             SizedBox(height: topPadding),
-            const _MembershipTopBar(),
+            _MembershipTopBar(
+              trailing: usesApplePayments
+                  ? TextButton(
+                      key: const Key('membership-restore-purchases'),
+                      onPressed: _isPurchasing ? null : _restorePurchases,
+                      child: Text(
+                        l10n.restorePurchases,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  : null,
+            ),
             if (plans == null)
               const Expanded(
                 child: Center(
@@ -196,12 +208,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                   },
                 ),
               ),
-              if (usesApplePayments)
-                TextButton(
-                  key: const Key('membership-restore-purchases'),
-                  onPressed: _isPurchasing ? null : _restorePurchases,
-                  child: Text(l10n.restorePurchases),
-                ),
               SizedBox(height: bottomPadding),
             ],
           ],
@@ -308,19 +314,20 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 }
 
 class _MembershipTopBar extends StatelessWidget {
-  const _MembershipTopBar();
+  const _MembershipTopBar({this.trailing});
+
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final foreground = Theme.of(context).colorScheme.onSurface;
     return SizedBox(
       height: 48,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            left: 20,
-            child: SizedBox.square(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            SizedBox.square(
               dimension: 40,
               child: IconButton(
                 key: const Key('membership-back'),
@@ -337,8 +344,12 @@ class _MembershipTopBar extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
+            if (trailing != null)
+              Expanded(
+                child: Align(alignment: Alignment.centerRight, child: trailing),
+              ),
+          ],
+        ),
       ),
     );
   }

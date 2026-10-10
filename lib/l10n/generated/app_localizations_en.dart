@@ -43,6 +43,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleCreateProject => 'Create project';
 
   @override
+  String get roleConfirmSelection => 'Confirm selection';
+
+  @override
+  String roleSelectionLimit(int count) {
+    return 'Choose up to $count characters';
+  }
+
+  @override
+  String get removeRole => 'Remove role';
+
+  @override
+  String get removeAsset => 'Remove asset';
+
+  @override
+  String assetSelectionLimit(int count) {
+    return 'Choose up to $count media items';
+  }
+
+  @override
+  String get chatRolePrompt => 'Create using the selected characters.';
+
+  @override
   String get roleGuideViewMore => 'View more';
 
   @override
@@ -626,6 +648,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get myIpAccounts => 'My IP accounts';
+
+  @override
+  String get ipProjects => 'IP projects';
+
+  @override
+  String get teachingCenter => 'Learning center';
 
   @override
   String get ipAccountsTitle => 'IP Account Management';

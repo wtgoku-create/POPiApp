@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import '../../../../shared/widgets/app_svg_icon.dart';
+import 'app_svg_icon.dart';
 
 /// Provides the Figma long-message editing surface above the keyboard.
 class PopiExpandedMessageEditor extends StatelessWidget {

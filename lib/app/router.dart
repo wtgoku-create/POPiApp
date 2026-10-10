@@ -25,6 +25,13 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(
+        path: '/teaching',
+        builder: (context, state) => H5Page(
+          title: AppLocalizations.of(context)!.teachingCenter,
+          url: Uri.parse(AppConfig.teachingCenterUrl),
+        ),
+      ),
+      GoRoute(
         path: '/ip-accounts',
         builder: (context, state) => const IpAccountsLivePage(),
         routes: [

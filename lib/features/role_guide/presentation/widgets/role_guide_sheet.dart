@@ -11,6 +11,8 @@ class RoleGuideSheet extends StatelessWidget {
     required this.builder,
     this.actions,
     this.footer,
+    this.header,
+    this.backgroundColor,
     this.initialSize = .845,
     super.key,
   });
@@ -19,6 +21,8 @@ class RoleGuideSheet extends StatelessWidget {
   final Widget Function(BuildContext, ScrollController) builder;
   final List<Widget>? actions;
   final Widget? footer;
+  final Widget? header;
+  final Color? backgroundColor;
   final double initialSize;
 
   @override
@@ -28,7 +32,7 @@ class RoleGuideSheet extends StatelessWidget {
     maxChildSize: 1,
     expand: false,
     builder: (context, controller) => Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: backgroundColor ?? Theme.of(context).colorScheme.surface,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(44)),
       clipBehavior: Clip.antiAlias,
       child: Center(
@@ -36,26 +40,29 @@ class RoleGuideSheet extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 560),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        textAlign: actions == null
-                            ? TextAlign.center
-                            : TextAlign.start,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
+              if (header != null)
+                header!
+              else
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          textAlign: actions == null
+                              ? TextAlign.center
+                              : TextAlign.start,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                    ...?actions,
-                  ],
+                      ...?actions,
+                    ],
+                  ),
                 ),
-              ),
               Expanded(child: builder(context, controller)),
               if (footer != null)
                 Padding(

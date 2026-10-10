@@ -1,5 +1,7 @@
 PODS:
   - DouyinOpenSDK (4.2.5)
+  - file_selector_ios (0.0.1):
+    - Flutter
   - Flutter (1.0.0)
   - flutter_secure_storage (6.0.0):
     - Flutter
@@ -37,6 +39,7 @@ PODS:
 
 DEPENDENCIES:
   - DouyinOpenSDK (= 4.2.5)
+  - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - fluwx (from `.symlinks/plugins/fluwx/ios`)
@@ -56,6 +59,8 @@ SPEC REPOS:
     - WechatOpenSDK-XCFramework
 
 EXTERNAL SOURCES:
+  file_selector_ios:
+    :path: ".symlinks/plugins/file_selector_ios/ios"
   Flutter:
     :path: Flutter
   flutter_secure_storage:
@@ -83,6 +88,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   DouyinOpenSDK: f7ef5783f185e612dd957d8e231cc4972f965190
+  file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   fluwx: 21f30eca2f470e526e076434cb0b28c736aa8a78

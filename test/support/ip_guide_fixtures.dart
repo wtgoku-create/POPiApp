@@ -6,9 +6,13 @@ class MemoryGuideStorage extends PreferencesStorage {
   MemoryGuideStorage(super.preferences);
   final values = <String, String>{};
   bool failWrites = false;
+  int readCount = 0;
 
   @override
-  String? getString(String key) => values[key];
+  String? getString(String key) {
+    readCount++;
+    return values[key];
+  }
 
   @override
   Future<void> setString(String key, String value) async {

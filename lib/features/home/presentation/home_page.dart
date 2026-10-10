@@ -31,11 +31,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       return;
     }
     if (prompt == AppLocalizations.of(context)!.homeStartIp) {
-      context.push('/ip-guide');
+      context.replace('/ip-guide');
       return;
     }
     if (prompt == AppLocalizations.of(context)!.homeStartRole) {
-      context.push('/role-guide');
+      context.replace('/role-guide');
       return;
     }
     context.push(

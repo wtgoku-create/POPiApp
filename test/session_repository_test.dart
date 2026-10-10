@@ -9,6 +9,7 @@ import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
+import 'package:popi_ai_app/features/assets/domain/library_work.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'conversation_events_test.dart' show chatId, chatDate, chatSnapshotJson;
@@ -56,7 +57,7 @@ void main() {
         ),
       );
       await expectLater(
-        repository().send('a', chatId, 'hello', ['801']),
+        repository().send('a', chatId, 'hello', ['801'], roleIds: ['2', '1']),
         throwsA(isA<DioException>()),
       );
       expect(
@@ -65,16 +66,42 @@ void main() {
         ),
         isTrue,
       );
-      await repository().send('a', chatId, 'hello', ['801']);
+      await repository().send(
+        'a',
+        chatId,
+        'hello',
+        ['801'],
+        roleIds: ['2', '1'],
+      );
       expect(commands[1], commands[0]);
+      expect(commands[1]['inputRefs'], [
+        {'kind': 'character', 'id': 2},
+        {'kind': 'character', 'id': 1},
+      ]);
       expect(storage.preferences.getKeys(), isEmpty);
-      await repository().send('a', chatId, 'hello', ['801']);
+      await repository().send(
+        'a',
+        chatId,
+        'hello',
+        ['801'],
+        roleIds: ['2', '1'],
+      );
       expect(
         commands[2]['clientRequestId'],
         isNot(commands[0]['clientRequestId']),
       );
     },
   );
+
+  test('invalid role IDs cannot enter the message contract', () async {
+    for (final id in ['invalid', '0', '-1', '9007199254740992']) {
+      await expectLater(
+        repository().send('a', chatId, 'hello', [], roleIds: [id]),
+        throwsArgumentError,
+      );
+    }
+    expect(storage.preferences.getKeys(), isEmpty);
+  });
 
   test(
     'update retry keeps the original revision instead of loading a newer snapshot',
@@ -352,4 +379,90 @@ void main() {
       expect(uploads, 1);
     },
   );
+
+  for (final isVideo in [false, true]) {
+    test(
+      'library ${isVideo ? 'video' : 'image'} registers source media and reuses its ID',
+      () async {
+        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        addTearDown(() => server.close(force: true));
+        final source =
+            'http://127.0.0.1:${server.port}/source.${isVideo ? 'mp4' : 'png'}';
+        final bytes = Uint8List.fromList(
+          isVideo
+              ? [0, 0, 0, 24, 102, 116, 121, 112, 105, 115, 111, 109]
+              : [137, 80, 78, 71, 13, 10, 26, 10],
+        );
+        var downloads = 0;
+        var uploads = 0;
+        final subscription = server.listen((request) async {
+          expect(request.headers.value('authorization'), isNull);
+          if (request.method == 'GET') {
+            downloads++;
+            expect(request.uri.path, Uri.parse(source).path);
+            request.response.add(bytes);
+          } else {
+            uploads++;
+            expect(
+              await request.fold<List<int>>(
+                [],
+                (all, part) => all..addAll(part),
+              ),
+              bytes,
+            );
+          }
+          await request.response.close();
+        });
+        addTearDown(subscription.cancel);
+        dio.options.headers['Authorization'] = 'Bearer private';
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (request, handler) {
+              final complete = request.path.endsWith('/complete');
+              if (!complete) {
+                expect(
+                  (request.data as Map)['mime'],
+                  isVideo ? 'video/mp4' : 'image/png',
+                );
+              }
+              handler.resolve(
+                Response(
+                  requestOptions: request,
+                  data: {
+                    'status': '0000',
+                    'data': complete
+                        ? {'mediaId': '801'}
+                        : {
+                            'upload': {'id': '701'},
+                            'uploadUrl':
+                                'http://127.0.0.1:${server.port}/upload',
+                            'uploadHeaders': {
+                              'Content-Type': isVideo
+                                  ? 'video/mp4'
+                                  : 'image/png',
+                            },
+                          },
+                  },
+                ),
+              );
+            },
+          ),
+        );
+        final work = LibraryWork(
+          id: '42',
+          previewUrl: isVideo ? 'https://example.test/cover.png' : source,
+          isVideo: isVideo,
+          videoUrl: isVideo ? source : '',
+          createdAt: null,
+        );
+        expect(await repository().importLibraryWork('a', work), '801');
+        expect(await repository().importLibraryWork('a', work), '801');
+        expect(downloads, 1);
+        expect(uploads, 1);
+        expect(await repository().importLibraryWork('b', work), '801');
+        expect(downloads, 2);
+        expect(uploads, 2);
+      },
+    );
+  }
 }

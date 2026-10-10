@@ -99,6 +99,7 @@ class RoleGuideSegments extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     this.filledTrack = true,
+    this.scrollable = false,
     super.key,
   });
 
@@ -106,63 +107,84 @@ class RoleGuideSegments extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelected;
   final bool filledTrack;
+  final bool scrollable;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: filledTrack ? roleGuideTint(context) : Colors.transparent,
-      borderRadius: BorderRadius.circular(100),
-    ),
-    child: Padding(
-      padding: const EdgeInsets.all(3),
-      child: Row(
-        children: [
-          for (var i = 0; i < labels.length; i++)
-            Expanded(
-              child: Semantics(
-                selected: i == selected,
-                child: TextButton(
-                  key: Key('role-segment-$i'),
-                  onPressed: () => onSelected(i),
-                  style: TextButton.styleFrom(
-                    visualDensity: VisualDensity.standard,
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 7,
-                    ),
-                    backgroundColor: i == selected
-                        ? filledTrack
-                              ? Theme.of(context).colorScheme.surface
-                              : roleGuideTint(context)
-                        : Colors.transparent,
-                    foregroundColor: i == selected
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    shape: const StadiumBorder(),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: i == selected
-                          ? FontWeight.w600
-                          : FontWeight.w400,
-                    ),
-                  ),
-                  child: Text(labels[i], textAlign: TextAlign.center),
-                ),
+  Widget build(BuildContext context) {
+    final buttons = [
+      for (var i = 0; i < labels.length; i++)
+        Semantics(
+          selected: i == selected,
+          child: TextButton(
+            key: Key('role-segment-$i'),
+            onPressed: () => onSelected(i),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.standard,
+              minimumSize: const Size(0, 34),
+              padding: EdgeInsets.symmetric(
+                horizontal: scrollable ? 20 : 7,
+                vertical: 7,
+              ),
+              backgroundColor: i == selected
+                  ? filledTrack
+                        ? Theme.of(context).colorScheme.surface
+                        : roleGuideTint(context)
+                  : Colors.transparent,
+              foregroundColor: i == selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              shape: const StadiumBorder(),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 14,
+                fontWeight: i == selected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
-        ],
+            child: Text(
+              labels[i],
+              textAlign: TextAlign.center,
+              maxLines: scrollable ? 1 : null,
+              softWrap: !scrollable,
+            ),
+          ),
+        ),
+    ];
+    final row = Row(
+      mainAxisSize: scrollable ? MainAxisSize.min : MainAxisSize.max,
+      children: [
+        for (final button in buttons)
+          if (scrollable) button else Expanded(child: button),
+      ],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: filledTrack ? roleGuideTint(context) : Colors.transparent,
+        borderRadius: BorderRadius.circular(100),
       ),
-    ),
-  );
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: scrollable
+            ? SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: row,
+              )
+            : row,
+      ),
+    );
+  }
 }
 
 class RoleGuideAvatar extends StatelessWidget {
-  const RoleGuideAvatar({required this.role, this.size = 50, super.key});
+  const RoleGuideAvatar({
+    required this.role,
+    this.size = 50,
+    this.borderRadius,
+    super.key,
+  });
 
   final LibraryRole role;
   final double size;
+  final double? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +198,9 @@ class RoleGuideAvatar extends StatelessWidget {
       ),
     );
     return ClipRRect(
-      borderRadius: BorderRadius.circular(size >= 70 ? 20 : 15),
+      borderRadius: BorderRadius.circular(
+        borderRadius ?? (size >= 70 ? 20 : 15),
+      ),
       child: SizedBox.square(
         dimension: size,
         child: role.avatar.isEmpty

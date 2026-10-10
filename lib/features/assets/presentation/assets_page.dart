@@ -9,7 +9,6 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
-import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_skeleton.dart';
@@ -31,43 +30,15 @@ class AssetsPage extends ConsumerStatefulWidget {
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
     this.repository,
-  }) : _isSheet = false;
-
-  const AssetsPage._sheet({required this.initialSection})
-    : _isSheet = true,
-      hasSampleContent = false,
-      isLoadingWorks = false,
-      repository = null;
+  });
 
   const AssetsPage.sample({
     super.key,
     this.isLoadingWorks = false,
     this.initialSection = AssetLibrarySection.works,
     this.repository,
-  }) : hasSampleContent = true,
-       _isSheet = false;
+  }) : hasSampleContent = true;
 
-  static Future<void> showSheet({
-    required BuildContext context,
-    required AssetLibrarySection initialSection,
-  }) => AppSheet.show<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: false,
-    backgroundColor: Theme.of(context).colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
-    ),
-    builder: (context) => SizedBox(
-      height: MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
-        child: AssetsPage._sheet(initialSection: initialSection),
-      ),
-    ),
-  );
-
-  final bool _isSheet;
   final bool hasSampleContent;
 
   /// Allows previews to demonstrate the loading state.
@@ -255,29 +226,25 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final statusBarHeight = widget._isSheet
-        ? 12.0
-        : math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final statusBarHeight = math
+        .max(MediaQuery.paddingOf(context).top, 52)
+        .toDouble();
 
     return Scaffold(
       key: _scaffoldKey,
-      drawer: widget._isSheet ? null : const PopiNavigationDrawer(),
-      backgroundColor:
-          !widget._isSheet && Theme.of(context).brightness == Brightness.light
+      drawer: const PopiNavigationDrawer(),
+      backgroundColor: Theme.of(context).brightness == Brightness.light
           ? const Color(0xFFF5F4FA)
           : Theme.of(context).colorScheme.surface,
       body: SafeArea(
         top: false,
-        bottom: widget._isSheet,
+        bottom: false,
         child: Column(
           children: [
             SizedBox(height: statusBarHeight),
             _LibraryNavigation(
               selected: _section,
-              isSheet: widget._isSheet,
-              onLeadingPressed: widget._isSheet
-                  ? () => Navigator.of(context).pop()
-                  : () => _scaffoldKey.currentState?.openDrawer(),
+              onLeadingPressed: () => _scaffoldKey.currentState?.openDrawer(),
               onSelected: _changeSection,
             ),
             ...[
@@ -371,7 +338,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
       _selectedWorks.clear();
     });
     final router = GoRouter.maybeOf(context);
-    if (!widget._isSheet && router?.state.uri.path == '/assets') {
+    if (router?.state.uri.path == '/assets') {
       final location = Uri(
         path: '/assets',
         queryParameters: section == AssetLibrarySection.roles
@@ -481,13 +448,11 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
 class _LibraryNavigation extends StatelessWidget {
   const _LibraryNavigation({
     required this.selected,
-    required this.isSheet,
     required this.onLeadingPressed,
     required this.onSelected,
   });
 
   final AssetLibrarySection selected;
-  final bool isSheet;
   final VoidCallback onLeadingPressed;
   final ValueChanged<AssetLibrarySection> onSelected;
 
@@ -500,27 +465,17 @@ class _LibraryNavigation extends StatelessWidget {
         children: [
           const SizedBox(width: 20),
           SizedBox.square(
-            dimension: isSheet ? 30 : 40,
+            dimension: 40,
             child: IconButton(
-              key: Key(
-                isSheet ? 'assets-navigation-back' : 'popi-open-navigation',
-              ),
-              tooltip: isSheet ? l10n.backToPreviousPage : l10n.openNavigation,
-              padding: isSheet ? EdgeInsets.zero : const EdgeInsets.all(5),
+              key: const Key('popi-open-navigation'),
+              tooltip: l10n.openNavigation,
+              padding: const EdgeInsets.all(5),
               onPressed: onLeadingPressed,
-              icon: isSheet
-                  ? Transform.rotate(
-                      angle: math.pi / 2,
-                      child: const AppSvgIcon.asset(
-                        'assets_history_chevron',
-                        size: 30,
-                      ),
-                    )
-                  : AppSvgIcon.asset(
-                      'common_navigation_menu',
-                      size: 30,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+              icon: AppSvgIcon.asset(
+                'common_navigation_menu',
+                size: 30,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
           const SizedBox(width: 10),

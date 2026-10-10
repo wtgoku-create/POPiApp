@@ -11,7 +11,11 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
-import 'popi_expanded_message_editor.dart';
+import '../../../../shared/widgets/popi_expanded_message_editor.dart';
+import '../../../assets/domain/library_role.dart';
+import '../../../assets/domain/library_work.dart';
+import '../../../assets/presentation/library_work_thumbnail.dart';
+import '../../../role_guide/presentation/widgets/role_guide_controls.dart';
 
 class PopiComposerImage {
   const PopiComposerImage({required this.name, required this.bytes});
@@ -174,6 +178,10 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     required this.onRemoveImage,
     required this.onHeightChanged,
     required this.onSubmitted,
+    this.selectedRoles = const [],
+    this.onRemoveRole,
+    this.selectedAssets = const [],
+    this.onRemoveAsset,
     this.onModelParametersRequested,
     this.modelParametersDescription = '',
     this.onMentionRequested,
@@ -187,6 +195,10 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   final PopiMessageComposerController controller;
   final List<PopiComposerImage> selectedImages;
+  final List<LibraryRole> selectedRoles;
+  final ValueChanged<int>? onRemoveRole;
+  final List<LibraryWork> selectedAssets;
+  final ValueChanged<int>? onRemoveAsset;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<double> onHeightChanged;
@@ -228,7 +240,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       running: widget.running,
     ));
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
-    _isExpanded = widget.controller.textController.text.isNotEmpty;
+    _isExpanded =
+        widget.controller.textController.text.isNotEmpty ||
+        widget.selectedRoles.isNotEmpty ||
+        widget.selectedAssets.isNotEmpty;
     _composerAnimationController = AnimationController(
       vsync: this,
       value: _isExpanded ? 1 : 0,
@@ -304,7 +319,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                       : status.running
                       ? widget.onStop
                       : widget.controller.markdown.isNotEmpty ||
-                            widget.selectedImages.isNotEmpty
+                            widget.selectedImages.isNotEmpty ||
+                            widget.selectedRoles.isNotEmpty ||
+                            widget.selectedAssets.isNotEmpty
                       ? () => Navigator.of(sheetContext).pop(true)
                       : null,
                 ),
@@ -354,7 +371,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   void _syncExpansion() {
     if (!mounted) return;
     final expanded =
-        _focusNode.hasFocus || widget.controller.textController.text.isNotEmpty;
+        _focusNode.hasFocus ||
+        widget.controller.textController.text.isNotEmpty ||
+        widget.selectedRoles.isNotEmpty ||
+        widget.selectedAssets.isNotEmpty;
     if (expanded == _isExpanded) return;
     setState(() => _isExpanded = expanded);
     if (expanded) {
@@ -421,6 +441,106 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (widget.selectedAssets.isNotEmpty) ...[
+                    SizedBox(
+                      height: 92,
+                      child: ListView.separated(
+                        key: const Key('popi-selected-assets'),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.selectedAssets.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final work = widget.selectedAssets[index];
+                          return SizedBox.square(
+                            key: ValueKey('popi-selected-asset-${work.id}'),
+                            dimension: 92,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                LibraryWorkThumbnail(work: work),
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: IconButton(
+                                    key: ValueKey(
+                                      'popi-remove-selected-asset-${work.id}',
+                                    ),
+                                    tooltip: l10n.removeAsset,
+                                    onPressed: widget.sending
+                                        ? null
+                                        : () =>
+                                              widget.onRemoveAsset?.call(index),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: colorScheme.surface,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  if (widget.selectedRoles.isNotEmpty) ...[
+                    SizedBox(
+                      height: 44,
+                      child: ListView.separated(
+                        key: const Key('popi-selected-roles'),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.selectedRoles.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final role = widget.selectedRoles[index];
+                          return Container(
+                            key: ValueKey('popi-selected-role-${role.id}'),
+                            padding: const EdgeInsets.only(left: 6),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.sizeOf(context).width - 40,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface,
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                RoleGuideAvatar(role: role, size: 32),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    role.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ),
+                                IconButton(
+                                  key: ValueKey(
+                                    'popi-remove-selected-role-${role.id}',
+                                  ),
+                                  tooltip: l10n.removeRole,
+                                  onPressed: widget.sending
+                                      ? null
+                                      : () => widget.onRemoveRole?.call(index),
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   LayoutBuilder(
                     builder: (context, constraints) {
                       return ValueListenableBuilder<TextEditingValue>(
@@ -451,7 +571,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                   : 60.0;
                               final content = _ComposerContent(
                                 isExpanded: _isExpanded,
-                                hasText: text.isNotEmpty,
+                                hasText:
+                                    text.isNotEmpty ||
+                                    widget.selectedRoles.isNotEmpty ||
+                                    widget.selectedAssets.isNotEmpty,
                                 sending: widget.sending,
                                 running: widget.running,
                                 onStop: widget.onStop,

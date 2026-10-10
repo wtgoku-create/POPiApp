@@ -158,6 +158,42 @@ abstract class AppLocalizations {
   /// **'Create project'**
   String get roleCreateProject;
 
+  /// No description provided for @roleConfirmSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm selection'**
+  String get roleConfirmSelection;
+
+  /// No description provided for @roleSelectionLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to {count} characters'**
+  String roleSelectionLimit(int count);
+
+  /// No description provided for @removeRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove role'**
+  String get removeRole;
+
+  /// No description provided for @removeAsset.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove asset'**
+  String get removeAsset;
+
+  /// No description provided for @assetSelectionLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose up to {count} media items'**
+  String assetSelectionLimit(int count);
+
+  /// No description provided for @chatRolePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Create using the selected characters.'**
+  String get chatRolePrompt;
+
   /// No description provided for @roleGuideViewMore.
   ///
   /// In en, this message translates to:
@@ -1187,6 +1223,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'My IP accounts'**
   String get myIpAccounts;
+
+  /// No description provided for @ipProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'IP projects'**
+  String get ipProjects;
+
+  /// No description provided for @teachingCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning center'**
+  String get teachingCenter;
 
   /// No description provided for @ipAccountsTitle.
   ///

@@ -12,6 +12,10 @@ abstract final class AppConfig {
     'API_ENABLE_LOGGING',
     defaultValue: false,
   );
+  static const teachingCenterUrl = String.fromEnvironment(
+    'TEACHING_CENTER_URL',
+    defaultValue: '$apiBaseUrl/teaching',
+  );
   static const applePaymentEnvironment = String.fromEnvironment(
     'APPLE_PAYMENT_ENVIRONMENT',
     defaultValue: 'Production',

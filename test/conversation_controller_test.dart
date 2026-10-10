@@ -31,6 +31,7 @@ class StreamingSessionRepository extends FixtureSessionRepository {
   final tokens = <CancelToken>[];
   Completer<ConversationSnapshot>? delayedSnapshot;
   List<String>? sentMediaIds;
+  List<String>? sentRoleIds;
   @override
   Future<ConversationSnapshot> snapshot(
     String id, {
@@ -65,10 +66,12 @@ class StreamingSessionRepository extends FixtureSessionRepository {
     String id,
     String text,
     List<String> mediaIds, {
+    List<String> roleIds = const [],
     CancelToken? cancelToken,
   }) async {
     sends++;
     sentMediaIds = mediaIds;
+    sentRoleIds = List.of(roleIds);
     if (failSend) throw StateError('offline');
   }
 
@@ -242,7 +245,17 @@ void main() {
       expect(controller.error, isA<StateError>());
       expect(controller.pending, isFalse);
       repository.failSend = false;
-      expect(await controller.send('Hello', [], 'New', 'Images'), isTrue);
+      expect(
+        await controller.send(
+          'Hello',
+          [],
+          'New',
+          'Images',
+          roleIds: ['2', '1'],
+        ),
+        isTrue,
+      );
+      expect(repository.sentRoleIds, ['2', '1']);
       await flushConversation();
       expect(repository.sends, 2);
       expect(controller.error, isNull);

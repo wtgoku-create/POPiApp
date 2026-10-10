@@ -10,6 +10,7 @@ import '../../../core/network/agent_api_exception.dart';
 import '../../../core/network/network_agent_api.dart';
 import '../../../core/network/network_api.dart';
 import '../../../core/storage/preferences_storage.dart';
+import '../../assets/domain/library_work.dart';
 import '../domain/conversation_session.dart';
 import '../domain/conversation_snapshot.dart';
 import 'conversation_events.dart';
@@ -44,6 +45,7 @@ abstract class SessionRepository {
     String id,
     String text,
     List<String> mediaIds, {
+    List<String> roleIds = const [],
     CancelToken? cancelToken,
   });
   Future<void> stop(String userId, String id, {CancelToken? cancelToken});
@@ -55,6 +57,11 @@ abstract class SessionRepository {
     CancelToken? cancelToken,
   });
   Future<ConversationMedia> media(String id, {CancelToken? cancelToken});
+  Future<String> importLibraryWork(
+    String userId,
+    LibraryWork work, {
+    CancelToken? cancelToken,
+  });
   Future<void> answer(
     String id,
     ConversationBlock question,
@@ -230,24 +237,43 @@ class ApiSessionRepository extends SessionRepository {
     String id,
     String text,
     List<String> mediaIds, {
+    List<String> roleIds = const [],
     CancelToken? cancelToken,
   }) async {
     if (text.trim().isEmpty || text.length > 20000) {
       throw ArgumentError.value(text, 'text');
     }
+    final inputRefs = [
+      for (final value in roleIds) {'kind': 'character', 'id': _roleId(value)},
+    ];
     await _command(
       userId,
       'send:$id',
-      {'text': text, 'mediaIds': mediaIds},
+      {
+        'text': text,
+        'mediaIds': mediaIds,
+        if (inputRefs.isNotEmpty) 'inputRefs': inputRefs,
+      },
       (input) => agent.sendSessionMessage(
         id,
         clientRequestId: input['clientRequestId'] as String,
         text: input['text'] as String,
         mediaIds: (input['mediaIds'] as List).cast<String>(),
-        inputRefs: const [],
+        inputRefs: [
+          for (final value in (input['inputRefs'] as List?) ?? const [])
+            Map<String, Object?>.from(value as Map),
+        ],
         cancelToken: cancelToken,
       ),
     );
+  }
+
+  int _roleId(String value) {
+    final id = int.tryParse(value);
+    if (id == null || id <= 0 || id > 9007199254740991) {
+      throw ArgumentError.value(value, 'roleId');
+    }
+    return id;
   }
 
   @override
@@ -332,6 +358,33 @@ class ApiSessionRepository extends SessionRepository {
     );
     final mediaId = completed['mediaId'] as String;
     await storage().setString(mediaKey, mediaId);
+    return mediaId;
+  }
+
+  @override
+  Future<String> importLibraryWork(
+    String userId,
+    LibraryWork work, {
+    CancelToken? cancelToken,
+  }) async {
+    final source = work.isVideo ? work.videoUrl : work.previewUrl;
+    final key =
+        'agent.library-media.$userId.${sha256.convert(utf8.encode(_canonical({'assetId': work.id, 'source': source})))}';
+    final saved = storage().getString(key);
+    if (saved != null) return saved;
+    // Legacy work IDs belong to ani_asset, not the Agent's registered media.
+    final bytes = await business.readLibraryMedia(
+      source,
+      cancelToken: cancelToken,
+    );
+    final name = Uri.parse(source).pathSegments.lastOrNull ?? '';
+    final mediaId = await upload(
+      userId,
+      name.contains('.') ? name : '${work.id}.${work.isVideo ? 'mp4' : 'png'}',
+      bytes,
+      cancelToken: cancelToken,
+    );
+    await storage().setString(key, mediaId);
     return mediaId;
   }
 

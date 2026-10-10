@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/agent_api_exception.dart';
+import '../../assets/domain/library_work.dart';
 import '../data/conversation_events.dart';
 import '../data/session_repository.dart';
 import '../domain/conversation_session.dart';
@@ -148,8 +149,10 @@ class ConversationController extends ChangeNotifier {
     String text,
     List<({String name, Uint8List bytes})> images,
     String newTitle,
-    String mediaPrompt,
-  ) => running || loading
+    String mediaPrompt, {
+    List<String> roleIds = const [],
+    List<LibraryWork> assets = const [],
+  }) => running || loading
       ? Future.value(false)
       : act((token) async {
           if (sessionId == null) {
@@ -175,11 +178,21 @@ class ConversationController extends ChangeNotifier {
             );
             if (token.isCancelled) return;
           }
+          for (final asset in assets) {
+            final mediaId = await repository.importLibraryWork(
+              userId,
+              asset,
+              cancelToken: token,
+            );
+            if (token.isCancelled) return;
+            if (!mediaIds.contains(mediaId)) mediaIds.add(mediaId);
+          }
           await repository.send(
             userId,
             sessionId!,
             text.isEmpty ? mediaPrompt : text,
             mediaIds,
+            roleIds: roleIds,
             cancelToken: token,
           );
           if (!token.isCancelled) _awaitingRun = true;

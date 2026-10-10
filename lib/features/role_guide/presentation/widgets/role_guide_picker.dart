@@ -17,8 +17,8 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
     required this.selected,
     required this.onToggle,
     required this.onDetails,
-    required this.onCreate,
     required this.onCategoryChanged,
+    this.onCreate,
     this.initialCategory = 'official',
     this.fullLibrary = false,
     this.scrollController,
@@ -29,7 +29,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
   final List<LibraryRole> Function() selected;
   final ValueChanged<LibraryRole> onToggle;
   final ValueChanged<LibraryRole> onDetails;
-  final VoidCallback onCreate;
+  final VoidCallback? onCreate;
   final ValueChanged<String> onCategoryChanged;
   final String initialCategory;
   final bool fullLibrary;
@@ -156,7 +156,10 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
           final painter = TextPainter(
             text: TextSpan(
               text: label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             textDirection: Directionality.of(context),
             textScaler: MediaQuery.textScalerOf(context),
@@ -179,6 +182,15 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
           filledTrack: !widget.fullLibrary,
           onSelected: (i) => _changeCategory(i == 0 ? 'official' : 'personal'),
         );
+        if (widget.onCreate == null) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: (categoriesWidth + 28).clamp(0, constraints.maxWidth),
+              child: categories,
+            ),
+          );
+        }
         final create = TextButton(
           key: const Key('role-guide-create-role'),
           onPressed: widget.onCreate,
@@ -248,9 +260,9 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
             onMore: widget.onMore,
           ),
         if (_loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator()),
+          _RoleGuideGridSkeleton(
+            key: const Key('role-guide-grid-skeleton'),
+            label: l10n.loadingRoles,
           )
         else if (_failed)
           TextButton(
@@ -360,7 +372,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RoleGuideAvatar(role: role, size: 70),
+                RoleGuideAvatar(role: role, size: 70, borderRadius: 10),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Padding(
@@ -370,6 +382,8 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
                       children: [
                         Text(
                           role.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -378,7 +392,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
                         const SizedBox(height: 5),
                         Text(
                           role.description,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
@@ -400,6 +414,52 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       ),
     );
   }
+}
+
+class _RoleGuideGridSkeleton extends StatelessWidget {
+  const _RoleGuideGridSkeleton({required this.label, super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => AppSkeleton(
+    label: label,
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth < 270 ? 2 : 3;
+        final width = (constraints.maxWidth - 15 * (columns - 1)) / columns;
+        return Wrap(
+          spacing: 15,
+          runSpacing: 15,
+          children: [
+            for (var index = 0; index < 9; index++)
+              SizedBox(
+                key: ValueKey('role-guide-grid-skeleton-$index'),
+                width: width,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    children: [
+                      const AspectRatio(
+                        aspectRatio: 1,
+                        child: AppSkeletonBox(radius: 16),
+                      ),
+                      const SizedBox(height: 10),
+                      FractionallySizedBox(
+                        widthFactor: index.isEven ? .7 : .55,
+                        child: AppSkeletonBox(
+                          height: MediaQuery.textScalerOf(context).scale(18),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    ),
+  );
 }
 
 /// Character thumbnails separate selection taps from the profile command.

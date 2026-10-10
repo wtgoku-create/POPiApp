@@ -39,6 +39,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleCreateProject => '创建项目';
 
   @override
+  String get roleConfirmSelection => '确认选择';
+
+  @override
+  String roleSelectionLimit(int count) {
+    return '最多选择$count个角色';
+  }
+
+  @override
+  String get removeRole => '移除角色';
+
+  @override
+  String get removeAsset => '移除资产';
+
+  @override
+  String assetSelectionLimit(int count) {
+    return '最多选择$count个素材';
+  }
+
+  @override
+  String get chatRolePrompt => '请参考所选角色进行创作。';
+
+  @override
   String get roleGuideViewMore => '查看更多';
 
   @override
@@ -601,6 +623,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get myIpAccounts => '我的IP账号';
+
+  @override
+  String get ipProjects => 'IP项目';
+
+  @override
+  String get teachingCenter => '教学中心';
 
   @override
   String get ipAccountsTitle => 'IP账号管理';

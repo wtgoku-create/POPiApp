@@ -15,6 +15,41 @@ class NetworkApi {
 
   String get mediaBaseUrl => dio.options.baseUrl;
 
+  /// CDN media downloads use an unauthenticated transport, like signed uploads.
+  Future<Uint8List> readLibraryMedia(
+    String url, {
+    CancelToken? cancelToken,
+  }) async {
+    final uri = Uri.parse(url);
+    if (!uri.hasAuthority || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      throw const ApiException(message: 'Invalid media URL');
+    }
+    final transport = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(minutes: 2),
+      ),
+    );
+    try {
+      final response = await transport.get<ResponseBody>(
+        url,
+        options: Options(responseType: ResponseType.stream),
+        cancelToken: cancelToken,
+      );
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in response.data!.stream) {
+        if (bytes.length + chunk.length > 256 * 1024 * 1024) {
+          throw const ApiException(message: 'Media exceeds upload size limit');
+        }
+        bytes.add(chunk);
+      }
+      if (bytes.isEmpty) throw const ApiException(message: 'Empty media');
+      return bytes.takeBytes();
+    } finally {
+      transport.close(force: true);
+    }
+  }
+
   Future<Map<String, Object?>> createStudioUpload(
     Map<String, Object?> input, {
     CancelToken? cancelToken,

@@ -60,26 +60,30 @@ class RoleGenerationPanel extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: roleGuideTint(context),
-                    borderRadius: BorderRadius.circular(100),
-                  ),
-                  child: Text(
-                    switch (progress.status) {
-                      RoleGenerationStatus.running => l10n.roleTaskExecuting,
-                      RoleGenerationStatus.completed =>
-                        l10n.roleStatusCompleted,
-                      RoleGenerationStatus.failed => l10n.roleStatusFailed,
-                      RoleGenerationStatus.canceled => l10n.roleStatusCanceled,
-                    },
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.brand,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: roleGuideTint(context),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Text(
+                      switch (progress.status) {
+                        RoleGenerationStatus.running => l10n.roleTaskExecuting,
+                        RoleGenerationStatus.completed =>
+                          l10n.roleStatusCompleted,
+                        RoleGenerationStatus.failed => l10n.roleStatusFailed,
+                        RoleGenerationStatus.canceled =>
+                          l10n.roleStatusCanceled,
+                      },
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.brand,
+                      ),
                     ),
                   ),
                 ),

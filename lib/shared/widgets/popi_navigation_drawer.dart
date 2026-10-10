@@ -66,147 +66,168 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
         child: Column(
           children: [
             Expanded(
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: OutlinedButton(
-                      key: const Key('drawer-new-session'),
-                      onPressed: _creatingSession
-                          ? null
-                          : () async {
-                              if (!isLoggedIn) {
-                                _openRoute(context, '/login');
-                              } else {
-                                final userId = ref.read(userProvider)?.id;
-                                setState(() => _creatingSession = true);
-                                try {
-                                  final session = await ref
-                                      .read(sessionsProvider.notifier)
-                                      .create(l10n.newSessionTitle);
-                                  if (context.mounted &&
-                                      session != null &&
-                                      ref.read(userProvider)?.id == userId) {
-                                    _openConversation(context, session);
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Reserve room for the menu, history heading, and one history row.
+                  const minimumBodyHeight = 410.0;
+                  final body = Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton(
+                          key: const Key('drawer-new-session'),
+                          onPressed: _creatingSession
+                              ? null
+                              : () async {
+                                  if (!isLoggedIn) {
+                                    _openRoute(context, '/login');
+                                  } else {
+                                    final userId = ref.read(userProvider)?.id;
+                                    setState(() => _creatingSession = true);
+                                    try {
+                                      final session = await ref
+                                          .read(sessionsProvider.notifier)
+                                          .create(l10n.newSessionTitle);
+                                      if (context.mounted &&
+                                          session != null &&
+                                          ref.read(userProvider)?.id ==
+                                              userId) {
+                                        _openConversation(context, session);
+                                      }
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        AppToast.error(
+                                          context,
+                                          l10n.chatRequestFailed,
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(
+                                          () => _creatingSession = false,
+                                        );
+                                      }
+                                    }
                                   }
-                                } catch (_) {
-                                  if (context.mounted) {
-                                    AppToast.error(
-                                      context,
-                                      l10n.chatRequestFailed,
-                                    );
-                                  }
-                                } finally {
-                                  if (mounted) {
-                                    setState(() => _creatingSession = false);
-                                  }
-                                }
-                              }
-                            },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.only(left: 20, right: 10),
-                        foregroundColor: colorScheme.onSurface,
-                        side: BorderSide(color: colorScheme.outline),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l10n.newSessionTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w400,
-                              ),
+                                },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.only(left: 20, right: 10),
+                            foregroundColor: colorScheme.onSurface,
+                            side: BorderSide(color: colorScheme.outline),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
-                          SizedBox.square(
-                            dimension: 30,
-                            child: Center(
-                              child: AppSvgIcon.asset(
-                                'home_drawer_project_add',
-                                size: 14,
-                                color: colorScheme.onSurface,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  l10n.newSessionTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
                               ),
+                              SizedBox.square(
+                                dimension: 30,
+                                child: Center(
+                                  child: AppSvgIcon.asset(
+                                    'home_drawer_project_add',
+                                    size: 14,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Column(
+                        children: [
+                          _NavigationItem(
+                            key: const Key('drawer-nav-home'),
+                            iconAsset: 'home_drawer_nav_home',
+                            iconWidth: 19.25,
+                            iconHeight: 20.25,
+                            label: l10n.home,
+                            onTap: () => _openRoute(context, '/'),
+                          ),
+                          _NavigationItem(
+                            key: const Key('drawer-nav-teaching'),
+                            iconAsset: 'home_drawer_nav_teaching',
+                            label: l10n.teachingCenter,
+                            selected: route == '/teaching',
+                            onTap: () => _openRoute(context, '/teaching'),
+                          ),
+                          _NavigationItem(
+                            key: const Key('drawer-nav-role'),
+                            iconAsset: 'home_drawer_nav_role',
+                            iconWidth: 18.4994,
+                            iconHeight: 20.716,
+                            flipIconVertically: true,
+                            label: l10n.roles,
+                            selected: route == '/assets' && showingRoles,
+                            onTap: () => _openProtectedRoute(
+                              context,
+                              isLoggedIn: isLoggedIn,
+                              route: '/assets?section=roles',
+                            ),
+                          ),
+                          _NavigationItem(
+                            key: const Key('drawer-nav-ip-accounts'),
+                            iconAsset: 'home_drawer_nav_ip_account',
+                            label: l10n.ipProjects,
+                            selected: route.startsWith('/ip-accounts'),
+                            onTap: () => _openProtectedRoute(
+                              context,
+                              isLoggedIn: isLoggedIn,
+                              route: '/ip-accounts',
+                            ),
+                          ),
+                          _NavigationItem(
+                            key: const Key('drawer-nav-assets'),
+                            iconAsset: 'home_drawer_nav_asset',
+                            label: l10n.assets,
+                            selected: route == '/assets' && !showingRoles,
+                            onTap: () => _openProtectedRoute(
+                              context,
+                              isLoggedIn: isLoggedIn,
+                              route: '/assets',
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Column(
-                    children: [
-                      _NavigationItem(
-                        key: const Key('drawer-nav-home'),
-                        iconAsset: 'home_drawer_nav_home',
-                        iconWidth: 19.25,
-                        iconHeight: 20.25,
-                        label: l10n.home,
-                        onTap: () => _openRoute(context, '/'),
+                      const SizedBox(height: 10),
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: colorScheme.outlineVariant,
                       ),
-                      _NavigationItem(
-                        key: const Key('drawer-nav-ip-accounts'),
-                        iconAsset: 'home_drawer_nav_ip_account',
-                        label: l10n.myIpAccounts,
-                        selected: route.startsWith('/ip-accounts'),
-                        onTap: () => _openProtectedRoute(
-                          context,
-                          isLoggedIn: isLoggedIn,
-                          route: '/ip-accounts',
-                        ),
-                      ),
-                      _NavigationItem(
-                        key: const Key('drawer-nav-role'),
-                        iconAsset: 'home_drawer_nav_role',
-                        iconWidth: 18.4994,
-                        iconHeight: 20.716,
-                        flipIconVertically: true,
-                        label: l10n.roles,
-                        selected: route == '/assets' && showingRoles,
-                        onTap: () => _openProtectedRoute(
-                          context,
-                          isLoggedIn: isLoggedIn,
-                          route: '/assets?section=roles',
-                        ),
-                      ),
-                      _NavigationItem(
-                        key: const Key('drawer-nav-assets'),
-                        iconAsset: 'home_drawer_nav_asset',
-                        label: l10n.assets,
-                        selected: route == '/assets' && !showingRoles,
-                        onTap: () => _openProtectedRoute(
-                          context,
-                          isLoggedIn: isLoggedIn,
-                          route: '/assets',
+                      const SizedBox(height: 9),
+                      Expanded(
+                        child: PopiDrawerSessions(
+                          onOpenConversation: (session) {
+                            if (!isLoggedIn) {
+                              _openRoute(context, '/login');
+                            } else {
+                              _openConversation(context, session);
+                            }
+                          },
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 10),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: colorScheme.outlineVariant,
-                  ),
-                  const SizedBox(height: 9),
-                  Expanded(
-                    child: PopiDrawerSessions(
-                      onOpenConversation: (session) {
-                        if (!isLoggedIn) {
-                          _openRoute(context, '/login');
-                        } else {
-                          _openConversation(context, session);
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                  );
+                  if (constraints.maxHeight >= minimumBodyHeight) return body;
+                  return SingleChildScrollView(
+                    key: const Key('drawer-body-scroll'),
+                    child: SizedBox(height: minimumBodyHeight, child: body),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),

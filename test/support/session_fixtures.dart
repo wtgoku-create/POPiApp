@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:popi_ai_app/features/assets/domain/library_work.dart';
 import 'package:popi_ai_app/features/session/data/conversation_events.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_session.dart';
@@ -12,6 +13,13 @@ import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 class FixtureSessionRepository extends SessionRepository {
   final _accounts = <String, List<ConversationSession>>{};
   int _nextId = 0;
+
+  @override
+  Future<String> importLibraryWork(
+    String userId,
+    LibraryWork work, {
+    CancelToken? cancelToken,
+  }) async => 'media-${work.id}';
 
   List<ConversationSession> _list(String userId) {
     final sessions = [..._accounts.putIfAbsent(userId, _samples)];
@@ -167,6 +175,7 @@ class FixtureSessionRepository extends SessionRepository {
     String id,
     String text,
     List<String> mediaIds, {
+    List<String> roleIds = const [],
     CancelToken? cancelToken,
   }) async {}
   @override

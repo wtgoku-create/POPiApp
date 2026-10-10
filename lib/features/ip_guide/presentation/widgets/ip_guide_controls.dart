@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/popi_expanded_message_editor.dart';
 
 /// Shared next action with the pill shape and exported chevron from the design.
 class IpGuideNextButton extends StatelessWidget {
@@ -47,13 +49,15 @@ class IpGuideNextButton extends StatelessWidget {
   );
 }
 
-class IpGuideTextField extends StatelessWidget {
+/// Custom answers use the same expanded editing surface as the chat composer.
+class IpGuideTextField extends StatefulWidget {
   const IpGuideTextField({
     required this.controller,
     required this.hint,
     this.limit = 50,
     this.nickname = false,
     this.readOnly = false,
+    this.editInSheet = true,
     super.key,
   });
 
@@ -62,28 +66,94 @@ class IpGuideTextField extends StatelessWidget {
   final int limit;
   final bool nickname;
   final bool readOnly;
+  final bool editInSheet;
+
+  @override
+  State<IpGuideTextField> createState() => _IpGuideTextFieldState();
+}
+
+class _IpGuideTextFieldState extends State<IpGuideTextField> {
+  bool _editorOpen = false;
+
+  Future<void> _openEditor() async {
+    if (_editorOpen || widget.readOnly) return;
+    _editorOpen = true;
+    try {
+      await AppSheet.show<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        backgroundColor: Colors.transparent,
+        shape: PopiExpandedMessageEditor.shape,
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: PopiExpandedMessageEditor(
+            input: TextField(
+              key: const Key('ip-guide-expanded-input'),
+              controller: widget.controller,
+              autofocus: true,
+              expands: true,
+              maxLines: null,
+              maxLength: widget.limit,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              style: TextStyle(
+                fontSize: 18,
+                height: 1.4,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                filled: false,
+                contentPadding: EdgeInsets.zero,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+            action: SizedBox.square(
+              dimension: 40,
+              child: IconButton.filled(
+                key: const Key('ip-guide-editor-confirm'),
+                tooltip: AppLocalizations.of(context)!.confirm,
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.check_rounded),
+              ),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      _editorOpen = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
+      valueListenable: widget.controller,
       builder: (context, value, _) => TextField(
-        controller: controller,
-        readOnly: readOnly,
-        maxLength: limit,
+        controller: widget.controller,
+        readOnly: widget.readOnly || widget.editInSheet,
+        canRequestFocus: !widget.readOnly && !widget.editInSheet,
+        enableInteractiveSelection: !widget.editInSheet,
+        onTap: widget.editInSheet && !widget.readOnly ? _openEditor : null,
+        maxLength: widget.limit,
         maxLines: 1,
         style: TextStyle(fontSize: 14, color: colors.onSurface, height: 1.4),
         textInputAction: TextInputAction.done,
         onSubmitted: (_) => FocusScope.of(context).unfocus(),
         decoration: InputDecoration(
-          hintText: hint,
+          hintText: widget.hint,
           hintStyle: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
           filled: true,
           fillColor: dark
               ? colors.surfaceContainerHigh
-              : nickname
+              : widget.nickname
               ? const Color(0xFFF8F6FD)
               : const Color(0xFFF0F4F9),
           counterText: '',
@@ -97,7 +167,7 @@ class IpGuideTextField extends StatelessWidget {
               widthFactor: 1,
               heightFactor: 1,
               child: Text(
-                '${value.text.characters.length}/$limit',
+                '${value.text.characters.length}/${widget.limit}',
                 style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
               ),
             ),

@@ -21,10 +21,23 @@ class RoleDetailPage extends ConsumerStatefulWidget {
     required this.role,
     required this.category,
     this.onRoleUpdated,
-  });
+  }) : isSheet = false,
+       scrollController = null;
+
+  /// Reuses the archive layout in a sheet without page navigation or actions.
+  const RoleDetailPage.sheet({
+    super.key,
+    required this.role,
+    required this.category,
+    required this.scrollController,
+  }) : isSheet = true,
+       onRoleUpdated = null;
+
   final LibraryRole role;
   final String category;
   final ValueChanged<LibraryRole>? onRoleUpdated;
+  final bool isSheet;
+  final ScrollController? scrollController;
 
   @override
   ConsumerState<RoleDetailPage> createState() => _RoleDetailPageState();
@@ -115,6 +128,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     super.initState();
     _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _role = widget.role;
+    _fullProfile = !widget.isSheet;
     _load();
   }
 
@@ -167,6 +181,31 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
   List<RoleProfileField> get _visibleFields {
     final fields = (_edit ?? RoleProfileEdit.fromRole(_role)).fields;
     if (_edit != null) return fields;
+    if (widget.isSheet) {
+      return [
+        if (!fields.any(
+              (field) =>
+                  field.type == RoleProfileFieldType.positioning &&
+                  field.text.isNotEmpty,
+            ) &&
+            _role.description.trim().isNotEmpty)
+          RoleProfileField(
+            id: 'description',
+            type: RoleProfileFieldType.positioning,
+            value: _role.description,
+          ),
+        for (final type in [
+          RoleProfileFieldType.positioning,
+          RoleProfileFieldType.style,
+          RoleProfileFieldType.audience,
+          RoleProfileFieldType.tags,
+          RoleProfileFieldType.boundaries,
+        ])
+          ...fields.where(
+            (field) => field.type == type && field.text.isNotEmpty,
+          ),
+      ];
+    }
     return fields
         .where((field) => _overviewTypes.contains(field.type))
         .toList();
@@ -192,56 +231,76 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
       },
       child: Scaffold(
         key: const Key('role-detail-page'),
-        backgroundColor: light ? const Color(0xFFF5F4FA) : colors.surface,
-        appBar: AppBar(
-          backgroundColor: light ? const Color(0xFFF5F4FA) : colors.surface,
-          surfaceTintColor: Colors.transparent,
-          titleSpacing: 0,
-          title: Text(
-            l10n.roleArchive,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          leading: IconButton(
-            key: const Key('role-profile-back'),
-            tooltip: l10n.backToPreviousPage,
-            onPressed: _saving
-                ? null
-                : () {
-                    if (_edit != null) {
-                      _cancelEditing();
-                    } else {
-                      Navigator.of(context).pop();
-                    }
-                  },
-            icon: Transform.rotate(
-              angle: math.pi / 2,
-              child: AppSvgIcon.asset(
-                'role_profile_back',
-                size: 40,
-                color: colors.onSurface,
+        primary: !widget.isSheet,
+        backgroundColor: widget.isSheet
+            ? Colors.transparent
+            : light
+            ? const Color(0xFFF5F4FA)
+            : colors.surface,
+        appBar: widget.isSheet
+            ? null
+            : AppBar(
+                backgroundColor: light
+                    ? const Color(0xFFF5F4FA)
+                    : colors.surface,
+                surfaceTintColor: Colors.transparent,
+                titleSpacing: 0,
+                title: Text(
+                  l10n.roleArchive,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                leading: IconButton(
+                  key: const Key('role-profile-back'),
+                  tooltip: l10n.backToPreviousPage,
+                  onPressed: _saving
+                      ? null
+                      : () {
+                          if (_edit != null) {
+                            _cancelEditing();
+                          } else {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                  icon: Transform.rotate(
+                    angle: math.pi / 2,
+                    child: AppSvgIcon.asset(
+                      'role_profile_back',
+                      size: 40,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
         body: SafeArea(
           top: false,
           bottom: false,
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            margin: const EdgeInsets.only(top: 10),
+            margin: EdgeInsets.only(top: widget.isSheet ? 0 : 10),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: panelBackground,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(45),
-              ),
+              color: widget.isSheet ? Colors.transparent : panelBackground,
+              borderRadius: widget.isSheet
+                  ? BorderRadius.zero
+                  : const BorderRadius.vertical(top: Radius.circular(45)),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   key: const Key('role-profile-scroll'),
-                  padding: const EdgeInsets.all(20),
+                  controller: widget.scrollController,
+                  padding: widget.isSheet
+                      ? EdgeInsets.fromLTRB(
+                          20,
+                          4,
+                          20,
+                          MediaQuery.paddingOf(context).bottom + 20,
+                        )
+                      : const EdgeInsets.all(20),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
@@ -290,13 +349,23 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                                               ),
                                           ],
                                         ),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w600,
-                                          height: 1.4,
+                                          height: widget.isSheet
+                                              ? 20 / 18
+                                              : 1.4,
                                         ),
                                       ),
-                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        height:
+                                            widget.isSheet &&
+                                                field.type ==
+                                                    RoleProfileFieldType
+                                                        .positioning
+                                            ? 5
+                                            : 10,
+                                      ),
                                       if (_edit != null && field.editable)
                                         TextFormField(
                                           key: Key('role-edit-${field.id}'),
@@ -365,7 +434,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                               if (_edit == null &&
                                   _fullProfileFields.isNotEmpty)
                                 _profileArchive(l10n, enabled),
-                              const SizedBox(height: 20),
+                              if (!widget.isSheet) const SizedBox(height: 20),
                             ],
                           ),
                         ],
@@ -377,42 +446,48 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
             ),
           ),
         ),
-        bottomNavigationBar: ColoredBox(
-          color: panelBackground,
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(45),
-              ),
-              child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
-                child: ColoredBox(
-                  color: light
-                      ? AppColors.brand.withValues(alpha: .05)
-                      : colors.surfaceContainer,
-                  child: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        _edit == null ? 40 : 20,
-                        20,
-                        _edit == null ? 40 : 20,
-                        20,
-                      ),
-                      child: Center(
-                        heightFactor: 1,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: 560,
-                            maxHeight: MediaQuery.sizeOf(context).height * .55,
-                          ),
-                          child: SingleChildScrollView(
-                            child: _edit != null
-                                ? _editActions(l10n)
-                                : _actions(l10n, enabled),
+        bottomNavigationBar: widget.isSheet
+            ? null
+            : ColoredBox(
+                color: panelBackground,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.viewInsetsOf(context).bottom,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(45),
+                    ),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                      child: ColoredBox(
+                        color: light
+                            ? AppColors.brand.withValues(alpha: .05)
+                            : colors.surfaceContainer,
+                        child: SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              _edit == null ? 40 : 20,
+                              20,
+                              _edit == null ? 40 : 20,
+                              20,
+                            ),
+                            child: Center(
+                              heightFactor: 1,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxWidth: 560,
+                                  maxHeight:
+                                      MediaQuery.sizeOf(context).height * .55,
+                                ),
+                                child: SingleChildScrollView(
+                                  child: _edit != null
+                                      ? _editActions(l10n)
+                                      : _actions(l10n, enabled),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -420,9 +495,6 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -612,16 +684,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _role.title,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                _summaryTitle(l10n),
                 const SizedBox(height: 5),
                 Text(
                   _role.profileComplete
@@ -645,6 +708,80 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                     ),
                   ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryTitle(AppLocalizations l10n) {
+    final title = Text(
+      _role.title,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+    );
+    if (!widget.isSheet) return title;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: _role.isCertified ? l10n.roleCertified : l10n.roleUncertified,
+            style: const TextStyle(fontSize: 12, height: 1.25),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.localeOf(context),
+        )..layout();
+        final badgeWidth = painter.width + 23;
+        painter.dispose();
+        if (constraints.maxWidth < badgeWidth + 65) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [title, const SizedBox(height: 5), _certification(l10n)],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: title),
+            const SizedBox(width: 5),
+            _certification(l10n),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _certification(AppLocalizations l10n) {
+    final colors = Theme.of(context).colorScheme;
+    final color = _role.isCertified
+        ? AppColors.brand
+        : Theme.of(context).brightness == Brightness.light
+        ? const Color(0xFF999999)
+        : colors.onSurfaceVariant;
+    return Container(
+      key: const Key('role-profile-certification'),
+      constraints: const BoxConstraints(minHeight: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .1),
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'assets/icons/role_profile_certificate.png',
+            width: 12,
+            height: 12,
+          ),
+          const SizedBox(width: 1),
+          Flexible(
+            child: Text(
+              _role.isCertified ? l10n.roleCertified : l10n.roleUncertified,
+              style: TextStyle(fontSize: 12, height: 1.25, color: color),
             ),
           ),
         ],

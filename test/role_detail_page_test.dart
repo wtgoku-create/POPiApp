@@ -16,6 +16,8 @@ import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/domain/role_profile_edit.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
+import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
@@ -43,6 +45,11 @@ void main() {
   final boundaryKey = GlobalKey();
   Future<void> capture(WidgetTester tester, String path) async {
     if (!const bool.fromEnvironment('CAPTURE_ROLE_PROFILE')) return;
+    await tester.runAsync(
+      () =>
+          precacheImage(AssetImage(sample.avatar), boundaryKey.currentContext!),
+    );
+    await tester.pumpAndSettle();
     final boundary =
         boundaryKey.currentContext!.findRenderObject()!
             as RenderRepaintBoundary;
@@ -61,6 +68,7 @@ void main() {
     Locale locale = const Locale('zh'),
     double textScale = 1,
     bool dark = false,
+    bool sheet = false,
     Future<LibraryRole> Function(String)? load,
     Future<void> Function(String)? delete,
     RoleProfileSaver? save,
@@ -94,7 +102,20 @@ void main() {
           path: '/',
           builder: (context, _) => Scaffold(
             body: TextButton(
-              onPressed: () => context.push('/role'),
+              onPressed: () {
+                if (sheet) {
+                  AppSheet.show<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: false,
+                    showDragHandle: false,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const RoleProfileSheet(roles: [sample]),
+                  );
+                } else {
+                  context.push('/role');
+                }
+              },
               child: const Text('Open'),
             ),
           ),
@@ -617,6 +638,96 @@ void main() {
       await capture(tester, '/tmp/popi-role-profile-edit-keyboard.png');
     },
   );
+
+  testWidgets(
+    'profile sheet matches the Figma overview and collapsed archive',
+    (tester) async {
+      await pumpPage(tester, sheet: true);
+      final page = tester.widget<RoleDetailPage>(find.byType(RoleDetailPage));
+      expect(page.isSheet, isTrue);
+      final scaffold = tester.widget<Scaffold>(
+        find.byKey(const Key('role-detail-page')),
+      );
+      expect(scaffold.appBar, isNull);
+      expect(scaffold.bottomNavigationBar, isNull);
+      expect(find.byKey(const Key('role-profile-actions')), findsNothing);
+      expect(find.text('角色档案'), findsOneWidget);
+      expect(find.text('未存证'), findsOneWidget);
+      expect(find.text('人物定位'), findsOneWidget);
+      expect(find.text(sample.description), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('role-profile-summary'))).height,
+        90,
+      );
+      expect(find.text('校园故事 / 室友互损 / 嘴硬心软'), findsNWidgets(2));
+      final archive = find.byKey(const Key('role-profile-archive'));
+      expect(archive, findsOneWidget);
+      expect(
+        find.byKey(const Key('role-profile-value-profileData-boundaries')),
+        findsNothing,
+      );
+      expect(find.text('表达边界'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('role-profile-summary'))).dy -
+            tester
+                .getTopLeft(find.byKey(const Key('role-guide-profile-sheet')))
+                .dy,
+        68,
+      );
+      await capture(tester, '/tmp/popi-role-profile-sheet.png');
+      await tester.ensureVisible(find.byKey(const Key('role-profile-toggle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('role-profile-toggle')));
+      await tester.pumpAndSettle();
+      final label = tester.getRect(
+        find.byKey(const Key('role-profile-label-profileData-boundaries')),
+      );
+      final value = tester.getRect(
+        find.byKey(const Key('role-profile-value-profileData-boundaries')),
+      );
+      expect(label.width, 94);
+      expect(value.left - label.right, 20);
+      expect(value.top, label.top);
+      await tester.ensureVisible(find.byKey(const Key('role-profile-toggle')));
+      await tester.tap(find.byKey(const Key('role-profile-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('表达边界'), findsOneWidget);
+      expect(find.byKey(const Key('role-profile-actions')), findsNothing);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(RoleProfileSheet), findsNothing);
+      expect(find.text('Open'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final size in [const Size(320, 640), const Size(1024, 768)]) {
+    testWidgets(
+      'profile sheet handles missing fields and enlarged English at $size',
+      (tester) async {
+        await pumpPage(
+          tester,
+          sheet: true,
+          size: size,
+          dark: true,
+          locale: const Locale('en'),
+          textScale: 1.4,
+          load: (_) async => const LibraryRole(
+            id: '7',
+            title: 'A very long character name',
+            description: '',
+            isCertified: true,
+          ),
+        );
+        expect(find.byKey(const Key('role-profile-summary')), findsOneWidget);
+        expect(find.text('Certified'), findsOneWidget);
+        expect(find.byKey(const Key('role-profile-archive')), findsNothing);
+        expect(find.byKey(const Key('role-profile-actions')), findsNothing);
+        expect(find.byType(SelectableText), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('renders the archive and actions from real profile fields', (
     tester,

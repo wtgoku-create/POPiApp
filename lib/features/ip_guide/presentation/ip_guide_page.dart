@@ -66,9 +66,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _formatInput.addListener(_updateDraft);
     _nicknameInput.addListener(_updateDraft);
     _audienceInput.addListener(_updateDraft);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _repository.load() != null) unawaited(_start());
-    });
   }
 
   @override
@@ -364,7 +361,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                 backgroundColor: Colors.transparent,
                 surfaceTintColor: Colors.transparent,
                 toolbarHeight: 56,
-                leadingWidth: 100,
+                leadingWidth: _step == 0 ? 80 : 100,
                 leading: Padding(
                   padding: const EdgeInsets.only(left: 15),
                   child: Row(
@@ -384,23 +381,24 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                           ),
                         ),
                       ),
-                      SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          key: const Key('ip-guide-back'),
-                          tooltip: l10n.back,
-                          onPressed: _back,
-                          padding: EdgeInsets.zero,
-                          icon: Transform.rotate(
-                            angle: math.pi / 2,
-                            child: AppSvgIcon.asset(
-                              'ip_guide_back',
-                              size: 40,
-                              color: colors.onSurface,
+                      if (_step > 0)
+                        SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('ip-guide-back'),
+                            tooltip: l10n.back,
+                            onPressed: _back,
+                            padding: EdgeInsets.zero,
+                            icon: Transform.rotate(
+                              angle: math.pi / 2,
+                              child: AppSvgIcon.asset(
+                                'ip_guide_back',
+                                size: 40,
+                                color: colors.onSurface,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -710,7 +708,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                   _toggle(_draft.directions, value, _directionInput),
               keyPrefix: 'ip-direction',
             ),
-          IpGuideSelectionSummary(labels: labels),
+          if (labels.isNotEmpty) IpGuideSelectionSummary(labels: labels),
           IpGuideTextField(
             key: Key(feelings ? 'ip-custom-feeling' : 'ip-custom-direction'),
             controller: feelings ? _feelingInput : _directionInput,
@@ -800,11 +798,12 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               _toggle(_draft.audience, value, _audienceInput),
           keyPrefix: 'ip-audience',
         ),
-        IpGuideSelectionSummary(
-          labels: _draft.audience.values
-              .map((value) => audienceLabel(value, l10n))
-              .toList(),
-        ),
+        if (_draft.audience.values.isNotEmpty)
+          IpGuideSelectionSummary(
+            labels: _draft.audience.values
+                .map((value) => audienceLabel(value, l10n))
+                .toList(),
+          ),
         IpGuideTextField(
           key: const Key('ip-custom-audience'),
           controller: _audienceInput,

@@ -23,5 +23,6 @@ abstract class GalleryRepository {
   Future<void> manageLimitedAccess();
   Future<void> openSettings();
   Future<List<XFile>> pickImages(int limit);
+  Future<List<XFile>> pickImageFiles(int limit);
   Future<XFile?> takePhoto();
 }

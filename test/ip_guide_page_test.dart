@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,8 @@ import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/ip_guide/data/ip_guide_repository.dart';
 import 'package:popi_ai_app/features/ip_guide/domain/ip_guide_draft.dart';
+import 'package:popi_ai_app/features/ip_guide/presentation/widgets/ip_guide_choices.dart';
+import 'package:popi_ai_app/features/ip_guide/presentation/widgets/ip_guide_controls.dart';
 import 'package:popi_ai_app/shared/providers/ip_guide_provider.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
@@ -92,11 +95,85 @@ void main() {
     matching: find.byType(TextField),
   );
 
+  Future<void> enterAnswer(WidgetTester tester, String key, String text) async {
+    await tap(tester, key);
+    expect(find.byKey(const Key('popi-expanded-editor')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('ip-guide-expanded-input')),
+      text,
+    );
+    await tap(tester, 'ip-guide-editor-confirm');
+  }
+
+  testWidgets('empty selections leave only the normal gap above custom input', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await tap(tester, 'ip-guide-start');
+    final input = field('ip-custom-direction');
+    final grid = find.byType(IpGuideChoiceGrid<IpContentDirection>);
+    expect(find.byType(IpGuideSelectionSummary), findsNothing);
+    expect(tester.getTopLeft(input).dy - tester.getBottomLeft(grid).dy, 20);
+    final inputTop = tester.getTopLeft(input).dy;
+    await tap(tester, 'ip-direction-campus');
+    expect(find.text('主方向：校园'), findsOneWidget);
+    await tap(tester, 'ip-direction-campus');
+    expect(find.byType(IpGuideSelectionSummary), findsNothing);
+    expect(tester.getTopLeft(input).dy, inputTop);
+  });
+
+  testWidgets(
+    'custom answer sheet fits above keyboard and retains limited edits',
+    (tester) async {
+      await pumpGuide(tester, size: const Size(320, 640));
+      await tap(tester, 'ip-guide-start');
+      final inlineInput = field('ip-custom-direction');
+      expect(tester.widget<TextField>(inlineInput).readOnly, isTrue);
+      await tap(tester, 'ip-custom-direction');
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      final editor = find.byKey(const Key('popi-expanded-editor'));
+      final expandedInput = find.byKey(const Key('ip-guide-expanded-input'));
+      expect(tester.getBottomLeft(editor).dy, lessThanOrEqualTo(400));
+      expect(tester.widget<TextField>(expandedInput).maxLength, 50);
+      await tester.enterText(expandedInput, List.filled(51, '👩‍🎨').join());
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(expandedInput)
+            .controller!
+            .text
+            .characters
+            .length,
+        50,
+      );
+      await tap(tester, 'ip-guide-editor-confirm');
+      expect(editor, findsNothing);
+      expect(repository.load()!.directions.customText.characters.length, 50);
+      await tap(tester, 'ip-custom-direction');
+      await tester.enterText(expandedInput, '独立音乐\n日常创作');
+      await tap(tester, 'popi-expanded-editor-close');
+      expect(
+        tester.widget<TextField>(inlineInput).controller!.text,
+        '独立音乐\n日常创作',
+      );
+      await tap(tester, 'ip-custom-direction');
+      await tester.enterText(expandedInput, '修改后保留');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(editor, findsNothing);
+      expect(repository.load()!.directions.customText, '修改后保留');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('status bar inset is counted once above the guide progress', (
     tester,
   ) async {
     await pumpGuide(tester, systemTopInset: 52);
     final menu = find.byKey(const Key('ip-guide-menu'));
+    expect(find.byKey(const Key('ip-guide-back')), findsNothing);
     expect(tester.getSize(menu), const Size(40, 40));
     expect(tester.getTopLeft(menu).dy, 52 + 8);
     expect(
@@ -154,7 +231,7 @@ void main() {
         tester.getBottomLeft(input).dy,
         lessThan(tester.getTopLeft(action).dy),
       );
-      await tester.enterText(input, '独立音乐');
+      await enterAnswer(tester, 'ip-custom-direction', '独立音乐');
       await tap(tester, 'ip-guide-next-1');
       expect(find.text('你想让观众看完有什么感受？'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -162,13 +239,18 @@ void main() {
   );
 
   testWidgets(
-    'checks on entry, resumes saved step and replaces the single draft',
+    'checks drafts only after starting, resumes and replaces the single draft',
     (tester) async {
       final draft = IpGuideDraft()..step = 2;
       draft.directions.toggle(IpContentDirection.campus);
       draft.feelings.customText = '温暖';
       await repository.save(draft);
       await pumpGuide(tester);
+      expect(storage.readCount, 0);
+      expect(find.text('继续草稿，还是新建IP？'), findsNothing);
+      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+      await tap(tester, 'ip-guide-start');
+      expect(storage.readCount, 1);
       expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
       await tap(tester, 'ip-draft-resume');
       expect(find.text('你想让观众看完有什么感受？'), findsOneWidget);
@@ -176,10 +258,12 @@ void main() {
         tester.widget<TextField>(field('ip-custom-feeling')).controller!.text,
         '温暖',
       );
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 2; i++) {
         await tap(tester, 'ip-guide-back');
       }
-      await tap(tester, 'home-start-0');
+      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+      expect(find.text('继续草稿，还是新建IP？'), findsNothing);
+      await tap(tester, 'ip-guide-start');
       expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
       await tap(tester, 'ip-draft-restart');
       expect(find.text('你想长期分享什么？'), findsOneWidget);
@@ -202,8 +286,13 @@ void main() {
       draft.audience.toggle(IpTargetAudience.students);
       await repository.save(draft);
       await pumpGuide(tester);
+      expect(find.text('继续草稿，还是新建IP？'), findsNothing);
+      await tap(tester, 'ip-guide-start');
+      expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
+      expect(find.text('继续草稿，还是新建IP？'), findsNothing);
+      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
       expect(repository.load()!.nickname, '校园故事');
       await tap(tester, 'ip-guide-start');
       await tap(tester, 'ip-draft-resume');
@@ -303,16 +392,16 @@ void main() {
       await pumpGuide(tester);
       await tap(tester, 'ip-guide-start');
       await tap(tester, 'ip-direction-campus');
-      await tester.enterText(field('ip-custom-direction'), '独立音乐');
+      await enterAnswer(tester, 'ip-custom-direction', '独立音乐');
       await tester.pumpAndSettle();
       expect(find.text('主方向：校园'), findsNothing);
       await tap(tester, 'ip-guide-next-1');
-      await tester.enterText(field('ip-custom-feeling'), '好奇而轻松');
+      await enterAnswer(tester, 'ip-custom-feeling', '好奇而轻松');
       await tap(tester, 'ip-guide-next-2');
       await tap(tester, 'ip-presentation-aiReal');
-      await tester.enterText(field('ip-custom-format'), '音乐故事');
+      await enterAnswer(tester, 'ip-custom-format', '音乐故事');
       await tap(tester, 'ip-guide-next-3');
-      await tester.enterText(field('ip-custom-audience'), '独立音乐爱好者');
+      await enterAnswer(tester, 'ip-custom-audience', '独立音乐爱好者');
       await tap(tester, 'ip-guide-next-4');
       expect(find.text('独立音乐'), findsOneWidget);
       expect(find.text('好奇而轻松'), findsOneWidget);
@@ -330,8 +419,9 @@ void main() {
         tester.widget<TextField>(field('ip-custom-direction')).controller!.text,
         '独立音乐',
       );
-      await tester.enterText(
-        field('ip-custom-direction'),
+      await enterAnswer(
+        tester,
+        'ip-custom-direction',
         List.filled(51, 'a').join(),
       );
       await tester.pump();
@@ -368,29 +458,36 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     await tap(tester, 'ip-guide-back');
-    await tap(tester, 'ip-guide-back');
-    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+    expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+    expect(find.byType(HomePage), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('system back steps through the guide and preserves the draft', (
-    tester,
-  ) async {
-    await pumpGuide(tester);
-    await tap(tester, 'ip-guide-start');
-    await tap(tester, 'ip-direction-campus');
-    await tap(tester, 'ip-guide-next-1');
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('主方向：校园'), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.byType(HomePage), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'system back preserves the draft without restoring the replaced home',
+    (tester) async {
+      await pumpGuide(tester);
+      await tap(tester, 'ip-guide-start');
+      await tap(tester, 'ip-direction-campus');
+      await tap(tester, 'ip-guide-next-1');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('主方向：校园'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsNothing);
+      expect(find.byType(IpGuidePage), findsOneWidget);
+      expect(
+        GoRouter.of(tester.element(find.byType(IpGuidePage))).canPop(),
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('removing the primary choice promotes the secondary', (
     tester,

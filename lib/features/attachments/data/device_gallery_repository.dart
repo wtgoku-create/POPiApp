@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:photo_manager/photo_manager.dart';
 
@@ -105,6 +106,28 @@ class DeviceGalleryRepository implements GalleryRepository {
     maxWidth: 1920,
     limit: limit < 2 ? null : limit,
   );
+
+  @override
+  Future<List<XFile>> pickImageFiles(int limit) async {
+    if (limit <= 0) return [];
+    const images = XTypeGroup(
+      label: 'Images',
+      extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'],
+      mimeTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'image/bmp',
+      ],
+      uniformTypeIdentifiers: ['public.image'],
+    );
+    if (limit == 1) {
+      final file = await openFile(acceptedTypeGroups: [images]);
+      return [if (file != null) file];
+    }
+    return openFiles(acceptedTypeGroups: [images]);
+  }
 
   @override
   Future<XFile?> takePhoto() => ImagePicker().pickImage(

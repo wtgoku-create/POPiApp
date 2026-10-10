@@ -221,7 +221,13 @@ void main() {
             prompts[i],
           );
         }
-        container.read(routerProvider(false)).pop();
+        final router = container.read(routerProvider(false));
+        expect(router.canPop(), i == 2);
+        if (i < 2) {
+          router.replace('/');
+        } else {
+          router.pop();
+        }
         await tester.pumpAndSettle();
         expect(find.byType(HomePage), findsOneWidget);
         expect(tester.takeException(), isNull);
