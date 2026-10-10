@@ -238,6 +238,96 @@ void main() {
     },
   );
 
+  for (final size in [const Size(320, 640), const Size(390, 844)]) {
+    testWidgets('review actions stay fixed while summary scrolls at $size', (
+      tester,
+    ) async {
+      final draft = IpGuideDraft()
+        ..step = 5
+        ..nickname = '校园故事'
+        ..presentation = IpPresentation.animation3d;
+      draft.directions.toggle(IpContentDirection.campus);
+      draft.feelings.toggle(IpAudienceFeeling.authentic);
+      draft.audience.toggle(IpTargetAudience.students);
+      await repository.save(draft);
+      await pumpGuide(tester, size: size);
+      await tap(tester, 'ip-guide-start');
+      await tap(tester, 'ip-draft-resume');
+
+      final confirm = find.byKey(const Key('ip-confirm'));
+      final reselect = find.byKey(const Key('ip-reselect'));
+      expect(confirm.hitTestable(), findsOneWidget);
+      expect(reselect.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(reselect).dy,
+        closeTo(size.height - 34 - 20, .01),
+      );
+      final confirmPosition = tester.getTopLeft(confirm);
+      final reselectPosition = tester.getTopLeft(reselect);
+      final summaryPosition = tester.getTopLeft(
+        find.byKey(const Key('ip-review-panel')),
+      );
+      await tester.drag(
+        find.byKey(const Key('ip-guide-scroll-5')),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(confirm), confirmPosition);
+      expect(tester.getTopLeft(reselect), reselectPosition);
+      expect(
+        tester.getTopLeft(find.byKey(const Key('ip-review-panel'))).dy,
+        lessThan(summaryPosition.dy),
+      );
+      expect(
+        tester.getBottomLeft(find.byKey(const Key('ip-guide-scroll-5'))).dy,
+        lessThan(confirmPosition.dy),
+      );
+
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getBottomLeft(reselect).dy,
+        closeTo(size.height - 240 - 20, .01),
+      );
+      final nickname = field('ip-nickname');
+      await tester.ensureVisible(nickname);
+      await tester.pumpAndSettle();
+      expect(nickname.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(nickname).dy,
+        lessThanOrEqualTo(tester.getTopLeft(confirm).dy),
+      );
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      final project = find.byKey(const Key('ip-open-project'));
+      expect(project.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(project).dy,
+        closeTo(size.height - 34 - 20, .01),
+      );
+      final projectPosition = tester.getTopLeft(project);
+      await tester.drag(
+        find.byKey(const Key('ip-guide-scroll-5')),
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(project), projectPosition);
+      expect(
+        find.byKey(const Key('ip-create-role')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ip-create-content')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'checks drafts only after starting, resumes and replaces the single draft',
     (tester) async {

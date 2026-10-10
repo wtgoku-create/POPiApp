@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +12,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
+import 'package:popi_ai_app/features/activities/presentation/activities_page.dart';
 import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
@@ -22,6 +24,7 @@ import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 import 'support/project_fixtures.dart';
+import 'support/activity_fixtures.dart';
 import 'support/role_library_fixtures.dart';
 import 'support/session_fixtures.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
@@ -36,6 +39,7 @@ void main() {
     double textScale = 1,
     double systemTopInset = 0,
     EdgeInsets? safeArea,
+    Dio? dio,
   }) async {
     safeArea ??= const EdgeInsets.only(top: 52, bottom: 34);
     tester.view.physicalSize = size;
@@ -59,7 +63,7 @@ void main() {
         ),
         sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
-        dioProvider.overrideWithValue(roleLibraryDio()),
+        dioProvider.overrideWithValue(dio ?? roleLibraryDio()),
       ],
     );
     addTearDown(container.dispose);
@@ -112,6 +116,23 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('activity opens its center and back restores home', (
+    tester,
+  ) async {
+    final fixture = ActivityFixture();
+    addTearDown(() => fixture.dio.close(force: true));
+    final container = await pumpHome(tester, dio: fixture.dio);
+    final router = container.read(routerProvider(false));
+    await tester.tap(find.byTooltip('活动'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ActivitiesPage), findsOneWidget);
+    expect(find.text('新手活动礼包'), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'new home shows three creation entries and personal account data',
@@ -338,6 +359,20 @@ void main() {
         );
         expect(find.byType(HomePage), findsOneWidget);
         expect(find.byType(PopiMessageComposer), findsNothing);
+        final activity = find.byKey(const Key('popi-open-activity'));
+        final membership = find.byKey(const Key('home-membership-entry'));
+        final navigation = find.byKey(const Key('popi-open-navigation'));
+        expect(tester.getSize(activity), const Size(42, 42));
+        expect(tester.getSize(membership).height, 40);
+        expect(
+          tester.getRect(activity).left,
+          greaterThan(tester.getRect(navigation).right),
+        );
+        expect(
+          tester.getRect(activity).right,
+          lessThan(tester.getRect(membership).left),
+        );
+        expect(tester.getRect(membership).right, lessThanOrEqualTo(size.width));
         await tester.scrollUntilVisible(
           find.byKey(const Key('home-start-2')),
           200,

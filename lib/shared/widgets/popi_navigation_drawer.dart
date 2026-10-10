@@ -233,7 +233,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
             const SizedBox(height: 20),
             _DrawerFooter(
               onNotification: () => isLoggedIn
-                  ? _showPending(context, l10n.notifications)
+                  ? _openNotifications(context)
                   : _openRoute(context, '/login'),
               onSettings: () => _openProtectedRoute(
                 context,
@@ -276,10 +276,10 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
     _openRoute(context, isLoggedIn ? route : '/login');
   }
 
-  void _showPending(BuildContext context, String label) {
-    final messenger = ScaffoldMessenger.of(context);
+  void _openNotifications(BuildContext context) {
+    final router = GoRouter.of(context);
     Navigator.pop(context);
-    messenger.showSnackBar(SnackBar(content: Text(label)));
+    router.push('/notifications');
   }
 }
 

@@ -8,6 +8,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import 'widgets/home_banner_carousel.dart';
@@ -110,9 +111,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   ),
                 ),
                 actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: PopiMembershipEntry(
+                  PopiAppBarActions(
+                    membershipEntry: PopiMembershipEntry(
                       points: user?.allCoins ?? 0,
                       showPoints: user != null,
                       label: user == null

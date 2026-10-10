@@ -102,14 +102,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('password entry is available', (
-    tester,
-  ) async {
+  testWidgets('password entry is available', (tester) async {
     await pumpLoginPage(tester);
-    expect(
-      find.byKey(const Key('login-mode-switch')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('login-mode-switch')), findsOneWidget);
     expect(find.byKey(const Key('login-password-field')), findsNothing);
   });
 

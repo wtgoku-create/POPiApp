@@ -1896,6 +1896,126 @@ abstract class AppLocalizations {
   /// **'Open navigation'**
   String get openNavigation;
 
+  /// No description provided for @activities.
+  ///
+  /// In en, this message translates to:
+  /// **'Activities'**
+  String get activities;
+
+  /// No description provided for @activityCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Center'**
+  String get activityCenter;
+
+  /// No description provided for @activityEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activities available'**
+  String get activityEmpty;
+
+  /// No description provided for @activityUntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get activityUntitled;
+
+  /// No description provided for @activityNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity details available'**
+  String get activityNoDescription;
+
+  /// No description provided for @activityLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load activities. Please try again'**
+  String get activityLoadFailed;
+
+  /// No description provided for @activityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity has ended or is not available yet'**
+  String get activityUnavailable;
+
+  /// No description provided for @activityOfficialCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Official redemption code'**
+  String get activityOfficialCode;
+
+  /// No description provided for @activityCodePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter redemption code'**
+  String get activityCodePlaceholder;
+
+  /// No description provided for @activityOrderNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Order number'**
+  String get activityOrderNumber;
+
+  /// No description provided for @activityOrderPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste your Douyin order number'**
+  String get activityOrderPlaceholder;
+
+  /// No description provided for @activityMemberRestriction.
+  ///
+  /// In en, this message translates to:
+  /// **'This activity is limited to {levels}'**
+  String activityMemberRestriction(String levels);
+
+  /// No description provided for @activityMemberLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Membership level {level}'**
+  String activityMemberLevel(int level);
+
+  /// No description provided for @activityExchangeSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeemed successfully'**
+  String get activityExchangeSuccess;
+
+  /// No description provided for @activityExchangeFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to redeem. Please try again later'**
+  String get activityExchangeFailed;
+
+  /// No description provided for @activityRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeemed successfully. Membership information could not refresh; check again later'**
+  String get activityRefreshFailed;
+
+  /// No description provided for @activityQrTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity QR code'**
+  String get activityQrTitle;
+
+  /// No description provided for @activityFinalConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Final confirmation'**
+  String get activityFinalConfirmation;
+
+  /// No description provided for @activityRefundNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Once this membership benefit is claimed, the course is considered redeemed and used, and you will no longer be able to request a refund from POPi. To confirm that you fully understand this rule, enter the following text:'**
+  String get activityRefundNotice;
+
+  /// No description provided for @activityConfirmationPhrase.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand this redemption is non-refundable'**
+  String get activityConfirmationPhrase;
+
   /// No description provided for @selectAction.
   ///
   /// In en, this message translates to:
@@ -2935,6 +3055,102 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get notifications;
 
+  /// No description provided for @notificationSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get notificationSystem;
+
+  /// No description provided for @notificationPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get notificationPersonal;
+
+  /// No description provided for @notificationNew.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW'**
+  String get notificationNew;
+
+  /// No description provided for @notificationUnread.
+  ///
+  /// In en, this message translates to:
+  /// **'Unread'**
+  String get notificationUnread;
+
+  /// No description provided for @notificationUntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification'**
+  String get notificationUntitled;
+
+  /// No description provided for @notificationLearnMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn more'**
+  String get notificationLearnMore;
+
+  /// No description provided for @notificationDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Details'**
+  String get notificationDetail;
+
+  /// No description provided for @notificationEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications yet'**
+  String get notificationEmpty;
+
+  /// No description provided for @notificationLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load notifications. Please retry.'**
+  String get notificationLoadFailed;
+
+  /// No description provided for @notificationLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get notificationLoadMore;
+
+  /// No description provided for @notificationLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load more notifications. Retry'**
+  String get notificationLoadMoreFailed;
+
+  /// No description provided for @notificationReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not mark as read. Reopen the notification to retry.'**
+  String get notificationReadFailed;
+
+  /// No description provided for @notificationLoginRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to view notifications'**
+  String get notificationLoginRequired;
+
+  /// No description provided for @notificationImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load image'**
+  String get notificationImageFailed;
+
+  /// No description provided for @notificationViewImage.
+  ///
+  /// In en, this message translates to:
+  /// **'View notification image'**
+  String get notificationViewImage;
+
+  /// No description provided for @notificationDaysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 day ago} other{{days} days ago}}'**
+  String notificationDaysAgo(int days);
+
   /// No description provided for @profileSettings.
   ///
   /// In en, this message translates to:
@@ -3966,6 +4182,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preparing a character plan'**
   String get chatPrepareRole;
+
+  /// No description provided for @redemptionCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Redemption Center'**
+  String get redemptionCenter;
+
+  /// No description provided for @redemptionPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite Friends'**
+  String get redemptionPageTitle;
+
+  /// No description provided for @redemptionMyCodes.
+  ///
+  /// In en, this message translates to:
+  /// **'My Invite Codes'**
+  String get redemptionMyCodes;
+
+  /// No description provided for @redemptionRegistrationReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome Reward'**
+  String get redemptionRegistrationReward;
+
+  /// No description provided for @redemptionInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite friends, earn points'**
+  String get redemptionInviteTitle;
+
+  /// No description provided for @redemptionInviteDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn 200 points for each friend\nwho registers and signs in.'**
+  String get redemptionInviteDescription;
+
+  /// No description provided for @redemptionRewardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A welcome gift from a friend'**
+  String get redemptionRewardTitle;
+
+  /// No description provided for @redemptionRewardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a friend\'s invite code\nto receive {points} points.'**
+  String redemptionRewardDescription(int points);
+
+  /// No description provided for @redemptionPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'points'**
+  String get redemptionPoints;
+
+  /// No description provided for @redemptionFriendCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Friend\'s Invite Code'**
+  String get redemptionFriendCode;
+
+  /// No description provided for @redemptionFriendPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter invite code (once per user)'**
+  String get redemptionFriendPlaceholder;
+
+  /// No description provided for @redemptionClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed'**
+  String get redemptionClaimed;
+
+  /// No description provided for @redemptionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Unused'**
+  String get redemptionPending;
+
+  /// No description provided for @redemptionUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Used by a friend'**
+  String get redemptionUsed;
+
+  /// No description provided for @redemptionRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation History'**
+  String get redemptionRecords;
+
+  /// No description provided for @redemptionRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered'**
+  String get redemptionRegistered;
+
+  /// No description provided for @redemptionCodesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No invite codes yet'**
+  String get redemptionCodesEmpty;
+
+  /// No description provided for @redemptionRecordsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No invitations yet'**
+  String get redemptionRecordsEmpty;
+
+  /// No description provided for @redemptionFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards follow the activity rules. Updates may be delayed.'**
+  String get redemptionFooter;
+
+  /// No description provided for @redemptionLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load. Please retry.'**
+  String get redemptionLoadFailed;
+
+  /// No description provided for @redemptionRewardClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome rewards are currently unavailable'**
+  String get redemptionRewardClosed;
+
+  /// No description provided for @redemptionClaimSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome reward claimed'**
+  String get redemptionClaimSuccess;
+
+  /// No description provided for @redemptionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not redeem. Please try again later.'**
+  String get redemptionFailed;
+
+  /// No description provided for @redemptionCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite code copied'**
+  String get redemptionCopied;
+
+  /// No description provided for @redemptionLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get redemptionLoadMore;
+
+  /// No description provided for @redemptionLoginRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to use the Redemption Center'**
+  String get redemptionLoginRequired;
+
+  /// No description provided for @redemptionBindRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Link WeChat Official Account to view invite codes'**
+  String get redemptionBindRequired;
+
+  /// No description provided for @redemptionBindAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Link WeChat Official Account'**
+  String get redemptionBindAction;
+
+  /// No description provided for @redemptionBindDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with WeChat to link your account'**
+  String get redemptionBindDescription;
+
+  /// No description provided for @redemptionQrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'QR code expired. Please refresh.'**
+  String get redemptionQrExpired;
+
+  /// No description provided for @redemptionQrFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load QR code'**
+  String get redemptionQrFailed;
+
+  /// No description provided for @redemptionBindingSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'WeChat Official Account linked'**
+  String get redemptionBindingSuccess;
+
+  /// No description provided for @redemptionBindingCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check link status'**
+  String get redemptionBindingCheck;
+
+  /// No description provided for @redemptionBindingWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for WeChat scan'**
+  String get redemptionBindingWaiting;
+
+  /// No description provided for @teachingAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get teachingAll;
+
+  /// No description provided for @teachingCreatorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator center'**
+  String get teachingCreatorTitle;
+
+  /// No description provided for @teachingCreatorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A learning platform\nfor new AI creators'**
+  String get teachingCreatorDescription;
+
+  /// No description provided for @teachingCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get teachingCommunityTitle;
+
+  /// No description provided for @teachingCommunityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Meet other creators\nScan to join POPi'**
+  String get teachingCommunityDescription;
+
+  /// No description provided for @teachingCommunityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Community QR code unavailable'**
+  String get teachingCommunityUnavailable;
+
+  /// No description provided for @teachingMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Member offers'**
+  String get teachingMemberTitle;
+
+  /// No description provided for @teachingMemberDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock premium courses\nExplore more ways to create'**
+  String get teachingMemberDescription;
+
+  /// No description provided for @teachingMemberPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'From ¥{price}\nUnlock premium courses'**
+  String teachingMemberPrice(String price);
+
+  /// No description provided for @teachingInstructor.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor: {name}'**
+  String teachingInstructor(String name);
+
+  /// No description provided for @teachingFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get teachingFree;
+
+  /// No description provided for @teachingUntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled course'**
+  String get teachingUntitled;
+
+  /// No description provided for @teachingLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading courses'**
+  String get teachingLoading;
+
+  /// No description provided for @teachingEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No courses available'**
+  String get teachingEmpty;
+
+  /// No description provided for @teachingLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load courses. Try again later'**
+  String get teachingLoadFailed;
+
+  /// No description provided for @teachingLoadMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load more. Tap to retry'**
+  String get teachingLoadMoreFailed;
+
+  /// No description provided for @teachingCategoriesFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load categories. Tap to retry'**
+  String get teachingCategoriesFailed;
 
   /// No description provided for @chatAskUser.
   ///

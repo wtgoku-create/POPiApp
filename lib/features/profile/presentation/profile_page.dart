@@ -157,6 +157,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 SettingsGroup(
                   children: [
                     SettingsRow(
+                      key: const Key('profile-redemption-center'),
+                      iconWidget: const AppSvgIcon.asset(
+                        'redemption_center',
+                        size: 30,
+                      ),
+                      label: l10n.redemptionCenter,
+                      onTap: () => context.push('/profile/redemption'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SettingsGroup(
+                  children: [
+                    SettingsRow(
                       iconWidget: AppSvgIcon.asset(
                         'profile_settings_phone',
                         size: 20,

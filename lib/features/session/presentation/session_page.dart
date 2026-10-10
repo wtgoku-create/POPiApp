@@ -26,6 +26,7 @@ import 'conversation_controller.dart';
 import 'widgets/conversation_timeline.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
+import '../../../shared/widgets/popi_app_bar_actions.dart';
 
 /// Creation session with a prompt composer and attachment selection.
 class SessionPage extends ConsumerStatefulWidget {
@@ -235,18 +236,16 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       ),
                     ),
                     actions: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 20),
-                          child: PopiMembershipEntry(
-                            points: pointsBalance,
-                            showPoints: isLoggedIn,
-                            label: isLoggedIn
-                                ? l10n.upgradeMembership
-                                : l10n.goToLogin,
-                            onTap: () => context.push(
-                              isLoggedIn ? '/profile/membership' : '/login',
-                            ),
+                      PopiAppBarActions(
+                        rightPadding: 20,
+                        membershipEntry: PopiMembershipEntry(
+                          points: pointsBalance,
+                          showPoints: isLoggedIn,
+                          label: isLoggedIn
+                              ? l10n.upgradeMembership
+                              : l10n.goToLogin,
+                          onTap: () => context.push(
+                            isLoggedIn ? '/profile/membership' : '/login',
                           ),
                         ),
                       ),

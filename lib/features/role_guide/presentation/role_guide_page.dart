@@ -15,6 +15,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
+import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../assets/domain/library_role.dart';
 import '../../projects/domain/project.dart';
@@ -481,9 +482,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                     ),
                   ),
                   actions: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 15),
-                      child: PopiMembershipEntry(
+                    PopiAppBarActions(
+                      leadingWidth: showBack ? 100 : 60,
+                      membershipEntry: PopiMembershipEntry(
                         points: user?.allCoins ?? 0,
                         showPoints: user != null,
                         label: user == null

@@ -1003,6 +1003,76 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openNavigation => 'Open navigation';
 
   @override
+  String get activities => 'Activities';
+
+  @override
+  String get activityCenter => 'Activity Center';
+
+  @override
+  String get activityEmpty => 'No activities available';
+
+  @override
+  String get activityUntitled => 'Activity';
+
+  @override
+  String get activityNoDescription => 'No activity details available';
+
+  @override
+  String get activityLoadFailed =>
+      'Unable to load activities. Please try again';
+
+  @override
+  String get activityUnavailable =>
+      'This activity has ended or is not available yet';
+
+  @override
+  String get activityOfficialCode => 'Official redemption code';
+
+  @override
+  String get activityCodePlaceholder => 'Enter redemption code';
+
+  @override
+  String get activityOrderNumber => 'Order number';
+
+  @override
+  String get activityOrderPlaceholder => 'Paste your Douyin order number';
+
+  @override
+  String activityMemberRestriction(String levels) {
+    return 'This activity is limited to $levels';
+  }
+
+  @override
+  String activityMemberLevel(int level) {
+    return 'Membership level $level';
+  }
+
+  @override
+  String get activityExchangeSuccess => 'Redeemed successfully';
+
+  @override
+  String get activityExchangeFailed =>
+      'Unable to redeem. Please try again later';
+
+  @override
+  String get activityRefreshFailed =>
+      'Redeemed successfully. Membership information could not refresh; check again later';
+
+  @override
+  String get activityQrTitle => 'Activity QR code';
+
+  @override
+  String get activityFinalConfirmation => 'Final confirmation';
+
+  @override
+  String get activityRefundNotice =>
+      'Once this membership benefit is claimed, the course is considered redeemed and used, and you will no longer be able to request a refund from POPi. To confirm that you fully understand this rule, enter the following text:';
+
+  @override
+  String get activityConfirmationPhrase =>
+      'I understand this redemption is non-refundable';
+
+  @override
   String get selectAction => 'Select';
 
   @override
@@ -1571,6 +1641,65 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifications => 'Notifications';
 
   @override
+  String get notificationSystem => 'System';
+
+  @override
+  String get notificationPersonal => 'Personal';
+
+  @override
+  String get notificationNew => 'NEW';
+
+  @override
+  String get notificationUnread => 'Unread';
+
+  @override
+  String get notificationUntitled => 'Notification';
+
+  @override
+  String get notificationLearnMore => 'Learn more';
+
+  @override
+  String get notificationDetail => 'Notification Details';
+
+  @override
+  String get notificationEmpty => 'No notifications yet';
+
+  @override
+  String get notificationLoadFailed =>
+      'Could not load notifications. Please retry.';
+
+  @override
+  String get notificationLoadMore => 'Load more';
+
+  @override
+  String get notificationLoadMoreFailed =>
+      'Could not load more notifications. Retry';
+
+  @override
+  String get notificationReadFailed =>
+      'Could not mark as read. Reopen the notification to retry.';
+
+  @override
+  String get notificationLoginRequired => 'Sign in to view notifications';
+
+  @override
+  String get notificationImageFailed => 'Could not load image';
+
+  @override
+  String get notificationViewImage => 'View notification image';
+
+  @override
+  String notificationDaysAgo(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get profileSettings => 'Profile settings';
 
   @override
@@ -2128,6 +2257,174 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatPrepareRole => 'Preparing a character plan';
+
+  @override
+  String get redemptionCenter => 'Redemption Center';
+
+  @override
+  String get redemptionPageTitle => 'Invite Friends';
+
+  @override
+  String get redemptionMyCodes => 'My Invite Codes';
+
+  @override
+  String get redemptionRegistrationReward => 'Welcome Reward';
+
+  @override
+  String get redemptionInviteTitle => 'Invite friends, earn points';
+
+  @override
+  String get redemptionInviteDescription =>
+      'Earn 200 points for each friend\nwho registers and signs in.';
+
+  @override
+  String get redemptionRewardTitle => 'A welcome gift from a friend';
+
+  @override
+  String redemptionRewardDescription(int points) {
+    return 'Enter a friend\'s invite code\nto receive $points points.';
+  }
+
+  @override
+  String get redemptionPoints => 'points';
+
+  @override
+  String get redemptionFriendCode => 'Friend\'s Invite Code';
+
+  @override
+  String get redemptionFriendPlaceholder => 'Enter invite code (once per user)';
+
+  @override
+  String get redemptionClaimed => 'Claimed';
+
+  @override
+  String get redemptionPending => 'Unused';
+
+  @override
+  String get redemptionUsed => 'Used by a friend';
+
+  @override
+  String get redemptionRecords => 'Invitation History';
+
+  @override
+  String get redemptionRegistered => 'Registered';
+
+  @override
+  String get redemptionCodesEmpty => 'No invite codes yet';
+
+  @override
+  String get redemptionRecordsEmpty => 'No invitations yet';
+
+  @override
+  String get redemptionFooter =>
+      'Rewards follow the activity rules. Updates may be delayed.';
+
+  @override
+  String get redemptionLoadFailed => 'Could not load. Please retry.';
+
+  @override
+  String get redemptionRewardClosed =>
+      'Welcome rewards are currently unavailable';
+
+  @override
+  String get redemptionClaimSuccess => 'Welcome reward claimed';
+
+  @override
+  String get redemptionFailed => 'Could not redeem. Please try again later.';
+
+  @override
+  String get redemptionCopied => 'Invite code copied';
+
+  @override
+  String get redemptionLoadMore => 'Load more';
+
+  @override
+  String get redemptionLoginRequired => 'Sign in to use the Redemption Center';
+
+  @override
+  String get redemptionBindRequired =>
+      'Link WeChat Official Account to view invite codes';
+
+  @override
+  String get redemptionBindAction => 'Link WeChat Official Account';
+
+  @override
+  String get redemptionBindDescription =>
+      'Scan with WeChat to link your account';
+
+  @override
+  String get redemptionQrExpired => 'QR code expired. Please refresh.';
+
+  @override
+  String get redemptionQrFailed => 'Could not load QR code';
+
+  @override
+  String get redemptionBindingSuccess => 'WeChat Official Account linked';
+
+  @override
+  String get redemptionBindingCheck => 'Check link status';
+
+  @override
+  String get redemptionBindingWaiting => 'Waiting for WeChat scan';
+
+  @override
+  String get teachingAll => 'All';
+
+  @override
+  String get teachingCreatorTitle => 'Creator center';
+
+  @override
+  String get teachingCreatorDescription =>
+      'A learning platform\nfor new AI creators';
+
+  @override
+  String get teachingCommunityTitle => 'Community';
+
+  @override
+  String get teachingCommunityDescription =>
+      'Meet other creators\nScan to join POPi';
+
+  @override
+  String get teachingCommunityUnavailable => 'Community QR code unavailable';
+
+  @override
+  String get teachingMemberTitle => 'Member offers';
+
+  @override
+  String get teachingMemberDescription =>
+      'Unlock premium courses\nExplore more ways to create';
+
+  @override
+  String teachingMemberPrice(String price) {
+    return 'From ¥$price\nUnlock premium courses';
+  }
+
+  @override
+  String teachingInstructor(String name) {
+    return 'Tutor: $name';
+  }
+
+  @override
+  String get teachingFree => 'Free';
+
+  @override
+  String get teachingUntitled => 'Untitled course';
+
+  @override
+  String get teachingLoading => 'Loading courses';
+
+  @override
+  String get teachingEmpty => 'No courses available';
+
+  @override
+  String get teachingLoadFailed => 'Unable to load courses. Try again later';
+
+  @override
+  String get teachingLoadMoreFailed => 'Unable to load more. Tap to retry';
+
+  @override
+  String get teachingCategoriesFailed =>
+      'Unable to load categories. Tap to retry';
 
   @override
   String get chatAskUser => 'Waiting for more details';

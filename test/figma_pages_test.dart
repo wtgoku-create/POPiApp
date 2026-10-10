@@ -347,15 +347,15 @@ void main() {
     );
     expect(find.text('你已是Pro'), findsOneWidget);
     expect(button().onPressed, isNull);
-      await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-2')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
+    await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
     expect(find.text('当前计划'), findsOneWidget);
     expect(button().onPressed, isNull);
-      await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-3')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
+    await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-3')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
     await tester.pumpAndSettle();
     expect(button().onPressed, isNotNull);
     await container

@@ -15,6 +15,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
+import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../domain/ip_guide_draft.dart';
 import '../data/ip_guide_repository.dart';
@@ -403,9 +404,9 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                   ),
                 ),
                 actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 15),
-                    child: PopiMembershipEntry(
+                  PopiAppBarActions(
+                    leadingWidth: _step == 0 ? 80 : 100,
+                    membershipEntry: PopiMembershipEntry(
                       points: user?.allCoins ?? 0,
                       showPoints: user != null,
                       label: user == null
@@ -501,7 +502,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                           label: l10n.ipNextReview,
                           onPressed: _next,
                         ),
-                        _scroll(
+                        _stepWithFooter(
                           5,
                           Column(
                             children: [
@@ -513,17 +514,21 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                               IpGuideReview(
                                 draft: _draft,
                                 nicknameController: _nicknameInput,
-                                onConfirm: _confirm,
-                                onReselect: () => _goToStep(1),
                                 submitted: _draft.submitted,
-                                busy: _busy,
                                 completed: _completed,
-                                onCreateRole: () => context.push('/role-guide'),
-                                onCreateContent: () =>
-                                    _openProject(createContent: true),
-                                onOpenProject: _openProject,
                               ),
                             ],
+                          ),
+                          IpGuideReviewActions(
+                            onConfirm: _confirm,
+                            onReselect: () => _goToStep(1),
+                            submitted: _draft.submitted,
+                            busy: _busy,
+                            completed: _completed,
+                            onCreateRole: () => context.push('/role-guide'),
+                            onCreateContent: () =>
+                                _openProject(createContent: true),
+                            onOpenProject: _openProject,
                           ),
                         ),
                       ],
@@ -554,6 +559,22 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     required String label,
     required VoidCallback? onPressed,
     double top = 30,
+  }) => _stepWithFooter(
+    step,
+    child,
+    IpGuideNextButton(
+      key: Key(step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step'),
+      label: label,
+      onPressed: onPressed,
+    ),
+    top: top,
+  );
+
+  Widget _stepWithFooter(
+    int step,
+    Widget child,
+    Widget footer, {
+    double top = 30,
   }) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom > 0
         ? 0.0
@@ -562,12 +583,9 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       children: [
         Expanded(child: _scroll(step, child, top: top, bottom: 20)),
         Padding(
+          key: Key('ip-guide-actions-$step'),
           padding: EdgeInsets.fromLTRB(40, 12, 40, bottomInset + 20),
-          child: IpGuideNextButton(
-            key: Key(step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step'),
-            label: label,
-            onPressed: onPressed,
-          ),
+          child: footer,
         ),
       ],
     );

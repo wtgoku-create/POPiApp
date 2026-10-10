@@ -963,6 +963,71 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openNavigation => '打开导航';
 
   @override
+  String get activities => '活动';
+
+  @override
+  String get activityCenter => '活动中心';
+
+  @override
+  String get activityEmpty => '暂无活动';
+
+  @override
+  String get activityUntitled => '活动';
+
+  @override
+  String get activityNoDescription => '暂无活动详情';
+
+  @override
+  String get activityLoadFailed => '活动加载失败，请重试';
+
+  @override
+  String get activityUnavailable => '活动已结束或暂未开放';
+
+  @override
+  String get activityOfficialCode => '官方兑换码';
+
+  @override
+  String get activityCodePlaceholder => '输入兑换码';
+
+  @override
+  String get activityOrderNumber => '订单编号';
+
+  @override
+  String get activityOrderPlaceholder => '请粘贴抖音订单编号';
+
+  @override
+  String activityMemberRestriction(String levels) {
+    return '当前活动仅限$levels参加';
+  }
+
+  @override
+  String activityMemberLevel(int level) {
+    return '会员等级$level';
+  }
+
+  @override
+  String get activityExchangeSuccess => '兑换成功';
+
+  @override
+  String get activityExchangeFailed => '兑换失败，请稍后重试';
+
+  @override
+  String get activityRefreshFailed => '兑换成功，会员信息暂未刷新，请稍后重新查看';
+
+  @override
+  String get activityQrTitle => '活动二维码';
+
+  @override
+  String get activityFinalConfirmation => '最终确认';
+
+  @override
+  String get activityRefundNotice =>
+      '会员权益一经领取，即视为课程已核销使用，您将无法再向POPi申请退款。为确保您充分了解此规则，请在输入框中输入以下内容：';
+
+  @override
+  String get activityConfirmationPhrase => '我已知晓领取后不可退款';
+
+  @override
   String get selectAction => '选择';
 
   @override
@@ -1510,6 +1575,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notifications => '通知';
 
   @override
+  String get notificationSystem => '系统通知';
+
+  @override
+  String get notificationPersonal => '个人通知';
+
+  @override
+  String get notificationNew => 'NEW';
+
+  @override
+  String get notificationUnread => '未读';
+
+  @override
+  String get notificationUntitled => '通知';
+
+  @override
+  String get notificationLearnMore => '了解详情';
+
+  @override
+  String get notificationDetail => '通知详情';
+
+  @override
+  String get notificationEmpty => '暂无通知';
+
+  @override
+  String get notificationLoadFailed => '通知加载失败，请重试';
+
+  @override
+  String get notificationLoadMore => '加载更多';
+
+  @override
+  String get notificationLoadMoreFailed => '加载更多通知失败，点击重试';
+
+  @override
+  String get notificationReadFailed => '标记已读失败，请重新打开通知重试';
+
+  @override
+  String get notificationLoginRequired => '登录后即可查看通知';
+
+  @override
+  String get notificationImageFailed => '图片加载失败';
+
+  @override
+  String get notificationViewImage => '查看通知图片';
+
+  @override
+  String notificationDaysAgo(int days) {
+    return '$days天前';
+  }
+
+  @override
   String get profileSettings => '个人设置';
 
   @override
@@ -2043,6 +2158,165 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatPrepareRole => '正在整理角色方案';
+
+  @override
+  String get redemptionCenter => '兑换中心';
+
+  @override
+  String get redemptionPageTitle => '邀请好友';
+
+  @override
+  String get redemptionMyCodes => '我的邀请码';
+
+  @override
+  String get redemptionRegistrationReward => '注册奖励';
+
+  @override
+  String get redemptionInviteTitle => '邀请好友，赚积分';
+
+  @override
+  String get redemptionInviteDescription => '每邀请1位好友注册并登录\n即可获得200积分';
+
+  @override
+  String get redemptionRewardTitle => '好友邀请，领取好礼';
+
+  @override
+  String redemptionRewardDescription(int points) {
+    return '输入好友分享的邀请码\n领取$points积分奖励';
+  }
+
+  @override
+  String get redemptionPoints => '积分';
+
+  @override
+  String get redemptionFriendCode => '好友邀请码';
+
+  @override
+  String get redemptionFriendPlaceholder => '输入邀请码（每个用户仅一次）';
+
+  @override
+  String get redemptionClaimed => '已领取';
+
+  @override
+  String get redemptionPending => '待激活';
+
+  @override
+  String get redemptionUsed => '已被用户使用';
+
+  @override
+  String get redemptionRecords => '邀请记录';
+
+  @override
+  String get redemptionRegistered => '注册成功';
+
+  @override
+  String get redemptionCodesEmpty => '暂无邀请码';
+
+  @override
+  String get redemptionRecordsEmpty => '暂无邀请记录';
+
+  @override
+  String get redemptionFooter => '邀请奖励以活动规则为准，更新可能延时';
+
+  @override
+  String get redemptionLoadFailed => '加载失败，请重试';
+
+  @override
+  String get redemptionRewardClosed => '注册奖励活动暂未开放';
+
+  @override
+  String get redemptionClaimSuccess => '注册奖励领取成功';
+
+  @override
+  String get redemptionFailed => '兑换失败，请稍后重试';
+
+  @override
+  String get redemptionCopied => '邀请码已复制';
+
+  @override
+  String get redemptionLoadMore => '加载更多';
+
+  @override
+  String get redemptionLoginRequired => '登录后即可使用兑换中心';
+
+  @override
+  String get redemptionBindRequired => '绑定微信公众号后可查看邀请码';
+
+  @override
+  String get redemptionBindAction => '绑定微信公众号';
+
+  @override
+  String get redemptionBindDescription => '使用微信扫描二维码并完成绑定';
+
+  @override
+  String get redemptionQrExpired => '二维码已过期，请刷新';
+
+  @override
+  String get redemptionQrFailed => '二维码加载失败';
+
+  @override
+  String get redemptionBindingSuccess => '微信公众号绑定成功';
+
+  @override
+  String get redemptionBindingCheck => '检查绑定状态';
+
+  @override
+  String get redemptionBindingWaiting => '等待微信扫码绑定';
+
+  @override
+  String get teachingAll => '全部';
+
+  @override
+  String get teachingCreatorTitle => '创作者中心';
+
+  @override
+  String get teachingCreatorDescription => '专为AI新手打造的\n一站式教学平台';
+
+  @override
+  String get teachingCommunityTitle => '加入社群';
+
+  @override
+  String get teachingCommunityDescription => '与创作者交流\n扫码加入POPi社群';
+
+  @override
+  String get teachingCommunityUnavailable => '社群二维码暂不可用';
+
+  @override
+  String get teachingMemberTitle => '会员特惠';
+
+  @override
+  String get teachingMemberDescription => '解锁更多优质课程\n探索创作的无限可能';
+
+  @override
+  String teachingMemberPrice(String price) {
+    return '¥$price 起\n解锁更多优质课程';
+  }
+
+  @override
+  String teachingInstructor(String name) {
+    return '讲师：$name';
+  }
+
+  @override
+  String get teachingFree => '免费';
+
+  @override
+  String get teachingUntitled => '未命名课程';
+
+  @override
+  String get teachingLoading => '正在加载课程';
+
+  @override
+  String get teachingEmpty => '暂无课程';
+
+  @override
+  String get teachingLoadFailed => '课程加载失败，请稍后重试';
+
+  @override
+  String get teachingLoadMoreFailed => '加载更多失败，点击重试';
+
+  @override
+  String get teachingCategoriesFailed => '分类加载失败，点击重试';
 
   @override
   String get chatAskUser => '等待补充信息';

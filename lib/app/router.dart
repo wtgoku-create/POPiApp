@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/assets/presentation/assets_page.dart';
+import '../features/activities/domain/activity.dart';
+import '../features/activities/presentation/activities_page.dart';
+import '../features/activities/presentation/activity_detail_page.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/home/presentation/home_page.dart';
 import '../features/ip_guide/presentation/ip_guide_page.dart';
@@ -9,6 +12,7 @@ import '../features/role_guide/presentation/role_guide_page.dart';
 import '../features/ip_accounts/presentation/ip_accounts_live_page.dart';
 import '../features/ip_accounts/presentation/ip_account_home_page.dart';
 import '../features/session/presentation/session_page.dart';
+import '../features/teaching/presentation/teaching_page.dart';
 import '../core/config/app_config.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../features/h5/presentation/h5_page.dart';
@@ -16,6 +20,8 @@ import '../features/profile/presentation/edit_profile_page.dart';
 import '../features/profile/presentation/membership_page.dart';
 import '../features/profile/presentation/points_details_page.dart';
 import '../features/profile/presentation/profile_page.dart';
+import '../features/redemption/presentation/redemption_page.dart';
+import '../features/notifications/presentation/notifications_page.dart';
 import '../features/payments/domain/mobile_payment.dart';
 import '../features/payments/presentation/android_payment_page.dart';
 
@@ -25,11 +31,44 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
     routes: [
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(
+        path: '/activities',
+        builder: (context, state) => const ActivitiesPage(),
+        routes: [
+          GoRoute(
+            path: ':activityId',
+            builder: (context, state) => ActivityDetailPage(
+              activityId:
+                  int.tryParse(state.pathParameters['activityId']!) ?? 0,
+              catalog: state.extra is ActivityCatalog
+                  ? state.extra! as ActivityCatalog
+                  : null,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
         path: '/teaching',
-        builder: (context, state) => H5Page(
-          title: AppLocalizations.of(context)!.teachingCenter,
-          url: Uri.parse(AppConfig.teachingCenterUrl),
-        ),
+        builder: (context, state) => const TeachingPage(),
+        routes: [
+          GoRoute(
+            path: 'document/:courseId',
+            builder: (context, state) => H5Page(
+              title:
+                  state.extra is String && (state.extra! as String).isNotEmpty
+                  ? state.extra! as String
+                  : AppLocalizations.of(context)!.teachingCenter,
+              url: Uri.parse(AppConfig.teachingCenterUrl).replace(
+                pathSegments: [
+                  ...Uri.parse(
+                    AppConfig.teachingCenterUrl,
+                  ).pathSegments.where((part) => part.isNotEmpty),
+                  'document',
+                  state.pathParameters['courseId']!,
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/ip-accounts',
@@ -59,6 +98,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
         ),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
       GoRoute(
         path: '/legal/user-agreement',
         builder: (context, state) => H5Page(
@@ -98,6 +141,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       GoRoute(
         path: '/profile/points',
         builder: (context, state) => const PointsDetailsPage(),
+      ),
+      GoRoute(
+        path: '/profile/redemption',
+        builder: (context, state) => const RedemptionPage(),
       ),
       GoRoute(
         path: '/profile/membership',

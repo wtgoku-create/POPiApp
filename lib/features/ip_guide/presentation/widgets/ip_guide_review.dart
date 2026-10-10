@@ -13,12 +13,6 @@ class IpGuideReview extends StatelessWidget {
   const IpGuideReview({
     required this.draft,
     required this.nicknameController,
-    required this.onConfirm,
-    required this.onReselect,
-    required this.onCreateRole,
-    required this.onCreateContent,
-    required this.onOpenProject,
-    this.busy = false,
     this.submitted = false,
     this.completed = false,
     super.key,
@@ -26,12 +20,6 @@ class IpGuideReview extends StatelessWidget {
 
   final IpGuideDraft draft;
   final TextEditingController nicknameController;
-  final VoidCallback onConfirm;
-  final VoidCallback onReselect;
-  final VoidCallback onCreateRole;
-  final VoidCallback onCreateContent;
-  final VoidCallback onOpenProject;
-  final bool busy;
   final bool submitted;
   final bool completed;
 
@@ -210,45 +198,79 @@ class IpGuideReview extends StatelessWidget {
                   if (i < summaries.length - 1)
                     Divider(height: 1, thickness: 1, color: colors.outline),
                 ],
-                const SizedBox(height: 20),
-                if (completed) ...[
-                  IpGuideNextButton(
-                    key: const Key('ip-create-role'),
-                    label: l10n.ipCreateFirstRole,
-                    onPressed: busy ? null : onCreateRole,
-                  ),
-                  const SizedBox(height: 10),
-                  IpGuideNextButton(
-                    key: const Key('ip-create-content'),
-                    label: l10n.ipCreateFirstContent,
-                    onPressed: busy ? null : onCreateContent,
-                  ),
-                  const SizedBox(height: 10),
-                  _SecondaryAction(
-                    key: const Key('ip-open-project'),
-                    label: l10n.ipOpenProject,
-                    onPressed: busy ? null : onOpenProject,
-                  ),
-                ] else ...[
-                  IpGuideNextButton(
-                    key: const Key('ip-confirm'),
-                    label: busy ? l10n.ipCreating : l10n.ipConfirmCreate,
-                    onPressed: busy ? null : onConfirm,
-                  ),
-                  if (!submitted) ...[
-                    const SizedBox(height: 10),
-                    _SecondaryAction(
-                      key: const Key('ip-reselect'),
-                      label: l10n.ipReselect,
-                      onPressed: busy ? null : onReselect,
-                    ),
-                  ],
-                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Review actions remain visible outside the scrollable account summary.
+class IpGuideReviewActions extends StatelessWidget {
+  const IpGuideReviewActions({
+    required this.onConfirm,
+    required this.onReselect,
+    required this.onCreateRole,
+    required this.onCreateContent,
+    required this.onOpenProject,
+    this.busy = false,
+    this.submitted = false,
+    this.completed = false,
+    super.key,
+  });
+
+  final VoidCallback onConfirm;
+  final VoidCallback onReselect;
+  final VoidCallback onCreateRole;
+  final VoidCallback onCreateContent;
+  final VoidCallback onOpenProject;
+  final bool busy;
+  final bool submitted;
+  final bool completed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (completed) ...[
+          IpGuideNextButton(
+            key: const Key('ip-create-role'),
+            label: l10n.ipCreateFirstRole,
+            onPressed: busy ? null : onCreateRole,
+          ),
+          const SizedBox(height: 10),
+          IpGuideNextButton(
+            key: const Key('ip-create-content'),
+            label: l10n.ipCreateFirstContent,
+            onPressed: busy ? null : onCreateContent,
+          ),
+          const SizedBox(height: 10),
+          _SecondaryAction(
+            key: const Key('ip-open-project'),
+            label: l10n.ipOpenProject,
+            onPressed: busy ? null : onOpenProject,
+          ),
+        ] else ...[
+          IpGuideNextButton(
+            key: const Key('ip-confirm'),
+            label: busy ? l10n.ipCreating : l10n.ipConfirmCreate,
+            onPressed: busy ? null : onConfirm,
+          ),
+          if (!submitted) ...[
+            const SizedBox(height: 10),
+            _SecondaryAction(
+              key: const Key('ip-reselect'),
+              label: l10n.ipReselect,
+              onPressed: busy ? null : onReselect,
+            ),
+          ],
+        ],
+      ],
     );
   }
 }

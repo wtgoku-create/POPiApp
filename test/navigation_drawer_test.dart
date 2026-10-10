@@ -6,6 +6,8 @@ import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
+import 'package:popi_ai_app/features/teaching/presentation/teaching_page.dart';
+import 'package:popi_ai_app/features/notifications/presentation/notifications_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/home/presentation/home_page.dart';
 import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
@@ -115,6 +117,25 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets(
+    'notification button opens the inbox and preserves the current page',
+    (tester) async {
+      final container = await pumpDrawer(tester);
+      final router = container.read(routerProvider(false));
+      await tester.tap(find.byKey(const Key('drawer-notification-button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationsPage), findsOneWidget);
+      expect(router.state.uri.path, '/notifications');
+      expect(router.canPop(), isTrue);
+      await tester.tap(find.byKey(const Key('notification-back')));
+      await tester.pumpAndSettle();
+      expect(router.state.uri.path, '/session');
+      expect(router.state.uri.queryParameters['prompt'], '旧草稿');
+      expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('sidebar sections update a reused asset page and its selection', (
     tester,
@@ -351,10 +372,22 @@ void main() {
         final router = container.read(routerProvider(false));
         expect(router.state.uri.path, '/teaching');
         expect(router.canPop(), isFalse);
-        final page = tester.widget<H5Page>(find.byType(H5Page));
-        expect(page.title, '教学中心');
-        expect(page.url.toString(), AppConfig.teachingCenterUrl);
+        expect(find.byType(TeachingPage), findsOneWidget);
+        expect(find.text('教学中心'), findsOneWidget);
+        router.push('/teaching/document/17', extra: '课程详情');
+        await tester.pumpAndSettle();
+        final detail = tester.widget<H5Page>(find.byType(H5Page));
+        expect(detail.title, '课程详情');
+        expect(
+          detail.url.toString(),
+          '${AppConfig.teachingCenterUrl}/document/17',
+        );
         await tester.tap(find.byTooltip('返回'));
+        await tester.pumpAndSettle();
+        expect(find.byType(TeachingPage), findsOneWidget);
+        await tester.tap(find.byKey(const Key('popi-open-navigation')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('drawer-nav-home')));
         await tester.pumpAndSettle();
         expect(router.state.uri.path, '/');
         expect(find.byType(HomePage), findsOneWidget);

@@ -520,6 +520,135 @@ class NetworkApi {
     return _data(response);
   }
 
+  Future<Map<String, dynamic>> inviteCodes(int page, int pageSize) async =>
+      _data(
+        await dio.get<Map<String, dynamic>>(
+          '/api_client/users/inviteCode/list',
+          queryParameters: {'page': page, 'pageSize': pageSize},
+        ),
+      );
+
+  Future<Map<String, dynamic>> inviteRecords(int page, int pageSize) async =>
+      _data(
+        await dio.get<Map<String, dynamic>>(
+          '/api_client/users/inviteCodeLog/list',
+          queryParameters: {'page': page, 'pageSize': pageSize},
+        ),
+      );
+
+  Future<Map<String, dynamic>> usedInviteCode() async => _data(
+    await dio.get<Map<String, dynamic>>('/api_client/users/inviteCode/isUsed'),
+  );
+
+  Future<void> useInviteCode(String code) async {
+    _data(
+      await dio.post<Map<String, dynamic>>(
+        '/api_client/users/inviteCode/useInviteCode',
+        data: {'inviteCode': code},
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>> pointsRewardRule(String code) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/products/ruleConfig/detailByCode',
+      queryParameters: {'code': code},
+    ),
+  );
+
+  Future<Map<String, dynamic>> wechatOfficialBindingStatus() async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/users/user/wxghBindStatus',
+    ),
+  );
+
+  Future<Map<String, dynamic>> wechatOfficialBindingQrCode() async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/users/user/wxghBindQrCode',
+    ),
+  );
+
+  Future<Map<String, dynamic>> checkWechatOfficialBinding(
+    String sceneCode,
+  ) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/users/user/checkWxghBind',
+      queryParameters: {'sceneCode': sceneCode},
+    ),
+  );
+
+  Future<Map<String, dynamic>> notifications({
+    required String messageType,
+    required int page,
+    required int pageSize,
+  }) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/content/notification/list',
+      queryParameters: {
+        'messageType': messageType,
+        'page': page,
+        'pageSize': pageSize,
+      },
+    ),
+  );
+
+  Future<void> readNotification(int id) async {
+    _data(
+      await dio.post<Map<String, dynamic>>(
+        '/api_client/content/notification/read',
+        data: {'id': id},
+      ),
+    );
+  }
+
+  Future<List<Object?>> teachingCategories() async {
+    final response = await dio.get<Object?>(
+      '/api_client/content/courseCategory/list',
+    );
+    final data = _workBody(response.data)['data'];
+    if (data is! List) throw const ApiException();
+    return List<Object?>.from(data);
+  }
+
+  Future<Map<String, dynamic>> teachingCourses({
+    required int page,
+    required int pageSize,
+    int? categoryId,
+    String? keyword,
+  }) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/content/course/list',
+      queryParameters: {
+        'page': page,
+        'pageSize': pageSize,
+        if (categoryId != null) 'categoryId': categoryId,
+        if (keyword != null && keyword.trim().isNotEmpty)
+          'keyword': keyword.trim(),
+      },
+    ),
+  );
+
+  Future<Map<String, dynamic>> activities() async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/users/activity/list',
+      queryParameters: {'name': '', 'type': '', 'status': 1},
+    ),
+  );
+
+  Future<Map<String, dynamic>> activateActivityCode(String code) async => _data(
+    await dio.post<Map<String, dynamic>>(
+      '/api_client/users/activeCode/use',
+      data: {'code': code},
+    ),
+  );
+
+  Future<Map<String, dynamic>> memberLevels() async => _data(
+    await dio.get<Map<String, dynamic>>('/api_client/users/member/list'),
+  );
+
+  Future<Map<String, dynamic>> parameterConfig() async =>
+      _data(await dio.get<Map<String, dynamic>>('/api_client/param/config'));
+
   Future<List<dynamic>> pointPackages() async {
     final response = await dio.get<dynamic>(
       '/api_client/users/pointPackage/list',
