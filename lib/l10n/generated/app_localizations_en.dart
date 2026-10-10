@@ -2371,6 +2371,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get teachingAll => 'All';
 
   @override
+  String get teachingCatalog => 'Contents';
+
+  @override
+  String get teachingRequiredMember => 'membership';
+
+  @override
+  String get teachingDocumentEmpty => 'This course has no content yet';
+
+  @override
+  String get teachingDocumentFailed =>
+      'Could not load the course content. Please try again';
+
+  @override
+  String get teachingReaderUnavailable =>
+      'Course reading is unavailable on this platform';
+
+  @override
   String get teachingCreatorTitle => 'Creator center';
 
   @override

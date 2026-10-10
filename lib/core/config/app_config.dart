@@ -16,6 +16,10 @@ abstract final class AppConfig {
     'TEACHING_CENTER_URL',
     defaultValue: '$apiBaseUrl/teaching',
   );
+  static const teachingReaderUrl = String.fromEnvironment(
+    'TEACHING_READER_URL',
+    defaultValue: '$teachingCenterUrl/reader',
+  );
   static const applePaymentEnvironment = String.fromEnvironment(
     'APPLE_PAYMENT_ENVIRONMENT',
     defaultValue: 'Production',

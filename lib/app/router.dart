@@ -13,6 +13,8 @@ import '../features/ip_accounts/presentation/ip_accounts_live_page.dart';
 import '../features/ip_accounts/presentation/ip_account_home_page.dart';
 import '../features/session/presentation/session_page.dart';
 import '../features/teaching/presentation/teaching_page.dart';
+import '../features/teaching/presentation/teaching_document_page.dart';
+import '../features/teaching/domain/teaching.dart';
 import '../core/config/app_config.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../features/h5/presentation/h5_page.dart';
@@ -52,20 +54,11 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
         routes: [
           GoRoute(
             path: 'document/:courseId',
-            builder: (context, state) => H5Page(
-              title:
-                  state.extra is String && (state.extra! as String).isNotEmpty
-                  ? state.extra! as String
-                  : AppLocalizations.of(context)!.teachingCenter,
-              url: Uri.parse(AppConfig.teachingCenterUrl).replace(
-                pathSegments: [
-                  ...Uri.parse(
-                    AppConfig.teachingCenterUrl,
-                  ).pathSegments.where((part) => part.isNotEmpty),
-                  'document',
-                  state.pathParameters['courseId']!,
-                ],
-              ),
+            builder: (context, state) => TeachingDocumentPage(
+              courseId: int.tryParse(state.pathParameters['courseId']!) ?? 0,
+              course: state.extra is TeachingCourse
+                  ? state.extra! as TeachingCourse
+                  : null,
             ),
           ),
         ],

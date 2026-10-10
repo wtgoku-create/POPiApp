@@ -64,27 +64,14 @@ class TeachingRepository {
 
   Future<TeachingHighlights> fetchHighlights() async {
     // A missing promotion or configuration must not block course browsing.
-    final memberRequest = _optional(networkApi.memberLevels);
+    final memberRequest = _optional(fetchMemberLabels);
     final configRequest = _optional(networkApi.parameterConfig);
     final planRequest = _optional(
       () => ProductPlanRepository(networkApi).fetchAll(),
     );
-    final members = await memberRequest;
+    final memberLabels = await memberRequest ?? <int, String>{};
     final config = await configRequest;
     final plans = await planRequest;
-    final memberLabels = <int, String>{};
-    final list = members?['list'];
-    if (list is List) {
-      for (final item in list.whereType<Map>()) {
-        final level = _integer(item['memberLevel']);
-        final name = _string(item['memberName']);
-        if (item['deleted'] != true &&
-            _integer(item['status']) == 1 &&
-            name.isNotEmpty) {
-          memberLabels[level] = name;
-        }
-      }
-    }
     final systemConfig = config?['systemConfig'];
     final validPlans = (plans ?? [])
         .where((plan) => !plan.deleted && plan.status == 1 && plan.price > 0)
@@ -111,6 +98,92 @@ class TeachingRepository {
     );
   }
 
+  Future<Map<int, String>> fetchMemberLabels() async {
+    final data = await networkApi.memberLevels();
+    final list = data['list'];
+    return {
+      if (list is List)
+        for (final item in list.whereType<Map>())
+          if (item['deleted'] != true &&
+              _integer(item['status']) == 1 &&
+              _string(item['memberName']).isNotEmpty)
+            _integer(item['memberLevel']): _string(item['memberName']),
+    };
+  }
+
+  /// Match Web's first-document selection without reordering the server list.
+  Future<TeachingDocument?> fetchCourseDocument(int courseId) async {
+    if (courseId <= 0) throw const ApiException();
+    final list = (await networkApi.teachingDocuments(courseId))['list'];
+    if (list is! List) throw const ApiException();
+    if (list.isEmpty) return null;
+    final first = list.first;
+    if (first is! Map || _integer(first['id']) <= 0) {
+      throw const ApiException();
+    }
+    final data = await networkApi.teachingDocumentDetail(_integer(first['id']));
+    if (_integer(data['id']) <= 0 ||
+        data['deleted'] == true ||
+        (data['status'] != null && _integer(data['status']) != 1)) {
+      throw const ApiException();
+    }
+    final user = data['userInfo'];
+    final rawLevels = data['memberLevels'];
+    final levels = rawLevels is List
+        ? rawLevels
+              .map((value) => int.tryParse(value.toString()))
+              .whereType<int>()
+              .where((value) => value >= 0)
+              .toSet()
+              .toList()
+        : <int>[];
+    levels.sort();
+    final rawTags = data['tags'];
+    final html =
+        [
+              data['contentHtml'],
+              data['content'],
+              data['html'],
+              data['body'],
+              data['documentContent'],
+            ]
+            .whereType<String>()
+            .where((text) => text.trim().isNotEmpty)
+            .firstOrNull ??
+        '';
+    return TeachingDocument(
+      id: _integer(data['id']),
+      title:
+          [data['title'], data['name'], data['documentTitle']]
+              .whereType<String>()
+              .map((text) => text.trim())
+              .where((text) => text.isNotEmpty)
+              .firstOrNull ??
+          '',
+      contentJson:
+          data['contentJson'] ??
+          data['content'] ??
+          data['documentContent'] ??
+          data['body'] ??
+          data['html'],
+      contentHtml: html,
+      canViewPaidContent: data['canViewPaidContent'] == true,
+      publishTime: _string(data['publishTime']).isNotEmpty
+          ? _string(data['publishTime'])
+          : _string(data['createTime']),
+      tags: rawTags is List
+          ? rawTags
+                .whereType<String>()
+                .map((tag) => tag.trim())
+                .where((tag) => tag.isNotEmpty)
+                .toList()
+          : const [],
+      memberLevels: levels,
+      instructorName: user is Map ? _string(user['name']) : '',
+      instructorAvatarUrl: user is Map ? _mediaUrl(user['avatar']) : '',
+    );
+  }
+
   TeachingCourse _course(Map<String, Object?> json) {
     final user = json['userInfo'];
     final levels = json['memberLevels'];
@@ -126,6 +199,7 @@ class TeachingRepository {
     return TeachingCourse(
       id: _integer(json['id']),
       name: _string(json['name']),
+      description: _string(json['desp']),
       coverUrl: _mediaUrl(json['cover']),
       instructorName: user is Map ? _string(user['name']) : '',
       instructorAvatarUrl: user is Map ? _mediaUrl(user['avatar']) : '',

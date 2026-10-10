@@ -4393,6 +4393,36 @@ abstract class AppLocalizations {
   /// **'All'**
   String get teachingAll;
 
+  /// No description provided for @teachingCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Contents'**
+  String get teachingCatalog;
+
+  /// No description provided for @teachingRequiredMember.
+  ///
+  /// In en, this message translates to:
+  /// **'membership'**
+  String get teachingRequiredMember;
+
+  /// No description provided for @teachingDocumentEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This course has no content yet'**
+  String get teachingDocumentEmpty;
+
+  /// No description provided for @teachingDocumentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the course content. Please try again'**
+  String get teachingDocumentFailed;
+
+  /// No description provided for @teachingReaderUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Course reading is unavailable on this platform'**
+  String get teachingReaderUnavailable;
+
   /// No description provided for @teachingCreatorTitle.
   ///
   /// In en, this message translates to:

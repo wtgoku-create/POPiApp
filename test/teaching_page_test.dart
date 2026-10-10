@@ -12,7 +12,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
-import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
+import 'package:popi_ai_app/features/teaching/presentation/teaching_document_page.dart';
 import 'package:popi_ai_app/features/teaching/data/teaching_repository.dart';
 import 'package:popi_ai_app/features/teaching/domain/teaching.dart';
 import 'package:popi_ai_app/features/teaching/presentation/teaching_page.dart';
@@ -99,11 +99,10 @@ void main() {
           routes: [
             GoRoute(
               path: 'document/:courseId',
-              builder: (_, state) => H5Page(
-                title: state.extra! as String,
-                url: Uri.parse(
-                  'https://popi.test/teaching/document/${state.pathParameters['courseId']}',
-                ),
+              builder: (_, state) => TeachingDocumentPage(
+                courseId: int.parse(state.pathParameters['courseId']!),
+                course: state.extra! as TeachingCourse,
+                repository: repository,
               ),
             ),
           ],
@@ -289,7 +288,7 @@ void main() {
     },
   );
 
-  pageTest('course opens its Web detail and back preserves the catalog', (
+  pageTest('course opens its reader and back preserves the catalog', (
     tester,
   ) async {
     final repository = _Repository();
@@ -297,8 +296,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('teaching-course-2')));
     await tester.pumpAndSettle();
     expect(router.state.uri.path, '/teaching/document/2');
-    final detail = tester.widget<H5Page>(find.byType(H5Page));
-    expect(detail.url.toString(), 'https://popi.test/teaching/document/2');
+    final detail = tester.widget<TeachingDocumentPage>(
+      find.byType(TeachingDocumentPage),
+    );
+    expect(detail.courseId, 2);
+    expect(detail.course?.id, 2);
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
     expect(find.byType(TeachingPage), findsOneWidget);

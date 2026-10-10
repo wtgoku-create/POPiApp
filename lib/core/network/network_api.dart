@@ -628,6 +628,20 @@ class NetworkApi {
     ),
   );
 
+  Future<Map<String, dynamic>> teachingDocuments(int courseId) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/content/document/list',
+      queryParameters: {'courseId': courseId},
+    ),
+  );
+
+  Future<Map<String, dynamic>> teachingDocumentDetail(int id) async => _data(
+    await dio.get<Map<String, dynamic>>(
+      '/api_client/content/document/detail',
+      queryParameters: {'id': id},
+    ),
+  );
+
   Future<Map<String, dynamic>> activities() async => _data(
     await dio.get<Map<String, dynamic>>(
       '/api_client/users/activity/list',

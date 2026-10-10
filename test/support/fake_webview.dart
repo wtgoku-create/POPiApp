@@ -25,7 +25,19 @@ class FakeWebViewController extends PlatformWebViewController {
   FakeWebViewController(super.params) : super.implementation();
 
   final requests = <LoadRequestParams>[];
+  final scripts = <String>[];
+  final channels = <String, JavaScriptChannelParams>{};
   bool failNextLoad = false;
+
+  @override
+  Future<void> addJavaScriptChannel(JavaScriptChannelParams params) async {
+    channels[params.name] = params;
+  }
+
+  @override
+  Future<void> runJavaScript(String javaScript) async {
+    scripts.add(javaScript);
+  }
 
   @override
   Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}

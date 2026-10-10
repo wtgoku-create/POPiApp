@@ -318,7 +318,7 @@ class _TeachingPageState extends ConsumerState<TeachingPage> {
                                   memberLabels: _highlights.memberLabels,
                                   onTap: () => context.push(
                                     '/teaching/document/${course.id}',
-                                    extra: course.name,
+                                    extra: course,
                                   ),
                                 );
                               }, childCount: _courses.length),

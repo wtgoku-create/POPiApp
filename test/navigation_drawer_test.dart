@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
-import 'package:popi_ai_app/core/config/app_config.dart';
-import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
+import 'package:popi_ai_app/features/teaching/domain/teaching.dart';
+import 'package:popi_ai_app/features/teaching/presentation/teaching_document_page.dart';
 import 'package:popi_ai_app/features/teaching/presentation/teaching_page.dart';
 import 'package:popi_ai_app/features/notifications/presentation/notifications_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
@@ -374,14 +374,16 @@ void main() {
         expect(router.canPop(), isFalse);
         expect(find.byType(TeachingPage), findsOneWidget);
         expect(find.text('教学中心'), findsOneWidget);
-        router.push('/teaching/document/17', extra: '课程详情');
-        await tester.pumpAndSettle();
-        final detail = tester.widget<H5Page>(find.byType(H5Page));
-        expect(detail.title, '课程详情');
-        expect(
-          detail.url.toString(),
-          '${AppConfig.teachingCenterUrl}/document/17',
+        router.push(
+          '/teaching/document/17',
+          extra: const TeachingCourse(id: 17, name: '课程详情'),
         );
+        await tester.pumpAndSettle();
+        final detail = tester.widget<TeachingDocumentPage>(
+          find.byType(TeachingDocumentPage),
+        );
+        expect(detail.course?.name, '课程详情');
+        expect(detail.courseId, 17);
         await tester.tap(find.byTooltip('返回'));
         await tester.pumpAndSettle();
         expect(find.byType(TeachingPage), findsOneWidget);

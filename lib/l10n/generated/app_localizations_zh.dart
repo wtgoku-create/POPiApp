@@ -2267,6 +2267,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get teachingAll => '全部';
 
   @override
+  String get teachingCatalog => '课程目录';
+
+  @override
+  String get teachingRequiredMember => '会员';
+
+  @override
+  String get teachingDocumentEmpty => '该课程暂无内容';
+
+  @override
+  String get teachingDocumentFailed => '课程内容加载失败，请重试';
+
+  @override
+  String get teachingReaderUnavailable => '当前平台暂不支持课程阅读';
+
+  @override
   String get teachingCreatorTitle => '创作者中心';
 
   @override

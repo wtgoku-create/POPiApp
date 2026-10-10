@@ -65,6 +65,7 @@ void main() {
               {
                 'id': 10,
                 'name': ' AI创作 ',
+                'desp': ' 课程简介 ',
                 'cover': '/media/cover.png',
                 'memberLevels': [3, '1', 3, 'bad'],
                 'tags': ['', ' 新手 ', '第二个'],
@@ -84,6 +85,7 @@ void main() {
       expect(result.hasMore, isTrue);
       final course = result.items.single;
       expect(course.name, 'AI创作');
+      expect(course.description, '课程简介');
       expect(course.coverUrl, 'https://popi.test/media/cover.png');
       expect(course.instructorName, 'Alice');
       expect(course.instructorAvatarUrl, 'https://popi.test/media/avatar.png');
@@ -112,6 +114,118 @@ void main() {
       final result = await repo.fetchCourses(page: 1, pageSize: 2);
       expect(result.hasMore, isTrue);
       expect(result.items.single.coverUrl, isEmpty);
+    },
+  );
+
+  test(
+    'loads the first server document and only exposes reader fields',
+    () async {
+      final paths = <String>[];
+      final repo = repository((request) {
+        paths.add(request.path);
+        if (request.path.endsWith('/list')) {
+          expect(request.queryParameters, {'courseId': 5});
+          return {
+            'status': '0000',
+            'data': {
+              'list': [
+                {'id': 20, 'sort': 99},
+                {'id': 10, 'sort': 1},
+              ],
+            },
+          };
+        }
+        expect(request.queryParameters, {'id': 20});
+        return {
+          'status': '0000',
+          'data': {
+            'id': 20,
+            'title': ' 文章 ',
+            'contentJson': '{"type":"blocknote","blocks":[]}',
+            'contentHtml': '<h1>正文</h1>',
+            'memberLevels': [3, '2', 2],
+            'canViewPaidContent': false,
+            'createTime': '2026-10-10',
+            'tags': [' 标签 ', '', 1],
+            'userInfo': {
+              'name': ' 讲师 ',
+              'avatar': '/media/avatar.png',
+              'phone': 'private',
+            },
+            'token': 'private',
+          },
+        };
+      });
+      final document = (await repo.fetchCourseDocument(5))!;
+      expect(paths, [
+        '/api_client/content/document/list',
+        '/api_client/content/document/detail',
+      ]);
+      expect(document.id, 20);
+      expect(document.title, '文章');
+      expect(document.memberLevels, [2, 3]);
+      expect(document.publishTime, '2026-10-10');
+      expect(document.canViewPaidContent, isFalse);
+      expect(document.tags, ['标签']);
+      expect(
+        document.instructorAvatarUrl,
+        'https://popi.test/media/avatar.png',
+      );
+      final data = document.toReaderData();
+      expect(data.containsKey('token'), isFalse);
+      expect((data['userInfo'] as Map).containsKey('phone'), isFalse);
+    },
+  );
+
+  test(
+    'handles empty and malformed document lists and legacy content',
+    () async {
+      final empty = repository(
+        (_) => {
+          'status': '0000',
+          'data': {'list': []},
+        },
+      );
+      expect(await empty.fetchCourseDocument(1), isNull);
+      for (final list in [
+        'bad',
+        [null],
+        [
+          {'id': 'bad'},
+        ],
+      ]) {
+        final malformed = repository(
+          (_) => {
+            'status': '0000',
+            'data': {'list': list},
+          },
+        );
+        await expectLater(
+          malformed.fetchCourseDocument(1),
+          throwsA(isA<ApiException>()),
+        );
+      }
+      final legacy = repository(
+        (request) => {
+          'status': '0000',
+          'data': request.path.endsWith('/list')
+              ? {
+                  'list': [
+                    {'id': 9},
+                  ],
+                }
+              : {
+                  'id': 9,
+                  'name': '旧文章',
+                  'content': '<p>旧正文</p>',
+                  'canViewPaidContent': 'true',
+                },
+        },
+      );
+      final document = (await legacy.fetchCourseDocument(1))!;
+      expect(document.title, '旧文章');
+      expect(document.contentHtml, '<p>旧正文</p>');
+      expect(document.canViewPaidContent, isFalse);
     },
   );
 
