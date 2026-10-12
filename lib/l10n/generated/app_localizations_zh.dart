@@ -21,6 +21,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleRequestFailed => '创作请求失败，请重试';
 
   @override
+  String get roleStoryRequestFailed => '选题请求失败';
+
+  @override
   String get roleLoadingStories => '正在推荐故事...';
 
   @override
@@ -289,6 +292,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleStoryboardContent => '分镜内容';
 
   @override
+  String roleStoryboardShot(int index, String duration) {
+    return '镜头 $index · $duration 秒';
+  }
+
+  @override
+  String get roleVideoModelPrompt => '视频模型提示词';
+
+  @override
+  String get videoFullscreen => '全屏播放';
+
+  @override
   String get rolePreviewNotice => '交互演示 · 不消耗积分';
 
   @override
@@ -555,6 +569,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get roleFieldRequired => '请填写此项';
+
+  @override
+  String get roleEditCreationProfile => '修改此次角色档案';
+
+  @override
+  String get roleEditCreationArchive => '编辑本次创作档案';
+
+  @override
+  String get roleCreationEditTitle => '为本次创作调整角色设定';
+
+  @override
+  String get roleCreationEditDescription => '可修改角色描述、外形、性格、表达风格、受众和内容标签。';
+
+  @override
+  String get roleFieldInvalidFormat => '字段格式不正确';
 
   @override
   String get createWithRole => '围绕角色创作';
@@ -2151,10 +2180,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRoleCreated => '角色草案已创建';
 
   @override
-  String get chatRoleUpdated => '角色草案已更新';
+  String get chatRoleUpdated => '角色档案已更新';
 
   @override
-  String get chatRolePublished => '角色已发布';
+  String get chatRolePublished => '角色档案已发布';
+
+  @override
+  String get chatViewRoleLibrary => '前往角色库查看';
+
+  @override
+  String get chatViewRoleProfile => '查看完整档案';
+
+  @override
+  String get chatCastRole => '出场角色';
+
+  @override
+  String get chatRoleActive => '已发布';
+
+  @override
+  String get chatRoleDraft => '草稿';
 
   @override
   String get chatExpandProgress => '展开进度';

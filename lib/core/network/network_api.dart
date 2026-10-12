@@ -354,6 +354,16 @@ class NetworkApi {
     cancelToken,
   );
 
+  Future<Map<String, Object?>> saveHomeRoleProfile(
+    String creationId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _studioRequest(
+    '/api_client/agent/v2/creations/${Uri.encodeComponent(creationId)}/role-versions',
+    input,
+    cancelToken,
+  );
+
   Future<void> selectHomeTopic(
     String creationId,
     Map<String, Object?> input, {

@@ -23,6 +23,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not complete the creation request. Try again';
 
   @override
+  String get roleStoryRequestFailed => 'Could not complete the story request';
+
+  @override
   String get roleLoadingStories => 'Finding stories...';
 
   @override
@@ -299,6 +302,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleStoryboardContent => 'Storyboard';
+
+  @override
+  String roleStoryboardShot(int index, String duration) {
+    return 'Shot $index · $duration s';
+  }
+
+  @override
+  String get roleVideoModelPrompt => 'Video model prompt';
+
+  @override
+  String get videoFullscreen => 'Play fullscreen';
 
   @override
   String get rolePreviewNotice => 'Interaction preview · No points charged';
@@ -578,6 +592,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleFieldRequired => 'This field is required';
+
+  @override
+  String get roleEditCreationProfile => 'Edit role for this creation';
+
+  @override
+  String get roleEditCreationArchive => 'Edit profile for this creation';
+
+  @override
+  String get roleCreationEditTitle => 'Adjust the role for this creation';
+
+  @override
+  String get roleCreationEditDescription =>
+      'Edit the description, appearance, personality, expression style, audience and content tags.';
+
+  @override
+  String get roleFieldInvalidFormat => 'Invalid field format';
 
   @override
   String get createWithRole => 'Create with this role';
@@ -2252,10 +2282,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoleCreated => 'Character draft created';
 
   @override
-  String get chatRoleUpdated => 'Character draft updated';
+  String get chatRoleUpdated => 'Character profile updated';
 
   @override
-  String get chatRolePublished => 'Character published';
+  String get chatRolePublished => 'Character profile published';
+
+  @override
+  String get chatViewRoleLibrary => 'View in character library';
+
+  @override
+  String get chatViewRoleProfile => 'View full profile';
+
+  @override
+  String get chatCastRole => 'Cast';
+
+  @override
+  String get chatRoleActive => 'Published';
+
+  @override
+  String get chatRoleDraft => 'Draft';
 
   @override
   String get chatExpandProgress => 'Expand progress';

@@ -8,6 +8,57 @@ import 'support/home_creation_fixtures.dart';
 
 void main() {
   test(
+    'role edits follow Web home commands and leave library roles unchanged',
+    () async {
+      final fixture = HomeCreationFixture()..failRoleSaveOnce = true;
+      final repository = fixture.repository;
+      final home = await repository.open('101');
+      final profile = {
+        'title': 'Local character',
+        'description': 'Local description',
+        'contentTags': ['School'],
+      };
+      await expectLater(
+        repository.saveRoleProfile(home, '1', profile),
+        throwsA(isA<DioException>()),
+      );
+      final updated = await repository.saveRoleProfile(home, '1', profile);
+      final writes = fixture.requests
+          .where((request) => request.path.endsWith('/role-versions'))
+          .toList();
+      expect(writes, hasLength(2));
+      expect(writes[0].data, writes[1].data);
+      expect(writes.last.method, 'POST');
+      expect(
+        writes.last.path,
+        '/api_client/agent/v2/creations/301/role-versions',
+      );
+      expect(writes.last.baseUrl, 'http://business.test');
+      expect(writes.last.data['roleId'], 1);
+      expect(writes.last.data['profile'], profile);
+      expect(writes.last.data.containsKey('expectedRevision'), isFalse);
+      expect(writes.last.data.containsKey('profileVersionId'), isFalse);
+      expect(updated.cast.single.title, 'Local character');
+      expect(updated.version, 2);
+      expect(updated.selectedTopic, isNull);
+      expect(fixture.role(1)['title'], 'Character 1');
+      expect(fixture.requests.last.path, '/api_agent/v2/home/enter');
+      expect(
+        () => repository.saveRoleProfile(updated, '2', profile),
+        throwsA(isA<ApiException>()),
+      );
+      final locked = HomeCreation.fromJson({
+        ...fixture.snapshot(),
+        'editable': false,
+      });
+      expect(
+        () => repository.saveRoleProfile(locked, '1', profile),
+        throwsA(isA<ApiException>()),
+      );
+    },
+  );
+
+  test(
     'role entry, topics, cast and selection use separate Web transports',
     () async {
       final fixture = HomeCreationFixture();

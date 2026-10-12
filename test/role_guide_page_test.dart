@@ -349,6 +349,10 @@ void main() {
       expect(find.byKey(const Key('role-guide-back')), findsNothing);
       expect(find.text('爱丽丝的项目'), findsOneWidget);
       expect(find.text('共4个角色'), findsOneWidget);
+      final previous = find.byKey(const Key('role-guide-previous-story'));
+      final next = find.byKey(const Key('role-guide-next-story'));
+      expect(tester.widget<IconButton>(previous).onPressed, isNull);
+      expect(tester.getCenter(next).dx - tester.getCenter(previous).dx, 24);
       await tap(tester, 'role-guide-next-story');
       expect(find.text('室友的秘密计划'), findsOneWidget);
       await tap(tester, 'role-guide-previous-story');
@@ -670,7 +674,9 @@ void main() {
       lookupAppLocalizations(const Locale('zh')),
       0,
     ).first;
-    expect(find.text(story.content), findsOneWidget);
+    for (final shot in story.content.split('\n')) {
+      expect(find.textContaining(shot, findRichText: true), findsWidgets);
+    }
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('role-guide-produce')), findsOneWidget);

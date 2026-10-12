@@ -8,6 +8,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/widgets/app_video_preview.dart';
+import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
 
 import 'support/fake_video_player.dart';
 
@@ -62,6 +63,7 @@ void main() {
     await open(tester);
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('underlying-screen')), findsOneWidget);
+    expect(find.byType(AppVideoPlayer), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
     final videoBounds = tester.getRect(find.byType(VideoPlayer));
     await tester.tapAt(videoBounds.center);

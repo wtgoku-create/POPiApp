@@ -22,6 +22,7 @@ class RoleDetailPage extends ConsumerStatefulWidget {
     required this.category,
     this.onRoleUpdated,
   }) : isSheet = false,
+       useSnapshot = false,
        scrollController = null;
 
   /// Reuses the archive layout in a sheet without page navigation or actions.
@@ -30,10 +31,12 @@ class RoleDetailPage extends ConsumerStatefulWidget {
     required this.role,
     required this.category,
     required this.scrollController,
+    this.useSnapshot = false,
   }) : isSheet = true,
        onRoleUpdated = null;
 
   final LibraryRole role;
+  final bool useSnapshot;
   final String category;
   final ValueChanged<LibraryRole>? onRoleUpdated;
   final bool isSheet;
@@ -129,7 +132,19 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     _repository = RoleLibraryRepository(NetworkApi(ref.read(dioProvider)));
     _role = widget.role;
     _fullProfile = !widget.isSheet;
-    _load();
+    if (widget.useSnapshot) {
+      _loading = false;
+    } else {
+      _load();
+    }
+  }
+
+  @override
+  void didUpdateWidget(RoleDetailPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.useSnapshot && oldWidget.role != widget.role) {
+      _role = widget.role;
+    }
   }
 
   Future<void> _load() async {

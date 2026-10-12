@@ -21,6 +21,7 @@ class RoleGenerationPanel extends StatelessWidget {
     this.statusLabel,
     this.actionEnabled = true,
     this.onAction,
+    this.result,
     super.key,
   });
 
@@ -34,6 +35,7 @@ class RoleGenerationPanel extends StatelessWidget {
   final String? statusLabel;
   final bool actionEnabled;
   final VoidCallback? onAction;
+  final Widget? result;
 
   @override
   Widget build(BuildContext context) {
@@ -179,135 +181,140 @@ class RoleGenerationPanel extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 26),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.textScalerOf(context).scale(16) > 20
-                  ? 220
-                  : 160,
-            ),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: completed && progress.cover != null
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Hero(
-                          tag: 'role-guide-result',
-                          child: Image.asset(
-                            progress.cover!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: Center(
-                            child: IconButton.filledTonal(
-                              key: const Key('role-guide-preview-result'),
-                              tooltip: progress.videoUrl == null
-                                  ? l10n.rolePreviewCover
-                                  : l10n.videoPlay,
-                              onPressed: () => progress.videoUrl != null
-                                  ? AppVideoPreview.show(
-                                      context: context,
-                                      url: progress.videoUrl!,
-                                    )
-                                  : AppImagePreview.show(
-                                      context: context,
-                                      image: AssetImage(progress.cover!),
-                                      heroTag: 'role-guide-result',
-                                      label: l10n.rolePreviewCover,
-                                    ),
-                              icon: Icon(
-                                progress.videoUrl == null
-                                    ? Icons.fullscreen
-                                    : Icons.play_arrow,
-                              ),
+        if (result != null)
+          result!
+        else
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.textScalerOf(context).scale(16) > 20
+                    ? 220
+                    : 160,
+              ),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: completed && progress.cover != null
+                    ? Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Hero(
+                            tag: 'role-guide-result',
+                            child: Image.asset(
+                              progress.cover!,
+                              fit: BoxFit.cover,
                             ),
                           ),
-                        ),
-                        if (preview)
-                          Positioned(
-                            right: 10,
-                            bottom: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: .5),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                l10n.rolePreviewCover,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
+                          Positioned.fill(
+                            child: Center(
+                              child: IconButton.filledTonal(
+                                key: const Key('role-guide-preview-result'),
+                                tooltip: progress.videoUrl == null
+                                    ? l10n.rolePreviewCover
+                                    : l10n.videoPlay,
+                                onPressed: () => progress.videoUrl != null
+                                    ? AppVideoPreview.show(
+                                        context: context,
+                                        url: progress.videoUrl!,
+                                      )
+                                    : AppImagePreview.show(
+                                        context: context,
+                                        image: AssetImage(progress.cover!),
+                                        heroTag: 'role-guide-result',
+                                        label: l10n.rolePreviewCover,
+                                      ),
+                                icon: Icon(
+                                  progress.videoUrl == null
+                                      ? Icons.fullscreen
+                                      : Icons.play_arrow,
                                 ),
                               ),
                             ),
                           ),
-                      ],
-                    )
-                  : DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: progress.running
-                            ? const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFFE0D2E5),
-                                  Color(0xFF579ED1),
-                                  Color(0xFFA764E3),
-                                ],
-                              )
-                            : null,
-                        color: progress.running ? null : roleGuideTint(context),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (progress.running)
-                              const RotatedBox(
-                                quarterTurns: 2,
-                                child: AppSvgIcon.asset(
-                                  'role_guide_generating',
-                                  size: 60,
+                          if (preview)
+                            Positioned(
+                              right: 10,
+                              bottom: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
                                 ),
-                              )
-                            else
-                              Icon(
-                                progress.status == RoleGenerationStatus.failed
-                                    ? Icons.error_outline
-                                    : Icons.stop_circle_outlined,
-                                size: 40,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            const SizedBox(height: 12),
-                            Text(
-                              statusLabel ??
-                                  (progress.running
-                                      ? l10n.roleWorkGenerating
-                                      : status),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: progress.running
-                                    ? Colors.white
-                                    : colors.onSurface,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: .5),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  l10n.rolePreviewCover,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
+                        ],
+                      )
+                    : DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: progress.running
+                              ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFFE0D2E5),
+                                    Color(0xFF579ED1),
+                                    Color(0xFFA764E3),
+                                  ],
+                                )
+                              : null,
+                          color: progress.running
+                              ? null
+                              : roleGuideTint(context),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (progress.running)
+                                const RotatedBox(
+                                  quarterTurns: 2,
+                                  child: AppSvgIcon.asset(
+                                    'role_guide_generating',
+                                    size: 60,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  progress.status == RoleGenerationStatus.failed
+                                      ? Icons.error_outline
+                                      : Icons.stop_circle_outlined,
+                                  size: 40,
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              const SizedBox(height: 12),
+                              Text(
+                                statusLabel ??
+                                    (progress.running
+                                        ? l10n.roleWorkGenerating
+                                        : status),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: progress.running
+                                      ? Colors.white
+                                      : colors.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 20),
         RoleGuideAction(
           key: const Key('role-guide-generation-action'),

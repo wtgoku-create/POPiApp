@@ -16,6 +16,7 @@ class ConversationBlock {
       mediaId = json['mediaId'] as String?,
       kind = json['kind'] as String?,
       action = json['action'] as String?,
+      scope = json['scope'] == null ? const {} : conversationMap(json['scope']),
       data = json['data'] == null ? const {} : conversationMap(json['data']);
 
   ConversationBlock.text(this.text)
@@ -23,6 +24,7 @@ class ConversationBlock {
       mediaId = null,
       kind = null,
       action = null,
+      scope = const {},
       data = const {};
 
   final String type;
@@ -30,9 +32,17 @@ class ConversationBlock {
   final String? mediaId;
   final String? kind;
   final String? action;
+  final Map<String, Object?> scope;
   final Map<String, Object?> data;
 
   String get id => data['id']?.toString() ?? '';
+  String get referenceId {
+    final ref = data['ref'];
+    return ref is Map ? conversationMap(ref)['id']?.toString() ?? id : id;
+  }
+
+  String? get scopeId => scope['id']?.toString();
+  String? get scopeKind => scope['kind'] as String?;
   int get revision => data['revision'] as int? ?? 1;
   String get title => data['title'] as String? ?? '';
   String get status => (data['status'] ?? data['state']) as String? ?? '';

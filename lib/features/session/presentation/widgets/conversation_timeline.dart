@@ -17,9 +17,19 @@ import '../../../../shared/widgets/app_video_preview.dart';
 import '../../data/session_repository.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../conversation_controller.dart';
+import 'conversation_role_card.dart';
 
 const _conversationMessagePadding = EdgeInsets.fromLTRB(20, 6, 20, 6);
 const _conversationBlockPadding = EdgeInsets.symmetric(vertical: 4);
+const _userBubbleRadius = BorderRadius.only(
+  topLeft: Radius.circular(26),
+  bottomLeft: Radius.circular(26),
+  bottomRight: Radius.circular(26),
+);
+
+bool _hasRoleObjects(ConversationMessage message) => message.blocks.any(
+  (block) => block.type == 'object' && block.kind == 'role',
+);
 
 String conversationErrorText(Object? error, AppLocalizations l10n) {
   if (error is AgentApiException &&
@@ -98,6 +108,96 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       }
     }
     _lastSnapshot = snapshot;
+  }
+
+  List<Widget> _messageBlockViews(
+    ConversationMessage message,
+    ConversationController controller,
+    bool isSentByMe,
+  ) {
+    final children = <Widget>[];
+    final objectOccurrences = <(String?, String), int>{};
+    var topicGroup = 0;
+    for (var index = 0; index < message.blocks.length; index++) {
+      final block = message.blocks[index];
+      if (block.type == 'object' &&
+          block.kind == 'topic' &&
+          block.action != 'selected' &&
+          !isSentByMe) {
+        final topics = [block];
+        // Keep separate batches and intervening text/media in their original order.
+        while (index + 1 < message.blocks.length) {
+          final next = message.blocks[index + 1];
+          if (next.type != 'object' ||
+              next.kind != 'topic' ||
+              next.action != block.action ||
+              next.scopeId != block.scopeId ||
+              next.scopeKind != block.scopeKind) {
+            break;
+          }
+          topics.add(next);
+          index++;
+        }
+        children.add(
+          _ConversationTopics(
+            key: ValueKey((message.id, 'topics', topicGroup++)),
+            topics: topics,
+            controller: controller,
+          ),
+        );
+      } else if (block.type == 'text' && block.text.isNotEmpty) {
+        final text = MarkdownMessage(text: block.text, emphasized: isSentByMe);
+        children.add(
+          isSentByMe && _hasRoleObjects(message)
+              ? LayoutBuilder(
+                  builder: (context, constraints) => Align(
+                    alignment: Alignment.centerRight,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * .85,
+                      ),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: _userBubbleRadius,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: text,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : text,
+        );
+      } else if (block.type == 'media' && block.mediaId != null) {
+        children.add(
+          ConversationMediaView(
+            id: block.mediaId!,
+            repository: controller.repository,
+          ),
+        );
+      } else if (block.type == 'object') {
+        children.add(
+          ConversationObjectView(
+            key: ValueKey((
+              message.id,
+              block.kind,
+              block.id,
+              objectOccurrences.update(
+                (block.kind, block.id),
+                (count) => count + 1,
+                ifAbsent: () => 0,
+              ),
+            )),
+            block: block,
+            controller: controller,
+          ),
+        );
+      }
+    }
+    return children;
   }
 
   @override
@@ -239,79 +339,55 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                 required isSentByMe,
                 groupStatus,
                 isRemoved,
-              }) => Padding(
-                padding: _conversationMessagePadding,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 640),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) => Align(
-                        alignment: isSentByMe
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: isSentByMe
-                                ? constraints.maxWidth * .85
-                                : constraints.maxWidth,
+              }) {
+                final item =
+                    message.metadata!['conversation'] as ConversationMessage;
+                final userBubble = isSentByMe && !_hasRoleObjects(item);
+                return Padding(
+                  padding: _conversationMessagePadding,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => Align(
+                          alignment: userBubble
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: userBubble
+                                  ? constraints.maxWidth * .85
+                                  : constraints.maxWidth,
+                            ),
+                            child: child,
                           ),
-                          child: child,
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
           textMessageBuilder:
               (context, message, index, {required isSentByMe, groupStatus}) {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
                 final colors = Theme.of(context).colorScheme;
-                // Objects may omit IDs or reference the same entity more than once.
-                final objectOccurrences = <(String?, String), int>{};
+                final userBubble = isSentByMe && !_hasRoleObjects(item);
                 return DecoratedBox(
                   decoration: BoxDecoration(
-                    color: isSentByMe ? colors.surface : Colors.transparent,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(26),
-                      bottomLeft: Radius.circular(26),
-                      bottomRight: Radius.circular(26),
-                    ),
+                    color: userBubble ? colors.surface : Colors.transparent,
+                    borderRadius: _userBubbleRadius,
                   ),
                   child: Padding(
-                    padding: EdgeInsets.all(isSentByMe ? 20 : 0),
+                    padding: EdgeInsets.all(userBubble ? 20 : 0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final block in item.blocks)
-                          if (block.type == 'text' && block.text.isNotEmpty)
-                            MarkdownMessage(
-                              text: block.text,
-                              emphasized: isSentByMe,
-                            )
-                          else if (block.type == 'media' &&
-                              block.mediaId != null)
-                            ConversationMediaView(
-                              id: block.mediaId!,
-                              repository: controller.repository,
-                            )
-                          else if (block.type == 'object')
-                            ConversationObjectView(
-                              key: ValueKey((
-                                item.id,
-                                block.kind,
-                                block.id,
-                                objectOccurrences.update(
-                                  (block.kind, block.id),
-                                  (count) => count + 1,
-                                  ifAbsent: () => 0,
-                                ),
-                              )),
-                              block: block,
-                              controller: controller,
-                            ),
-                      ],
+                      children: _messageBlockViews(
+                        item,
+                        controller,
+                        isSentByMe,
+                      ),
                     ),
                   ),
                 );
@@ -557,16 +633,116 @@ class _ConversationCard extends StatelessWidget {
   );
 }
 
+class _ConversationTopics extends StatefulWidget {
+  const _ConversationTopics({
+    required this.topics,
+    required this.controller,
+    super.key,
+  });
+  final List<ConversationBlock> topics;
+  final ConversationController controller;
+
+  @override
+  State<_ConversationTopics> createState() => _ConversationTopicsState();
+}
+
+class _ConversationTopicsState extends State<_ConversationTopics> {
+  int _index = 0;
+
+  @override
+  void didUpdateWidget(_ConversationTopics oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final selectedId = oldWidget.topics[_index].referenceId;
+    final wasUnique =
+        selectedId.isNotEmpty &&
+        oldWidget.topics
+                .where((topic) => topic.referenceId == selectedId)
+                .length ==
+            1;
+    final matches = [
+      for (final (index, topic) in widget.topics.indexed)
+        if (topic.referenceId == selectedId) index,
+    ];
+    // Older snapshots can omit IDs or repeat one ID for several candidates.
+    _index = wasUnique && matches.length == 1
+        ? matches.single
+        : _index.clamp(0, widget.topics.length - 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final topic = widget.topics[_index];
+    return ConversationObjectView(
+      key: ValueKey((topic.referenceId, _index)),
+      block: topic,
+      controller: widget.controller,
+      headerTrailing: widget.topics.length > 1
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.roleStoryPosition(_index + 1, widget.topics.length),
+                  key: const Key('conversation-topic-position'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _arrow(context, l10n.rolePreviousStory, -1),
+                _arrow(context, l10n.roleNextStory, 1),
+              ],
+            )
+          : null,
+    );
+  }
+
+  Widget _arrow(BuildContext context, String tooltip, int direction) {
+    final target = _index + direction;
+    final enabled = target >= 0 && target < widget.topics.length;
+    return SizedBox(
+      width: 24,
+      height: 32,
+      child: IconButton(
+        key: Key(
+          direction < 0
+              ? 'conversation-topic-previous'
+              : 'conversation-topic-next',
+        ),
+        tooltip: tooltip,
+        padding: EdgeInsets.zero,
+        onPressed: enabled ? () => setState(() => _index = target) : null,
+        icon: RotatedBox(
+          quarterTurns: direction < 0 ? 2 : 0,
+          child: SizedBox(
+            width: 6,
+            height: 12,
+            child: AppSvgIcon.asset(
+              'role_guide_chevron',
+              color: enabled
+                  ? Theme.of(context).colorScheme.onSurface
+                  : Theme.of(context).disabledColor,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class ConversationObjectView extends StatefulWidget {
   const ConversationObjectView({
     required this.block,
     required this.controller,
     this.framed = true,
+    this.headerTrailing,
     super.key,
   });
   final ConversationBlock block;
   final ConversationController controller;
   final bool framed;
+  final Widget? headerTrailing;
   @override
   State<ConversationObjectView> createState() => _ConversationObjectViewState();
 }
@@ -594,17 +770,11 @@ class _ConversationObjectViewState extends State<ConversationObjectView> {
   @override
   Widget build(BuildContext context) {
     final block = widget.block;
+    if (block.kind == 'role') return ConversationRoleCard(block: block);
     final controller = widget.controller;
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final statusLabel = block.kind == 'role'
-        ? switch (block.action) {
-            'published' => l10n.chatRolePublished,
-            'edited' => l10n.chatRoleUpdated,
-            'created' => l10n.chatRoleCreated,
-            _ => _statusLabel(block.status, l10n),
-          }
-        : _statusLabel(block.status, l10n);
+    final statusLabel = _statusLabel(block.status, l10n);
     final details = block.details;
     final disabled =
         controller.pending || controller.running || controller.loading;
@@ -756,9 +926,13 @@ class _ConversationObjectViewState extends State<ConversationObjectView> {
             ),
             const SizedBox(height: 20),
           ],
-          if (block.title.isNotEmpty || block.avatar != null)
+          if (block.title.isNotEmpty ||
+              block.avatar != null ||
+              widget.headerTrailing != null)
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: widget.headerTrailing == null
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               children: [
                 if (block.avatar != null || details.isNotEmpty) ...[
                   SizedBox.square(
@@ -790,6 +964,10 @@ class _ConversationObjectViewState extends State<ConversationObjectView> {
                     ),
                   ),
                 ),
+                if (widget.headerTrailing != null) ...[
+                  const SizedBox(width: 8),
+                  widget.headerTrailing!,
+                ],
               ],
             ),
           if (block.body.isNotEmpty &&

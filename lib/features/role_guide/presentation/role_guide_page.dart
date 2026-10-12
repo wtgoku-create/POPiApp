@@ -18,7 +18,6 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/app_video_preview.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
@@ -28,6 +27,7 @@ import '../data/role_guide_examples.dart';
 import '../data/role_generation_repository.dart';
 import '../data/home_creation_repository.dart';
 import '../domain/home_creation.dart';
+import '../domain/home_storyboard.dart';
 import '../domain/role_generation.dart';
 import '../domain/role_guide_draft.dart';
 import 'widgets/role_generation_sheet.dart';
@@ -39,6 +39,9 @@ import 'widgets/role_profile_sheet.dart';
 import 'widgets/role_project_sheet.dart';
 import 'widgets/role_generation_panel.dart';
 import 'widgets/home_generation_config_sheet.dart';
+import 'widgets/role_guide_markdown.dart';
+import 'widgets/role_storyboard_body.dart';
+import 'widgets/role_generated_video.dart';
 
 /// Character selection, story planning, and a route-local generation workflow.
 class RoleGuidePage extends ConsumerStatefulWidget {
@@ -673,8 +676,58 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     }
   }
 
-  Future<void> _profiles() =>
-      _showSheet<void>((_) => RoleProfileSheet(roles: _draft.roles));
+  Future<void> _profiles({String? initialRoleId}) async {
+    if (_busy) return;
+    final home = _home;
+    await _showSheet<void>(
+      (_) => RoleProfileSheet(
+        roles: home?.castForEditing ?? _draft.roles,
+        initialRoleId: initialRoleId,
+        useSnapshot: home != null,
+        onSaveCreationProfile: _live && home?.editable == true
+            ? _saveCreationProfile
+            : null,
+      ),
+    );
+  }
+
+  Future<List<LibraryRole>> _saveCreationProfile(
+    String roleId,
+    Map<String, Object?> profile,
+  ) async {
+    final home = _home;
+    if (_busy || home?.editable != true) {
+      throw StateError('Creation is not editable');
+    }
+    final token = _requestToken;
+    setState(() => _busy = true);
+    try {
+      final updated = await _repository.saveRoleProfile(
+        home!,
+        roleId,
+        profile,
+        cancelToken: token,
+      );
+      if (!mounted || token.isCancelled) {
+        throw StateError('Creation is no longer active');
+      }
+      setState(() => _apply(updated));
+      AppToast.success(context, AppLocalizations.of(context)!.roleChangesSaved);
+      return updated.castForEditing;
+    } catch (error) {
+      await _recoverConflict(error, token);
+      rethrow;
+    } finally {
+      if (mounted && !token.isCancelled) setState(() => _busy = false);
+    }
+  }
+
+  Widget _projectSummary() => RoleProjectSummary(
+    roles: _draft.roles,
+    onViewProfile: _busy
+        ? null
+        : () => _profiles(initialRoleId: _draft.roles.first.id),
+  );
 
   Future<void> _storyDetails(RoleGuideStory story) => _showSheet<void>(
     (_) => RoleGuideSheet(
@@ -884,73 +937,113 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           body: _blur(
             AbsorbPointer(
               absorbing: _busy,
-              child: Column(
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  if (_busy)
-                    const LinearProgressIndicator(
-                      key: Key('role-guide-loading'),
-                    ),
-                  if (_failed)
-                    TextButton(
-                      key: const Key('role-guide-request-retry'),
-                      onPressed: _retry,
-                      child: Text('${l10n.roleRequestFailed} · ${l10n.retry}'),
-                    ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      key: const Key('role-guide-scroll'),
-                      controller: _scroll,
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: EdgeInsets.fromLTRB(
-                        20,
-                        10,
-                        20,
-                        hasFooter ? 20 : safeArea.bottom + 30,
-                      ),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _RoleGuideHeader(
-                                title: title,
-                                description: description,
-                                step: _draft.step,
-                                onSwitchProject:
-                                    _draft.step == RoleGuideStep.roles
-                                    ? _projects
-                                    : null,
-                              ),
-                              Container(
-                                key: const Key('role-guide-panel'),
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: colors.surface,
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: _content(l10n),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (hasFooter)
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 440),
-                        child: Padding(
+                  Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          key: const Key('role-guide-scroll'),
+                          controller: _scroll,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: EdgeInsets.fromLTRB(
-                            40,
-                            12,
-                            40,
-                            bottomInset + 20,
+                            20,
+                            10,
+                            20,
+                            hasFooter ? 20 : safeArea.bottom + 30,
                           ),
-                          child: _stepActions(l10n),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 400),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _RoleGuideHeader(
+                                    title: title,
+                                    description: description,
+                                    step: _draft.step,
+                                    onSwitchProject:
+                                        _draft.step == RoleGuideStep.roles
+                                        ? _projects
+                                        : null,
+                                  ),
+                                  Container(
+                                    key: const Key('role-guide-panel'),
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: colors.surface,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        _content(l10n),
+                                        if (_failed) ...[
+                                          const SizedBox(height: 20),
+                                          Text(
+                                            _draft.step == RoleGuideStep.story
+                                                ? l10n.roleStoryRequestFailed
+                                                : l10n.roleRequestFailed,
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: colors.onSurfaceVariant,
+                                            ),
+                                          ),
+                                          TextButton(
+                                            key: const Key(
+                                              'role-guide-request-retry',
+                                            ),
+                                            onPressed: _retry,
+                                            child: Text(l10n.retry),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
+                      ),
+                      if (hasFooter)
+                        Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 440),
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(
+                                40,
+                                12,
+                                40,
+                                bottomInset + 20,
+                              ),
+                              child: _stepActions(l10n),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (_busy)
+                    Center(
+                      child: Column(
+                        key: const Key('role-guide-loading'),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox.square(
+                            dimension: 32,
+                            child: CircularProgressIndicator(strokeWidth: 3),
+                          ),
+                          if (_draft.step == RoleGuideStep.story) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n.roleLoadingStories,
+                              style: TextStyle(color: colors.onSurfaceVariant),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                 ],
@@ -1052,7 +1145,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           const SizedBox(height: 20),
           Text(l10n.roleProjectSession, style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 16),
-          RoleProjectSummary(roles: _draft.roles),
+          _projectSummary(),
           const SizedBox(height: 20),
           RoleCastSummary(cast: _draft.cast, onViewProfiles: _profiles),
           const SizedBox(height: 12),
@@ -1075,21 +1168,15 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     }
     final production = _draft.step == RoleGuideStep.production;
     final stories = _stories(l10n);
-    if (stories.isEmpty) {
+    if (stories.isEmpty || (_busy && !production)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          RoleProjectSummary(roles: _draft.roles),
-          const SizedBox(height: 20),
-          Text(
-            _busy ? l10n.roleLoadingStories : l10n.roleNoStories,
-            textAlign: TextAlign.center,
-          ),
-          if (!_busy && _home?.editable == true)
-            TextButton(
-              onPressed: _recommend,
-              child: Text(l10n.roleRefreshStories),
-            ),
+          _projectSummary(),
+          if (!_busy && !_failed) ...[
+            const SizedBox(height: 20),
+            Text(l10n.roleNoStories, textAlign: TextAlign.center),
+          ],
         ],
       );
     }
@@ -1098,7 +1185,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!production) ...[
-          RoleProjectSummary(roles: _draft.roles),
+          _projectSummary(),
           const SizedBox(height: 20),
           RoleCastSummary(
             cast: _draft.cast,
@@ -1166,10 +1253,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           ),
         ConstrainedBox(
           constraints: BoxConstraints(minHeight: production ? 154 : 176),
-          child: Text(
-            story.summary,
-            style: const TextStyle(fontSize: 16, height: 1.375),
-          ),
+          child: RoleGuideMarkdown(text: story.summary),
         ),
         const SizedBox(height: 20),
         if (production) ...[
@@ -1179,12 +1263,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 4),
-          Text(
-            story.development,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16, height: 1.375),
-          ),
+          RoleGuideMarkdown(text: story.development),
           const SizedBox(height: 20),
         ],
         if (production) ...[
@@ -1304,6 +1383,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         RoleGenerationPanel(
           progress: _progress!,
           preview: false,
+          result: task.videoMediaId == null
+              ? null
+              : RoleGeneratedVideo(
+                  key: ValueKey('role-guide-video-${task.videoMediaId}'),
+                  mediaId: task.videoMediaId!,
+                  repository: _repository,
+                ),
           statusLabel: task.state == 'paused'
               ? l10n.roleTaskPaused
               : task.state == 'awaiting_confirmation'
@@ -1341,60 +1427,47 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             child: Text(l10n.roleStopProduction),
           ),
         const SizedBox(height: 20),
-        RoleProjectSummary(roles: _draft.roles),
+        _projectSummary(),
         for (final artifact in task.artifacts) ...[
           if (artifact.body.isNotEmpty)
             _artifact(artifact.title, artifact.body),
-          if (artifact.mediaId != null)
-            TextButton.icon(
-              onPressed: () async {
-                try {
-                  final url = await _repository.media(
-                    artifact.mediaId!,
-                    cancelToken: _requestToken,
-                  );
-                  if (mounted) {
-                    await AppVideoPreview.show(context: context, url: url);
-                  }
-                } catch (_) {
-                  if (mounted) AppToast.info(context, l10n.roleRequestFailed);
-                }
-              },
-              icon: const Icon(Icons.play_arrow),
-              label: Text(l10n.videoPlay),
-            ),
         ],
       ],
     );
   }
 
-  Widget _artifact(String title, String text) => ExpansionTile(
-    key: ValueKey('role-guide-artifact-$title'),
-    tilePadding: EdgeInsets.zero,
-    childrenPadding: const EdgeInsets.only(bottom: 12),
-    shape: const Border(),
-    collapsedShape: const Border(),
-    initiallyExpanded: true,
-    title: Text(title, style: const TextStyle(fontSize: 16)),
-    children: [
-      Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.4,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget _artifact(String title, String text) {
+    final storyboard = HomeStoryboard.tryParse(text);
+    return ListTileTheme.merge(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ExpansionTile(
+        key: ValueKey('role-guide-artifact-$title'),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 8),
+        childrenPadding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        initiallyExpanded: true,
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        children: [
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: storyboard != null
+                ? RoleStoryboardBody(storyboard: storyboard)
+                : RoleGuideMarkdown(
+                    text: text,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
           ),
-        ),
+        ],
       ),
-    ],
-  );
+    );
+  }
 
   Widget _storyArrow(String tooltip, int direction, int count) {
     final target = _draft.storyIndex + direction;
-    return SizedBox.square(
-      dimension: 40,
+    return SizedBox(
+      width: 24,
+      height: 32,
       child: IconButton(
         key: Key(
           direction < 0 ? 'role-guide-previous-story' : 'role-guide-next-story',
@@ -1403,7 +1476,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         onPressed: target < 0 || target >= count
             ? null
             : () => setState(() => _draft.storyIndex = target),
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.zero,
         icon: RotatedBox(
           quarterTurns: direction < 0 ? 2 : 0,
           child: SizedBox(

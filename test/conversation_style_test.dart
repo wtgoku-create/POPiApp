@@ -38,6 +38,92 @@ Future<void> _capture(WidgetTester tester, String name) async {
   });
 }
 
+Map<String, Object?> _topic(
+  String id, {
+  String scopeId = '301',
+  String action = 'generated',
+  String? title,
+}) => {
+  'type': 'object',
+  'kind': 'topic',
+  'action': action,
+  'scope': {'kind': 'creation', 'id': scopeId},
+  'data': {
+    'ref': {'kind': 'topic', 'id': id},
+    'title': title ?? 'Topic $id',
+    'summary':
+        '### 故事梗概\n\nStory $id\n\n'
+        '### 适合角色的原因\n\nA warm, quiet afternoon together.\n\n'
+        '### 核心看点\n\nA playful moment in a familiar home.',
+  },
+};
+
+Future<StreamingSessionRepository> _pumpTopicPage(
+  WidgetTester tester,
+  List<Map<String, Object?>> blocks, {
+  Size size = const Size(390, 844),
+  Locale locale = const Locale('zh'),
+  bool dark = false,
+  double scale = 1,
+  bool sentByUser = false,
+}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final repository = StreamingSessionRepository()
+    ..data = chatSnapshotJson(
+      seq: 1,
+      messages: [
+        {
+          ...chatMessageJson(),
+          if (sentByUser) 'role': 'user',
+          'blocks': blocks,
+        },
+      ],
+    );
+  final container = ProviderContainer(
+    overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
+  );
+  addTearDown(() async {
+    container.dispose();
+    await repository.close();
+  });
+  await container
+      .read(userProvider.notifier)
+      .setUser(const User(id: 'a', name: 'User', email: ''));
+  final theme = dark ? AppTheme.dark : AppTheme.light;
+  await tester.pumpWidget(
+    RepaintBoundary(
+      key: _captureKey,
+      child: UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: _captureDirectory == null
+              ? theme
+              : theme.copyWith(
+                  textTheme: theme.textTheme.apply(fontFamily: 'ChatCapture'),
+                ),
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(scale),
+              disableAnimations: true,
+            ),
+            child: child!,
+          ),
+          home: const SessionPage(sessionId: chatId),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  return repository;
+}
+
 void main() {
   setUpAll(() async {
     // Optional local captures use a real CJK font; CI has no system-font dependency.
@@ -60,7 +146,95 @@ void main() {
     ('desktop', const Size(1280, 900), const Locale('en'), false, 1.0),
     ('accessible-dark', const Size(320, 844), const Locale('en'), true, 1.5),
   ]) {
-    testWidgets('role expansion survives streamed updates at $name', (
+    testWidgets('topics share one card and retain the selected item at $name', (
+      tester,
+    ) async {
+      final title = locale.languageCode == 'zh'
+          ? '来财的专属晒太阳角落'
+          : 'A quiet afternoon in a sunny cardboard home';
+      final topics = [_topic('1', title: title), _topic('2'), _topic('3')];
+      const intro = {'type': 'text', 'text': 'Recommendations'};
+      const ending = {'type': 'text', 'text': 'Choose your favorite story.'};
+      final repository = await _pumpTopicPage(
+        tester,
+        [intro, ...topics, ending],
+        size: size,
+        locale: locale,
+        dark: dark,
+        scale: scale,
+      );
+      final previous = find.byKey(const Key('conversation-topic-previous'));
+      final next = find.byKey(const Key('conversation-topic-next'));
+      expect(find.byType(ConversationObjectView), findsOneWidget);
+      expect(find.text('1/3'), findsOneWidget);
+      expect(find.text('Story 1'), findsOneWidget);
+      expect(find.text('Story 2'), findsNothing);
+      expect(tester.widget<IconButton>(previous).onPressed, isNull);
+      await tester.ensureVisible(next);
+      await tester.pumpAndSettle();
+      final card = tester.getRect(find.byType(ConversationObjectView));
+      final button = tester.getRect(next);
+      expect(button.right, closeTo(card.right - 20, .01));
+      expect(button.top, closeTo(card.top + 24, .01));
+      expect(
+        button.center.dx - tester.getCenter(previous).dx,
+        closeTo(24, .01),
+      );
+      await _capture(tester, '$name-topics-first');
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      expect(find.text('Story 1'), findsNothing);
+      expect(find.text('Story 2'), findsOneWidget);
+      expect(find.text('2/3'), findsOneWidget);
+      await _capture(tester, '$name-topics-second');
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      expect(find.text('3/3'), findsOneWidget);
+      expect(tester.widget<IconButton>(next).onPressed, isNull);
+      await tester.tap(previous);
+      await tester.pumpAndSettle();
+      repository.streams.first.add(
+        chatEvent(2, 'message.updated', {
+          'timelineUpdates': [
+            {
+              ...chatMessageJson(revision: 2),
+              'blocks': [
+                intro,
+                _topic('2', title: 'Updated topic 2'),
+                topics[2],
+                topics[0],
+                ending,
+              ],
+            },
+          ],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Updated topic 2'), findsOneWidget);
+      expect(find.text('Story 2'), findsOneWidget);
+      expect(find.text('1/3'), findsOneWidget);
+      repository.streams.first.add(
+        chatEvent(3, 'message.updated', {
+          'timelineUpdates': [
+            {
+              ...chatMessageJson(revision: 3),
+              'blocks': [intro, topics[0], ending],
+            },
+          ],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Story 1'), findsOneWidget);
+      expect(next, findsNothing);
+      expect(previous, findsNothing);
+      expect(find.text('Recommendations'), findsOneWidget);
+      expect(find.text('Choose your favorite story.'), findsOneWidget);
+      expect(repository.sends, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('Web role card collapse survives streamed updates at $name', (
       tester,
     ) async {
       tester.view.physicalSize = size;
@@ -151,17 +325,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final expand = find.text(
-        locale.languageCode == 'zh'
-            ? '查看完整角色档案'
-            : 'View full character profile',
-      );
-      await tester.ensureVisible(expand);
+      final toggle = find.byKey(const Key('conversation-role-toggle'));
+      final preview = find.byKey(const Key('conversation-role-view-profile'));
+      expect(find.text('校园, 可爱角色'), findsOneWidget);
+      expect(find.text('认真、温柔'), findsOneWidget);
+      await tester.ensureVisible(toggle);
       await tester.pumpAndSettle();
       await _capture(tester, '$name-draft');
-      await tester.tap(expand);
+      await tester.tap(toggle);
       await tester.pumpAndSettle();
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
+      expect(find.text('校园, 可爱角色'), findsNothing);
       role['title'] = 'Updated Alice';
       repository.streams.first.add(
         chatEvent(3, 'message.updated', {
@@ -169,20 +342,86 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Updated Alice'), findsOneWidget);
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
-      final collapse = find.text(
-        locale.languageCode == 'zh' ? '收起档案' : 'Collapse profile',
-      );
-      await tester.ensureVisible(collapse);
-      await tester.pumpAndSettle();
-      await tester.tap(collapse);
-      await tester.pumpAndSettle();
+      expect(find.text('Updated Alice'), findsNothing);
       expect(find.text('校园, 可爱角色'), findsNothing);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.text('Updated Alice'), findsOneWidget);
+      await tester.ensureVisible(preview);
+      await tester.pumpAndSettle();
+      await tester.tap(preview);
+      await tester.pumpAndSettle();
+      final sheet = find.byKey(const Key('conversation-role-profile'));
+      expect(sheet, findsOneWidget);
+      expect(
+        find.descendant(of: sheet, matching: find.text('Updated Alice')),
+        findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.descendant(of: sheet, matching: find.text('认真、温柔')),
+        150,
+        scrollable: find
+            .descendant(of: sheet, matching: find.byType(Scrollable))
+            .first,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.text('认真、温柔')),
+        findsOneWidget,
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(sheet, findsNothing);
+      expect(find.text('校园, 可爱角色'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('user role objects use full card width outside the text bubble', (
+    tester,
+  ) async {
+    await _pumpTopicPage(tester, [
+      {'type': 'text', 'text': 'Use this character'},
+      {
+        'type': 'object',
+        'kind': 'role',
+        'action': 'created',
+        'data': {'title': 'Saved draft', 'status': 'draft'},
+      },
+    ], sentByUser: true);
+    final card = tester.getRect(
+      find.byKey(const Key('conversation-role-card')),
+    );
+    expect(card.left, closeTo(20, .01));
+    expect(card.width, closeTo(350, .01));
+    final text = tester.getRect(find.text('Use this character'));
+    expect(text.right, lessThanOrEqualTo(card.right));
+    expect(text.bottom, lessThan(card.top));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('topic groups preserve text boundaries, scopes and selections', (
+    tester,
+  ) async {
+    await _pumpTopicPage(tester, [
+      _topic('1'),
+      _topic('2'),
+      {'type': 'text', 'text': 'Another batch'},
+      _topic('3'),
+      _topic('4', scopeId: '302'),
+      _topic('5', action: 'selected'),
+    ]);
+    expect(find.byType(ConversationObjectView), findsNWidgets(4));
+    expect(find.byKey(const Key('conversation-topic-next')), findsOneWidget);
+    expect(find.text('Topic 2'), findsNothing);
+    expect(find.text('Topic 3'), findsOneWidget);
+    expect(find.text('Topic 4'), findsOneWidget);
+    expect(find.text('Topic 5'), findsOneWidget);
+    expect(find.text('Another batch'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets(
     'progress collapses and generation uses the shared confirmation dialog',

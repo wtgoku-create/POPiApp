@@ -122,6 +122,12 @@ abstract class AppLocalizations {
   /// **'Could not complete the creation request. Try again'**
   String get roleRequestFailed;
 
+  /// No description provided for @roleStoryRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the story request'**
+  String get roleStoryRequestFailed;
+
   /// No description provided for @roleLoadingStories.
   ///
   /// In en, this message translates to:
@@ -626,6 +632,24 @@ abstract class AppLocalizations {
   /// **'Storyboard'**
   String get roleStoryboardContent;
 
+  /// No description provided for @roleStoryboardShot.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot {index} · {duration} s'**
+  String roleStoryboardShot(int index, String duration);
+
+  /// No description provided for @roleVideoModelPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Video model prompt'**
+  String get roleVideoModelPrompt;
+
+  /// No description provided for @videoFullscreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Play fullscreen'**
+  String get videoFullscreen;
+
   /// No description provided for @rolePreviewNotice.
   ///
   /// In en, this message translates to:
@@ -1103,6 +1127,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This field is required'**
   String get roleFieldRequired;
+
+  /// No description provided for @roleEditCreationProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit role for this creation'**
+  String get roleEditCreationProfile;
+
+  /// No description provided for @roleEditCreationArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile for this creation'**
+  String get roleEditCreationArchive;
+
+  /// No description provided for @roleCreationEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the role for this creation'**
+  String get roleCreationEditTitle;
+
+  /// No description provided for @roleCreationEditDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit the description, appearance, personality, expression style, audience and content tags.'**
+  String get roleCreationEditDescription;
+
+  /// No description provided for @roleFieldInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid field format'**
+  String get roleFieldInvalidFormat;
 
   /// No description provided for @createWithRole.
   ///
@@ -4168,14 +4222,44 @@ abstract class AppLocalizations {
   /// No description provided for @chatRoleUpdated.
   ///
   /// In en, this message translates to:
-  /// **'Character draft updated'**
+  /// **'Character profile updated'**
   String get chatRoleUpdated;
 
   /// No description provided for @chatRolePublished.
   ///
   /// In en, this message translates to:
-  /// **'Character published'**
+  /// **'Character profile published'**
   String get chatRolePublished;
+
+  /// No description provided for @chatViewRoleLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'View in character library'**
+  String get chatViewRoleLibrary;
+
+  /// No description provided for @chatViewRoleProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'View full profile'**
+  String get chatViewRoleProfile;
+
+  /// No description provided for @chatCastRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get chatCastRole;
+
+  /// No description provided for @chatRoleActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get chatRoleActive;
+
+  /// No description provided for @chatRoleDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get chatRoleDraft;
 
   /// No description provided for @chatExpandProgress.
   ///

@@ -160,6 +160,30 @@ class HomeCreationRepository {
     );
   }
 
+  Future<HomeCreation> saveRoleProfile(
+    HomeCreation home,
+    String roleId,
+    Map<String, Object?> profile, {
+    CancelToken? cancelToken,
+  }) {
+    final id = int.tryParse(roleId);
+    if (!home.editable ||
+        id == null ||
+        !home.cast.any((role) => role.id == roleId)) {
+      throw const ApiException(
+        message: 'Role is not editable in this creation',
+      );
+    }
+    return _command(
+      'role-profile:${home.id}',
+      {'roleId': id, 'profile': profile},
+      (body) async {
+        await _api.saveHomeRoleProfile(home.id, body, cancelToken: cancelToken);
+        return refresh(home, cancelToken: cancelToken);
+      },
+    );
+  }
+
   Future<List<HomeModel>> models({CancelToken? cancelToken}) async =>
       homeObjects(
             (await _api.homeVideoModels(cancelToken: cancelToken))['list'],

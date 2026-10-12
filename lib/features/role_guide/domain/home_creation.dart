@@ -56,6 +56,16 @@ class HomeCreation {
   List<LibraryRole> get cast => homeObjects(
     revision['cast'],
   ).map((item) => LibraryRole.fromJson(item)).toList();
+  // Edit the fixed source version, rather than the display-only profile projection.
+  List<LibraryRole> get castForEditing => homeObjects(revision['cast'])
+      .map(
+        (item) => LibraryRole.fromJson({
+          ...item,
+          if (item['profileVersion'] is Map)
+            'profile': homeObject(item['profileVersion'])['profile'],
+        }),
+      )
+      .toList();
   HomeConfig? get config {
     final value = homeObject(revision['specs'])['homeConfig'];
     return value == null ? null : HomeConfig.fromJson(homeObject(value));
@@ -203,6 +213,18 @@ class HomeTask {
   final String? lock;
   final List<String> allowedActions;
   final List<Map<String, Object?>> steps;
+  String? get videoMediaId {
+    for (final step in steps) {
+      final output = step['output'];
+      if (output is Map &&
+          (step['key'] == 'video' || output['kind'] == 'video')) {
+        final id = output['mediaId']?.toString();
+        if (id != null && id.isNotEmpty) return id;
+      }
+    }
+    return null;
+  }
+
   bool get canConfirmVideo => state == 'awaiting_confirmation';
   bool get needsPolling =>
       state != 'paused' &&

@@ -10,10 +10,12 @@ class RoleProjectSummary extends StatelessWidget {
   const RoleProjectSummary({
     required this.roles,
     this.showStatus = false,
+    this.onViewProfile,
     super.key,
   });
   final List<LibraryRole> roles;
   final bool showStatus;
+  final VoidCallback? onViewProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -29,49 +31,61 @@ class RoleProjectSummary extends StatelessWidget {
         style: const TextStyle(fontSize: 16, color: Color(0xFF0F9E3F)),
       ),
     );
-    return Container(
-      constraints: const BoxConstraints(minHeight: 70),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        border: Border.all(
-          color: AppColors.brand.withValues(alpha: .15),
-          width: 2,
-        ),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        key: const Key('role-guide-project-profile'),
+        onTap: onViewProfile,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final stacked =
-              constraints.maxWidth < 290 ||
-              MediaQuery.textScalerOf(context).scale(16) > 20;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              RoleGuideAvatar(role: roles.first),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.roleProjectName(roles.first.title),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 70),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(
+              color: AppColors.brand.withValues(alpha: .15),
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stacked =
+                  constraints.maxWidth < 290 ||
+                  MediaQuery.textScalerOf(context).scale(16) > 20;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  RoleGuideAvatar(role: roles.first),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.roleProjectName(roles.first.title),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (showStatus && stacked) ...[
+                          const SizedBox(height: 8),
+                          status,
+                        ],
+                      ],
                     ),
-                    if (showStatus && stacked) ...[
-                      const SizedBox(height: 8),
-                      status,
-                    ],
+                  ),
+                  if (showStatus && !stacked) ...[
+                    const SizedBox(width: 5),
+                    status,
                   ],
-                ),
-              ),
-              if (showStatus && !stacked) ...[const SizedBox(width: 5), status],
-            ],
-          );
-        },
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

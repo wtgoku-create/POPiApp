@@ -25,6 +25,9 @@ class HomeCreationFixture {
   bool failEntryOnce = false;
   bool failTopicsOnce = false;
   bool failGenerateOnce = false;
+  bool failMediaOnce = false;
+  bool failRoleSaveOnce = false;
+  final creationProfiles = <int, Map<String, Object?>>{};
   Completer<void>? waitForEntry;
   HomeCreationRepository get repository =>
       HomeCreationRepository(NetworkApi(business), NetworkAgentApi(agent));
@@ -56,7 +59,22 @@ class HomeCreationFixture {
       'outputMode': 'video',
       'accountProfileVersionId': null,
       'inputContentVersionIds': <String>[],
-      'cast': cast.map(role).toList(),
+      'cast': [
+        for (final id in cast)
+          {
+            ...role(id),
+            if (creationProfiles[id] case final profile?) ...{
+              'title': profile['title'],
+              'description': profile['description'],
+              'profile': profile,
+              'creationRoleVersionId': 'local-$id-$revision',
+              'profileVersion': {
+                ...Map<String, Object?>.from(role(id)['profileVersion'] as Map),
+                'profile': profile,
+              },
+            },
+          },
+      ],
       'specs': {if (config != null) 'homeConfig': config},
     },
     'editable': task == null || task!['lock'] == 'released',
@@ -159,6 +177,19 @@ class HomeCreationFixture {
       revision++;
       return snapshot();
     }
+    if (path.endsWith('/role-versions')) {
+      if (failRoleSaveOnce) {
+        failRoleSaveOnce = false;
+        throw StateError('Role save unavailable');
+      }
+      creationProfiles[body['roleId'] as int] = Map<String, Object?>.from(
+        body['profile'] as Map,
+      );
+      selected = null;
+      topics = [];
+      revision++;
+      return snapshot();
+    }
     if (path.endsWith('/revisions')) {
       cast = (body['cast'] as List)
           .map((item) => (item as Map)['roleId'] as int)
@@ -248,6 +279,13 @@ class HomeCreationFixture {
       return {'task': task};
     }
     if (path.contains('/home-tasks/')) return {'task': task};
+    if (path.contains('/media/')) {
+      if (failMediaOnce) {
+        failMediaOnce = false;
+        throw StateError('Media unavailable');
+      }
+      return {'url': '/generated/video.mp4'};
+    }
     throw StateError('Unexpected request $path');
   }
 }

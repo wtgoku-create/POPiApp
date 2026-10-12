@@ -15,7 +15,7 @@ import 'conversation_events_test.dart'
 
 void main() {
   for (final objectId in ['', 'shared-topic']) {
-    testWidgets('renders repeated object blocks with ID "$objectId"', (
+    testWidgets('browses repeated topic IDs "$objectId" through updates', (
       tester,
     ) async {
       Map<String, Object?> message(int revision, {bool insertText = false}) => {
@@ -58,6 +58,13 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Topic 0 revision 1'), findsOneWidget);
+      expect(find.text('Topic 1 revision 1'), findsNothing);
+      final next = find.byKey(const Key('conversation-topic-next'));
+      await tester.ensureVisible(next);
+      await tester.pumpAndSettle();
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      expect(find.text('Topic 0 revision 1'), findsNothing);
       expect(find.text('Topic 1 revision 1'), findsOneWidget);
       expect(tester.takeException(), isNull);
       final states = tester
@@ -70,12 +77,16 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Topic 0 revision 2'), findsOneWidget);
+      expect(find.text('Topic 0 revision 2'), findsNothing);
       expect(find.text('Topic 1 revision 2'), findsOneWidget);
       expect(
         tester.stateList(find.byType(ConversationObjectView)).toList(),
         orderedEquals(states),
       );
+      await tester.tap(find.byKey(const Key('conversation-topic-previous')));
+      await tester.pumpAndSettle();
+      expect(find.text('Topic 0 revision 2'), findsOneWidget);
+      expect(find.text('Topic 1 revision 2'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
