@@ -86,7 +86,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sidebar destinations replace pushed pages with one root page', (
+  testWidgets('sidebar destinations retain home beneath the selected page', (
     tester,
   ) async {
     final container = await pumpDrawer(tester);
@@ -112,10 +112,53 @@ void main() {
       await tester.tap(find.byKey(Key(entry)));
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), location);
-      expect(router.canPop(), isFalse, reason: entry);
+      expect(router.canPop(), location != '/', reason: entry);
       expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('system back returns through detail and destination to home', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    final router = container.read(routerProvider(false));
+    await tester.tap(find.byKey(const Key('drawer-profile-button')));
+    await tester.pumpAndSettle();
+    router.push('/profile/edit');
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfilePage), findsOneWidget);
+    expect(router.state.uri.path, '/profile');
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(router.state.uri.path, '/');
+    expect(router.canPop(), isFalse);
+    expect(await router.routerDelegate.popRoute(), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('system back dismisses the drawer before leaving the page', (
+    tester,
+  ) async {
+    final container = await pumpDrawer(tester);
+    final router = container.read(routerProvider(false));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/session');
+    expect(
+      find.byKey(const Key('drawer-nav-home')).hitTestable(),
+      findsNothing,
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/');
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -161,7 +204,7 @@ void main() {
     expect(tester.state(find.byType(AssetsPage)), same(assetsState));
     expect(find.text('图片'), findsOneWidget);
     expect(find.text('官方角色'), findsNothing);
-    expect(container.read(routerProvider(false)).canPop(), isFalse);
+    expect(container.read(routerProvider(false)).canPop(), isTrue);
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
     expect(itemColor(role), AppColors.surface);
@@ -189,7 +232,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(router.state.uri.queryParameters['sessionId'], 'mock-2');
     expect(find.byType(SessionPage), findsOneWidget);
-    expect(router.canPop(), isFalse);
+    expect(router.canPop(), isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -201,7 +244,7 @@ void main() {
     await tester.tap(find.byKey(const Key('drawer-profile-button')));
     await tester.pumpAndSettle();
     expect(find.byType(ProfilePage), findsOneWidget);
-    expect(router.canPop(), isFalse);
+    expect(router.canPop(), isTrue);
     router.push('/profile/edit');
     await tester.pumpAndSettle();
     expect(find.byType(EditProfilePage), findsOneWidget);
@@ -209,7 +252,7 @@ void main() {
     await tester.tap(find.byKey(const Key('profile-back')));
     await tester.pumpAndSettle();
     expect(find.byType(ProfilePage), findsOneWidget);
-    expect(router.canPop(), isFalse);
+    expect(router.canPop(), isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -370,7 +413,7 @@ void main() {
         await tester.pumpAndSettle();
         final router = container.read(routerProvider(false));
         expect(router.state.uri.path, '/teaching');
-        expect(router.canPop(), isFalse);
+        expect(router.canPop(), isTrue);
         expect(find.byType(TeachingPage), findsOneWidget);
         expect(find.text('教学中心'), findsOneWidget);
         router.push(

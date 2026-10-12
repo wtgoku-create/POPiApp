@@ -31,127 +31,137 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const HomePage()),
+      // Keep home beneath every destination, including direct links.
       GoRoute(
-        path: '/activities',
-        builder: (context, state) => const ActivitiesPage(),
+        path: '/',
+        builder: (context, state) => const HomePage(),
         routes: [
           GoRoute(
-            path: ':activityId',
-            builder: (context, state) => ActivityDetailPage(
-              activityId:
-                  int.tryParse(state.pathParameters['activityId']!) ?? 0,
-              catalog: state.extra is ActivityCatalog
-                  ? state.extra! as ActivityCatalog
-                  : null,
-            ),
+            path: 'activities',
+            builder: (context, state) => const ActivitiesPage(),
+            routes: [
+              GoRoute(
+                path: ':activityId',
+                builder: (context, state) => ActivityDetailPage(
+                  activityId:
+                      int.tryParse(state.pathParameters['activityId']!) ?? 0,
+                  catalog: state.extra is ActivityCatalog
+                      ? state.extra! as ActivityCatalog
+                      : null,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      GoRoute(
-        path: '/teaching',
-        builder: (context, state) => const TeachingPage(),
-        routes: [
           GoRoute(
-            path: 'document/:courseId',
-            builder: (context, state) => TeachingDocumentPage(
-              courseId: int.tryParse(state.pathParameters['courseId']!) ?? 0,
-              course: state.extra is TeachingCourse
-                  ? state.extra! as TeachingCourse
-                  : null,
-            ),
+            path: 'teaching',
+            builder: (context, state) => const TeachingPage(),
+            routes: [
+              GoRoute(
+                path: 'document/:courseId',
+                builder: (context, state) => TeachingDocumentPage(
+                  courseId:
+                      int.tryParse(state.pathParameters['courseId']!) ?? 0,
+                  course: state.extra is TeachingCourse
+                      ? state.extra! as TeachingCourse
+                      : null,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-      GoRoute(
-        path: '/ip-accounts',
-        builder: (context, state) => const IpAccountsLivePage(),
-        routes: [
           GoRoute(
-            path: ':accountId',
-            builder: (context, state) => IpAccountHomePage(
-              accountId: state.pathParameters['accountId']!,
+            path: 'ip-accounts',
+            builder: (context, state) => const IpAccountsLivePage(),
+            routes: [
+              GoRoute(
+                path: ':accountId',
+                builder: (context, state) => IpAccountHomePage(
+                  accountId: state.pathParameters['accountId']!,
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'ip-guide',
+            builder: (context, state) => const IpGuidePage(),
+          ),
+          GoRoute(
+            path: 'role-guide',
+            builder: (context, state) => RoleGuidePage(
+              accountId: state.uri.queryParameters['accountId'],
+              sessionId: state.uri.queryParameters['sessionId'],
             ),
           ),
+          GoRoute(
+            path: 'session',
+            builder: (context, state) => SessionPage(
+              initialPrompt: state.uri.queryParameters['prompt'],
+              sessionId: state.uri.queryParameters['sessionId'],
+            ),
+          ),
+          GoRoute(
+            path: 'login',
+            builder: (context, state) => const LoginPage(),
+          ),
+          GoRoute(
+            path: 'notifications',
+            builder: (context, state) => const NotificationsPage(),
+          ),
+          GoRoute(
+            path: 'legal/user-agreement',
+            builder: (context, state) => H5Page(
+              title: AppLocalizations.of(context)!.userAgreement,
+              url: Uri.parse(AppConfig.userAgreementUrl),
+            ),
+          ),
+          GoRoute(
+            path: 'legal/privacy-policy',
+            builder: (context, state) => H5Page(
+              title: AppLocalizations.of(context)!.privacyPolicy,
+              url: Uri.parse(AppConfig.privacyPolicyUrl),
+            ),
+          ),
+          GoRoute(
+            path: 'WeChat/:appId/oauth',
+            builder: (context, state) => LoginPage(
+              wechatAuthorizationCode: state.uri.queryParameters['code'],
+            ),
+          ),
+          GoRoute(
+            path: 'assets',
+            builder: (context, state) => AssetsPage(
+              initialSection: state.uri.queryParameters['section'] == 'roles'
+                  ? AssetLibrarySection.roles
+                  : AssetLibrarySection.works,
+            ),
+          ),
+          GoRoute(
+            path: 'profile',
+            builder: (context, state) => const ProfilePage(),
+          ),
+          GoRoute(
+            path: 'profile/edit',
+            builder: (context, state) => const EditProfilePage(),
+          ),
+          GoRoute(
+            path: 'profile/points',
+            builder: (context, state) => const PointsDetailsPage(),
+          ),
+          GoRoute(
+            path: 'profile/redemption',
+            builder: (context, state) => const RedemptionPage(),
+          ),
+          GoRoute(
+            path: 'profile/membership',
+            builder: (context, state) => const MembershipPage(),
+          ),
+          GoRoute(
+            path: 'payment/android',
+            redirect: (context, state) =>
+                state.extra is PaymentProduct ? null : '/profile',
+            builder: (context, state) =>
+                AndroidPaymentPage(product: state.extra! as PaymentProduct),
+          ),
         ],
-      ),
-      GoRoute(
-        path: '/ip-guide',
-        builder: (context, state) => const IpGuidePage(),
-      ),
-      GoRoute(
-        path: '/role-guide',
-        builder: (context, state) => RoleGuidePage(
-          accountId: state.uri.queryParameters['accountId'],
-          sessionId: state.uri.queryParameters['sessionId'],
-        ),
-      ),
-      GoRoute(
-        path: '/session',
-        builder: (context, state) => SessionPage(
-          initialPrompt: state.uri.queryParameters['prompt'],
-          sessionId: state.uri.queryParameters['sessionId'],
-        ),
-      ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
-      GoRoute(
-        path: '/notifications',
-        builder: (context, state) => const NotificationsPage(),
-      ),
-      GoRoute(
-        path: '/legal/user-agreement',
-        builder: (context, state) => H5Page(
-          title: AppLocalizations.of(context)!.userAgreement,
-          url: Uri.parse(AppConfig.userAgreementUrl),
-        ),
-      ),
-      GoRoute(
-        path: '/legal/privacy-policy',
-        builder: (context, state) => H5Page(
-          title: AppLocalizations.of(context)!.privacyPolicy,
-          url: Uri.parse(AppConfig.privacyPolicyUrl),
-        ),
-      ),
-      GoRoute(
-        path: '/WeChat/:appId/oauth',
-        builder: (context, state) => LoginPage(
-          wechatAuthorizationCode: state.uri.queryParameters['code'],
-        ),
-      ),
-      GoRoute(
-        path: '/assets',
-        builder: (context, state) => AssetsPage(
-          initialSection: state.uri.queryParameters['section'] == 'roles'
-              ? AssetLibrarySection.roles
-              : AssetLibrarySection.works,
-        ),
-      ),
-      GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfilePage(),
-      ),
-      GoRoute(
-        path: '/profile/edit',
-        builder: (context, state) => const EditProfilePage(),
-      ),
-      GoRoute(
-        path: '/profile/points',
-        builder: (context, state) => const PointsDetailsPage(),
-      ),
-      GoRoute(
-        path: '/profile/redemption',
-        builder: (context, state) => const RedemptionPage(),
-      ),
-      GoRoute(
-        path: '/profile/membership',
-        builder: (context, state) => const MembershipPage(),
-      ),
-      GoRoute(
-        path: '/payment/android',
-        redirect: (context, state) =>
-            state.extra is PaymentProduct ? null : '/profile',
-        builder: (context, state) =>
-            AndroidPaymentPage(product: state.extra! as PaymentProduct),
       ),
     ],
   );

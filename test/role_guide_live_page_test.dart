@@ -95,8 +95,7 @@ void main() {
       expect(
         container
             .read(routerProvider(false))
-            .routeInformationProvider
-            .value
+            .state
             .uri
             .queryParameters['accountId'],
         '101',
@@ -179,8 +178,7 @@ void main() {
       expect(
         container
             .read(routerProvider(false))
-            .routeInformationProvider
-            .value
+            .state
             .uri
             .queryParameters['accountId'],
         '202',

@@ -34,9 +34,11 @@ void main() {
               linkStyle: TextStyle(),
             ),
           ),
-        ),
-        ...appRouter.configuration.routes.where(
-          (route) => route is GoRoute && route.path.startsWith('/legal/'),
+          routes: (appRouter.configuration.routes.single as GoRoute).routes
+              .where(
+                (route) => route is GoRoute && route.path.startsWith('legal/'),
+              )
+              .toList(),
         ),
       ],
     );

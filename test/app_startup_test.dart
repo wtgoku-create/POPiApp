@@ -110,7 +110,7 @@ void main() {
 
       expect(find.byType(LoginPage), findsOneWidget, reason: entryKey);
       final router = GoRouter.of(tester.element(find.byType(LoginPage)));
-      expect(router.canPop(), isFalse, reason: entryKey);
+      expect(router.canPop(), isTrue, reason: entryKey);
       await tester.tap(find.byKey(const Key('login-back-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -187,7 +187,7 @@ void main() {
 
     expect(find.byType(ProfilePage), findsOneWidget);
     final profileContext = tester.element(find.byType(ProfilePage));
-    expect(Navigator.of(profileContext).canPop(), isFalse);
+    expect(Navigator.of(profileContext).canPop(), isTrue);
 
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();

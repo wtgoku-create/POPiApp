@@ -57,14 +57,24 @@ void main() {
     final previewRouter = GoRouter(
       routes: [
         for (final route in templateRouter.configuration.routes)
-          if (route is GoRoute && route.path == '/role-guide')
+          if (route is GoRoute && route.path == '/')
             GoRoute(
               path: route.path,
-              builder: (_, __) => RoleGuidePage(
-                generationRepository:
-                    generationRepository ??
-                    const PreviewRoleGenerationRepository(),
-              ),
+              builder: route.builder,
+              routes: [
+                for (final child in route.routes)
+                  if (child is GoRoute && child.path == 'role-guide')
+                    GoRoute(
+                      path: child.path,
+                      builder: (_, __) => RoleGuidePage(
+                        generationRepository:
+                            generationRepository ??
+                            const PreviewRoleGenerationRepository(),
+                      ),
+                    )
+                  else
+                    child,
+              ],
             )
           else
             route,
@@ -562,7 +572,7 @@ void main() {
     expect(sheet, findsNothing);
     expect(find.textContaining('已选1个角色'), findsOneWidget);
     expect(find.byType(RoleGuidePage), findsOneWidget);
-    expect(container.read(routerProvider(false)).canPop(), isFalse);
+    expect(container.read(routerProvider(false)).canPop(), isTrue);
     expect(tester.takeException(), isNull);
   });
 

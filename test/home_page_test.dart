@@ -243,7 +243,7 @@ void main() {
           );
         }
         final router = container.read(routerProvider(false));
-        expect(router.canPop(), i == 2);
+        expect(router.canPop(), isTrue);
         if (i < 2) {
           router.replace('/');
         } else {

@@ -554,30 +554,29 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'system back preserves the draft without restoring the replaced home',
-    (tester) async {
-      await pumpGuide(tester);
-      await tap(tester, 'ip-guide-start');
-      await tap(tester, 'ip-direction-campus');
-      await tap(tester, 'ip-guide-next-1');
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.text('主方向：校园'), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(HomePage), findsNothing);
-      expect(find.byType(IpGuidePage), findsOneWidget);
-      expect(
-        GoRouter.of(tester.element(find.byType(IpGuidePage))).canPop(),
-        isFalse,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('system back returns through draft steps and then home', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await tap(tester, 'ip-guide-start');
+    await tap(tester, 'ip-direction-campus');
+    await tap(tester, 'ip-guide-next-1');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('主方向：校园'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.byType(IpGuidePage), findsNothing);
+    expect(
+      GoRouter.of(tester.element(find.byType(HomePage))).canPop(),
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('removing the primary choice promotes the secondary', (
     tester,
