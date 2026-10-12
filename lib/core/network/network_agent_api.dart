@@ -11,6 +11,60 @@ class NetworkAgentApi {
 
   final Dio dio;
 
+  Future<Map<String, dynamic>> enterHome(
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/home/enter',
+    method: 'POST',
+    receiveTimeout: const Duration(minutes: 1),
+    data: input,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> recommendHomeTopics(
+    String sessionId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/topics',
+    method: 'POST',
+    receiveTimeout: const Duration(minutes: 3),
+    data: input,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> generateHome(
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/home/generate',
+    method: 'POST',
+    receiveTimeout: const Duration(minutes: 2),
+    data: input,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> homeTask(
+    String id, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/home-tasks/${Uri.encodeComponent(id)}',
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> controlHomeTask(
+    String id,
+    Map<String, Object?> input, {
+    bool confirmVideo = false,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/home-tasks/${Uri.encodeComponent(id)}/${confirmVideo ? 'confirm-video' : 'control'}',
+    method: 'POST',
+    data: input,
+    cancelToken: cancelToken,
+  );
+
   Future<Map<String, dynamic>> resolveSession({
     required String clientRequestId,
     String mode = 'new',
@@ -257,6 +311,7 @@ class NetworkAgentApi {
     String method = 'GET',
     Map<String, Object?>? data,
     Map<String, Object?>? queryParameters,
+    Duration? receiveTimeout,
     CancelToken? cancelToken,
   }) async {
     try {
@@ -264,7 +319,7 @@ class NetworkAgentApi {
         path,
         data: data,
         queryParameters: queryParameters,
-        options: Options(method: method),
+        options: Options(method: method, receiveTimeout: receiveTimeout),
         cancelToken: cancelToken,
       );
       final body = response.data;

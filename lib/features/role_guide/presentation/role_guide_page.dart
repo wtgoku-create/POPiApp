@@ -2,18 +2,23 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/network_api.dart';
+import '../../../core/network/network_agent_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
+import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/app_video_preview.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
@@ -21,6 +26,8 @@ import '../../assets/domain/library_role.dart';
 import '../../projects/domain/project.dart';
 import '../data/role_guide_examples.dart';
 import '../data/role_generation_repository.dart';
+import '../data/home_creation_repository.dart';
+import '../domain/home_creation.dart';
 import '../domain/role_generation.dart';
 import '../domain/role_guide_draft.dart';
 import 'widgets/role_generation_sheet.dart';
@@ -31,15 +38,22 @@ import 'widgets/role_guide_sheet.dart';
 import 'widgets/role_profile_sheet.dart';
 import 'widgets/role_project_sheet.dart';
 import 'widgets/role_generation_panel.dart';
+import 'widgets/home_generation_config_sheet.dart';
 
 /// Character selection, story planning, and a route-local generation workflow.
 class RoleGuidePage extends ConsumerStatefulWidget {
   const RoleGuidePage({
-    this.generationRepository = const PreviewRoleGenerationRepository(),
+    this.generationRepository,
+    this.homeRepository,
+    this.accountId,
+    this.sessionId,
     super.key,
   });
 
-  final RoleGenerationRepository generationRepository;
+  final RoleGenerationRepository? generationRepository;
+  final HomeCreationRepository? homeRepository;
+  final String? accountId;
+  final String? sessionId;
 
   @override
   ConsumerState<RoleGuidePage> createState() => _RoleGuidePageState();
@@ -55,21 +69,288 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   RoleGenerationProgress? _progress;
   StreamSubscription<RoleGenerationProgress>? _generation;
   int _generationId = 0;
+  late HomeCreationRepository _repository;
+  HomeCreation? _home;
+  HomeTask? _task;
+  HomeConfig? _config;
+  num? _estimate;
+  Timer? _poll;
+  CancelToken _requestToken = CancelToken();
+  bool _busy = false;
+  bool _failed = false;
+  VoidCallback? _retry;
+  bool get _live => widget.generationRepository == null;
+  List<RoleGuideStory> _stories(AppLocalizations l10n) => _live
+      ? (_home?.topics ?? const [])
+            .map(
+              (topic) => (
+                title: topic.title,
+                summary: topic.story,
+                development: '',
+                content: '',
+              ),
+            )
+            .toList()
+      : roleGuideStories(l10n, _draft.storyBatch);
+
+  @override
+  void initState() {
+    super.initState();
+    _repository =
+        widget.homeRepository ??
+        HomeCreationRepository(
+          NetworkApi(ref.read(dioProvider)),
+          NetworkAgentApi(ref.read(agentDioProvider)),
+        );
+    ref.listenManual(userProvider.select((user) => user?.id), (_, __) {
+      _requestToken.cancel();
+      _requestToken = CancelToken();
+      _poll?.cancel();
+      if (mounted) {
+        setState(() {
+          _home = null;
+          _task = null;
+          _config = null;
+          _estimate = null;
+          _draft.clear();
+          _busy = false;
+          _failed = false;
+          _retry = null;
+        });
+      }
+    });
+    if (_live && widget.accountId != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _update(
+          () => _repository.open(
+            widget.accountId!,
+            sessionId: widget.sessionId,
+            cancelToken: _requestToken,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(RoleGuidePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_live &&
+        (oldWidget.accountId != widget.accountId ||
+            oldWidget.sessionId != widget.sessionId)) {
+      if (_home?.accountId == widget.accountId &&
+          _home?.sessionId == widget.sessionId) {
+        return;
+      }
+      _requestToken.cancel();
+      _requestToken = CancelToken();
+      _poll?.cancel();
+      _busy = false;
+      _home = null;
+      _task = null;
+      _config = null;
+      _estimate = null;
+      _draft.clear();
+      if (widget.accountId != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _update(
+            () => _repository.open(
+              widget.accountId!,
+              sessionId: widget.sessionId,
+              cancelToken: _requestToken,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _apply(HomeCreation home, {RoleGuideStep? step}) {
+    if (_home?.accountId != home.accountId || _home?.id != home.id) {
+      _config = null;
+      _estimate = null;
+      _draft.clear();
+    }
+    _home = home;
+    if (home.cast.isNotEmpty) _draft.replaceRoles(home.cast);
+    _config = home.config ?? _config;
+    _task = home.task;
+    _progress = _task?.progress;
+    final selected = home.topics.indexWhere(
+      (topic) => topic.id == home.selectedTopic?.id,
+    );
+    _draft.storyIndex = selected < 0 ? 0 : selected;
+    _draft.step =
+        step ??
+        (_task != null
+            ? RoleGuideStep.generation
+            : home.selectedTopic != null
+            ? RoleGuideStep.production
+            : home.cast.isNotEmpty
+            ? RoleGuideStep.story
+            : RoleGuideStep.roles);
+    _schedulePoll();
+  }
+
+  Future<bool> _update(
+    Future<HomeCreation> Function() action, {
+    RoleGuideStep? step,
+  }) async {
+    if (_busy || !mounted) return false;
+    if (ref.read(userProvider) == null) {
+      context.push('/login');
+      return false;
+    }
+    final token = _requestToken;
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
+    _retry = () => _update(action, step: step);
+    try {
+      final home = await action();
+      if (!mounted || token.isCancelled) return false;
+      setState(() => _apply(home, step: step));
+      if (widget.accountId != home.accountId ||
+          widget.sessionId != home.sessionId) {
+        context.replace(
+          Uri(
+            path: '/role-guide',
+            queryParameters: {
+              'accountId': home.accountId,
+              'sessionId': home.sessionId,
+            },
+          ).toString(),
+        );
+      }
+      return true;
+    } catch (error) {
+      await _recoverConflict(error, token);
+      if (mounted && !token.isCancelled) setState(() => _failed = true);
+      return false;
+    } finally {
+      if (mounted && !token.isCancelled) setState(() => _busy = false);
+      if (mounted && !token.isCancelled) _schedulePoll();
+    }
+  }
+
+  Future<void> _recommend() async {
+    final home = _home;
+    if (home == null || !home.editable) return;
+    await _update(
+      () => _repository.recommend(home, cancelToken: _requestToken),
+      step: RoleGuideStep.story,
+    );
+  }
+
+  Future<void> _recoverConflict(Object error, CancelToken token) async {
+    final home = _home;
+    if (home == null ||
+        token.isCancelled ||
+        !HomeCreationRepository.isConflict(error)) {
+      return;
+    }
+    try {
+      final current = await _repository.refresh(home, cancelToken: token);
+      if (mounted && !token.isCancelled) {
+        setState(() => _apply(current));
+        _retry = () => _update(
+          () => _repository.refresh(current, cancelToken: _requestToken),
+        );
+      }
+    } catch (_) {
+      // Keep the original command available when recovery itself is offline.
+    }
+  }
+
+  Future<void> _chooseStory() async {
+    if (!_live) {
+      _step(RoleGuideStep.production);
+      return;
+    }
+    final home = _home;
+    if (home == null || !home.editable || home.topics.isEmpty) return;
+    final topic = home.topics[_draft.storyIndex];
+    await _update(
+      () => _repository.selectTopic(home, topic, cancelToken: _requestToken),
+      step: RoleGuideStep.production,
+    );
+  }
+
+  Future<void> _taskCommand(Future<HomeTask> Function() action) async {
+    if (_busy || !mounted) return;
+    final token = _requestToken;
+    _poll?.cancel();
+    setState(() {
+      _busy = true;
+      _failed = false;
+    });
+    _retry = () => _taskCommand(action);
+    try {
+      final task = await action();
+      if (!mounted || token.isCancelled) return;
+      setState(() {
+        _task = task;
+        _progress = task.progress;
+        _draft.step = RoleGuideStep.generation;
+      });
+    } catch (error) {
+      await _recoverConflict(error, token);
+      if (mounted && !token.isCancelled) setState(() => _failed = true);
+    } finally {
+      if (mounted && !token.isCancelled) {
+        setState(() => _busy = false);
+        _schedulePoll();
+      }
+    }
+  }
+
+  void _schedulePoll() {
+    _poll?.cancel();
+    final task = _task;
+    if (task == null || !task.needsPolling || _busy || !_live) return;
+    final token = _requestToken;
+    _poll = Timer(const Duration(seconds: 2), () async {
+      try {
+        final next = await _repository.task(task.id, cancelToken: token);
+        if (!mounted || token.isCancelled || _busy || _task?.id != task.id) {
+          return;
+        }
+        if (next.revision >= _task!.revision) {
+          setState(() {
+            _task = next;
+            _progress = next.progress;
+          });
+        }
+        if (!next.needsPolling && next.state != 'paused' && _home != null) {
+          await _update(() => _repository.refresh(_home!, cancelToken: token));
+        }
+      } catch (_) {
+        if (mounted && !token.isCancelled) setState(() => _failed = true);
+      } finally {
+        if (mounted && !token.isCancelled) _schedulePoll();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _generationId++;
     _generation?.cancel();
+    _poll?.cancel();
+    _requestToken.cancel();
     _scroll.dispose();
     super.dispose();
   }
 
   void _step(RoleGuideStep step) {
+    if (_busy) return;
     setState(() => _draft.step = step);
     if (_scroll.hasClients) _scroll.jumpTo(0);
   }
 
   void _back() {
+    if (_busy) return;
     if (_draft.step == RoleGuideStep.generation && _progress?.running == true) {
       return;
     }
@@ -83,6 +364,14 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   }
 
   void _toggleRole(LibraryRole role) {
+    if (_busy) return;
+    if (_live && !role.readyForHomeCreation) {
+      AppToast.info(
+        context,
+        AppLocalizations.of(context)!.roleNotReadyForVideo,
+      );
+      return;
+    }
     final changed = _draft.toggleRole(role);
     if (changed) {
       setState(() {});
@@ -91,7 +380,21 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     }
   }
 
-  bool _startProject() {
+  Future<bool> _startProject() async {
+    if (_busy) return false;
+    if (_live) {
+      final roles = _draft.roles;
+      final ok = await _update(
+        () => _repository.create(roles, cancelToken: _requestToken),
+      );
+      if (ok &&
+          _home!.topics.isEmpty &&
+          _home!.selectedTopic == null &&
+          _home!.task == null) {
+        await _recommend();
+      }
+      return ok;
+    }
     if (!_draft.startProject()) {
       AppToast.info(
         context,
@@ -138,6 +441,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                 initialCategory: _category,
                 selected: () => editing ? selection : _draft.roles,
                 onToggle: (role) {
+                  if (_busy) return;
+                  if (_live && !role.readyForHomeCreation) {
+                    AppToast.info(context, l10n.roleNotReadyForVideo);
+                    return;
+                  }
                   if (editing) {
                     final index = selection.indexWhere(
                       (item) => item.id == role.id,
@@ -170,14 +478,29 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                 count: editing ? selection.length : _draft.roles.length,
                 onPressed: (editing ? selection : _draft.roles).isEmpty
                     ? null
-                    : () {
+                    : () async {
                         if (editing) {
-                          if (_draft.replaceRoles(selection)) {
+                          if (_live) {
+                            final home = _home!;
+                            final ok = await _update(
+                              () => _repository.replaceCast(
+                                home,
+                                selection,
+                                cancelToken: _requestToken,
+                              ),
+                              step: RoleGuideStep.story,
+                            );
+                            if (ok && sheetContext.mounted) {
+                              Navigator.of(sheetContext).pop();
+                            }
+                          } else if (_draft.replaceRoles(selection)) {
                             _step(RoleGuideStep.story);
                             Navigator.of(sheetContext).pop();
                           }
-                        } else if (_startProject()) {
-                          Navigator.of(sheetContext).pop();
+                        } else if (await _startProject()) {
+                          if (sheetContext.mounted) {
+                            Navigator.of(sheetContext).pop();
+                          }
                         }
                       },
               ),
@@ -192,6 +515,19 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
 
   Future<void> _configure() async {
     if (_sheetOpen) return;
+    if (_live) {
+      final result = await _showSheet<HomeGenerationConfiguration>(
+        (_) =>
+            HomeGenerationConfigSheet(repository: _repository, saved: _config),
+      );
+      if (result != null && mounted) {
+        setState(() {
+          _config = result.config;
+          _estimate = result.points;
+        });
+      }
+      return;
+    }
     setState(() => _sheetOpen = true);
     try {
       final settings = await AppSheet.show<RoleGenerationSettings>(
@@ -220,10 +556,28 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   }
 
   void _viewPlan() => context.push(
-    Uri(path: '/session', queryParameters: {'prompt': _plan()}).toString(),
+    Uri(
+      path: '/session',
+      queryParameters: _live
+          ? {'sessionId': _home!.sessionId}
+          : {'prompt': _plan()},
+    ).toString(),
   );
 
   void _produce() {
+    if (_live) {
+      if (_busy || _home == null || !_home!.editable) return;
+      if (_config == null || _estimate == null) {
+        _configure();
+        return;
+      }
+      final home = _home!;
+      final config = _config!;
+      _taskCommand(
+        () => _repository.generate(home, config, cancelToken: _requestToken),
+      );
+      return;
+    }
     if (_progress?.running == true) return;
     final settings = _draft.settings;
     if (settings == null) {
@@ -234,7 +588,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     _generation?.cancel();
     setState(() => _progress = const RoleGenerationProgress());
     _step(RoleGuideStep.generation);
-    _generation = widget.generationRepository
+    _generation = widget.generationRepository!
         .generate(_plan())
         .listen(
           (progress) {
@@ -283,6 +637,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         stop != true ||
         _progress?.running != true ||
         generationId != _generationId) {
+      return;
+    }
+    if (_live) {
+      final task = _task!;
+      await _taskCommand(
+        () => _repository.control(task, 'cancel', cancelToken: _requestToken),
+      );
       return;
     }
     _generationId++;
@@ -355,6 +716,22 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   Future<void> _projects() async {
     if (ref.read(userProvider) == null) {
       context.push('/login');
+      return;
+    }
+    if (_live) {
+      final accountId = await _showSheet<String>(
+        (_) => const RoleProjectSheet(forHomeCreation: true),
+      );
+      if (!mounted || accountId == null) return;
+      final ok = await _update(
+        () => _repository.open(accountId, cancelToken: _requestToken),
+      );
+      if (ok &&
+          _home!.topics.isEmpty &&
+          _home!.selectedTopic == null &&
+          _home!.task == null) {
+        await _recommend();
+      }
       return;
     }
     final selection = await _showSheet<ProjectSessionSelection>(
@@ -505,66 +882,79 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             ),
           ),
           body: _blur(
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    key: const Key('role-guide-scroll'),
-                    controller: _scroll,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      10,
-                      20,
-                      hasFooter ? 20 : safeArea.bottom + 30,
+            AbsorbPointer(
+              absorbing: _busy,
+              child: Column(
+                children: [
+                  if (_busy)
+                    const LinearProgressIndicator(
+                      key: Key('role-guide-loading'),
                     ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _RoleGuideHeader(
-                              title: title,
-                              description: description,
-                              step: _draft.step,
-                              onSwitchProject:
-                                  _draft.step == RoleGuideStep.roles
-                                  ? _projects
-                                  : null,
-                            ),
-                            Container(
-                              key: const Key('role-guide-panel'),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: colors.surface,
-                                borderRadius: BorderRadius.circular(30),
+                  if (_failed)
+                    TextButton(
+                      key: const Key('role-guide-request-retry'),
+                      onPressed: _retry,
+                      child: Text('${l10n.roleRequestFailed} · ${l10n.retry}'),
+                    ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      key: const Key('role-guide-scroll'),
+                      controller: _scroll,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        10,
+                        20,
+                        hasFooter ? 20 : safeArea.bottom + 30,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 400),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _RoleGuideHeader(
+                                title: title,
+                                description: description,
+                                step: _draft.step,
+                                onSwitchProject:
+                                    _draft.step == RoleGuideStep.roles
+                                    ? _projects
+                                    : null,
                               ),
-                              child: _content(l10n),
-                            ),
-                          ],
+                              Container(
+                                key: const Key('role-guide-panel'),
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: colors.surface,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: _content(l10n),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                if (hasFooter)
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 440),
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          40,
-                          12,
-                          40,
-                          bottomInset + 20,
+                  if (hasFooter)
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            40,
+                            12,
+                            40,
+                            bottomInset + 20,
+                          ),
+                          child: _stepActions(l10n),
                         ),
-                        child: _stepActions(l10n),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -579,7 +969,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         key: const Key('role-guide-create-project'),
         label: l10n.roleCreateProject,
         count: _draft.roles.length,
-        onPressed: _draft.roles.isEmpty ? null : _startProject,
+        onPressed: _draft.roles.isEmpty || _busy ? null : _startProject,
       );
     }
     final production = _draft.step == RoleGuideStep.production;
@@ -592,9 +982,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             production ? 'role-guide-produce' : 'role-guide-choose-story',
           ),
           label: production ? l10n.roleStartCreating : l10n.roleChooseStory,
-          onPressed: production
+          onPressed:
+              _busy ||
+                  (_live && (_home?.editable != true || _home!.topics.isEmpty))
+              ? null
+              : production
               ? _produce
-              : () => _step(RoleGuideStep.production),
+              : _chooseStory,
         ),
         if (!production) ...[
           const SizedBox(height: 10),
@@ -604,6 +998,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             secondary: true,
             showArrow: false,
             onPressed: () {
+              if (_live) {
+                _recommend();
+                return;
+              }
               _draft.refreshStories();
               _step(RoleGuideStep.story);
             },
@@ -626,10 +1024,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       );
     }
     if (_draft.step == RoleGuideStep.generation) {
+      if (_live) return _liveGeneration(l10n);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.generationRepository.isPreview) ...[
+          if (widget.generationRepository!.isPreview) ...[
             Text(
               l10n.rolePreviewNotice,
               style: TextStyle(
@@ -641,7 +1040,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           ],
           RoleGenerationPanel(
             progress: _progress!,
-            preview: widget.generationRepository.isPreview,
+            preview: widget.generationRepository!.isPreview,
             onStop: _stopProduction,
             onRetry: _produce,
             onContinue: () {
@@ -675,7 +1074,25 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       );
     }
     final production = _draft.step == RoleGuideStep.production;
-    final stories = roleGuideStories(l10n, _draft.storyBatch);
+    final stories = _stories(l10n);
+    if (stories.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RoleProjectSummary(roles: _draft.roles),
+          const SizedBox(height: 20),
+          Text(
+            _busy ? l10n.roleLoadingStories : l10n.roleNoStories,
+            textAlign: TextAlign.center,
+          ),
+          if (!_busy && _home?.editable == true)
+            TextButton(
+              onPressed: _recommend,
+              child: Text(l10n.roleRefreshStories),
+            ),
+        ],
+      );
+    }
     final story = stories[_draft.storyIndex];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -799,7 +1216,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    _draft.settings == null
+                    _live
+                        ? (_config == null
+                              ? l10n.roleModelPending
+                              : l10n.roleModelConfigured)
+                        : _draft.settings == null
                         ? l10n.roleModelPending
                         : '${_draft.settings!.model.label} / ${_draft.settings!.videoResolution}P / ${_draft.settings!.videoRatio.label}',
                     style: const TextStyle(fontSize: 16),
@@ -822,7 +1243,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           ),
           const SizedBox(height: 20),
           Text(
-            _draft.settings == null
+            _live
+                ? (_estimate == null
+                      ? l10n.roleEstimatePending
+                      : l10n.chatEstimatedPoints(_estimate.toString()))
+                : _draft.settings == null
                 ? l10n.roleEstimatePending
                 : l10n.roleEstimatePreview,
             style: TextStyle(
@@ -830,13 +1255,114 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-          if (widget.generationRepository.isPreview) ...[
+          if (!_live && widget.generationRepository!.isPreview) ...[
             const SizedBox(height: 8),
             Text(
               l10n.rolePreviewNotice,
               style: const TextStyle(fontSize: 12, color: AppColors.brand),
             ),
           ],
+        ],
+      ],
+    );
+  }
+
+  Widget _liveGeneration(AppLocalizations l10n) {
+    final task = _task!;
+    final action = task.canConfirmVideo
+        ? 'confirm-video'
+        : task.allowedActions.contains('resume')
+        ? 'resume'
+        : task.allowedActions.contains('cancel')
+        ? 'cancel'
+        : task.allowedActions.contains('retry')
+        ? 'retry'
+        : task.state == 'completed' && _home?.editable == true
+        ? 'continue'
+        : null;
+    Future<void> perform() async {
+      if (action == 'cancel') {
+        await _stopProduction();
+        return;
+      }
+      if (action == 'continue') {
+        await _update(
+          () =>
+              _repository.continueCreation(_home!, cancelToken: _requestToken),
+        );
+        if (_home?.topics.isEmpty == true) await _recommend();
+      } else if (action != null) {
+        await _taskCommand(
+          () => _repository.control(task, action, cancelToken: _requestToken),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        RoleGenerationPanel(
+          progress: _progress!,
+          preview: false,
+          statusLabel: task.state == 'paused'
+              ? l10n.roleTaskPaused
+              : task.state == 'awaiting_confirmation'
+              ? l10n.chatAwaitingConfirmation
+              : null,
+          actionLabel: switch (action) {
+            'confirm-video' => l10n.roleConfirmVideo,
+            'resume' => l10n.roleResumeProduction,
+            'continue' => l10n.roleContinueCreating,
+            'cancel' => l10n.roleStopProduction,
+            _ => l10n.retry,
+          },
+          actionEnabled: action != null && !_busy,
+          onAction: perform,
+          onStop: _stopProduction,
+          onRetry: _produce,
+          onContinue: perform,
+          onViewPlan: _viewPlan,
+        ),
+        if (task.allowedActions.contains('pause'))
+          TextButton(
+            key: const Key('role-guide-pause'),
+            onPressed: () => _taskCommand(
+              () => _repository.control(
+                task,
+                'pause',
+                cancelToken: _requestToken,
+              ),
+            ),
+            child: Text(l10n.rolePauseProduction),
+          ),
+        if (task.canConfirmVideo && task.allowedActions.contains('cancel'))
+          TextButton(
+            onPressed: _stopProduction,
+            child: Text(l10n.roleStopProduction),
+          ),
+        const SizedBox(height: 20),
+        RoleProjectSummary(roles: _draft.roles),
+        for (final artifact in task.artifacts) ...[
+          if (artifact.body.isNotEmpty)
+            _artifact(artifact.title, artifact.body),
+          if (artifact.mediaId != null)
+            TextButton.icon(
+              onPressed: () async {
+                try {
+                  final url = await _repository.media(
+                    artifact.mediaId!,
+                    cancelToken: _requestToken,
+                  );
+                  if (mounted) {
+                    await AppVideoPreview.show(context: context, url: url);
+                  }
+                } catch (_) {
+                  if (mounted) AppToast.info(context, l10n.roleRequestFailed);
+                }
+              },
+              icon: const Icon(Icons.play_arrow),
+              label: Text(l10n.videoPlay),
+            ),
         ],
       ],
     );

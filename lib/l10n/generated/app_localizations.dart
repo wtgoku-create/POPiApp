@@ -110,6 +110,66 @@ abstract class AppLocalizations {
   /// **'Start with characters'**
   String get roleGuideTitle;
 
+  /// No description provided for @roleNotReadyForVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'This character\'s profile or reference images are not ready'**
+  String get roleNotReadyForVideo;
+
+  /// No description provided for @roleRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the creation request. Try again'**
+  String get roleRequestFailed;
+
+  /// No description provided for @roleLoadingStories.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding stories...'**
+  String get roleLoadingStories;
+
+  /// No description provided for @roleNoStories.
+  ///
+  /// In en, this message translates to:
+  /// **'No story suggestions yet'**
+  String get roleNoStories;
+
+  /// No description provided for @roleNoVideoModels.
+  ///
+  /// In en, this message translates to:
+  /// **'No video models available'**
+  String get roleNoVideoModels;
+
+  /// No description provided for @roleModelConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Model configured'**
+  String get roleModelConfigured;
+
+  /// No description provided for @roleTaskPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation paused'**
+  String get roleTaskPaused;
+
+  /// No description provided for @rolePauseProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause creation'**
+  String get rolePauseProduction;
+
+  /// No description provided for @roleResumeProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume creation'**
+  String get roleResumeProduction;
+
+  /// No description provided for @roleConfirmVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm video generation'**
+  String get roleConfirmVideo;
+
   /// No description provided for @roleGuideDescription.
   ///
   /// In en, this message translates to:

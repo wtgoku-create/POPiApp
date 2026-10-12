@@ -111,6 +111,7 @@ class ProjectRepository {
   Future<List<Project>> listProjects({CancelToken? cancelToken}) async {
     final items = await _pages(
       (page) => _api.projectsPage(page, cancelToken: cancelToken),
+      pageSize: 10,
     );
     return List.unmodifiable(
       {
@@ -153,8 +154,9 @@ class ProjectRepository {
 
   // Fetch every page before publishing, so a later failure cannot look complete.
   Future<List<Map<String, dynamic>>> _pages(
-    Future<Map<String, dynamic>> Function(int) load,
-  ) async {
+    Future<Map<String, dynamic>> Function(int) load, {
+    int pageSize = 100,
+  }) async {
     final items = <Map<String, dynamic>>[];
     for (var page = 1; ; page++) {
       final result = await load(page);
@@ -163,13 +165,13 @@ class ProjectRepository {
       if (list is! List ||
           info is! Map<String, dynamic> ||
           info['page'] != page ||
-          info['pageSize'] != 100 ||
+          info['pageSize'] != pageSize ||
           info['pageCount'] is! int ||
           (info['pageCount'] as int) < 1 ||
           (info['pageCount'] as int) > 10000 ||
           info['total'] is! int ||
           (info['total'] as int) < 0 ||
-          list.length > 100) {
+          list.length > pageSize) {
         throw const ApiException(message: 'Invalid project pagination');
       }
       for (final item in list) {

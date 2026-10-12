@@ -15,6 +15,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleGuideTitle => '从角色出发';
 
   @override
+  String get roleNotReadyForVideo => '角色档案或参考图尚未就绪';
+
+  @override
+  String get roleRequestFailed => '创作请求失败，请重试';
+
+  @override
+  String get roleLoadingStories => '正在推荐故事...';
+
+  @override
+  String get roleNoStories => '暂无推荐故事';
+
+  @override
+  String get roleNoVideoModels => '暂无可用视频模型';
+
+  @override
+  String get roleModelConfigured => '已配置生成模型';
+
+  @override
+  String get roleTaskPaused => '创作已暂停';
+
+  @override
+  String get rolePauseProduction => '暂停创作';
+
+  @override
+  String get roleResumeProduction => '继续创作';
+
+  @override
+  String get roleConfirmVideo => '确认生成视频';
+
+  @override
   String get roleGuideDescription => '选择至多5个角色\n组建一个新项目会话';
 
   @override

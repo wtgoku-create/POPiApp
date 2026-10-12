@@ -338,11 +338,57 @@ class NetworkApi {
   }) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/accounts',
-      queryParameters: {'status': 'active', 'page': page, 'pageSize': 100},
+      queryParameters: {'page': page, 'pageSize': 10},
       cancelToken: cancelToken,
     );
     return _projectData(response.data);
   }
+
+  Future<Map<String, Object?>> saveHomeCast(
+    String creationId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _studioRequest(
+    '/api_client/agent/v2/creations/${Uri.encodeComponent(creationId)}/revisions',
+    input,
+    cancelToken,
+  );
+
+  Future<void> selectHomeTopic(
+    String creationId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.put<Map<String, dynamic>>(
+      '/api_client/agent/v2/creations/${Uri.encodeComponent(creationId)}/topic',
+      data: input,
+      cancelToken: cancelToken,
+    );
+    _projectData(response.data);
+  }
+
+  Future<Map<String, Object?>> homeVideoModels({
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Object?>(
+      '/api_client/agent/v2/media-models',
+      queryParameters: {'mediaType': 'video'},
+      cancelToken: cancelToken,
+    );
+    final data = _workBody(response.data)['data'];
+    if (data is! Map) throw const ApiException();
+    return Map<String, Object?>.from(data);
+  }
+
+  Future<Map<String, Object?>> estimateHomeGeneration(
+    Map<String, Object?> config, {
+    CancelToken? cancelToken,
+  }) => _studioRequest('/api_client/agent/v2/generation/estimate-points', {
+    'mediaType': 'video',
+    'modelId': config['modelId'],
+    'parameters': config['params'],
+    'outputCount': 1,
+  }, cancelToken);
 
   Future<Map<String, dynamic>> libraryRoleDetail(
     String id, {

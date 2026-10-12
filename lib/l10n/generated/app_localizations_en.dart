@@ -15,6 +15,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleGuideTitle => 'Start with characters';
 
   @override
+  String get roleNotReadyForVideo =>
+      'This character\'s profile or reference images are not ready';
+
+  @override
+  String get roleRequestFailed =>
+      'Could not complete the creation request. Try again';
+
+  @override
+  String get roleLoadingStories => 'Finding stories...';
+
+  @override
+  String get roleNoStories => 'No story suggestions yet';
+
+  @override
+  String get roleNoVideoModels => 'No video models available';
+
+  @override
+  String get roleModelConfigured => 'Model configured';
+
+  @override
+  String get roleTaskPaused => 'Creation paused';
+
+  @override
+  String get rolePauseProduction => 'Pause creation';
+
+  @override
+  String get roleResumeProduction => 'Resume creation';
+
+  @override
+  String get roleConfirmVideo => 'Confirm video generation';
+
+  @override
   String get roleGuideDescription =>
       'Choose up to 5 characters\nto start a project conversation';
 

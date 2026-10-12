@@ -17,6 +17,10 @@ class RoleGenerationPanel extends StatelessWidget {
     required this.onRetry,
     required this.onContinue,
     required this.onViewPlan,
+    this.actionLabel,
+    this.statusLabel,
+    this.actionEnabled = true,
+    this.onAction,
     super.key,
   });
 
@@ -26,18 +30,24 @@ class RoleGenerationPanel extends StatelessWidget {
   final VoidCallback onRetry;
   final VoidCallback onContinue;
   final VoidCallback onViewPlan;
+  final String? actionLabel;
+  final String? statusLabel;
+  final bool actionEnabled;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final completed = progress.status == RoleGenerationStatus.completed;
-    final status = switch (progress.status) {
-      RoleGenerationStatus.running => l10n.roleTaskRunning,
-      RoleGenerationStatus.completed => l10n.roleTaskCompleted,
-      RoleGenerationStatus.canceled => l10n.roleTaskCanceled,
-      RoleGenerationStatus.failed => l10n.roleTaskFailed,
-    };
+    final status =
+        statusLabel ??
+        switch (progress.status) {
+          RoleGenerationStatus.running => l10n.roleTaskRunning,
+          RoleGenerationStatus.completed => l10n.roleTaskCompleted,
+          RoleGenerationStatus.canceled => l10n.roleTaskCanceled,
+          RoleGenerationStatus.failed => l10n.roleTaskFailed,
+        };
     final stages = [
       l10n.roleStageCharacters,
       l10n.roleStageScript,
@@ -119,7 +129,9 @@ class RoleGenerationPanel extends StatelessWidget {
                                   color: AppColors.brand,
                                   size: 20,
                                 )
-                              : progress.running && i == progress.stage
+                              : progress.running &&
+                                    statusLabel == null &&
+                                    i == progress.stage
                               ? const Padding(
                                   padding: EdgeInsets.all(4),
                                   child: CircularProgressIndicator(
@@ -276,9 +288,10 @@ class RoleGenerationPanel extends StatelessWidget {
                               ),
                             const SizedBox(height: 12),
                             Text(
-                              progress.running
-                                  ? l10n.roleWorkGenerating
-                                  : status,
+                              statusLabel ??
+                                  (progress.running
+                                      ? l10n.roleWorkGenerating
+                                      : status),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
@@ -298,17 +311,22 @@ class RoleGenerationPanel extends StatelessWidget {
         const SizedBox(height: 20),
         RoleGuideAction(
           key: const Key('role-guide-generation-action'),
-          label: progress.running
-              ? l10n.roleStopProduction
-              : completed
-              ? l10n.roleContinueCreating
-              : l10n.retry,
+          label:
+              actionLabel ??
+              (progress.running
+                  ? l10n.roleStopProduction
+                  : completed
+                  ? l10n.roleContinueCreating
+                  : l10n.retry),
           showArrow: !progress.running,
-          onPressed: progress.running
-              ? onStop
-              : completed
-              ? onContinue
-              : onRetry,
+          onPressed: !actionEnabled
+              ? null
+              : onAction ??
+                    (progress.running
+                        ? onStop
+                        : completed
+                        ? onContinue
+                        : onRetry),
         ),
         const SizedBox(height: 10),
         RoleGuideAction(

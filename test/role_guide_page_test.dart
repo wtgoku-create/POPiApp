@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
@@ -51,8 +52,29 @@ void main() {
     addTearDown(tester.view.resetPadding);
     addTearDown(tester.view.resetViewPadding);
     final roles = roleGuideExamples(lookupAppLocalizations(locale));
+    final routeContainer = ProviderContainer();
+    final templateRouter = routeContainer.read(routerProvider(false));
+    final previewRouter = GoRouter(
+      routes: [
+        for (final route in templateRouter.configuration.routes)
+          if (route is GoRoute && route.path == '/role-guide')
+            GoRoute(
+              path: route.path,
+              builder: (_, __) => RoleGuidePage(
+                generationRepository:
+                    generationRepository ??
+                    const PreviewRoleGenerationRepository(),
+              ),
+            )
+          else
+            route,
+      ],
+    );
+    templateRouter.dispose();
+    routeContainer.dispose();
     final container = ProviderContainer(
       overrides: [
+        routerProvider(false).overrideWithValue(previewRouter),
         sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
         projectRepositoryProvider.overrideWithValue(
           projectRepository ?? FixtureProjectRepository(),
@@ -104,17 +126,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    if (generationRepository != null) {
-      unawaited(
-        Navigator.of(tester.element(find.byType(RoleGuidePage))).push<void>(
-          MaterialPageRoute(
-            builder: (_) =>
-                RoleGuidePage(generationRepository: generationRepository),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-    }
     return container;
   }
 

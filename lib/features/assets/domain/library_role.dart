@@ -7,9 +7,11 @@ class LibraryRole {
     this.profile = const {},
     this.canEdit = false,
     this.canCreate = false,
+    this.canUseVideo = false,
     this.isCertified = false,
     this.profileComplete = false,
     this.profileVersion,
+    this.profileVersionId,
   });
 
   final String id;
@@ -19,9 +21,16 @@ class LibraryRole {
   final Map<String, dynamic> profile;
   final bool canEdit;
   final bool canCreate;
+  final bool canUseVideo;
   final bool isCertified;
   final bool profileComplete;
   final num? profileVersion;
+  final String? profileVersionId;
+  bool get readyForHomeCreation =>
+      profileComplete &&
+      canUseVideo &&
+      profileVersionId != null &&
+      profileVersionId!.isNotEmpty;
 
   LibraryRole withFallbackAvatar(String fallback) => LibraryRole(
     id: id,
@@ -31,9 +40,11 @@ class LibraryRole {
     profile: profile,
     canEdit: canEdit,
     canCreate: canCreate,
+    canUseVideo: canUseVideo,
     isCertified: isCertified,
     profileComplete: profileComplete,
     profileVersion: profileVersion,
+    profileVersionId: profileVersionId,
   );
 
   factory LibraryRole.fromJson(Map<String, dynamic> json) {
@@ -62,8 +73,10 @@ class LibraryRole {
       profile: Map<String, dynamic>.from(profile),
       canEdit: json['canEdit'] == true,
       canCreate: json['canUseText'] == true || json['canUseVideo'] == true,
+      canUseVideo: json['canUseVideo'] == true,
       isCertified: json['isCertified'] == true,
       profileComplete: json['profileComplete'] == true,
+      profileVersionId: version is Map ? version['id']?.toString() : null,
       profileVersion:
           profileVersion != null &&
               profileVersion.isFinite &&

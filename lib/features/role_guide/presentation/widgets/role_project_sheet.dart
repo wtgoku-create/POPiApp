@@ -12,7 +12,8 @@ import 'role_guide_sheet.dart';
 
 /// Selects an existing project and opens its most recently updated conversation.
 class RoleProjectSheet extends ConsumerStatefulWidget {
-  const RoleProjectSheet({super.key});
+  const RoleProjectSheet({this.forHomeCreation = false, super.key});
+  final bool forHomeCreation;
 
   @override
   ConsumerState<RoleProjectSheet> createState() => _RoleProjectSheetState();
@@ -42,6 +43,10 @@ class _RoleProjectSheetState extends ConsumerState<RoleProjectSheet> {
   Future<void> _open() async {
     final project = _selected;
     if (project == null || _opening) return;
+    if (widget.forHomeCreation) {
+      Navigator.of(context).pop(project.id);
+      return;
+    }
     final userId = ref.read(userProvider)?.id;
     setState(() {
       _opening = true;

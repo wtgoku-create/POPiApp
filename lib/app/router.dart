@@ -81,7 +81,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
       GoRoute(
         path: '/role-guide',
-        builder: (context, state) => const RoleGuidePage(),
+        builder: (context, state) => RoleGuidePage(
+          accountId: state.uri.queryParameters['accountId'],
+          sessionId: state.uri.queryParameters['sessionId'],
+        ),
       ),
       GoRoute(
         path: '/session',

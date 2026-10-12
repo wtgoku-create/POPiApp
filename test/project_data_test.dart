@@ -61,8 +61,8 @@ void main() {
       expect(request.method, 'GET');
       expect(request.path, '/api_client/agent/v2/accounts');
       expect(request.headers['Authorization'], 'Bearer project-token');
-      expect(request.queryParameters['status'], 'active');
-      expect(request.queryParameters['pageSize'], 100);
+      expect(request.queryParameters.containsKey('status'), isFalse);
+      expect(request.queryParameters['pageSize'], 10);
       expect(request.queryParameters.containsKey('mainRoleStatus'), isFalse);
     }
     expect(requests.map((request) => request.queryParameters['page']), [1, 2]);
@@ -102,6 +102,7 @@ void main() {
                         ],
                   page: page,
                   pageCount: 2,
+                  pageSize: 100,
                 ),
               ),
             );
@@ -272,11 +273,12 @@ Map<String, dynamic> _page(
   List<Map<String, dynamic>> list, {
   int page = 1,
   int pageCount = 1,
+  int pageSize = 10,
 }) => {
   'list': list,
   'pageInfo': {
     'page': page,
-    'pageSize': 100,
+    'pageSize': pageSize,
     'pageCount': pageCount,
     'total': 5,
   },
