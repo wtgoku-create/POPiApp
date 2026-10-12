@@ -36,7 +36,6 @@ class _RoleProfileSheetState extends State<RoleProfileSheet> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
   bool _failed = false;
-  String? _invalidField;
 
   @override
   void initState() {
@@ -75,22 +74,15 @@ class _RoleProfileSheetState extends State<RoleProfileSheet> {
     setState(() {
       _edit = null;
       _failed = false;
-      _invalidField = null;
     });
     _disposeControllers();
   }
 
   Future<void> _saveProfile() async {
     if (_saving || !_formKey.currentState!.validate()) return;
-    Map<String, Object?> profile;
-    try {
-      profile = _edit!.savedProfile({
-        for (final entry in _controllers.entries) entry.key: entry.value.text,
-      });
-    } on FormatException catch (error) {
-      setState(() => _invalidField = error.source as String?);
-      return;
-    }
+    final profile = _edit!.savedProfile({
+      for (final entry in _controllers.entries) entry.key: entry.value.text,
+    });
     final roleId = _roles[_index].id;
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
@@ -252,12 +244,7 @@ class _RoleProfileSheetState extends State<RoleProfileSheet> {
                   scrollController: controller,
                   formKey: _formKey,
                   saving: _saving,
-                  invalidField: _invalidField,
-                  onChanged: (fieldId) {
-                    if (_invalidField == fieldId) {
-                      setState(() => _invalidField = null);
-                    }
-                  },
+                  onChanged: (_) => setState(() {}),
                 )
               : RoleDetailPage.sheet(
                   key: ValueKey(role.id),
@@ -294,7 +281,13 @@ class _RoleProfileSheetState extends State<RoleProfileSheet> {
           Expanded(
             child: FilledButton(
               key: const Key('home-role-edit-save'),
-              onPressed: _saving ? null : _saveProfile,
+              onPressed:
+                  _saving ||
+                      _controllers.values.any(
+                        (controller) => controller.text.trim().isEmpty,
+                      )
+                  ? null
+                  : _saveProfile,
               child: _saving
                   ? const SizedBox(
                       width: 20,

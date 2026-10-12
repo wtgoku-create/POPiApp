@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/widgets/app_sheet.dart';
+import '../../../../shared/widgets/app_expanded_text_field.dart';
+import '../../../../shared/type/account_input_type.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../../../shared/widgets/popi_expanded_message_editor.dart';
 
 /// Shared next action with the pill shape and exported chevron from the design.
 class IpGuideNextButton extends StatelessWidget {
@@ -49,149 +49,21 @@ class IpGuideNextButton extends StatelessWidget {
   );
 }
 
-/// Custom answers use the same expanded editing surface as the chat composer.
-class IpGuideTextField extends StatefulWidget {
+/// Account guide input backed by the shared expanded editor.
+class IpGuideTextField extends AppExpandedTextField {
   const IpGuideTextField({
-    required this.controller,
-    required this.hint,
-    this.limit = 50,
-    this.nickname = false,
-    this.readOnly = false,
-    this.editInSheet = true,
+    required super.controller,
+    required super.hint,
+    super.limit = AccountInputLimits.customCharacters,
+    super.maxBytes,
+    super.nickname,
+    super.readOnly,
+    super.editInSheet,
     super.key,
-  });
-
-  final TextEditingController controller;
-  final String hint;
-  final int limit;
-  final bool nickname;
-  final bool readOnly;
-  final bool editInSheet;
-
-  @override
-  State<IpGuideTextField> createState() => _IpGuideTextFieldState();
-}
-
-class _IpGuideTextFieldState extends State<IpGuideTextField> {
-  bool _editorOpen = false;
-
-  Future<void> _openEditor() async {
-    if (_editorOpen || widget.readOnly) return;
-    _editorOpen = true;
-    try {
-      await AppSheet.show<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: false,
-        backgroundColor: Colors.transparent,
-        shape: PopiExpandedMessageEditor.shape,
-        builder: (context) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: PopiExpandedMessageEditor(
-            input: TextField(
-              key: const Key('ip-guide-expanded-input'),
-              controller: widget.controller,
-              autofocus: true,
-              expands: true,
-              maxLines: null,
-              maxLength: widget.limit,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-              style: TextStyle(
-                fontSize: 18,
-                height: 1.4,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              decoration: InputDecoration(
-                hintText: widget.hint,
-                filled: false,
-                contentPadding: EdgeInsets.zero,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-              ),
-            ),
-            action: SizedBox.square(
-              dimension: 40,
-              child: IconButton.filled(
-                key: const Key('ip-guide-editor-confirm'),
-                tooltip: AppLocalizations.of(context)!.confirm,
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.check_rounded),
-              ),
-            ),
-          ),
-        ),
-      );
-    } finally {
-      _editorOpen = false;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: widget.controller,
-      builder: (context, value, _) => TextField(
-        controller: widget.controller,
-        readOnly: widget.readOnly || widget.editInSheet,
-        canRequestFocus: !widget.readOnly && !widget.editInSheet,
-        enableInteractiveSelection: !widget.editInSheet,
-        onTap: widget.editInSheet && !widget.readOnly ? _openEditor : null,
-        maxLength: widget.limit,
-        maxLines: 1,
-        style: TextStyle(fontSize: 14, color: colors.onSurface, height: 1.4),
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => FocusScope.of(context).unfocus(),
-        decoration: InputDecoration(
-          hintText: widget.hint,
-          hintStyle: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
-          filled: true,
-          fillColor: dark
-              ? colors.surfaceContainerHigh
-              : widget.nickname
-              ? const Color(0xFFF8F6FD)
-              : const Color(0xFFF0F4F9),
-          counterText: '',
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: 54,
-            minHeight: 50,
-          ),
-          suffixIcon: Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Align(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: Text(
-                '${value.text.characters.length}/${widget.limit}',
-                style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
-              ),
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 15,
-          ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(100)),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(100)),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(100),
-            borderSide: BorderSide(color: colors.primary),
-          ),
-        ),
-      ),
-    );
-  }
+  }) : super(
+         editorInputKey: const Key('ip-guide-expanded-input'),
+         editorConfirmKey: const Key('ip-guide-editor-confirm'),
+       );
 }
 
 class IpGuideSelectionBadge extends StatelessWidget {

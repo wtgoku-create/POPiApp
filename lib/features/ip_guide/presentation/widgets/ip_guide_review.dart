@@ -7,6 +7,7 @@ import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/ip_guide_draft.dart';
 import '../ip_guide_copy.dart';
 import 'ip_guide_controls.dart';
+import '../../../../shared/type/account_input_type.dart';
 
 /// Account plan review reflects the draft, including custom answers.
 class IpGuideReview extends StatelessWidget {
@@ -27,21 +28,18 @@ class IpGuideReview extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final direction = selectionLabel(
-      draft.directions,
-      (value) => directionLabel(value, l10n),
-      ' × ',
+    final direction = guidePreferenceLabel(draft, 'contentDirections', l10n);
+    final feeling = guidePreferenceLabel(
+      draft,
+      'audienceFeelings',
+      l10n,
+      separator: ' / ',
+    );
+    final presentation = guidePreferenceLabel(
+      draft,
+      'presentationFormats',
       l10n,
     );
-    final feeling = selectionLabel(
-      draft.feelings,
-      (value) => feelingLabel(value, l10n),
-      ' / ',
-      l10n,
-    );
-    final presentation = draft.presentation == null
-        ? l10n.ipNotSelected
-        : presentationLabel(draft.presentation!, l10n);
     final format = draft.customFormat.trim().isEmpty
         ? formatLabel(draft.format, l10n)
         : draft.customFormat.trim();
@@ -54,12 +52,7 @@ class IpGuideReview extends StatelessWidget {
       (l10n.ipPresentation, '$presentation · $format'),
       (
         l10n.ipTargetAudience,
-        selectionLabel(
-          draft.audience,
-          (value) => audienceLabel(value, l10n),
-          ' × ',
-          l10n,
-        ),
+        guidePreferenceLabel(draft, 'targetAudience', l10n),
       ),
     ];
 
@@ -156,7 +149,8 @@ class IpGuideReview extends StatelessWidget {
                     key: const Key('ip-nickname'),
                     controller: nicknameController,
                     hint: l10n.ipNicknameHint,
-                    limit: 15,
+                    limit: AccountInputLimits.nicknameCharacters,
+                    maxBytes: AccountInputLimits.nicknameBytes,
                     nickname: true,
                     editInSheet: false,
                     readOnly: submitted,

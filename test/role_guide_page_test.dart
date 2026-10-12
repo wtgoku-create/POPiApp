@@ -377,7 +377,7 @@ void main() {
       await tap(tester, 'role-segment-1');
       expect(find.text('模型选择'), findsNothing);
       await tap(tester, 'role-ratio-square');
-      await tap(tester, 'role-quantity-2');
+      expect(find.byKey(const Key('role-quantity-2')), findsNothing);
       await tap(tester, 'role-generation-confirm');
       expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
       await tap(tester, 'role-guide-back');
@@ -396,7 +396,8 @@ void main() {
       expect(session.initialPrompt, contains('视频模型：Veo 3.1'));
       expect(session.initialPrompt, contains('视频参数：1080P / 9:16'));
       expect(session.initialPrompt, contains('图片参数：720P / 1:1'));
-      expect(session.initialPrompt, contains('生成数量：2'));
+      expect(session.initialPrompt, contains('生成数量：1'));
+      expect(session.initialPrompt, contains('时长: 20s'));
       expect(
         session.initialPrompt,
         contains(

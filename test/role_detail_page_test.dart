@@ -652,7 +652,7 @@ void main() {
       expect(scaffold.bottomNavigationBar, isNull);
       expect(find.byKey(const Key('role-profile-actions')), findsNothing);
       expect(find.text('角色档案'), findsOneWidget);
-      expect(find.text('未存证'), findsOneWidget);
+      expect(find.text('未存证'), findsNothing);
       expect(find.text('人物定位'), findsOneWidget);
       expect(find.text(sample.description), findsOneWidget);
       expect(
@@ -720,7 +720,7 @@ void main() {
           ),
         );
         expect(find.byKey(const Key('role-profile-summary')), findsOneWidget);
-        expect(find.text('Certified'), findsOneWidget);
+        expect(find.text('Certified'), findsNothing);
         expect(find.byKey(const Key('role-profile-archive')), findsNothing);
         expect(find.byKey(const Key('role-profile-actions')), findsNothing);
         expect(find.byType(SelectableText), findsNothing);

@@ -203,7 +203,9 @@ class NetworkApi {
   }
 
   Future<(String, int)> createIpAccount({
-    required String title,
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
     required String clientRequestId,
     CancelToken? cancelToken,
   }) async {
@@ -212,8 +214,9 @@ class NetworkApi {
       cancelToken: cancelToken,
       data: {
         'clientRequestId': clientRequestId,
-        'expectedRevision': 0,
-        'title': title,
+        if (title != null) 'title': title,
+        if (preferences != null) 'preferences': preferences,
+        if (userPrompt != null) 'userPrompt': userPrompt,
         'accountType': 'ip_character',
       },
     );
@@ -230,20 +233,92 @@ class NetworkApi {
     required Map<String, Object?> profile,
     CancelToken? cancelToken,
   }) async {
-    final response = await dio.post<Map<String, dynamic>>(
-      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/profile-versions',
+    await updateIpAccount(id, preferences: profile, cancelToken: cancelToken);
+  }
+
+  Future<Map<String, dynamic>> ipAccountPreferenceOptions({
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/preference-options',
       cancelToken: cancelToken,
-      data: {
-        'clientRequestId': clientRequestId,
-        'expectedRevision': revision,
-        'profile': profile,
-        'activate': true,
-      },
     );
-    final version = _projectData(response.data);
-    if (version['id'] is! String || (version['id'] as String).isEmpty) {
-      throw const ApiException();
-    }
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> ipAccountsPage({
+    String status = 'active',
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts',
+      queryParameters: {'status': status, 'page': page, 'pageSize': pageSize},
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> updateIpAccount(
+    String id, {
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
+    String? action,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.patch<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}',
+      data: {
+        if (title != null) 'title': title,
+        if (preferences != null) 'preferences': preferences,
+        if (userPrompt != null) 'userPrompt': userPrompt,
+        if (action != null) 'action': action,
+      },
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> archiveIpAccount(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.delete<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}',
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> ipAccountArchives(
+    String id, {
+    String keyword = '',
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/creation-archives',
+      queryParameters: {'keyword': keyword, 'page': page, 'pageSize': pageSize},
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
+  }
+
+  Future<Map<String, dynamic>> ipAccountArchiveDetail(
+    String id,
+    String creationId, {
+    String? versionId,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Map<String, dynamic>>(
+      '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/creation-archives/${Uri.encodeComponent(creationId)}',
+      queryParameters: {if (versionId != null) 'versionId': versionId},
+      cancelToken: cancelToken,
+    );
+    return _projectData(response.data);
   }
 
   Future<void> updateProject(
@@ -344,16 +419,6 @@ class NetworkApi {
     return _projectData(response.data);
   }
 
-  Future<Map<String, Object?>> saveHomeCast(
-    String creationId,
-    Map<String, Object?> input, {
-    CancelToken? cancelToken,
-  }) => _studioRequest(
-    '/api_client/agent/v2/creations/${Uri.encodeComponent(creationId)}/revisions',
-    input,
-    cancelToken,
-  );
-
   Future<Map<String, Object?>> saveHomeRoleProfile(
     String creationId,
     Map<String, Object?> input, {
@@ -364,30 +429,49 @@ class NetworkApi {
     cancelToken,
   );
 
-  Future<void> selectHomeTopic(
-    String creationId,
-    Map<String, Object?> input, {
-    CancelToken? cancelToken,
-  }) async {
-    final response = await dio.put<Map<String, dynamic>>(
-      '/api_client/agent/v2/creations/${Uri.encodeComponent(creationId)}/topic',
-      data: input,
-      cancelToken: cancelToken,
-    );
-    _projectData(response.data);
-  }
+  Future<Map<String, Object?>> homeVideoModels({CancelToken? cancelToken}) =>
+      mediaModels(mediaType: 'video', cancelToken: cancelToken);
 
-  Future<Map<String, Object?>> homeVideoModels({
+  Future<Map<String, Object?>> mediaModels({
+    required String mediaType,
     CancelToken? cancelToken,
   }) async {
     final response = await dio.get<Object?>(
       '/api_client/agent/v2/media-models',
-      queryParameters: {'mediaType': 'video'},
+      queryParameters: {'mediaType': mediaType},
       cancelToken: cancelToken,
     );
     final data = _workBody(response.data)['data'];
     if (data is! Map) throw const ApiException();
     return Map<String, Object?>.from(data);
+  }
+
+  Future<Map<String, Object?>> sessionMediaPreferences(
+    String sessionId, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Object?>(
+      '/api_client/agent/v2/session-media-preferences',
+      queryParameters: {'sessionId': sessionId},
+      cancelToken: cancelToken,
+    );
+    final data = _workBody(response.data)['data'];
+    if (data is! Map) throw const ApiException();
+    return Map<String, Object?>.from(data);
+  }
+
+  Future<void> updateSessionMediaPreferences({
+    required String sessionId,
+    required String mediaType,
+    required Map<String, Object?> config,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.put<Object?>(
+      '/api_client/agent/v2/session-media-preferences',
+      data: {'sessionId': sessionId, 'mediaType': mediaType, 'config': config},
+      cancelToken: cancelToken,
+    );
+    _workBody(response.data);
   }
 
   Future<Map<String, Object?>> estimateHomeGeneration(

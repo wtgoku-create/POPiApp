@@ -11,6 +11,7 @@ import '../features/ip_guide/presentation/ip_guide_page.dart';
 import '../features/role_guide/presentation/role_guide_page.dart';
 import '../features/ip_accounts/presentation/ip_accounts_live_page.dart';
 import '../features/ip_accounts/presentation/ip_account_home_page.dart';
+import '../features/ip_accounts/presentation/ip_account_history_page.dart';
 import '../features/session/presentation/session_page.dart';
 import '../features/teaching/presentation/teaching_page.dart';
 import '../features/teaching/presentation/teaching_document_page.dart';
@@ -77,6 +78,14 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
                 builder: (context, state) => IpAccountHomePage(
                   accountId: state.pathParameters['accountId']!,
                 ),
+                routes: [
+                  GoRoute(
+                    path: 'history',
+                    builder: (context, state) => IpAccountHistoryPage(
+                      accountId: state.pathParameters['accountId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

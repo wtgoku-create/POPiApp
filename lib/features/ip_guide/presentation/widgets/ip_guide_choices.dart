@@ -3,21 +3,22 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
-import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/ip_guide_draft.dart';
-import '../ip_guide_copy.dart';
+import '../../../ip_accounts/domain/account_preferences.dart';
 import 'ip_guide_controls.dart';
 
 /// Ordered choices; rows grow together when translated text needs more room.
-class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
+class IpGuideChoiceGrid<T> extends StatelessWidget {
   const IpGuideChoiceGrid({
     required this.values,
     required this.selection,
     required this.label,
     required this.onSelected,
     required this.keyPrefix,
+    required this.valueKey,
     this.icon,
+    this.imageUrl,
     this.description,
     this.showAvatar = true,
     super.key,
@@ -26,7 +27,9 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
   final List<T> values;
   final IpGuideSelection<T> selection;
   final String Function(T) label;
-  final String Function(T)? icon;
+  final String? Function(T)? icon;
+  final String? Function(T)? imageUrl;
+  final String Function(T) valueKey;
   final String Function(T)? description;
   final ValueChanged<T> onSelected;
   final String keyPrefix;
@@ -82,7 +85,7 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
               : colors.surface,
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
-            key: Key('$keyPrefix-${value.name}'),
+            key: Key('$keyPrefix-${valueKey(value)}'),
             onTap: () => onSelected(value),
             borderRadius: BorderRadius.circular(20),
             child: Stack(
@@ -137,7 +140,7 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              AppSvgIcon.asset(icon!(value), size: 44),
+                              _image(value),
                               const SizedBox(height: 10),
                               Text(
                                 label(value),
@@ -165,26 +168,48 @@ class IpGuideChoiceGrid<T extends Enum> extends StatelessWidget {
       ),
     );
   }
+
+  Widget _image(T value) {
+    final asset = icon?.call(value);
+    final fallback = asset == null
+        ? const Icon(Icons.auto_awesome_outlined, size: 44)
+        : AppSvgIcon.asset(asset, size: 44);
+    final url = imageUrl?.call(value);
+    if (url == null || url.isEmpty) return fallback;
+    return Image.network(
+      url,
+      width: 44,
+      height: 44,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => fallback,
+    );
+  }
 }
 
 class IpGuidePresentationChoices extends StatelessWidget {
   const IpGuidePresentationChoices({
-    required this.selected,
+    required this.options,
+    required this.selection,
     required this.onSelected,
     super.key,
   });
 
-  final IpPresentation? selected;
-  final ValueChanged<IpPresentation> onSelected;
+  final List<AccountPreferenceOption> options;
+  final IpGuideSelection<String> selection;
+  final ValueChanged<String> onSelected;
 
   static const _images = {
-    IpPresentation.aiReal: 'assets/images/ip_guide_ai_real.png',
-    IpPresentation.animation2d: 'assets/images/ip_guide_2d.png',
-    IpPresentation.animation3d: 'assets/images/ip_guide_3d.png',
-    IpPresentation.liveAction: 'assets/images/ip_guide_live.png',
-    IpPresentation.pets: 'assets/images/ip_guide_pets.png',
-    IpPresentation.clay: 'assets/images/ip_guide_clay.png',
-    IpPresentation.ink: 'assets/images/ip_guide_ink.png',
+    'AI 真人': 'assets/images/ip_guide_ai_real.png',
+    'AI真人': 'assets/images/ip_guide_ai_real.png',
+    '2D 动画': 'assets/images/ip_guide_2d.png',
+    '2D动漫': 'assets/images/ip_guide_2d.png',
+    '3D 动漫': 'assets/images/ip_guide_3d.png',
+    '3D动漫': 'assets/images/ip_guide_3d.png',
+    '真人实拍': 'assets/images/ip_guide_live.png',
+    '萌宠': 'assets/images/ip_guide_pets.png',
+    '黏土定格': 'assets/images/ip_guide_clay.png',
+    '定格动画': 'assets/images/ip_guide_clay.png',
+    '国风水墨': 'assets/images/ip_guide_ink.png',
   };
 
   @override
@@ -197,17 +222,16 @@ class IpGuidePresentationChoices extends StatelessWidget {
           : 2;
       return Column(
         children: [
-          for (var row = 0; row < 6 ~/ columns; row++) ...[
+          for (var row = 0; row < (options.length / columns).ceil(); row++) ...[
             if (row > 0) const SizedBox(height: 15),
             Row(
               children: [
                 for (var column = 0; column < columns; column++) ...[
                   if (column > 0) const SizedBox(width: 15),
                   Expanded(
-                    child: _tile(
-                      context,
-                      IpPresentation.values[row * columns + column],
-                    ),
+                    child: row * columns + column >= options.length
+                        ? const SizedBox()
+                        : _tile(context, options[row * columns + column]),
                   ),
                 ],
               ],
@@ -218,30 +242,23 @@ class IpGuidePresentationChoices extends StatelessWidget {
     },
   );
 
-  Widget _tile(BuildContext context, IpPresentation value) {
-    final l10n = AppLocalizations.of(context)!;
+  Widget _tile(BuildContext context, AccountPreferenceOption value) {
+    final order = selection.values.indexOf(value.name) + 1;
     return Semantics(
-      selected: selected == value,
+      selected: order > 0,
       button: true,
       child: Material(
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: Key('ip-presentation-${value.name}'),
-          onTap: () => onSelected(value),
+          onTap: () => onSelected(value.name),
           child: SizedBox(
             height: 125,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset(
-                  _images[value]!,
-                  fit: BoxFit.cover,
-                  alignment: value == IpPresentation.aiReal
-                      ? const Alignment(0, -.6)
-                      : Alignment.center,
-                  excludeFromSemantics: true,
-                ),
+                _image(context, value),
                 Positioned(
                   left: 10,
                   right: 10,
@@ -258,7 +275,7 @@ class IpGuidePresentationChoices extends StatelessWidget {
                           vertical: 4,
                         ),
                         child: Text(
-                          presentationLabel(value, l10n),
+                          value.name,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: AppColors.textPrimary,
@@ -274,16 +291,30 @@ class IpGuidePresentationChoices extends StatelessWidget {
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: IpGuideSelectionBadge(
-                    order: selected == value ? 1 : 0,
-                    single: true,
-                  ),
+                  child: IpGuideSelectionBadge(order: order),
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _image(BuildContext context, AccountPreferenceOption option) {
+    final asset = _images[option.name];
+    final fallback = asset == null
+        ? ColoredBox(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: const Center(child: Icon(Icons.palette_outlined, size: 44)),
+          )
+        : Image.asset(asset, fit: BoxFit.cover, excludeFromSemantics: true);
+    final url = option.imageUrl;
+    if (url == null || url.isEmpty) return fallback;
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => fallback,
     );
   }
 }

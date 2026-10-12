@@ -145,6 +145,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleRefreshStories => 'Try another set';
 
   @override
+  String get roleCustomTopic => 'Custom topic';
+
+  @override
+  String get roleCustomTopicHint => 'What story would you like to create?';
+
+  @override
+  String get roleGenerateTopic => 'Generate topic';
+
+  @override
+  String get roleReconfirmVideo => 'Confirm video again';
+
+  @override
   String get rolePreviousStory => 'Previous story';
 
   @override
@@ -404,6 +416,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleRatio => 'Aspect ratio';
+
+  @override
+  String get roleDuration => 'Duration';
+
+  @override
+  String get roleNoImageModels => 'No image models available';
+
+  @override
+  String get roleDurationAutomatic => 'Automatic';
+
+  @override
+  String get roleDurationCustom => 'Custom';
+
+  @override
+  String roleDurationSeconds(String seconds) {
+    return '${seconds}s';
+  }
 
   @override
   String get roleDimensions => 'Dimensions';
@@ -755,6 +784,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipAccountPreferences => 'Account Preferences';
+
+  @override
+  String get accountCreate => 'Create account';
+
+  @override
+  String get accountArchived => 'Archived';
+
+  @override
+  String get accountActive => 'Active';
+
+  @override
+  String get accountArchive => 'Archive account';
+
+  @override
+  String get accountRestore => 'Restore account';
+
+  @override
+  String get accountArchiveConfirm =>
+      'Creations, conversations and account details will be kept. You can restore this account at any time.';
+
+  @override
+  String get accountMemory => 'Account memory';
+
+  @override
+  String get accountUserPrompt => 'Account Positioning';
+
+  @override
+  String get accountPositioningHint =>
+      'Enter the account\'s theme, style and creative direction';
+
+  @override
+  String get accountConstraints => 'Creative constraints';
+
+  @override
+  String get accountCustomOption => 'Custom option';
+
+  @override
+  String get accountInputInvalid =>
+      'Enter a value within the selection and length limits';
+
+  @override
+  String get accountTitleInvalid =>
+      'Enter an account name of up to 15 characters';
+
+  @override
+  String get accountRenameTitle => 'Rename project';
+
+  @override
+  String accountRenameConfirm(String title) {
+    return 'Change the account nickname to:\n$title';
+  }
+
+  @override
+  String get accountArchives => 'Creation archives';
+
+  @override
+  String get accountArchiveSearch => 'Search titles or summaries';
+
+  @override
+  String get accountLoadMore => 'Load more';
+
+  @override
+  String get accountArchiveVersion => 'Version';
+
+  @override
+  String get accountArchiveSummary => 'Summary';
+
+  @override
+  String get accountArchiveBrief => 'Brief';
+
+  @override
+  String get accountArchiveTopic => 'Topic';
+
+  @override
+  String get accountArchiveScript => 'Script';
+
+  @override
+  String get accountArchiveStoryboard => 'Storyboard';
+
+  @override
+  String get accountArchiveCast => 'Cast snapshot';
+
+  @override
+  String get accountArchiveGeneration => 'Generation parameters';
+
+  @override
+  String get accountOpenConversation => 'View conversation';
 
   @override
   String get ipAccountPositioning => 'Account Positioning';
@@ -1809,6 +1925,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get creationHistory => 'History';
+
+  @override
+  String get creationHistoryLoadFailed => 'Unable to load creation history';
+
+  @override
+  String get searchCreationHistory => 'Search creation history';
+
+  @override
+  String get noMatchingHistory => 'No matching history';
+
+  @override
+  String get clearSearch => 'Clear search';
 
   @override
   String get assetLibrary => 'Library';

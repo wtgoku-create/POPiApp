@@ -74,6 +74,43 @@ void main() {
     },
   );
 
+  test(
+    'dynamic option names and custom answers restore and clear with the draft',
+    () async {
+      final draft = IpGuideDraft()..step = 3;
+      final directions = IpGuideSelection<String>();
+      for (final name in ['天文观察', '城市散步', '传统工艺']) {
+        directions.toggle(name, maxSelections: 20);
+      }
+      draft.preferences['contentDirections'] = directions;
+      draft.preferences['audienceFeelings'] = IpGuideSelection<String>()
+        ..customText = '好奇';
+      await repository.save(draft);
+      final restored = IpGuideRepository(storage, api, userId: '1').load()!;
+      expect(restored.preferences['contentDirections']!.values, [
+        '天文观察',
+        '城市散步',
+        '传统工艺',
+      ]);
+      expect(restored.preferences['audienceFeelings']!.customText, '好奇');
+      await repository.clear();
+      expect(repository.load(), isNull);
+    },
+  );
+
+  test(
+    'guide reads the existing account preference endpoint adapter',
+    () async {
+      final steps = await repository.preferenceOptions();
+      expect(api.preferenceRequests, 1);
+      expect(steps.first.key, 'contentDirections');
+      expect(steps.first.options.first.name, '校园');
+      expect(steps.first.options.first.description, '来自接口的选项描述');
+      expect(steps.first.maxSelections, 2);
+      expect(steps.first.allowCustom, isTrue);
+    },
+  );
+
   test('malformed or unsupported drafts are ignored', () {
     for (final raw in [
       '{',
@@ -107,7 +144,9 @@ void main() {
     api.failAccount = false;
     await repository.create(restored, {'direction': 'Changed locale'});
     expect(api.accountRequests[0], api.accountRequests[1]);
-    expect(api.savedProfile, {'direction': '校园'});
+    expect(api.savedProfile, {
+      'direction': ['校园'],
+    });
     expect(repository.load(), isNull);
   });
 
@@ -128,7 +167,9 @@ void main() {
       });
       expect(api.accountRequests, hasLength(1));
       expect(api.profileRequests[0], api.profileRequests[1]);
-      expect(api.savedProfile, {'targetAudience': '学生'});
+      expect(api.savedProfile, {
+        'targetAudience': ['学生'],
+      });
       expect(repository.load(), isNull);
     },
   );
@@ -168,25 +209,22 @@ void main() {
         'account-1',
         revision: 1,
         clientRequestId: 'profile-id',
-        profile: {'contentDirection': '校园'},
+        profile: {
+          'contentDirections': ['校园'],
+        },
       );
       expect(requests[0].method, 'POST');
       expect(requests[0].path, '/api_client/agent/v2/accounts');
       expect(requests[0].data, {
         'clientRequestId': 'create-id',
-        'expectedRevision': 0,
         'title': '账号',
         'accountType': 'ip_character',
       });
-      expect(
-        requests[1].path,
-        '/api_client/agent/v2/accounts/account-1/profile-versions',
-      );
+      expect(requests[1].path, '/api_client/agent/v2/accounts/account-1');
       expect(requests[1].data, {
-        'clientRequestId': 'profile-id',
-        'expectedRevision': 1,
-        'profile': {'contentDirection': '校园'},
-        'activate': true,
+        'preferences': {
+          'contentDirections': ['校园'],
+        },
       });
     },
   );

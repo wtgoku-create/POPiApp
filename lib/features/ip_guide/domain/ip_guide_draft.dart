@@ -40,8 +40,8 @@ enum IpTargetAudience {
 
 enum IpContentFormat { shortFilm, comicDrama, interactiveDrama, talkingHead }
 
-/// Keeps selection order so the first choice is primary and the second auxiliary.
-class IpGuideSelection<T extends Enum> {
+/// Preserves selection order while enforcing the supplied selection limit.
+class IpGuideSelection<T> {
   final List<T> _values = [];
   String _customText = '';
 
@@ -54,9 +54,9 @@ class IpGuideSelection<T extends Enum> {
     if (text.trim().isNotEmpty) _values.clear();
   }
 
-  bool toggle(T value) {
+  bool toggle(T value, {int maxSelections = 2}) {
     if (_values.remove(value)) return true;
-    if (_values.length == 2) return false;
+    if (_values.length >= maxSelections) return false;
     _customText = '';
     _values.add(value);
     return true;
@@ -65,6 +65,8 @@ class IpGuideSelection<T extends Enum> {
 
 /// One resumable account plan, including idempotent creation progress.
 class IpGuideDraft {
+  /// Backend option names remain stable when the app language changes.
+  final preferences = <String, IpGuideSelection<String>>{};
   final directions = IpGuideSelection<IpContentDirection>();
   final feelings = IpGuideSelection<IpAudienceFeeling>();
   final audience = IpGuideSelection<IpTargetAudience>();
@@ -82,10 +84,14 @@ class IpGuideDraft {
   bool get submitted => creationRequestId != null;
 
   int? get firstIncompleteStep {
-    if (directions.isEmpty) return 1;
-    if (feelings.isEmpty) return 2;
-    if (presentation == null) return 3;
-    if (audience.isEmpty) return 4;
+    if (preferences['contentDirections']?.isEmpty ?? directions.isEmpty) {
+      return 1;
+    }
+    if (preferences['audienceFeelings']?.isEmpty ?? feelings.isEmpty) return 2;
+    if (preferences['presentationFormats']?.isEmpty ?? (presentation == null)) {
+      return 3;
+    }
+    if (preferences['targetAudience']?.isEmpty ?? audience.isEmpty) return 4;
     return null;
   }
 }

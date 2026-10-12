@@ -39,6 +39,7 @@ import 'widgets/role_profile_sheet.dart';
 import 'widgets/role_project_sheet.dart';
 import 'widgets/role_generation_panel.dart';
 import 'widgets/home_generation_config_sheet.dart';
+import 'widgets/home_topic_input_sheet.dart';
 import 'widgets/role_guide_markdown.dart';
 import 'widgets/role_storyboard_body.dart';
 import 'widgets/role_generated_video.dart';
@@ -125,11 +126,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_live && widget.accountId != null) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => _update(
-          () => _repository.open(
-            widget.accountId!,
-            sessionId: widget.sessionId,
-            cancelToken: _requestToken,
-          ),
+          () => _repository.open(widget.accountId!, cancelToken: _requestToken),
         ),
       );
     }
@@ -157,11 +154,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       if (widget.accountId != null) {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _update(
-            () => _repository.open(
-              widget.accountId!,
-              sessionId: widget.sessionId,
-              cancelToken: _requestToken,
-            ),
+            () =>
+                _repository.open(widget.accountId!, cancelToken: _requestToken),
           ),
         );
       }
@@ -175,7 +169,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       _draft.clear();
     }
     _home = home;
-    if (home.cast.isNotEmpty) _draft.replaceRoles(home.cast);
+    _draft.replaceRoles(home.cast, allowEmpty: true);
     _config = home.config ?? _config;
     _task = home.task;
     _progress = _task?.progress;
@@ -242,6 +236,17 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (home == null || !home.editable) return;
     await _update(
       () => _repository.recommend(home, cancelToken: _requestToken),
+      step: RoleGuideStep.story,
+    );
+  }
+
+  Future<void> _customTopic() async {
+    final home = _home;
+    if (_busy || home == null || !home.editable) return;
+    final text = await _showSheet<String>((_) => const HomeTopicInputSheet());
+    if (!mounted || text == null || !identical(home, _home)) return;
+    await _update(
+      () => _repository.customTopic(home, text, cancelToken: _requestToken),
       step: RoleGuideStep.story,
     );
   }
@@ -388,7 +393,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_live) {
       final roles = _draft.roles;
       final ok = await _update(
-        () => _repository.create(roles, cancelToken: _requestToken),
+        () => _home == null
+            ? _repository.create(roles, cancelToken: _requestToken)
+            : _repository.replaceCast(
+                _home!,
+                roles,
+                cancelToken: _requestToken,
+              ),
       );
       if (ok &&
           _home!.topics.isEmpty &&
@@ -479,7 +490,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                     ? l10n.roleEditProjectRoles
                     : l10n.roleCreateProject,
                 count: editing ? selection.length : _draft.roles.length,
-                onPressed: (editing ? selection : _draft.roles).isEmpty
+                onPressed:
+                    (!editing || !_live) &&
+                        (editing ? selection : _draft.roles).isEmpty
                     ? null
                     : () async {
                         if (editing) {
@@ -491,11 +504,14 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                                 selection,
                                 cancelToken: _requestToken,
                               ),
-                              step: RoleGuideStep.story,
+                              step: selection.isEmpty
+                                  ? RoleGuideStep.roles
+                                  : RoleGuideStep.story,
                             );
                             if (ok && sheetContext.mounted) {
                               Navigator.of(sheetContext).pop();
                             }
+                            if (ok && selection.isNotEmpty) await _recommend();
                           } else if (_draft.replaceRoles(selection)) {
                             _step(RoleGuideStep.story);
                             Navigator.of(sheetContext).pop();
@@ -520,8 +536,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_sheetOpen) return;
     if (_live) {
       final result = await _showSheet<HomeGenerationConfiguration>(
-        (_) =>
-            HomeGenerationConfigSheet(repository: _repository, saved: _config),
+        (_) => HomeGenerationConfigSheet(
+          repository: _repository,
+          sessionId: _home!.sessionId,
+          saved: _config,
+        ),
       );
       if (result != null && mounted) {
         setState(() {
@@ -555,7 +574,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     final story = roleGuideStories(l10n, _draft.storyBatch)[_draft.storyIndex];
     String roles(List<LibraryRole> items) =>
         items.map((role) => '${role.title} [${role.id}]').join(', ');
-    return '${l10n.roleVideoPlanPrompt(l10n.roleProjectName(_draft.roles.first.title), roles(_draft.roles), roles(_draft.cast), story.title, story.summary, settings.model.label, '${settings.videoResolution}P / ${settings.videoRatio.label}', '${settings.imageResolution}P / ${settings.imageRatio.label}', settings.quantity)}\n${l10n.roleStoryDevelopment}: ${story.development}\n${l10n.roleStoryboardContent}:\n${story.content}';
+    return '${l10n.roleVideoPlanPrompt(l10n.roleProjectName(_draft.roles.first.title), roles(_draft.roles), roles(_draft.cast), story.title, story.summary, settings.model.label, '${settings.videoResolution}P / ${settings.videoRatio.label}', '${settings.imageResolution}P / ${settings.imageRatio.label}', settings.quantity)}\n${l10n.roleDuration}: ${settings.duration == null ? l10n.roleDurationAutomatic : l10n.roleDurationSeconds(settings.duration.toString())}\n${l10n.roleStoryDevelopment}: ${story.development}\n${l10n.roleStoryboardContent}:\n${story.content}';
   }
 
   void _viewPlan() => context.push(
@@ -700,9 +719,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       throw StateError('Creation is not editable');
     }
     final token = _requestToken;
+    late HomeCreation updated;
     setState(() => _busy = true);
     try {
-      final updated = await _repository.saveRoleProfile(
+      updated = await _repository.saveRoleProfile(
         home!,
         roleId,
         profile,
@@ -711,15 +731,20 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       if (!mounted || token.isCancelled) {
         throw StateError('Creation is no longer active');
       }
-      setState(() => _apply(updated));
+      setState(() {
+        _failed = false;
+        _retry = null;
+        _apply(updated, step: RoleGuideStep.story);
+      });
       AppToast.success(context, AppLocalizations.of(context)!.roleChangesSaved);
-      return updated.castForEditing;
     } catch (error) {
       await _recoverConflict(error, token);
       rethrow;
     } finally {
       if (mounted && !token.isCancelled) setState(() => _busy = false);
     }
+    if (mounted && !token.isCancelled) await _recommend();
+    return updated.castForEditing;
   }
 
   Widget _projectSummary() => RoleProjectSummary(
@@ -862,6 +887,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         ),
         child: Scaffold(
           key: _scaffoldKey,
+          // Input sheets handle their own inset while the covered page stays stable.
+          resizeToAvoidBottomInset: !_sheetOpen,
           // The app bar already includes the stored status-bar inset.
           primary: false,
           backgroundColor: Colors.transparent,
@@ -1026,26 +1053,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                         ),
                     ],
                   ),
-                  if (_busy)
-                    Center(
-                      child: Column(
-                        key: const Key('role-guide-loading'),
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox.square(
-                            dimension: 32,
-                            child: CircularProgressIndicator(strokeWidth: 3),
-                          ),
-                          if (_draft.step == RoleGuideStep.story) ...[
-                            const SizedBox(height: 16),
-                            Text(
-                              l10n.roleLoadingStories,
-                              style: TextStyle(color: colors.onSurfaceVariant),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  if (_busy && _draft.step != RoleGuideStep.story)
+                    Center(child: _loading(l10n)),
                 ],
               ),
             ),
@@ -1054,6 +1063,36 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       ),
     );
   }
+
+  Widget _loading(AppLocalizations l10n) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24),
+    child: Column(
+      key: const Key('role-guide-loading'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox.square(
+          dimension: 32,
+          child: CircularProgressIndicator(strokeWidth: 3),
+        ),
+        if (_draft.step == RoleGuideStep.story) ...[
+          const SizedBox(height: 16),
+          Text(
+            l10n.roleLoadingStories,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
+
+  Widget _castSummary() => RoleCastSummary(
+    cast: _draft.cast,
+    onViewProfiles: _profiles,
+    onEdit: _busy ? null : () => _library(editing: true),
+  );
 
   // Step actions remain visible independently of the scrollable planning content.
   Widget _stepActions(AppLocalizations l10n) {
@@ -1090,15 +1129,24 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             label: l10n.roleRefreshStories,
             secondary: true,
             showArrow: false,
-            onPressed: () {
-              if (_live) {
-                _recommend();
-                return;
-              }
-              _draft.refreshStories();
-              _step(RoleGuideStep.story);
-            },
+            onPressed: _busy
+                ? null
+                : () {
+                    if (_live) {
+                      _recommend();
+                      return;
+                    }
+                    _draft.refreshStories();
+                    _step(RoleGuideStep.story);
+                  },
           ),
+          if (_live)
+            TextButton.icon(
+              key: const Key('role-guide-custom-topic'),
+              onPressed: _busy || _home?.editable != true ? null : _customTopic,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: Text(l10n.roleCustomTopic),
+            ),
         ],
       ],
     );
@@ -1173,6 +1221,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _projectSummary(),
+          const SizedBox(height: 20),
+          _castSummary(),
+          if (_busy) _loading(l10n),
           if (!_busy && !_failed) ...[
             const SizedBox(height: 20),
             Text(l10n.roleNoStories, textAlign: TextAlign.center),
@@ -1187,11 +1238,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         if (!production) ...[
           _projectSummary(),
           const SizedBox(height: 20),
-          RoleCastSummary(
-            cast: _draft.cast,
-            onViewProfiles: _profiles,
-            onEdit: () => _library(editing: true),
-          ),
+          _castSummary(),
           const SizedBox(height: 20),
         ],
         Row(
@@ -1209,24 +1256,28 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               ),
             ),
             if (production)
-              TextButton(
-                key: const Key('role-guide-story-details'),
-                onPressed: () => _storyDetails(story),
-                style: TextButton.styleFrom(
-                  backgroundColor: roleGuideTint(context),
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.roleDetailedStory,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const Icon(Icons.chevron_right, size: 18),
-                  ],
+              Flexible(
+                child: TextButton(
+                  key: const Key('role-guide-story-details'),
+                  onPressed: () => _storyDetails(story),
+                  style: TextButton.styleFrom(
+                    backgroundColor: roleGuideTint(context),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          l10n.roleDetailedStory,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 18),
+                    ],
+                  ),
                 ),
               ),
             if (!production) ...[
@@ -1356,7 +1407,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         ? 'cancel'
         : task.allowedActions.contains('retry')
         ? 'retry'
-        : task.state == 'completed' && _home?.editable == true
+        : task.canContinue
         ? 'continue'
         : null;
     Future<void> perform() async {
@@ -1365,11 +1416,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         return;
       }
       if (action == 'continue') {
-        await _update(
+        final ok = await _update(
           () =>
               _repository.continueCreation(_home!, cancelToken: _requestToken),
         );
-        if (_home?.topics.isEmpty == true) await _recommend();
+        if (ok && _home?.topics.isEmpty == true) await _recommend();
       } else if (action != null) {
         await _taskCommand(
           () => _repository.control(task, action, cancelToken: _requestToken),
@@ -1396,7 +1447,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               ? l10n.chatAwaitingConfirmation
               : null,
           actionLabel: switch (action) {
-            'confirm-video' => l10n.roleConfirmVideo,
+            'confirm-video' =>
+              task.confirmationReason == 'generation_reconfirmation'
+                  ? l10n.roleReconfirmVideo
+                  : l10n.roleConfirmVideo,
             'resume' => l10n.roleResumeProduction,
             'continue' => l10n.roleContinueCreating,
             'cancel' => l10n.roleStopProduction,

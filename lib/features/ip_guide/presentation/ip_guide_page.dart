@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../domain/ip_guide_draft.dart';
 import '../data/ip_guide_repository.dart';
+import '../../ip_accounts/domain/account_preferences.dart';
 import '../../projects/data/project_repository.dart';
 import 'ip_guide_copy.dart';
 import 'widgets/ip_guide_choices.dart';
@@ -45,6 +47,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   final _formatInput = TextEditingController();
   final _nicknameInput = TextEditingController();
   final _audienceInput = TextEditingController();
+  final _presentationInput = TextEditingController();
   late TabController _tabs;
   bool? _reducedMotion;
   int _step = 0;
@@ -56,6 +59,15 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   bool _draftSheetOpen = false;
   String? _projectSessionId;
   String? _sessionRequestId;
+  static const _preferenceKeys = [
+    'contentDirections',
+    'audienceFeelings',
+    'presentationFormats',
+    'targetAudience',
+  ];
+  final _optionsToken = CancelToken();
+  Map<String, AccountPreferenceStep>? _options;
+  bool _optionsLoading = true;
 
   @override
   void initState() {
@@ -67,6 +79,71 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _formatInput.addListener(_updateDraft);
     _nicknameInput.addListener(_updateDraft);
     _audienceInput.addListener(_updateDraft);
+    _presentationInput.addListener(_updateDraft);
+    unawaited(_loadPreferenceOptions());
+  }
+
+  Future<void> _loadPreferenceOptions() async {
+    setState(() => _optionsLoading = true);
+    try {
+      final steps = await _repository.preferenceOptions(
+        cancelToken: _optionsToken,
+      );
+      final options = {for (final step in steps) step.key: step};
+      if (!_preferenceKeys.every(options.containsKey)) {
+        throw const FormatException('Missing account preference group');
+      }
+      if (!mounted || _optionsToken.isCancelled) return;
+      setState(() {
+        _options = options;
+        _initializePreferences();
+      });
+    } catch (_) {
+      if (mounted && !_optionsToken.isCancelled) {
+        setState(() => _options = null);
+      }
+    } finally {
+      if (mounted && !_optionsToken.isCancelled) {
+        setState(() => _optionsLoading = false);
+      }
+    }
+  }
+
+  void _initializePreferences() {
+    final profile = guideAccountProfile(_draft, AppLocalizations.of(context)!);
+    for (final key in _preferenceKeys) {
+      _draft.preferences.putIfAbsent(key, () {
+        final selection = IpGuideSelection<String>();
+        final custom = _inputFor(key)?.text ?? '';
+        if (custom.trim().isNotEmpty) {
+          selection.customText = custom;
+        } else {
+          final names = profile[key] as List<String>;
+          for (final name in names) {
+            selection.toggle(name, maxSelections: names.length);
+          }
+        }
+        return selection;
+      });
+    }
+  }
+
+  TextEditingController? _inputFor(String key) => switch (key) {
+    'contentDirections' => _directionInput,
+    'audienceFeelings' => _feelingInput,
+    'presentationFormats' => _presentationInput,
+    'targetAudience' => _audienceInput,
+    _ => null,
+  };
+
+  bool _validPreference(String key) {
+    final step = _options![key]!;
+    final values = selectionValues(_draft.preferences[key]!, (value) => value);
+    return step.accepts(values) &&
+        (step.allowCustom ||
+            values.every(
+              (name) => step.options.any((option) => option.name == name),
+            ));
   }
 
   @override
@@ -97,6 +174,9 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       _draft.customFormat = _formatInput.text;
       _draft.nickname = _nicknameInput.text;
       _draft.audience.customText = _audienceInput.text;
+      for (final key in _preferenceKeys) {
+        _draft.preferences[key]?.customText = _inputFor(key)!.text;
+      }
     });
     _save();
   }
@@ -148,6 +228,14 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _formatInput.text = draft.customFormat;
     _nicknameInput.text = draft.nickname;
     _audienceInput.text = draft.audience.customText;
+    _presentationInput.text =
+        draft.preferences['presentationFormats']?.customText ?? '';
+    for (final key in _preferenceKeys) {
+      if (draft.preferences[key] case final selection?) {
+        _inputFor(key)!.text = selection.customText;
+      }
+    }
+    _initializePreferences();
     _restoring = false;
     setState(() {});
   }
@@ -170,16 +258,17 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   }
 
   void _next() {
+    if (_optionsLoading || _options == null) return;
     final l10n = AppLocalizations.of(context)!;
-    final invalid = switch (_step) {
-      1 => _draft.directions.isEmpty,
-      2 => _draft.feelings.isEmpty,
-      3 => _draft.presentation == null,
-      4 => _draft.audience.isEmpty,
-      _ => false,
-    };
+    final invalid =
+        _step > 0 &&
+        _step <= 4 &&
+        !_validPreference(_preferenceKeys[_step - 1]);
     if (invalid) {
-      AppToast.info(context, _validationMessage(_step, l10n));
+      AppToast.info(
+        context,
+        _preferenceValidation(_preferenceKeys[_step - 1], l10n),
+      );
       return;
     }
     _goToStep(_step + 1);
@@ -192,28 +281,50 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _ => l10n.ipSelectPresentation,
   };
 
-  void _toggle<T extends Enum>(
-    IpGuideSelection<T> selection,
-    T value,
-    TextEditingController input,
-  ) {
-    input.clear();
-    final changed = selection.toggle(value);
+  String _preferenceValidation(String key, AppLocalizations l10n) {
+    final values = selectionValues(_draft.preferences[key]!, (value) => value);
+    if (values.isEmpty) {
+      return _validationMessage(_preferenceKeys.indexOf(key) + 1, l10n);
+    }
+    return l10n.accountInputInvalid;
+  }
+
+  void _togglePreference(String key, String value) {
+    _inputFor(key)?.clear();
+    final changed = _draft.preferences[key]!.toggle(
+      value,
+      maxSelections: _options![key]!.maxSelections,
+    );
     if (changed) {
       setState(() {});
       _save();
     } else {
-      AppToast.info(context, AppLocalizations.of(context)!.ipMaximumSelections);
+      AppToast.info(
+        context,
+        _preferenceValidation(key, AppLocalizations.of(context)!),
+      );
     }
   }
 
   Future<void> _confirm() async {
     if (_busy || _completed) return;
     final l10n = AppLocalizations.of(context)!;
-    final missing = _draft.firstIncompleteStep;
+    if (_optionsLoading || _options == null) return;
+    int? missing;
+    if (!_draft.submitted) {
+      for (var index = 0; index < _preferenceKeys.length; index++) {
+        if (!_validPreference(_preferenceKeys[index])) {
+          missing = index + 1;
+          break;
+        }
+      }
+    }
     if (missing != null) {
       _goToStep(missing);
-      AppToast.info(context, _validationMessage(missing, l10n));
+      AppToast.info(
+        context,
+        _preferenceValidation(_preferenceKeys[missing - 1], l10n),
+      );
       return;
     }
     if (_draft.nickname.trim().isEmpty) {
@@ -301,6 +412,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
 
   @override
   void dispose() {
+    _optionsToken.cancel();
     _tabs.removeListener(_onTabChanged);
     _tabs.dispose();
     _directionInput.dispose();
@@ -308,6 +420,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     _formatInput.dispose();
     _nicknameInput.dispose();
     _audienceInput.dispose();
+    _presentationInput.dispose();
     super.dispose();
   }
 
@@ -482,25 +595,33 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                           1,
                           _selectionStep(l10n, feelings: false),
                           label: l10n.ipNextFeelings,
-                          onPressed: _next,
+                          onPressed: _optionsLoading || _options == null
+                              ? null
+                              : _next,
                         ),
                         _stepWithAction(
                           2,
                           _selectionStep(l10n, feelings: true),
                           label: l10n.ipNextPresentation,
-                          onPressed: _next,
+                          onPressed: _optionsLoading || _options == null
+                              ? null
+                              : _next,
                         ),
                         _stepWithAction(
                           3,
                           _presentationStep(l10n),
                           label: l10n.ipNextAudience,
-                          onPressed: _next,
+                          onPressed: _optionsLoading || _options == null
+                              ? null
+                              : _next,
                         ),
                         _stepWithAction(
                           4,
                           _audienceStep(l10n),
                           label: l10n.ipNextReview,
-                          onPressed: _next,
+                          onPressed: _optionsLoading || _options == null
+                              ? null
+                              : _next,
                         ),
                         _stepWithFooter(
                           5,
@@ -511,6 +632,8 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                               else
                                 _heading(5, l10n.ipReviewQuestion),
                               const SizedBox(height: 20),
+                              if (!_optionsLoading && _options == null)
+                                _catalogState(l10n)!,
                               IpGuideReview(
                                 draft: _draft,
                                 nicknameController: _nicknameInput,
@@ -691,13 +814,11 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   );
 
   Widget _selectionStep(AppLocalizations l10n, {required bool feelings}) {
-    final labels = feelings
-        ? _draft.feelings.values
-              .map((value) => feelingLabel(value, l10n))
-              .toList()
-        : _draft.directions.values
-              .map((value) => directionLabel(value, l10n))
-              .toList();
+    final state = _catalogState(l10n);
+    if (state != null) return state;
+    final key = feelings ? 'audienceFeelings' : 'contentDirections';
+    final step = _options![key]!;
+    final selection = _draft.preferences[key]!;
     return Column(
       children: [
         _heading(
@@ -706,38 +827,42 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         ),
         const SizedBox(height: 20),
         _panel([
-          if (feelings)
-            IpGuideChoiceGrid<IpAudienceFeeling>(
-              values: IpAudienceFeeling.values,
-              selection: _draft.feelings,
-              label: (value) => feelingLabel(value, l10n),
-              description: (value) => feelingDescription(value, l10n),
-              onSelected: (value) =>
-                  _toggle(_draft.feelings, value, _feelingInput),
-              keyPrefix: 'ip-feeling',
-            )
-          else
-            IpGuideChoiceGrid<IpContentDirection>(
-              values: IpContentDirection.values,
-              selection: _draft.directions,
-              label: (value) => directionLabel(value, l10n),
-              icon: (value) => 'ip_guide_${value.name}',
-              onSelected: (value) =>
-                  _toggle(_draft.directions, value, _directionInput),
-              keyPrefix: 'ip-direction',
-            ),
-          if (labels.isNotEmpty) IpGuideSelectionSummary(labels: labels),
-          IpGuideTextField(
-            key: Key(feelings ? 'ip-custom-feeling' : 'ip-custom-direction'),
-            controller: feelings ? _feelingInput : _directionInput,
-            hint: l10n.ipCustomHint,
+          IpGuideChoiceGrid<String>(
+            values: step.options.map((option) => option.name).toList(),
+            selection: selection,
+            label: (value) => value,
+            valueKey: (value) => value,
+            description: feelings
+                ? (value) => step.options
+                      .firstWhere((option) => option.name == value)
+                      .description
+                : null,
+            icon: feelings ? null : _directionIcon,
+            imageUrl: (value) => step.options
+                .firstWhere((option) => option.name == value)
+                .imageUrl,
+            onSelected: (value) => _togglePreference(key, value),
+            keyPrefix: feelings ? 'ip-feeling' : 'ip-direction',
           ),
+          if (selection.values.isNotEmpty)
+            IpGuideSelectionSummary(labels: selection.values),
+          if (step.allowCustom)
+            IpGuideTextField(
+              key: Key(feelings ? 'ip-custom-feeling' : 'ip-custom-direction'),
+              controller: feelings ? _feelingInput : _directionInput,
+              hint: l10n.ipCustomHint,
+              maxBytes: step.maxNameBytes,
+            ),
         ]),
       ],
     );
   }
 
   Widget _presentationStep(AppLocalizations l10n) {
+    final state = _catalogState(l10n);
+    if (state != null) return state;
+    final step = _options!['presentationFormats']!;
+    final selection = _draft.preferences[step.key]!;
     final style = TextStyle(
       color: Theme.of(context).colorScheme.onSurface,
       fontSize: 18,
@@ -751,12 +876,17 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         _panel([
           Text(l10n.ipVisualStyle, style: style),
           IpGuidePresentationChoices(
-            selected: _draft.presentation,
-            onSelected: (value) {
-              setState(() => _draft.presentation = value);
-              _save();
-            },
+            options: step.options,
+            selection: selection,
+            onSelected: (value) => _togglePreference(step.key, value),
           ),
+          if (step.allowCustom)
+            IpGuideTextField(
+              key: const Key('ip-custom-presentation'),
+              controller: _presentationInput,
+              hint: l10n.ipCustomHint,
+              maxBytes: step.maxNameBytes,
+            ),
           Text(l10n.ipContentFormat, style: style),
           Wrap(
             spacing: 8,
@@ -801,35 +931,74 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     );
   }
 
-  Widget _audienceStep(AppLocalizations l10n) => Column(
-    children: [
-      _heading(4, l10n.ipAudienceQuestion),
-      const SizedBox(height: 20),
-      _panel([
-        IpGuideChoiceGrid<IpTargetAudience>(
-          values: IpTargetAudience.values,
-          selection: _draft.audience,
-          label: (value) => audienceLabel(value, l10n),
-          description: (value) => audienceDescription(value, l10n),
-          showAvatar: false,
-          onSelected: (value) =>
-              _toggle(_draft.audience, value, _audienceInput),
-          keyPrefix: 'ip-audience',
-        ),
-        if (_draft.audience.values.isNotEmpty)
-          IpGuideSelectionSummary(
-            labels: _draft.audience.values
-                .map((value) => audienceLabel(value, l10n))
-                .toList(),
+  Widget _audienceStep(AppLocalizations l10n) {
+    final state = _catalogState(l10n);
+    if (state != null) return state;
+    final step = _options!['targetAudience']!;
+    final selection = _draft.preferences[step.key]!;
+    return Column(
+      children: [
+        _heading(4, l10n.ipAudienceQuestion),
+        const SizedBox(height: 20),
+        _panel([
+          IpGuideChoiceGrid<String>(
+            values: step.options.map((option) => option.name).toList(),
+            selection: selection,
+            label: (value) => value,
+            valueKey: (value) => value,
+            description: (value) => step.options
+                .firstWhere((option) => option.name == value)
+                .description,
+            showAvatar: false,
+            onSelected: (value) => _togglePreference(step.key, value),
+            keyPrefix: 'ip-audience',
           ),
-        IpGuideTextField(
-          key: const Key('ip-custom-audience'),
-          controller: _audienceInput,
-          hint: l10n.ipCustomHint,
+          if (selection.values.isNotEmpty)
+            IpGuideSelectionSummary(labels: selection.values),
+          if (step.allowCustom)
+            IpGuideTextField(
+              key: const Key('ip-custom-audience'),
+              controller: _audienceInput,
+              hint: l10n.ipCustomHint,
+              maxBytes: step.maxNameBytes,
+            ),
+        ]),
+      ],
+    );
+  }
+
+  Widget? _catalogState(AppLocalizations l10n) {
+    if (_optionsLoading) {
+      return const Center(
+        child: CircularProgressIndicator(key: Key('ip-preferences-loading')),
+      );
+    }
+    if (_options != null) return null;
+    return Column(
+      children: [
+        Text(l10n.ipAccountLoadFailed),
+        TextButton(
+          key: const Key('ip-preferences-retry'),
+          onPressed: _loadPreferenceOptions,
+          child: Text(l10n.retry),
         ),
-      ]),
-    ],
-  );
+      ],
+    );
+  }
+
+  String? _directionIcon(String name) => const {
+    '校园': 'ip_guide_campus',
+    '情感': 'ip_guide_emotion',
+    '成长': 'ip_guide_growth',
+    '职场': 'ip_guide_career',
+    '家庭': 'ip_guide_family',
+    '搞笑': 'ip_guide_humor',
+    '悬疑': 'ip_guide_mystery',
+    '萌宠': 'ip_guide_pets',
+    '知识': 'ip_guide_knowledge',
+    '科普': 'ip_guide_knowledge',
+    '生活': 'ip_guide_growth',
+  }[name];
 
   Widget _successHeading(AppLocalizations l10n) => Row(
     children: [

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -14,14 +15,16 @@ import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_expanded_text_field.dart';
+import '../../../shared/type/account_input_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../assets/domain/library_role.dart';
-import '../../assets/presentation/role_detail_page.dart';
 import '../../projects/data/project_repository.dart';
 import '../domain/ip_account_home.dart';
-import 'widgets/ip_account_edit_sheet.dart';
-import 'widgets/ip_account_roles_sheet.dart';
+import 'account_archives_page.dart';
+import 'widgets/account_preferences_sheet.dart';
+import 'widgets/ip_account_history.dart';
 
 /// Account overview with local loading state and account-bound creation entry.
 class IpAccountHomePage extends ConsumerStatefulWidget {
@@ -36,16 +39,18 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   final _nicknameController = TextEditingController();
   final _nicknameFocus = FocusNode();
   bool _renaming = false;
+  bool _confirmingRename = false;
   String? _renameTitle;
   String? _renameRequestId;
   CancelToken? _token;
   IpAccountHome? _account;
-  IpAccountResources? _resources;
   bool _loading = true;
   bool _failed = false;
-  bool _resourcesFailed = false;
   bool _creating = false;
   String? _creationRequestId;
+  List<IpAccountCreation> _history = const [];
+  bool _historyLoading = false;
+  bool _historyFailed = false;
 
   @override
   void initState() {
@@ -57,6 +62,9 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   void didUpdateWidget(IpAccountHomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.accountId != widget.accountId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _dismissRenameConfirmation();
+      });
       _creationRequestId = null;
       _creating = false;
       unawaited(_load());
@@ -81,11 +89,12 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     setState(() {
       _loading = true;
       _failed = false;
-      _resourcesFailed = false;
       _account = null;
-      _resources = null;
       _creating = false;
       _renaming = false;
+      _history = const [];
+      _historyLoading = false;
+      _historyFailed = false;
     });
     if (ref.read(userProvider) == null) {
       setState(() => _loading = false);
@@ -101,7 +110,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         _account = account;
         _loading = false;
       });
-      await _loadResources(account, token);
+      unawaited(_loadHistory(account, token));
     } catch (_) {
       if (mounted && !token.isCancelled) {
         setState(() {
@@ -112,27 +121,77 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     }
   }
 
-  Future<void> _loadResources(IpAccountHome account, CancelToken token) async {
+  Future<void> _loadHistory(IpAccountHome account, CancelToken token) async {
     setState(() {
-      _resourcesFailed = false;
-      _resources = null;
+      _historyLoading = true;
+      _historyFailed = false;
+      _history = const [];
     });
     try {
-      final resources = await ref
+      final page = await ref
           .read(ipAccountRepositoryProvider)
-          .resources(account, cancelToken: token);
-      if (mounted && !token.isCancelled) setState(() => _resources = resources);
+          .archives(account.id, cancelToken: token);
+      if (!mounted || token.isCancelled) return;
+      setState(() => _history = page.items);
     } catch (_) {
       if (mounted && !token.isCancelled) {
-        setState(() => _resourcesFailed = true);
+        setState(() => _historyFailed = true);
       }
+    } finally {
+      if (mounted && !token.isCancelled) {
+        setState(() => _historyLoading = false);
+      }
+    }
+  }
+
+  Future<void> _openHistory(IpAccountCreation creation) async {
+    final token = _token;
+    final account = _account;
+    if (account == null || token == null || token.isCancelled) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => AccountArchiveDetailPage(
+          accountId: account.id,
+          creationId: creation.id,
+          versionId: creation.versionId,
+        ),
+      ),
+    );
+    if (mounted && !token.isCancelled) {
+      await _loadHistory(account, token);
+    }
+  }
+
+  Future<void> _showHistory() async {
+    final token = _token;
+    final account = _account;
+    if (account == null || token == null || token.isCancelled) return;
+    await context.push(
+      Uri(
+        pathSegments: ['', 'ip-accounts', widget.accountId, 'history'],
+      ).toString(),
+    );
+    if (mounted && !token.isCancelled) {
+      await _loadHistory(account, token);
     }
   }
 
   Future<void> _saveNickname() async {
     final account = _account;
     final title = _nicknameController.text.trim();
-    if (account == null || !account.editable || _renaming || title.isEmpty) {
+    if (account == null ||
+        !account.editable ||
+        _renaming ||
+        _confirmingRename ||
+        title.isEmpty) {
+      return;
+    }
+    if (title.characters.length > AccountInputLimits.nicknameCharacters ||
+        utf8.encode(title).length > AccountInputLimits.nicknameBytes) {
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.accountTitleInvalid,
+      );
       return;
     }
     if (title == account.title) {
@@ -141,12 +200,33 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     }
     final token = _token!;
     final owner = ref.read(userProvider)?.id;
+    final l10n = AppLocalizations.of(context)!;
+    _nicknameFocus.unfocus();
+    setState(() => _confirmingRename = true);
+    bool? confirmed;
+    try {
+      confirmed = await AppDialog.confirm(
+        context: context,
+        title: l10n.accountRenameTitle,
+        description: l10n.accountRenameConfirm(title),
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.confirm,
+        confirmKey: const Key('ip-account-confirm-nickname'),
+      );
+    } finally {
+      if (mounted) setState(() => _confirmingRename = false);
+    }
+    if (!mounted ||
+        confirmed != true ||
+        token.isCancelled ||
+        ref.read(userProvider)?.id != owner) {
+      return;
+    }
     if (title != _renameTitle) {
       _renameTitle = title;
       _renameRequestId = ProjectRepository.createClientRequestId();
     }
     setState(() => _renaming = true);
-    final l10n = AppLocalizations.of(context)!;
     try {
       await ref
           .read(ipAccountRepositoryProvider)
@@ -176,86 +256,39 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     }
   }
 
+  void _dismissRenameConfirmation() {
+    if (!_confirmingRename) return;
+    _confirmingRename = false;
+    Navigator.of(context, rootNavigator: true).pop(false);
+  }
+
   Future<void> _edit({bool positioning = false}) async {
     final account = _account;
     if (account == null || !account.editable) return;
     final owner = ref.read(userProvider)?.id;
     final token = _token!;
     final l10n = AppLocalizations.of(context)!;
-    final fields = positioning
-        ? {'positioning': l10n.ipAccountPositioning}
-        : {
-            'contentDirection': l10n.ipContentDirection,
-            'audienceFeeling': l10n.ipAudienceFeeling,
-            'presentation': l10n.ipVisualStyle,
-            'contentFormat': l10n.ipContentFormat,
-            'targetAudience': l10n.ipTargetAudience,
-          };
-    final saved = await AppSheet.show<bool>(
+    final saved = await AppSheet.show<String>(
       context: context,
       isScrollControlled: true,
       isDismissible: false,
       enableDrag: false,
-      builder: (_) => IpAccountEditSheet(
-        title: positioning
-            ? l10n.ipAccountPositioning
-            : l10n.ipAccountPreferences,
-        fields: fields,
-        values: {for (final field in fields.keys) field: account.text(field)},
-        onSave: (values, requestId) async {
-          if (ref.read(userProvider)?.id != owner || token.isCancelled) {
-            throw StateError('Account changed');
-          }
-          final repository = ref.read(ipAccountRepositoryProvider);
-          await repository.saveProfile(
-            account,
-            values,
-            requestId: requestId,
-            cancelToken: token,
-          );
-        },
+      builder: (_) => AccountPreferencesSheet(
+        account: account,
+        editScope: positioning
+            ? AccountPreferencesEditScope.positioning
+            : AccountPreferencesEditScope.preferences,
       ),
     );
-    if (!mounted || token.isCancelled || saved != true) return;
+    if (!mounted ||
+        token.isCancelled ||
+        saved == null ||
+        ref.read(userProvider)?.id != owner) {
+      return;
+    }
     ref.invalidate(projectsProvider);
     AppToast.success(context, l10n.ipAccountSaved);
     await _load();
-  }
-
-  Future<void> _manageRoles() async {
-    final account = _account;
-    if (account == null || !account.editable) return;
-    final token = _token!;
-    final owner = ref.read(userProvider)?.id;
-    final saved = await AppSheet.show<bool>(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (_) => IpAccountRolesSheet(
-        selectedNames: {
-          for (final role in _resources?.roles ?? <LibraryRole>[])
-            role.id: role.title,
-        },
-        selectedIds: [
-          for (final role in account.residentRoles) role['roleId'].toString(),
-        ],
-        onSave: (ids, requestId) async {
-          if (ref.read(userProvider)?.id != owner || token.isCancelled) {
-            throw StateError('Account changed');
-          }
-          await ref
-              .read(ipAccountRepositoryProvider)
-              .saveRoles(
-                account,
-                ids,
-                requestId: requestId,
-                cancelToken: token,
-              );
-        },
-      ),
-    );
-    if (mounted && !token.isCancelled && saved == true) await _load();
   }
 
   Future<void> _startContent() async {
@@ -264,12 +297,24 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     final token = _token!;
     final owner = ref.read(userProvider)?.id;
     final l10n = AppLocalizations.of(context)!;
-    _creationRequestId ??= ProjectRepository.createClientRequestId();
     setState(() => _creating = true);
     try {
-      final session = await ref
-          .read(projectRepositoryProvider)
-          .createSession(
+      final repository = ref.read(projectRepositoryProvider);
+      final bound = await repository.boundSession(
+        account.id,
+        cancelToken: token,
+      );
+      if (!mounted ||
+          token.isCancelled ||
+          ref.read(userProvider)?.id != owner) {
+        return;
+      }
+      if (bound == null) {
+        _creationRequestId ??= ProjectRepository.createClientRequestId();
+      }
+      final session =
+          bound ??
+          await repository.createSession(
             account.id,
             l10n.newSessionTitle,
             clientRequestId: _creationRequestId!,
@@ -289,13 +334,15 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
           path: '/session',
           queryParameters: {
             'sessionId': session.id,
-            'prompt': l10n.ipAccountStartPrompt,
+            if (bound == null) 'prompt': l10n.ipAccountStartPrompt,
           },
         ).toString(),
       );
       if (mounted && !token.isCancelled) await _load();
     } catch (_) {
-      if (mounted && !token.isCancelled) {
+      if (mounted &&
+          !token.isCancelled &&
+          ref.read(userProvider)?.id == owner) {
         AppToast.error(context, l10n.networkRequestFailed);
       }
     } finally {
@@ -305,73 +352,10 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     }
   }
 
-  void _openRole(LibraryRole role) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RoleDetailPage(
-          role: role,
-          category: role.canEdit ? 'user' : 'official',
-        ),
-      ),
-    );
-  }
-
-  void _showAssets() {
-    final resources = _resources;
-    if (resources == null) return;
-    final l10n = AppLocalizations.of(context)!;
-    final ownerId = ref.read(userProvider)?.id;
-    AppSheet.showDraggable<void>(
-      context: context,
-      builder: (context, controller) => Consumer(
-        builder: (context, ref, _) {
-          ref.listen(userProvider.select((user) => user?.id), (_, id) {
-            if (id != ownerId && context.mounted) Navigator.of(context).pop();
-          });
-          return ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            children: [
-              Text(
-                l10n.ipAccountAssets,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 20),
-              if (resources.creations.isEmpty) Text(l10n.ipAccountNoAssets),
-              for (final creation in resources.creations)
-                ListTile(
-                  leading: const Icon(Icons.movie_outlined),
-                  title: Text(creation.title),
-                  trailing: creation.sessionId?.isNotEmpty == true
-                      ? const Icon(Icons.chevron_right)
-                      : null,
-                  onTap: creation.sessionId?.isNotEmpty == true
-                      ? () {
-                          Navigator.of(context).pop();
-                          this.context.push(
-                            Uri(
-                              path: '/session',
-                              queryParameters: {
-                                'sessionId': creation.sessionId!,
-                              },
-                            ).toString(),
-                          );
-                        }
-                      : null,
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.listen(userProvider.select((user) => user?.id), (_, _) {
+      _dismissRenameConfirmation();
       _creationRequestId = null;
       _creating = false;
       unawaited(_load());
@@ -481,25 +465,27 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                             children: [
                               _field(
                                 l10n.ipContentDirection,
-                                account.text('contentDirection'),
+                                account.preferenceText('contentDirections'),
                                 l10n,
                               ),
                               _field(
                                 l10n.ipAudienceFeeling,
-                                account.text('audienceFeeling'),
+                                account.preferenceText('audienceFeelings'),
                                 l10n,
                               ),
                               _field(
                                 l10n.ipPresentation,
-                                [
-                                  account.text('presentation'),
-                                  account.text('contentFormat'),
-                                ].where((s) => s.isNotEmpty).join(' x '),
+                                account.preferenceText('presentationFormats'),
                                 l10n,
                               ),
                               _field(
                                 l10n.ipTargetAudience,
-                                account.text('targetAudience'),
+                                account.preferenceText('targetAudience'),
+                                l10n,
+                              ),
+                              _field(
+                                l10n.accountConstraints,
+                                account.preferenceText('creativeConstraints'),
                                 l10n,
                                 last: true,
                               ),
@@ -507,16 +493,16 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                           ),
                           const SizedBox(height: 20),
                           _section(
-                            l10n.ipAccountPositioning,
+                            l10n.accountUserPrompt,
                             onEdit: account.editable
                                 ? () => _edit(positioning: true)
                                 : null,
                             editKey: 'ip-account-edit-positioning',
                             children: [
                               Text(
-                                account.text('positioning').isEmpty
+                                account.userPrompt.isEmpty
                                     ? l10n.ipAccountFieldEmpty
-                                    : account.text('positioning'),
+                                    : account.userPrompt,
                                 style: const TextStyle(
                                   fontSize: 16,
                                   height: 1.5,
@@ -525,62 +511,14 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          if (_resourcesFailed)
-                            _section(
-                              l10n.ipAccountResourcesFailed,
-                              children: [
-                                TextButton(
-                                  onPressed: () =>
-                                      _loadResources(account, _token!),
-                                  child: Text(l10n.retry),
-                                ),
-                                if (account.editable)
-                                  TextButton.icon(
-                                    onPressed: _manageRoles,
-                                    icon: const Icon(Icons.people_outline),
-                                    label: Text(l10n.ipAccountManageRoles),
-                                  ),
-                              ],
-                            )
-                          else if (_resources == null)
-                            const LinearProgressIndicator()
-                          else ...[
-                            _resourceSection(
-                              title:
-                                  '${l10n.ipAccountAssets}${l10n.ipAccountCountSeparator}${_resources!.creations.length}',
-                              sectionKey: 'ip-account-assets-section',
-                              openKey: 'ip-account-assets',
-                              openLabel: l10n.ipAccountAssets,
-                              onOpen: _showAssets,
-                              emptyLabel: l10n.ipAccountAssetsEmptyPrompt,
-                              addKey: 'ip-account-add-asset',
-                              addLabel: l10n.ipAccountStartContent,
-                              onAdd: account.editable && !_creating
-                                  ? _startContent
-                                  : null,
-                              items: [
-                                for (final creation in _resources!.creations)
-                                  _creationTile(creation),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            _resourceSection(
-                              title:
-                                  '${l10n.ipAccountRoles}${l10n.ipAccountCountSeparator}${_resources!.roles.length}',
-                              sectionKey: 'ip-account-roles-section',
-                              openKey: 'ip-account-roles',
-                              openLabel: l10n.ipAccountManageRoles,
-                              onOpen: account.editable ? _manageRoles : null,
-                              emptyLabel: l10n.ipAccountRolesEmptyPrompt,
-                              addKey: 'ip-account-manage-roles',
-                              addLabel: l10n.ipAccountManageRoles,
-                              onAdd: account.editable ? _manageRoles : null,
-                              items: [
-                                for (final role in _resources!.roles)
-                                  _roleTile(role),
-                              ],
-                            ),
-                          ],
+                          IpAccountHistory(
+                            creations: _history,
+                            loading: _historyLoading,
+                            failed: _historyFailed,
+                            onRetry: () => _loadHistory(account, _token!),
+                            onOpen: _openHistory,
+                            onOpenAll: _showHistory,
+                          ),
                         ],
                       ),
                     ),
@@ -617,30 +555,14 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 10,
-                        runSpacing: 5,
-                        children: [
-                          Text(
-                            account.editable
-                                ? l10n.ipAccountPublish
-                                : l10n.ipAccountUnavailable,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            l10n.ipAccountPublishEstimate,
-                            style: TextStyle(
-                              color: colors.primary,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        account.editable
+                            ? l10n.ipAccountPublish
+                            : l10n.ipAccountUnavailable,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -750,58 +672,29 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
           const SizedBox(height: 20),
           Text(l10n.ipAccountNickname, style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 5),
-          Material(
-            color: colors.primary.withValues(alpha: .05),
-            shape: const StadiumBorder(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('ip-account-edit-nickname'),
-                      controller: _nicknameController,
-                      focusNode: _nicknameFocus,
-                      readOnly: !account.editable || _renaming,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _saveNickname(),
-                      decoration: InputDecoration(
-                        hintText: l10n.ipNicknameHint,
-                        filled: false,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                        ),
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                      ),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  IconButton(
-                    key: const Key('ip-account-save-nickname'),
-                    tooltip: l10n.ipAccountSave,
-                    onPressed: account.editable && !_renaming
-                        ? _saveNickname
-                        : null,
-                    icon: _renaming
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            Icons.check_circle,
-                            size: 20,
-                            color: colors.primary,
-                          ),
-                  ),
-                ],
-              ),
+          AppExpandedTextField(
+            fieldKey: const Key('ip-account-edit-nickname'),
+            controller: _nicknameController,
+            focusNode: _nicknameFocus,
+            hint: l10n.ipNicknameHint,
+            limit: AccountInputLimits.nicknameCharacters,
+            maxBytes: AccountInputLimits.nicknameBytes,
+            nickname: true,
+            editInSheet: false,
+            readOnly: !account.editable || _renaming || _confirmingRename,
+            onSubmitted: (_) => _saveNickname(),
+            trailing: IconButton(
+              key: const Key('ip-account-save-nickname'),
+              tooltip: l10n.ipAccountSave,
+              onPressed: account.editable && !_renaming && !_confirmingRename
+                  ? _saveNickname
+                  : null,
+              icon: _renaming
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.check_circle, size: 28, color: colors.primary),
             ),
           ),
         ],
@@ -907,175 +800,4 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       if (!last) const Divider(height: 30),
     ],
   );
-
-  Widget _resourceSection({
-    required String title,
-    required String sectionKey,
-    required String openKey,
-    required String openLabel,
-    required VoidCallback? onOpen,
-    required String emptyLabel,
-    required String addKey,
-    required String addLabel,
-    required VoidCallback? onAdd,
-    required List<Widget> items,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      key: Key(sectionKey),
-      constraints: const BoxConstraints(minHeight: 125),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.brightness == Brightness.light
-            ? Colors.white.withValues(alpha: .5)
-            : colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadii.card),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton(
-                key: Key(openKey),
-                tooltip: openLabel,
-                onPressed: onOpen,
-                style: const ButtonStyle(
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                constraints: const BoxConstraints.tightFor(
-                  width: 20,
-                  height: 20,
-                ),
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.standard,
-                icon: const AppSvgIcon.asset('ip_account_chevron', size: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: items.isEmpty
-                    ? Text(
-                        emptyLabel,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                          color: colors.primary.withValues(alpha: .3),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            for (var i = 0; i < items.length; i++) ...[
-                              if (i > 0) const SizedBox(width: 10),
-                              items[i],
-                            ],
-                          ],
-                        ),
-                      ),
-              ),
-              if (onAdd != null) ...[
-                const SizedBox(width: 10),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: .05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    key: Key(addKey),
-                    tooltip: addLabel,
-                    onPressed: onAdd,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 51.6,
-                      height: 51.6,
-                    ),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.standard,
-                    icon: AppSvgIcon.asset(
-                      'ip_account_resource_add',
-                      size: 20,
-                      color: colors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _creationTile(IpAccountCreation creation) => Tooltip(
-    message: creation.title,
-    child: SizedBox.square(
-      dimension: 51.6,
-      child: Material(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: .05),
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          onTap: _showAssets,
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: Center(
-              child: Text(
-                creation.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-
-  Widget _roleTile(LibraryRole role) {
-    final fallback = ColoredBox(
-      color: Theme.of(context).colorScheme.primary.withValues(alpha: .05),
-      child: const Center(child: Icon(Icons.person_outline, size: 24)),
-    );
-    return Tooltip(
-      message: role.title,
-      child: Semantics(
-        label: role.title,
-        button: true,
-        child: SizedBox.square(
-          dimension: 51.6,
-          child: InkWell(
-            onTap: () => _openRole(role),
-            borderRadius: BorderRadius.circular(10),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: role.avatar.isEmpty
-                  ? fallback
-                  : Image.network(
-                      role.avatar,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => fallback,
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

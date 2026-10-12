@@ -9,6 +9,12 @@ class FixtureProjectRepository extends ProjectRepository {
   FixtureProjectRepository() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
 
   @override
+  Future<ProjectSession?> boundSession(
+    String accountId, {
+    CancelToken? cancelToken,
+  }) async => null;
+
+  @override
   Future<List<Project>> listProjects({CancelToken? cancelToken}) async => [
     for (final entry in [
       ('0', '爱丽丝'),

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/network/agent_api_exception.dart';
 import '../../../core/network/network_api.dart';
 import '../../../core/network/network_agent_api.dart';
 import '../domain/project.dart';
@@ -15,6 +16,33 @@ class ProjectRepository {
   /// Creates an idempotency key that can be retained across command retries.
   static String createClientRequestId() => const Uuid().v4();
 
+  /// Only an explicit missing binding allows callers to create a session.
+  Future<ProjectSession?> boundSession(
+    String accountId, {
+    CancelToken? cancelToken,
+  }) => _mutate(() async {
+    try {
+      return _session(
+        await _agentApi.sessionByAccount(accountId, cancelToken: cancelToken),
+      );
+    } on AgentApiException catch (error) {
+      if (error.statusCode == 404 &&
+          error.code == 'ACCOUNT_SESSION_NOT_FOUND') {
+        return null;
+      }
+      rethrow;
+    }
+  });
+
+  ProjectSession _session(Map<String, dynamic> value) {
+    if (value['id'] is! String ||
+        (value['id'] as String).isEmpty ||
+        value['title'] is! String) {
+      throw const ApiException(message: 'Invalid session response');
+    }
+    return ProjectSession.fromJson(value);
+  }
+
   Future<ProjectSession> createSession(
     String projectId,
     String title, {
@@ -27,12 +55,7 @@ class ProjectRepository {
       clientRequestId: clientRequestId,
       cancelToken: cancelToken,
     );
-    if (value['id'] is! String ||
-        (value['id'] as String).isEmpty ||
-        value['title'] is! String) {
-      throw const ApiException(message: 'Invalid session response');
-    }
-    return ProjectSession.fromJson(value);
+    return _session(value);
   });
 
   Future<void> renameProject(

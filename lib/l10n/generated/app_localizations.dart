@@ -332,6 +332,30 @@ abstract class AppLocalizations {
   /// **'Try another set'**
   String get roleRefreshStories;
 
+  /// No description provided for @roleCustomTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom topic'**
+  String get roleCustomTopic;
+
+  /// No description provided for @roleCustomTopicHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What story would you like to create?'**
+  String get roleCustomTopicHint;
+
+  /// No description provided for @roleGenerateTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate topic'**
+  String get roleGenerateTopic;
+
+  /// No description provided for @roleReconfirmVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm video again'**
+  String get roleReconfirmVideo;
+
   /// No description provided for @rolePreviousStory.
   ///
   /// In en, this message translates to:
@@ -799,6 +823,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Aspect ratio'**
   String get roleRatio;
+
+  /// No description provided for @roleDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get roleDuration;
+
+  /// No description provided for @roleNoImageModels.
+  ///
+  /// In en, this message translates to:
+  /// **'No image models available'**
+  String get roleNoImageModels;
+
+  /// No description provided for @roleDurationAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get roleDurationAutomatic;
+
+  /// No description provided for @roleDurationCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get roleDurationCustom;
+
+  /// No description provided for @roleDurationSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds}s'**
+  String roleDurationSeconds(String seconds);
 
   /// No description provided for @roleDimensions.
   ///
@@ -1427,6 +1481,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account Preferences'**
   String get ipAccountPreferences;
+
+  /// No description provided for @accountCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get accountCreate;
+
+  /// No description provided for @accountArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get accountArchived;
+
+  /// No description provided for @accountActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get accountActive;
+
+  /// No description provided for @accountArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive account'**
+  String get accountArchive;
+
+  /// No description provided for @accountRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore account'**
+  String get accountRestore;
+
+  /// No description provided for @accountArchiveConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Creations, conversations and account details will be kept. You can restore this account at any time.'**
+  String get accountArchiveConfirm;
+
+  /// No description provided for @accountMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Account memory'**
+  String get accountMemory;
+
+  /// No description provided for @accountUserPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Positioning'**
+  String get accountUserPrompt;
+
+  /// No description provided for @accountPositioningHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the account\'s theme, style and creative direction'**
+  String get accountPositioningHint;
+
+  /// No description provided for @accountConstraints.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative constraints'**
+  String get accountConstraints;
+
+  /// No description provided for @accountCustomOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom option'**
+  String get accountCustomOption;
+
+  /// No description provided for @accountInputInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value within the selection and length limits'**
+  String get accountInputInvalid;
+
+  /// No description provided for @accountTitleInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an account name of up to 15 characters'**
+  String get accountTitleInvalid;
+
+  /// No description provided for @accountRenameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename project'**
+  String get accountRenameTitle;
+
+  /// No description provided for @accountRenameConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the account nickname to:\n{title}'**
+  String accountRenameConfirm(String title);
+
+  /// No description provided for @accountArchives.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation archives'**
+  String get accountArchives;
+
+  /// No description provided for @accountArchiveSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search titles or summaries'**
+  String get accountArchiveSearch;
+
+  /// No description provided for @accountLoadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get accountLoadMore;
+
+  /// No description provided for @accountArchiveVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get accountArchiveVersion;
+
+  /// No description provided for @accountArchiveSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get accountArchiveSummary;
+
+  /// No description provided for @accountArchiveBrief.
+  ///
+  /// In en, this message translates to:
+  /// **'Brief'**
+  String get accountArchiveBrief;
+
+  /// No description provided for @accountArchiveTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get accountArchiveTopic;
+
+  /// No description provided for @accountArchiveScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Script'**
+  String get accountArchiveScript;
+
+  /// No description provided for @accountArchiveStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard'**
+  String get accountArchiveStoryboard;
+
+  /// No description provided for @accountArchiveCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast snapshot'**
+  String get accountArchiveCast;
+
+  /// No description provided for @accountArchiveGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation parameters'**
+  String get accountArchiveGeneration;
+
+  /// No description provided for @accountOpenConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'View conversation'**
+  String get accountOpenConversation;
 
   /// No description provided for @ipAccountPositioning.
   ///
@@ -3354,6 +3570,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'History'**
   String get creationHistory;
+
+  /// No description provided for @creationHistoryLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load creation history'**
+  String get creationHistoryLoadFailed;
+
+  /// No description provided for @searchCreationHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search creation history'**
+  String get searchCreationHistory;
+
+  /// No description provided for @noMatchingHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching history'**
+  String get noMatchingHistory;
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get clearSearch;
 
   /// No description provided for @assetLibrary.
   ///

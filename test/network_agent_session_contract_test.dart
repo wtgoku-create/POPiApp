@@ -20,14 +20,14 @@ void main() {
   tearDown(() => dio.close(force: true));
 
   test(
-    'standalone resolve omits project context and retains binding state',
+    'standalone creation omits optional fields and returns a ready binding',
     () async {
       dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
-            expect(options.path, '/api_agent/v2/sessions/resolve');
+            expect(options.path, '/api_agent/v2/sessions');
             expect(options.method, 'POST');
-            expect(options.data, {'clientRequestId': requestId, 'mode': 'new'});
+            expect(options.data, {'clientRequestId': requestId});
             handler.resolve(
               Response(
                 requestOptions: options,
@@ -35,7 +35,7 @@ void main() {
                 data: {
                   'id': sessionId,
                   'title': 'New',
-                  'bindingStatus': 'pending',
+                  'bindingStatus': 'ready',
                   'revision': 1,
                   'requestId': 'server-request',
                 },
@@ -44,42 +44,35 @@ void main() {
           },
         ),
       );
-      final session = await api.resolveSession(clientRequestId: requestId);
-      expect(session['bindingStatus'], 'pending');
+      final session = await api.createSession(clientRequestId: requestId);
+      expect(session['bindingStatus'], 'ready');
       expect(session['requestId'], 'server-request');
     },
   );
 
-  test(
-    'resume preserves typed resource references and fixed versions',
-    () async {
-      final ref = {
-        'kind': 'character',
-        'id': 201,
-        'versionId': '301',
-        'revision': 2,
-      };
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            expect(options.data, {
-              'clientRequestId': requestId,
-              'mode': 'resume',
-              'contextRef': ref,
-            });
-            handler.resolve(
-              Response(requestOptions: options, data: {'id': sessionId}),
-            );
-          },
-        ),
-      );
-      await api.resolveSession(
-        clientRequestId: requestId,
-        mode: 'resume',
-        contextRef: ref,
-      );
-    },
-  );
+  test('creation sends the existing account ID and optional title', () async {
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          expect(options.path, '/api_agent/v2/sessions');
+          expect(options.method, 'POST');
+          expect(options.data, {
+            'clientRequestId': requestId,
+            'accountId': '10',
+            'title': 'Campus series',
+          });
+          handler.resolve(
+            Response(requestOptions: options, data: {'id': sessionId}),
+          );
+        },
+      ),
+    );
+    await api.createSession(
+      clientRequestId: requestId,
+      accountId: '10',
+      title: 'Campus series',
+    );
+  });
 
   test(
     'lists all sessions or archived context sessions with numeric pages',

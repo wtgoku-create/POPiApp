@@ -5,8 +5,9 @@ import '../../../core/network/network_api.dart';
 import '../../assets/domain/library_role.dart';
 import '../domain/ip_account.dart';
 import '../domain/ip_account_home.dart';
+import '../domain/account_preferences.dart';
 
-/// Reads account facts and saves new profile versions through the business API.
+/// Account management and generated archives through the business API.
 class IpAccountRepository {
   const IpAccountRepository(this._api);
   final NetworkApi _api;
@@ -19,21 +20,27 @@ class IpAccountRepository {
     }
   }
 
-  Future<List<IpAccount>> list({CancelToken? cancelToken}) =>
-      _request(() async {
-        final items = await _pages(
-          (page) => _api.projectsPage(page, cancelToken: cancelToken),
-        );
-        return [
-          for (final item in items)
-            IpAccount(
-              id: _id(item['id']),
-              title: _title(item),
-              description: '',
-              isPaused: item['status'] != 'active',
-            ),
-        ];
-      });
+  Future<List<IpAccount>> list({
+    String status = 'active',
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    final items = await _pages(
+      (page) => _api.ipAccountsPage(
+        status: status,
+        page: page,
+        cancelToken: cancelToken,
+      ),
+    );
+    return [
+      for (final item in items)
+        IpAccount(
+          id: _id(item['id']),
+          title: _title(item),
+          description: _account(item).description,
+          isPaused: item['status'] != 'active',
+        ),
+    ];
+  });
 
   Future<IpAccountHome> detail(String id, {CancelToken? cancelToken}) =>
       _request(() async {
@@ -45,57 +52,138 @@ class IpAccountRepository {
         if (_id(account['id']) != id || revision is! int || revision < 1) {
           throw const ApiException();
         }
-        Map<String, Object?> profile = const {};
-        final activeId = account['activeProfileVersionId'];
-        if (activeId != null) {
-          // The newest draft can differ from the active profile. Match its ID.
-          var found = false;
-          for (var page = 1; !found; page++) {
-            final result = await _api.ipAccountResourcesPage(
-              id,
-              profiles: true,
-              page: page,
-              cancelToken: cancelToken,
-            );
-            for (final item in _items(result, page)) {
-              if (_id(item['id']) == _id(activeId)) {
-                final value = item['profile'];
-                if (value is! Map<String, dynamic>) throw const ApiException();
-                profile = Map<String, Object?>.unmodifiable(value);
-                found = true;
-                break;
-              }
-            }
-            if (!found && !_hasMore(result, page)) throw const ApiException();
-          }
-        }
-        final roles = account['residentRoles'];
-        if (roles != null && roles is! List) throw const ApiException();
-        return IpAccountHome(
-          id: id,
-          title: _title(account),
-          revision: revision,
-          status: account['status'] as String? ?? 'active',
-          profile: profile,
-          residentRoles: [
-            for (final role in roles as List? ?? const [])
-              if (role is Map<String, dynamic>)
-                Map<String, Object?>.unmodifiable(role)
-              else
-                throw const ApiException(),
-          ],
+        return _account(account);
+      });
+
+  IpAccountHome _account(Map<String, dynamic> account) => IpAccountHome(
+    id: _id(account['id']),
+    title: _title(account),
+    revision: account['revision'] as int? ?? 1,
+    status: account['status'] as String? ?? 'active',
+    preferences: Map<String, Object?>.from(
+      account['preferences'] as Map? ?? const {},
+    ),
+    memoryMarkdown: account['memoryMarkdown'] as String? ?? '',
+    userPrompt: account['userPrompt'] as String? ?? '',
+    residentRoles: [
+      for (final role in account['residentRoles'] as List? ?? const [])
+        Map<String, Object?>.from(role as Map),
+    ],
+  );
+
+  Future<List<AccountPreferenceStep>> preferenceOptions({
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    final data = await _api.ipAccountPreferenceOptions(
+      cancelToken: cancelToken,
+    );
+    return [
+      for (final step in data['steps'] as List)
+        AccountPreferenceStep.fromJson(step as Map<String, dynamic>),
+    ];
+  });
+
+  Future<String> create({
+    required String requestId,
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    final result = await _api.createIpAccount(
+      clientRequestId: requestId,
+      title: title,
+      preferences: preferences,
+      userPrompt: userPrompt,
+      cancelToken: cancelToken,
+    );
+    return result.$1;
+  });
+
+  Future<void> update(
+    String id, {
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    await _api.updateIpAccount(
+      id,
+      title: title,
+      preferences: preferences,
+      userPrompt: userPrompt,
+      cancelToken: cancelToken,
+    );
+  });
+
+  Future<void> archive(String id, {CancelToken? cancelToken}) =>
+      _request(() async {
+        await _api.archiveIpAccount(id, cancelToken: cancelToken);
+      });
+  Future<void> restore(String id, {CancelToken? cancelToken}) =>
+      _request(() async {
+        await _api.updateIpAccount(
+          id,
+          action: 'restore',
+          cancelToken: cancelToken,
         );
       });
+
+  Future<AccountArchivePage> archives(
+    String id, {
+    String keyword = '',
+    int page = 1,
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    final data = await _api.ipAccountArchives(
+      id,
+      keyword: keyword,
+      page: page,
+      cancelToken: cancelToken,
+    );
+    final items = _items(data, page);
+    final info = data['pageInfo'] as Map;
+    return AccountArchivePage(
+      items: [for (final item in items) _creation(item)],
+      page: page,
+      pageCount: info['pageCount'] as int,
+      total: info['total'] as int? ?? items.length,
+    );
+  });
+
+  Future<AccountCreationArchive> archiveDetail(
+    String id,
+    String creationId, {
+    String? versionId,
+    CancelToken? cancelToken,
+  }) => _request(
+    () async => AccountCreationArchive.fromJson(
+      await _api.ipAccountArchiveDetail(
+        id,
+        creationId,
+        versionId: versionId,
+        cancelToken: cancelToken,
+      ),
+    ),
+  );
+
+  IpAccountCreation _creation(Map<String, dynamic> item) => IpAccountCreation(
+    id: _id(item['id']),
+    title: _title(item),
+    versionId: item['versionId'] as String?,
+    summary: item['summary'] as String? ?? '',
+    sessionId: item['sessionId'] as String?,
+  );
 
   Future<IpAccountResources> resources(
     IpAccountHome account, {
     CancelToken? cancelToken,
   }) => _request(() async {
     final items = await _pages(
-      (page) => _api.ipAccountResourcesPage(
+      (page) => _api.ipAccountArchives(
         account.id,
-        profiles: false,
         page: page,
+        pageSize: 100,
         cancelToken: cancelToken,
       ),
     );
@@ -113,12 +201,7 @@ class IpAccountRepository {
     return IpAccountResources(
       creations: [
         for (final item in items)
-          if (item['status'] != 'archived')
-            IpAccountCreation(
-              id: _id(item['id']),
-              title: _title(item),
-              sessionId: item['sessionId'] as String?,
-            ),
+          if (item['status'] != 'archived') _creation(item),
       ],
       roles: roles,
     );
@@ -147,15 +230,13 @@ class IpAccountRepository {
     Map<String, Object?> changes, {
     required String requestId,
     CancelToken? cancelToken,
-  }) => _request(
-    () => _api.saveIpAccountProfile(
+  }) => _request(() async {
+    await _api.updateIpAccount(
       account.id,
-      revision: account.revision,
-      clientRequestId: requestId,
-      profile: {...account.profile, ...changes},
+      preferences: changes,
       cancelToken: cancelToken,
-    ),
-  );
+    );
+  });
 
   Future<void> rename(
     String id,
@@ -163,15 +244,13 @@ class IpAccountRepository {
     required int revision,
     required String requestId,
     CancelToken? cancelToken,
-  }) => _request(
-    () => _api.updateProject(
+  }) => _request(() async {
+    await _api.updateIpAccount(
       id,
       title: title.trim(),
-      clientRequestId: requestId,
-      expectedRevision: revision,
       cancelToken: cancelToken,
-    ),
-  );
+    );
+  });
 
   Future<void> saveRoles(
     IpAccountHome account,
@@ -212,7 +291,7 @@ class IpAccountRepository {
         info is! Map ||
         info['page'] != page ||
         info['pageCount'] is! int ||
-        (info['pageCount'] as int) < 1 ||
+        (info['pageCount'] as int) < 0 ||
         (info['pageCount'] as int) > 10000) {
       throw const ApiException();
     }

@@ -5,6 +5,7 @@ class LibraryRole {
     required this.description,
     this.avatar = '',
     this.profile = const {},
+    this.canRead = false,
     this.canEdit = false,
     this.canCreate = false,
     this.canUseVideo = false,
@@ -19,6 +20,7 @@ class LibraryRole {
   final String description;
   final String avatar;
   final Map<String, dynamic> profile;
+  final bool canRead;
   final bool canEdit;
   final bool canCreate;
   final bool canUseVideo;
@@ -27,6 +29,7 @@ class LibraryRole {
   final num? profileVersion;
   final String? profileVersionId;
   bool get readyForHomeCreation =>
+      canRead &&
       profileComplete &&
       canUseVideo &&
       profileVersionId != null &&
@@ -38,6 +41,7 @@ class LibraryRole {
     description: description,
     avatar: avatar.isEmpty ? fallback : avatar,
     profile: profile,
+    canRead: canRead,
     canEdit: canEdit,
     canCreate: canCreate,
     canUseVideo: canUseVideo,
@@ -71,6 +75,7 @@ class LibraryRole {
       ]),
       avatar: firstText([json['avatar'], json['threeViewImage']]),
       profile: Map<String, dynamic>.from(profile),
+      canRead: json['canRead'] == true,
       canEdit: json['canEdit'] == true,
       canCreate: json['canUseText'] == true || json['canUseVideo'] == true,
       canUseVideo: json['canUseVideo'] == true,

@@ -20,6 +20,7 @@ class IpAccountsPage extends ConsumerWidget {
     this.isLoading = false,
     this.onOpenAccount,
     this.onRetry,
+    this.onCreate,
     super.key,
   });
 
@@ -27,6 +28,7 @@ class IpAccountsPage extends ConsumerWidget {
     this.isLoading = false,
     this.onOpenAccount,
     this.onRetry,
+    this.onCreate,
     super.key,
   }) : accounts = ipAccountExamples;
 
@@ -34,6 +36,7 @@ class IpAccountsPage extends ConsumerWidget {
   final bool isLoading;
   final ValueChanged<IpAccount>? onOpenAccount;
   final VoidCallback? onRetry;
+  final VoidCallback? onCreate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,6 +95,13 @@ class IpAccountsPage extends ConsumerWidget {
                     ),
                   ),
                 ),
+                if (onCreate != null)
+                  IconButton(
+                    key: const Key('account-create'),
+                    tooltip: l10n.accountCreate,
+                    onPressed: onCreate,
+                    icon: const Icon(Icons.add),
+                  ),
                 const SizedBox(width: 20),
               ],
             ),
@@ -126,6 +136,7 @@ class IpAccountsPage extends ConsumerWidget {
                 : ListView.separated(
                     key: const Key('ip-accounts-list'),
                     padding: listPadding,
+                    physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: accounts.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
@@ -219,8 +230,8 @@ class _AccountCard extends StatelessWidget {
                           ),
                           child: Text(
                             account.isPaused
-                                ? l10n.ipAccountPausedStatus
-                                : l10n.ipAccountNormalStatus,
+                                ? l10n.accountArchived
+                                : l10n.accountActive,
                             style: TextStyle(
                               color: statusColor,
                               fontSize: 12,

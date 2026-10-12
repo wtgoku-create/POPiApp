@@ -14,7 +14,6 @@ class HomeRoleProfileForm extends StatelessWidget {
     required this.scrollController,
     required this.formKey,
     required this.saving,
-    required this.invalidField,
     required this.onChanged,
     super.key,
   });
@@ -25,7 +24,6 @@ class HomeRoleProfileForm extends StatelessWidget {
   final ScrollController scrollController;
   final GlobalKey<FormState> formKey;
   final bool saving;
-  final String? invalidField;
   final ValueChanged<String> onChanged;
 
   @override
@@ -44,42 +42,56 @@ class HomeRoleProfileForm extends StatelessWidget {
                 RoleGuideAvatar(role: role, size: 60),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    role.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        role.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (role.description.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(role.description),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            for (final field in edit.fields)
+            for (final (index, field) in edit.fields.indexed) ...[
+              if (index == 3) ...[
+                Text(
+                  l10n.roleFullProfile,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Padding(
                 padding: const EdgeInsets.only(bottom: 18),
                 child: TextFormField(
                   key: ValueKey((role.id, field.id)),
                   controller: controllers[field.id],
                   enabled: !saving,
-                  minLines: field.id == 'title' ? 1 : 2,
+                  minLines: 2,
                   maxLines: null,
-                  validator: (value) =>
-                      field.id == 'title' && (value?.trim().isEmpty ?? true)
+                  keyboardType: TextInputType.multiline,
+                  validator: (value) => (value?.trim().isEmpty ?? true)
                       ? l10n.roleFieldRequired
                       : null,
                   decoration: InputDecoration(
                     labelText: switch (field.id) {
-                      'title' => l10n.chatRoleName,
-                      'description' => l10n.roleDescription,
                       'expressionStyle' => l10n.roleStyle,
                       'targetAudience' => l10n.roleAudience,
                       'contentTags' => l10n.roleTags,
                       _ => field.label,
                     },
-                    errorText: invalidField == field.id
-                        ? l10n.roleFieldInvalidFormat
-                        : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -87,6 +99,7 @@ class HomeRoleProfileForm extends StatelessWidget {
                   onChanged: (_) => onChanged(field.id),
                 ),
               ),
+            ],
           ],
         ),
       ),

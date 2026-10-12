@@ -45,6 +45,28 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
+  Future<Map<String, dynamic>> updateSessionCast(
+    String sessionId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/cast',
+    method: 'PUT',
+    data: input,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> selectHomeTopic(
+    String sessionId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/topic',
+    method: 'PUT',
+    data: input,
+    cancelToken: cancelToken,
+  );
+
   Future<Map<String, dynamic>> homeTask(
     String id, {
     CancelToken? cancelToken,
@@ -65,20 +87,18 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
-  Future<Map<String, dynamic>> resolveSession({
+  Future<Map<String, dynamic>> createSession({
     required String clientRequestId,
-    String mode = 'new',
     String? title,
-    Map<String, Object?>? contextRef,
+    String? accountId,
     CancelToken? cancelToken,
   }) => _request(
-    '/api_agent/v2/sessions/resolve',
+    '/api_agent/v2/sessions',
     method: 'POST',
     data: {
       'clientRequestId': clientRequestId,
-      'mode': mode,
       if (title != null) 'title': title,
-      if (contextRef != null) 'contextRef': contextRef,
+      if (accountId != null) 'accountId': accountId,
     },
     cancelToken: cancelToken,
   );
@@ -88,10 +108,18 @@ class NetworkAgentApi {
     String title, {
     required String clientRequestId,
     CancelToken? cancelToken,
-  }) => resolveSession(
+  }) => createSession(
     clientRequestId: clientRequestId,
     title: title,
-    contextRef: {'kind': 'account', 'id': projectId},
+    accountId: projectId,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> sessionByAccount(
+    String accountId, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/by-account/${Uri.encodeComponent(accountId)}',
     cancelToken: cancelToken,
   );
 

@@ -77,31 +77,39 @@ Map<String, Object?> guideAccountProfile(
   IpGuideDraft draft,
   AppLocalizations l10n,
 ) => {
-  'contentDirection': selectionLabel(
+  'contentDirections': selectionValues(
     draft.directions,
     (value) => directionLabel(value, l10n),
-    ' × ',
-    l10n,
   ),
-  'audienceFeeling': selectionLabel(
+  'audienceFeelings': selectionValues(
     draft.feelings,
     (value) => feelingLabel(value, l10n),
-    ' / ',
-    l10n,
   ),
-  'presentation': presentationLabel(draft.presentation!, l10n),
-  'contentFormat': draft.customFormat.trim().isEmpty
-      ? formatLabel(draft.format, l10n)
-      : draft.customFormat.trim(),
-  'targetAudience': selectionLabel(
+  'presentationFormats': [
+    if (draft.presentation != null)
+      presentationLabel(draft.presentation!, l10n),
+  ],
+  'creativeConstraints': [
+    draft.customFormat.trim().isEmpty
+        ? formatLabel(draft.format, l10n)
+        : draft.customFormat.trim(),
+  ],
+  'targetAudience': selectionValues(
     draft.audience,
     (value) => audienceLabel(value, l10n),
-    ' × ',
-    l10n,
   ),
+  for (final entry in draft.preferences.entries)
+    entry.key: selectionValues(entry.value, (value) => value),
 };
 
-String selectionLabel<T extends Enum>(
+List<String> selectionValues<T>(
+  IpGuideSelection<T> selection,
+  String Function(T) label,
+) => selection.customText.trim().isNotEmpty
+    ? [selection.customText.trim()]
+    : selection.values.map(label).toList();
+
+String selectionLabel<T>(
   IpGuideSelection<T> selection,
   String Function(T) label,
   String separator,
@@ -114,32 +122,25 @@ String selectionLabel<T extends Enum>(
   return selection.values.map(label).join(separator);
 }
 
+String guidePreferenceLabel(
+  IpGuideDraft draft,
+  String key,
+  AppLocalizations l10n, {
+  String separator = ' × ',
+}) {
+  final values = guideAccountProfile(draft, l10n)[key] as List<String>;
+  return values.isEmpty ? l10n.ipNotSelected : values.join(separator);
+}
+
 /// Serializes the same values shown in the review into the session's initial prompt.
 String guideSessionPrompt(IpGuideDraft draft, AppLocalizations l10n) =>
     l10n.ipGuideSessionPrompt(
       draft.nickname.trim().isEmpty ? l10n.ipNewAccount : draft.nickname.trim(),
-      selectionLabel(
-        draft.directions,
-        (value) => directionLabel(value, l10n),
-        ' × ',
-        l10n,
-      ),
-      selectionLabel(
-        draft.feelings,
-        (value) => feelingLabel(value, l10n),
-        ' / ',
-        l10n,
-      ),
-      draft.presentation == null
-          ? l10n.ipNotSelected
-          : presentationLabel(draft.presentation!, l10n),
+      guidePreferenceLabel(draft, 'contentDirections', l10n),
+      guidePreferenceLabel(draft, 'audienceFeelings', l10n, separator: ' / '),
+      guidePreferenceLabel(draft, 'presentationFormats', l10n),
       draft.customFormat.trim().isEmpty
           ? formatLabel(draft.format, l10n)
           : draft.customFormat.trim(),
-      selectionLabel(
-        draft.audience,
-        (value) => audienceLabel(value, l10n),
-        ' × ',
-        l10n,
-      ),
+      guidePreferenceLabel(draft, 'targetAudience', l10n),
     );

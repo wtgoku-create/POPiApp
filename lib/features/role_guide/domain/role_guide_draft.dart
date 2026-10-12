@@ -36,6 +36,8 @@ class RoleGenerationSettings {
     this.imageRatio = GenerationRatio.landscape,
     this.videoResolution = 720,
     this.videoRatio = GenerationRatio.landscape,
+    this.duration = 20,
+    this.customDuration = 20,
     this.quantity = 1,
   });
 
@@ -44,6 +46,8 @@ class RoleGenerationSettings {
   final GenerationRatio imageRatio;
   final int videoResolution;
   final GenerationRatio videoRatio;
+  final int? duration;
+  final int customDuration;
   final int quantity;
 
   RoleGenerationSettings copyWith({
@@ -52,6 +56,8 @@ class RoleGenerationSettings {
     GenerationRatio? imageRatio,
     int? videoResolution,
     GenerationRatio? videoRatio,
+    int? duration,
+    bool automaticDuration = false,
     int? quantity,
   }) => RoleGenerationSettings(
     model: model ?? this.model,
@@ -59,6 +65,8 @@ class RoleGenerationSettings {
     imageRatio: imageRatio ?? this.imageRatio,
     videoResolution: videoResolution ?? this.videoResolution,
     videoRatio: videoRatio ?? this.videoRatio,
+    duration: automaticDuration ? null : duration ?? this.duration,
+    customDuration: duration ?? customDuration,
     quantity: quantity ?? this.quantity,
   );
 
@@ -101,9 +109,11 @@ class RoleGuideDraft {
   }
 
   /// Commits a sheet's selection atomically; dismissing it leaves the draft intact.
-  bool replaceRoles(List<LibraryRole> roles) {
+  bool replaceRoles(List<LibraryRole> roles, {bool allowEmpty = false}) {
     final unique = {for (final role in roles) role.id: role}.values.toList();
-    if (unique.isEmpty || unique.length > maxRoles) return false;
+    if ((!allowEmpty && unique.isEmpty) || unique.length > maxRoles) {
+      return false;
+    }
     _roles
       ..clear()
       ..addAll(unique);

@@ -30,6 +30,58 @@ void main() {
   tearDown(() => dio.close(force: true));
 
   test(
+    'creation retries reuse the request ID across repository recreation',
+    () async {
+      final commands = <Map<String, Object?>>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.path, '/api_agent/v2/sessions');
+            expect(options.method, 'POST');
+            final command = Map<String, Object?>.from(options.data as Map);
+            expect(command.keys, unorderedEquals(['clientRequestId', 'title']));
+            expect(command['title'], 'New');
+            commands.add(command);
+            if (commands.length == 1) {
+              handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.connectionTimeout,
+                ),
+              );
+            } else {
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 201,
+                  data: {
+                    'id': chatId,
+                    'title': 'New',
+                    'revision': 2,
+                    'bindingStatus': 'ready',
+                    'boundAccountId': '10',
+                    'updatedAt': chatDate,
+                  },
+                ),
+              );
+            }
+          },
+        ),
+      );
+      await expectLater(
+        repository().create('a', ' New '),
+        throwsA(isA<DioException>()),
+      );
+      expect(storage.preferences.getKeys(), isNotEmpty);
+      final session = await repository().create('a', ' New ');
+      expect(session.id, chatId);
+      expect(session.bindingStatus, 'ready');
+      expect(commands[1], commands[0]);
+      expect(storage.preferences.getKeys(), isEmpty);
+    },
+  );
+
+  test(
     'an uncertain send persists exact input across repository recreation',
     () async {
       final commands = <Map<String, Object?>>[];

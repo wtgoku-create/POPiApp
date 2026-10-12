@@ -90,49 +90,36 @@ class HomeConfig {
   final String modelId;
   final Map<String, Object?> params;
   Map<String, Object?> toJson() => {'modelId': modelId, 'params': params};
+
+  bool matches(HomeConfig? other) =>
+      other != null &&
+      modelId == other.modelId &&
+      params.length == other.params.length &&
+      params.entries.every(
+        (entry) =>
+            other.params.containsKey(entry.key) &&
+            other.params[entry.key] == entry.value,
+      );
 }
 
 class HomeModel {
   HomeModel.fromJson(Map<String, Object?> json)
     : id = homeId(json['id']),
       name = json['name']?.toString() ?? '',
-      available = json['available'] == true && json['mediaType'] == 'video',
+      description = json['description'] as String?,
+      available = json['available'] == true,
+      mediaType = json['mediaType']?.toString() ?? '',
       isDefault = json['isDefault'] == true,
-      parameters = homeObjects(json['parameters']).map(_homeParameter).toList();
+      parameters = homeObjects(
+        json['parameters'],
+      ).map(HomeParameter.fromJson).toList();
   final String id;
   final String name;
+  final String? description;
   final bool available;
+  final String mediaType;
   final bool isDefault;
   final List<HomeParameter> parameters;
-  bool get supportsHomeDuration => parameters.any(
-    (parameter) =>
-        parameter.isDuration &&
-        parameter.options.any((option) => _homeDuration(option.value)),
-  );
-
-  static bool _homeDuration(Object value) => RegExp(
-    r'^(15|30)(s|秒|seconds?)?$',
-    caseSensitive: false,
-  ).hasMatch(value.toString().replaceAll(RegExp(r'\s'), ''));
-
-  static HomeParameter _homeParameter(Map<String, Object?> json) {
-    final parameter = HomeParameter.fromJson(json);
-    if (!parameter.isDuration) return parameter;
-    final options = parameter.options
-        .where((option) => _homeDuration(option.value))
-        .toList();
-    if (options.isEmpty) return parameter;
-    return HomeParameter.fromJson({
-      ...json,
-      'options': [
-        for (final option in options)
-          {'label': option.label, 'value': option.value},
-      ],
-      'default': options.any((option) => option.value == parameter.defaultValue)
-          ? parameter.defaultValue
-          : options.first.value,
-    });
-  }
 
   HomeConfig get defaultConfig => HomeConfig(
     modelId: id,
@@ -142,6 +129,38 @@ class HomeModel {
           parameter.name: parameter.defaultValue,
     },
   );
+
+  /// Replaces legacy automatic durations with a value allowed by this model.
+  HomeConfig withExplicitDurations(HomeConfig config) {
+    final params = {...config.params};
+    for (final parameter in parameters) {
+      if (!parameter.name.toLowerCase().contains('duration') ||
+          params[parameter.name] is num) {
+        continue;
+      }
+      final values =
+          parameter.options
+              .map((option) => option.value)
+              .whereType<num>()
+              .toList()
+            ..sort();
+      for (final candidate in [
+        parameter.defaultValue,
+        ...values,
+        parameter.min,
+      ]) {
+        if (candidate is! num || !candidate.isFinite) continue;
+        final value = parameter.type == 'integer'
+            ? candidate.toInt()
+            : candidate;
+        if (!parameter.accepts(value)) continue;
+        params[parameter.name] = value;
+        break;
+      }
+    }
+    return HomeConfig(modelId: config.modelId, params: params);
+  }
+
   bool accepts(HomeConfig config) =>
       config.modelId == id &&
       parameters.every(
@@ -156,17 +175,19 @@ class HomeParameter {
       type = json['type']?.toString() ?? 'string',
       required = json['required'] == true,
       defaultValue = json['default'],
+      min = json['min'] as num?,
+      max = json['max'] as num?,
+      step = json['step'] as num?,
       options = _options(json['options']);
   final String name;
   final String label;
   final String type;
   final bool required;
   final Object? defaultValue;
+  final num? min;
+  final num? max;
+  final num? step;
   final List<({String label, Object value})> options;
-  bool get isDuration =>
-      name.toLowerCase().contains('duration') ||
-      label.contains('时长') ||
-      label.contains('時長');
 
   static List<({String label, Object value})> _options(Object? input) =>
       input is List
@@ -191,10 +212,23 @@ class HomeParameter {
     }
     return switch (type) {
       'boolean' => value is bool,
-      'number' => value is num && value.isFinite,
-      'integer' => value is int,
+      'number' => value is num && _acceptsNumber(value),
+      'integer' => value is int && _acceptsNumber(value),
       _ => value is String,
     };
+  }
+
+  bool _acceptsNumber(num value) {
+    if (!value.isFinite ||
+        (min != null && value < min!) ||
+        (max != null && value > max!)) {
+      return false;
+    }
+    if (step != null && step! > 0) {
+      final count = (value - (min ?? 0)) / step!;
+      if ((count - count.round()).abs() > 0.00000001) return false;
+    }
+    return true;
   }
 }
 
@@ -206,12 +240,16 @@ class HomeTask {
       lock = json['lock']?.toString(),
       allowedActions = (json['allowedActions'] as List? ?? const [])
           .cast<String>(),
+      confirmationPending = json['confirmationPending'] == true,
+      confirmationReason = json['confirmationReason'] as String?,
       steps = homeObjects(json['steps'] ?? json['stages']);
   final String id;
   final String state;
   final int revision;
   final String? lock;
   final List<String> allowedActions;
+  final bool confirmationPending;
+  final String? confirmationReason;
   final List<Map<String, Object?>> steps;
   String? get videoMediaId {
     for (final step in steps) {
@@ -225,7 +263,13 @@ class HomeTask {
     return null;
   }
 
-  bool get canConfirmVideo => state == 'awaiting_confirmation';
+  bool get canConfirmVideo =>
+      state == 'awaiting_confirmation' &&
+      confirmationPending &&
+      (allowedActions.contains('cancel') ||
+          allowedActions.contains('confirm-video'));
+  bool get canContinue =>
+      ['completed', 'failed', 'canceled'].contains(state) && lock == 'released';
   bool get needsPolling =>
       state != 'paused' &&
       (['queued', 'running', 'awaiting_confirmation'].contains(state) ||

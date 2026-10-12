@@ -18,6 +18,7 @@ class RoleGuideAction extends StatelessWidget {
     this.count,
     this.secondary = false,
     this.showArrow = true,
+    this.fontSize = 18,
     super.key,
   });
 
@@ -26,6 +27,7 @@ class RoleGuideAction extends StatelessWidget {
   final int? count;
   final bool secondary;
   final bool showArrow;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +66,7 @@ class RoleGuideAction extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: fontSize,
                   fontWeight: secondary ? FontWeight.w400 : FontWeight.w600,
                   color: onPressed == null
                       ? Theme.of(context).disabledColor

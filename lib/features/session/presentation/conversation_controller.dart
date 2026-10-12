@@ -145,6 +145,20 @@ class ConversationController extends ChangeNotifier {
     }
   }
 
+  Future<bool> ensureSession(String title) => sessionId != null
+      ? Future.value(true)
+      : act((token) async {
+          final session = await repository.create(
+            userId,
+            title,
+            cancelToken: token,
+          );
+          if (token.isCancelled || _disposed) return;
+          sessionId = session.id;
+          onSessionChanged?.call(session);
+          notifyListeners();
+        });
+
   Future<bool> send(
     String text,
     List<({String name, Uint8List bytes})> images,

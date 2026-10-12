@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/providers/project_provider.dart';
+import '../../../shared/widgets/app_sheet.dart';
+import 'widgets/account_preferences_sheet.dart';
 import '../domain/ip_account.dart';
 import 'ip_accounts_page.dart';
 
@@ -23,6 +26,25 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
   bool _loading = true;
   bool _failed = false;
   CancelToken? _token;
+
+  Future<void> _create() async {
+    if (ref.read(userProvider) == null) {
+      await context.push('/login');
+      return;
+    }
+    final owner = ref.read(userProvider)?.id;
+    final id = await AppSheet.show<String>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (_) => const AccountPreferencesSheet(),
+    );
+    if (!mounted || id == null || ref.read(userProvider)?.id != owner) return;
+    ref.invalidate(projectsProvider);
+    await context.push('/ip-accounts/${Uri.encodeComponent(id)}');
+    if (mounted) await _load();
+  }
 
   @override
   void initState() {
@@ -53,7 +75,7 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
     try {
       final accounts = await ref
           .read(ipAccountRepositoryProvider)
-          .list(cancelToken: token);
+          .list(status: 'active', cancelToken: token);
       if (mounted && !token.isCancelled) setState(() => _accounts = accounts);
     } catch (_) {
       if (mounted && !token.isCancelled) setState(() => _failed = true);
@@ -74,6 +96,7 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
         accounts: _accounts,
         isLoading: _loading,
         onRetry: _failed ? _load : null,
+        onCreate: _create,
         onOpenAccount: (account) async {
           await context.push('/ip-accounts/${Uri.encodeComponent(account.id)}');
           if (mounted) await _load();

@@ -164,7 +164,7 @@ class ApiSessionRepository extends SessionRepository {
     'create',
     {'title': _title(title)},
     (input) async => ConversationSession.fromJson(
-      await agent.resolveSession(
+      await agent.createSession(
         clientRequestId: input['clientRequestId'] as String,
         title: input['title'] as String,
         cancelToken: cancelToken,

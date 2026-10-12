@@ -699,7 +699,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _summaryTitle(l10n),
+                _summaryTitle(),
                 const SizedBox(height: 5),
                 Text(
                   _role.profileComplete
@@ -730,79 +730,13 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     );
   }
 
-  Widget _summaryTitle(AppLocalizations l10n) {
-    final title = Text(
-      _role.title,
-      maxLines: 1,
-      softWrap: false,
-      overflow: TextOverflow.ellipsis,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-    );
-    if (!widget.isSheet) return title;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final painter = TextPainter(
-          text: TextSpan(
-            text: _role.isCertified ? l10n.roleCertified : l10n.roleUncertified,
-            style: const TextStyle(fontSize: 12, height: 1.25),
-          ),
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-          locale: Localizations.localeOf(context),
-        )..layout();
-        final badgeWidth = painter.width + 23;
-        painter.dispose();
-        if (constraints.maxWidth < badgeWidth + 65) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [title, const SizedBox(height: 5), _certification(l10n)],
-          );
-        }
-        return Row(
-          children: [
-            Expanded(child: title),
-            const SizedBox(width: 5),
-            _certification(l10n),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _certification(AppLocalizations l10n) {
-    final colors = Theme.of(context).colorScheme;
-    final color = _role.isCertified
-        ? AppColors.brand
-        : Theme.of(context).brightness == Brightness.light
-        ? const Color(0xFF999999)
-        : colors.onSurfaceVariant;
-    return Container(
-      key: const Key('role-profile-certification'),
-      constraints: const BoxConstraints(minHeight: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(100),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/icons/role_profile_certificate.png',
-            width: 12,
-            height: 12,
-          ),
-          const SizedBox(width: 1),
-          Flexible(
-            child: Text(
-              _role.isCertified ? l10n.roleCertified : l10n.roleUncertified,
-              style: TextStyle(fontSize: 12, height: 1.25, color: color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _summaryTitle() => Text(
+    _role.title,
+    maxLines: 1,
+    softWrap: false,
+    overflow: TextOverflow.ellipsis,
+    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+  );
 
   Widget _editActions(AppLocalizations l10n) {
     final colors = Theme.of(context).colorScheme;

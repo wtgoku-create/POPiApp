@@ -138,6 +138,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleRefreshStories => '都不满意，换一批';
 
   @override
+  String get roleCustomTopic => '自定义选题';
+
+  @override
+  String get roleCustomTopicHint => '这次想创作什么故事？';
+
+  @override
+  String get roleGenerateTopic => '生成选题';
+
+  @override
+  String get roleReconfirmVideo => '重新确认生成视频';
+
+  @override
   String get rolePreviousStory => '上一个故事';
 
   @override
@@ -390,6 +402,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get roleRatio => '比例';
+
+  @override
+  String get roleDuration => '时长';
+
+  @override
+  String get roleNoImageModels => '暂无可用图片模型';
+
+  @override
+  String get roleDurationAutomatic => '智能选择';
+
+  @override
+  String get roleDurationCustom => '自定义';
+
+  @override
+  String roleDurationSeconds(String seconds) {
+    return '${seconds}s';
+  }
 
   @override
   String get roleDimensions => '尺寸';
@@ -727,6 +756,89 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipAccountPreferences => '账号偏好';
+
+  @override
+  String get accountCreate => '创建账号';
+
+  @override
+  String get accountArchived => '已归档';
+
+  @override
+  String get accountActive => '正常';
+
+  @override
+  String get accountArchive => '归档账号';
+
+  @override
+  String get accountRestore => '恢复账号';
+
+  @override
+  String get accountArchiveConfirm => '归档后保留作品、会话和资料，可随时恢复。';
+
+  @override
+  String get accountMemory => '账号记忆';
+
+  @override
+  String get accountUserPrompt => '账号定位';
+
+  @override
+  String get accountPositioningHint => '填写账号的主题、风格和创作方向';
+
+  @override
+  String get accountConstraints => '创作约束';
+
+  @override
+  String get accountCustomOption => '自定义选项';
+
+  @override
+  String get accountInputInvalid => '内容为空、超出数量或长度限制';
+
+  @override
+  String get accountTitleInvalid => '请输入不超过15字的账号名称';
+
+  @override
+  String get accountRenameTitle => '重命名项目';
+
+  @override
+  String accountRenameConfirm(String title) {
+    return '确认修改账号昵称为：\n$title';
+  }
+
+  @override
+  String get accountArchives => '创作档案';
+
+  @override
+  String get accountArchiveSearch => '搜索标题或摘要';
+
+  @override
+  String get accountLoadMore => '加载更多';
+
+  @override
+  String get accountArchiveVersion => '版本';
+
+  @override
+  String get accountArchiveSummary => '摘要';
+
+  @override
+  String get accountArchiveBrief => '创作要求';
+
+  @override
+  String get accountArchiveTopic => '选题';
+
+  @override
+  String get accountArchiveScript => '脚本';
+
+  @override
+  String get accountArchiveStoryboard => '分镜';
+
+  @override
+  String get accountArchiveCast => '角色快照';
+
+  @override
+  String get accountArchiveGeneration => '生成参数';
+
+  @override
+  String get accountOpenConversation => '查看会话';
 
   @override
   String get ipAccountPositioning => '账号定位';
@@ -1729,6 +1841,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get creationHistory => '创作历史';
+
+  @override
+  String get creationHistoryLoadFailed => '创作历史加载失败';
+
+  @override
+  String get searchCreationHistory => '搜索创作历史';
+
+  @override
+  String get noMatchingHistory => '未找到匹配的创作历史';
+
+  @override
+  String get clearSearch => '清除搜索';
 
   @override
   String get assetLibrary => '资产库';

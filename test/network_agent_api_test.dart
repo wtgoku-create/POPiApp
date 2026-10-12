@@ -54,16 +54,16 @@ void main() {
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => server.close(force: true));
       final subscription = server.listen((request) async {
-        expect(request.uri.path, '/api_agent/v2/sessions/resolve');
+        expect(request.uri.path, '/api_agent/v2/sessions');
+        expect(request.method, 'POST');
         expect(request.headers.value('Origin'), 'http://localhost:5195');
         expect(request.headers.value('Authorization'), 'Bearer agent-token');
         expect(request.headers.value('Accept'), 'application/json');
         expect(request.headers.contentType?.mimeType, 'application/json');
         expect(jsonDecode(await utf8.decoder.bind(request).join()), {
           'clientRequestId': 'request-id',
-          'mode': 'new',
           'title': 'New',
-          'contextRef': {'kind': 'account', 'id': 'account / 1'},
+          'accountId': '10',
         });
         request.response.headers.contentType = ContentType.json;
         request.response.write(jsonEncode({'id': 's1', 'title': 'New'}));
@@ -109,7 +109,7 @@ void main() {
       );
       expect(await repository.listProjects(), isEmpty);
       final session = await repository.createSession(
-        'account / 1',
+        '10',
         'New',
         clientRequestId: 'request-id',
       );

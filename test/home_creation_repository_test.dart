@@ -8,6 +8,160 @@ import 'support/home_creation_fixtures.dart';
 
 void main() {
   test(
+    'custom topics reuse uncertain request IDs and consume the returned snapshot',
+    () async {
+      final fixture = HomeCreationFixture();
+      final repository = fixture.repository;
+      final home = await repository.open('101');
+      fixture.failTopicsOnce = true;
+      await expectLater(
+        repository.customTopic(home, '  A campus story  '),
+        throwsA(isA<DioException>()),
+      );
+      final updated = await repository.customTopic(home, 'A campus story');
+      expect(updated.topics.single.title, 'Custom story: A campus story');
+      final writes = fixture.requests
+          .where((request) => request.path.endsWith('/topics'))
+          .toList();
+      expect(writes, hasLength(2));
+      expect(writes.first.data, writes.last.data);
+      expect(
+        writes.last.data.keys,
+        unorderedEquals(['clientRequestId', 'mode', 'text']),
+      );
+      expect(writes.last.data['mode'], 'custom');
+      expect(writes.last.data['text'], 'A campus story');
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/home/enter'),
+        ),
+        hasLength(1),
+      );
+      for (final text in [' ', List.filled(16001, 'a').join()]) {
+        expect(() => repository.customTopic(home, text), throwsArgumentError);
+      }
+    },
+  );
+
+  test('clearing the session cast refreshes the existing account', () async {
+    final fixture = HomeCreationFixture();
+    final repository = fixture.repository;
+    final home = await repository.open('101');
+    final updated = await repository.replaceCast(home, []);
+    expect(updated.cast, isEmpty);
+    expect(updated.accountId, home.accountId);
+    final write = fixture.requests.firstWhere(
+      (request) => request.path.endsWith('/cast'),
+    );
+    expect(write.data['roleIds'], isEmpty);
+    expect(write.data['reply'], isFalse);
+    expect(
+      fixture.requests.last.data.keys,
+      unorderedEquals(['clientRequestId', 'accountId']),
+    );
+  });
+
+  test(
+    'continuation reuses account and cast but resets topic, config and task',
+    () async {
+      final fixture = HomeCreationFixture();
+      final repository = fixture.repository;
+      var home = await repository.open('101');
+      home = await repository.recommend(home);
+      home = await repository.selectTopic(home, home.topics.single);
+      await repository.generate(
+        home,
+        const HomeConfig(modelId: '501', params: {'duration': 15}),
+      );
+      fixture.task = fixture.taskValue('completed', lock: 'released');
+      home = await repository.refresh(home);
+      expect(home.editable, isFalse);
+      final updated = await repository.continueCreation(home);
+      final input = fixture.requests.last.data as Map;
+      expect(
+        input.keys,
+        unorderedEquals(['clientRequestId', 'accountId', 'newCreation']),
+      );
+      expect(input['newCreation'], isTrue);
+      expect(updated.accountId, home.accountId);
+      expect(updated.sessionId, home.sessionId);
+      expect(updated.id, isNot(home.id));
+      expect(
+        updated.cast.map((role) => role.id),
+        home.cast.map((role) => role.id),
+      );
+      expect(updated.topics, isEmpty);
+      expect(updated.selectedTopic, isNull);
+      expect(updated.config, isNull);
+      expect(updated.task, isNull);
+    },
+  );
+
+  test('ten-second models and numeric bounds follow the catalog', () {
+    final model = HomeModel.fromJson({
+      'id': '8',
+      'available': true,
+      'mediaType': 'video',
+      'parameters': [
+        {
+          'name': 'duration',
+          'type': 'number',
+          'required': true,
+          'default': 10,
+          'options': [10],
+        },
+      ],
+    });
+    expect(model.available, isTrue);
+    expect(model.defaultConfig.params['duration'], 10);
+    expect(model.accepts(model.defaultConfig), isTrue);
+    final parameter = HomeParameter.fromJson({
+      'name': 'strength',
+      'type': 'number',
+      'required': true,
+      'min': 0.5,
+      'max': 2,
+      'step': 0.5,
+    });
+    expect(parameter.accepts(1), isTrue);
+    for (final value in [null, -1, 3, 0.7, double.infinity]) {
+      expect(parameter.accepts(value), isFalse);
+    }
+  });
+
+  test(
+    'video confirmation requires pending confirmation and an available action',
+    () {
+      final fixture = HomeCreationFixture();
+      final waiting = fixture.taskValue('awaiting_confirmation');
+      expect(HomeTask.fromJson(waiting).canConfirmVideo, isTrue);
+      expect(
+        HomeTask.fromJson({
+          ...waiting,
+          'confirmationPending': false,
+        }).canConfirmVideo,
+        isFalse,
+      );
+      expect(
+        HomeTask.fromJson({...waiting, 'allowedActions': []}).canConfirmVideo,
+        isFalse,
+      );
+      expect(
+        HomeTask.fromJson(
+          fixture.taskValue('completed', lock: 'held'),
+        ).canContinue,
+        isFalse,
+      );
+      expect(
+        HomeTask.fromJson(
+          fixture.taskValue('completed', lock: 'released'),
+        ).canContinue,
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'role edits follow Web home commands and leave library roles unchanged',
     () async {
       final fixture = HomeCreationFixture()..failRoleSaveOnce = true;
@@ -91,18 +245,36 @@ void main() {
         business.every((request) => request.baseUrl == 'http://business.test'),
         isTrue,
       );
-      final topic = business.firstWhere(
+      final topic = agent.firstWhere(
         (request) => request.path.endsWith('/topic'),
       );
       expect(topic.method, 'PUT');
-      expect(topic.data['expectedRevision'], 1);
-      final cast = business.firstWhere(
-        (request) => request.path.endsWith('/revisions'),
+      expect(topic.path, '/api_agent/v2/sessions/${home.sessionId}/topic');
+      expect(topic.data.keys, unorderedEquals(['clientRequestId', 'topicId']));
+      final cast = agent.firstWhere(
+        (request) => request.path.endsWith('/cast'),
       );
-      expect(cast.data['cast'], [
-        {'roleId': 2, 'profileVersionId': '21'},
-      ]);
-      expect(cast.data['topicId'], isNull);
+      expect(cast.method, 'PUT');
+      expect(cast.data['roleIds'], [2]);
+      expect(cast.data['reply'], isFalse);
+      expect(
+        cast.data.keys,
+        unorderedEquals(['clientRequestId', 'roleIds', 'reply']),
+      );
+      final recommendation = agent.firstWhere(
+        (request) => request.path.endsWith('/topics'),
+      );
+      expect(
+        recommendation.data.keys,
+        unorderedEquals(['clientRequestId', 'mode']),
+      );
+      expect(recommendation.data['mode'], 'recommend');
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/home/enter'),
+        ),
+        hasLength(2),
+      );
       expect(
         fixture.requests.any((request) => request.path.endsWith('/messages')),
         isFalse,
@@ -138,22 +310,23 @@ void main() {
   );
 
   test(
-    'model catalog filters home duration and preserves typed parameter defaults',
+    'model catalog preserves server duration options and typed defaults',
     () async {
       final fixture = HomeCreationFixture();
       final models = await fixture.repository.models();
       expect(models.map((model) => model.id), ['501']);
       final model = models.single;
       expect(model.parameters.first.options.map((option) => option.value), [
+        5,
         15,
         30,
       ]);
-      expect(model.defaultConfig.params['duration'], 15);
+      expect(model.defaultConfig.params['duration'], 5);
       expect(model.accepts(model.defaultConfig), isTrue);
       expect(await fixture.repository.estimate(model.defaultConfig), 42);
       final request = fixture.requests.last;
       expect(request.data['modelId'], '501');
-      expect(request.data['parameters']['duration'], 15);
+      expect(request.data['parameters']['duration'], 5);
       expect(request.data['outputCount'], 1);
     },
   );
@@ -166,9 +339,10 @@ void main() {
         'summary': 'Saved body',
       }
       ..task = HomeCreationFixture().taskValue('paused');
-    final home = await fixture.repository.open(
-      '202',
-      sessionId: 'saved-session',
+    final home = await fixture.repository.open('202');
+    expect(
+      fixture.requests.single.data.keys,
+      unorderedEquals(['clientRequestId', 'accountId']),
     );
     expect(home.accountId, '202');
     expect(home.topics.single.id, 'selected');
@@ -202,6 +376,9 @@ void main() {
         ],
         [
           LibraryRole.fromJson({...fixture.role(1), 'profileVersion': null}),
+        ],
+        [
+          LibraryRole.fromJson({...fixture.role(1), 'canRead': false}),
         ],
       ]) {
         expect(() => repository.create(roles), throwsA(isA<ApiException>()));

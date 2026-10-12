@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import 'package:popi_ai_app/features/role_guide/domain/role_guide_draft.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
+import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
+import 'conversation_controller_test.dart' show StreamingSessionRepository;
+import 'home_generation_config_sheet_test.dart' show configFixture, configTap;
+import 'support/home_creation_fixtures.dart';
 import 'support/project_fixtures.dart';
 
 void main() {
@@ -16,18 +24,31 @@ void main() {
     WidgetTester tester, {
     double width = 440,
     bool englishDark = false,
+    HomeCreationFixture? liveFixture,
+    StreamingSessionRepository? sessions,
   }) async {
     tester.view.physicalSize = Size(width, 956);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final container = ProviderContainer(
+      overrides: [
+        projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
+        if (liveFixture != null)
+          dioProvider.overrideWithValue(liveFixture.business),
+        if (sessions != null)
+          sessionRepositoryProvider.overrideWithValue(sessions),
+      ],
+    );
+    addTearDown(container.dispose);
+    if (liveFixture != null) {
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: 'config-user', name: 'Test', email: ''));
+    }
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          projectRepositoryProvider.overrideWithValue(
-            FixtureProjectRepository(),
-          ),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: MaterialApp(
           theme: englishDark ? AppTheme.dark : AppTheme.light,
           locale: Locale(englishDark ? 'en' : 'zh'),
@@ -85,7 +106,7 @@ void main() {
     await tester.tap(find.text('图片偏好'));
     await tester.pumpAndSettle();
     await select(tester, 'role-ratio-square');
-    await select(tester, 'role-quantity-4');
+    expect(find.byKey(const Key('role-quantity-4')), findsNothing);
     await select(tester, 'role-generation-confirm');
     expect(find.byType(RoleGenerationSheet), findsNothing);
     final composer = tester.widget<PopiMessageComposer>(
@@ -106,7 +127,7 @@ void main() {
     expect(saved.videoRatio, GenerationRatio.portrait);
     expect(saved.imageResolution, 720);
     expect(saved.imageRatio, GenerationRatio.square);
-    expect(saved.quantity, 4);
+    expect(saved.quantity, 1);
     await select(tester, 'role-model-kling');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -121,6 +142,52 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'signed-in composer saves conversation preferences before its first message',
+    (tester) async {
+      final fixture = configFixture();
+      final sessions = StreamingSessionRepository();
+      addTearDown(sessions.close);
+      await mount(tester, liveFixture: fixture, sessions: sessions);
+      await openParameters(tester);
+      expect(find.byType(HomeGenerationConfigSheet), findsOneWidget);
+      expect(sessions.sends, 0);
+      expect(find.byType(RoleGenerationSheet), findsNothing);
+      await configTap(tester, 'home-config-ratio-9:16');
+      await configTap(tester, 'home-config-confirm');
+      final write = fixture.requests.singleWhere(
+        (request) => request.method == 'PUT',
+      );
+      expect(write.data['sessionId'], 'mock-new-1');
+      expect(
+        tester
+            .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+            .controller
+            .markdown,
+        'Keep this prompt',
+      );
+      await tester.tap(find.byKey(const Key('popi-message-input')));
+      await tester.pumpAndSettle();
+      await openParameters(tester);
+      await configTap(tester, 'home-config-confirm');
+      expect(
+        fixture.requests.where((request) => request.method == 'PUT'),
+        hasLength(1),
+      );
+      await tester.tap(find.byKey(const Key('popi-send-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(sessions.sends, 1);
+      expect(
+        (await sessions.list(
+          'config-user',
+        )).where((session) => session.id.startsWith('mock-new-')),
+        hasLength(1),
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   for (final englishDark in [false, true]) {
     testWidgets(

@@ -6,6 +6,7 @@ import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/ip_accounts/data/ip_account_repository.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account_home.dart';
+import 'package:popi_ai_app/features/ip_accounts/domain/account_preferences.dart';
 
 class FixtureIpAccountRepository extends IpAccountRepository {
   FixtureIpAccountRepository() : super(NetworkApi(Dio()));
@@ -16,6 +17,9 @@ class FixtureIpAccountRepository extends IpAccountRepository {
   final saveRequestIds = <String>[];
   final renameRequestIds = <String>[];
   final renameRevisions = <int>[];
+  final statuses = <String>[];
+  final createRequestIds = <String>[];
+  String status = 'active';
   String title = '后来才懂';
   Map<String, Object?> profile = {
     'contentDirection': '校园情感',
@@ -32,9 +36,48 @@ class FixtureIpAccountRepository extends IpAccountRepository {
   ];
 
   @override
-  Future<List<IpAccount>> list({CancelToken? cancelToken}) async => [
-    IpAccount(id: '42', title: title, description: '校园情感 x AI真人'),
-  ];
+  Future<List<IpAccount>> list({
+    String status = 'active',
+    CancelToken? cancelToken,
+  }) async {
+    statuses.add(status);
+    return [
+      if (status == 'all' || status == this.status)
+        IpAccount(
+          id: '42',
+          title: title,
+          description: '校园情感 x AI真人',
+          isPaused: this.status == 'archived',
+        ),
+    ];
+  }
+
+  @override
+  Future<String> create({
+    required String requestId,
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
+    CancelToken? cancelToken,
+  }) async {
+    createRequestIds.add(requestId);
+    if (failSave) throw StateError('Failed');
+    if (title != null) this.title = title;
+    this.preferences = preferences ?? {};
+    return '42';
+  }
+
+  @override
+  Future<void> archive(String id, {CancelToken? cancelToken}) async {
+    if (failSave) throw StateError('Failed');
+    status = 'archived';
+  }
+
+  @override
+  Future<void> restore(String id, {CancelToken? cancelToken}) async {
+    if (failSave) throw StateError('Failed');
+    status = 'active';
+  }
 
   @override
   Future<IpAccountHome> detail(String id, {CancelToken? cancelToken}) async {
@@ -44,12 +87,67 @@ class FixtureIpAccountRepository extends IpAccountRepository {
       id: id,
       title: title,
       revision: 7,
+      status: status,
       profile: profile,
+      preferences: {
+        'contentDirections': [profile['contentDirection']!],
+        'audienceFeelings': [profile['audienceFeeling']!],
+        'presentationFormats': [profile['presentation']!],
+        'targetAudience': [profile['targetAudience']!],
+        ...preferences,
+      },
+      userPrompt: profile['positioning'] as String,
       residentRoles: [
         for (final id in residents) {'roleId': int.parse(id)},
       ],
     );
   }
+
+  Map<String, Object?> preferences = {};
+  @override
+  Future<List<AccountPreferenceStep>> preferenceOptions({
+    CancelToken? cancelToken,
+  }) async => const [
+    AccountPreferenceStep(
+      key: 'contentDirections',
+      title: '内容方向',
+      options: [AccountPreferenceOption(name: '校园')],
+    ),
+    AccountPreferenceStep(key: 'audienceFeelings', title: '观众感受'),
+    AccountPreferenceStep(key: 'presentationFormats', title: '表达形式'),
+    AccountPreferenceStep(
+      key: 'targetAudience',
+      title: '目标受众',
+      maxNameBytes: 2000,
+    ),
+  ];
+  @override
+  Future<void> update(
+    String id, {
+    String? title,
+    Map<String, Object?>? preferences,
+    String? userPrompt,
+    CancelToken? cancelToken,
+  }) async {
+    saveRequestIds.add('patch');
+    if (failSave) throw StateError('Failed');
+    if (title != null) this.title = title;
+    this.preferences = {...this.preferences, ...?preferences};
+    if (userPrompt != null) profile['positioning'] = userPrompt;
+  }
+
+  @override
+  Future<AccountArchivePage> archives(
+    String id, {
+    String keyword = '',
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async => AccountArchivePage(
+    items: creations.where((c) => c.title.contains(keyword)).toList(),
+    page: page,
+    pageCount: 1,
+    total: creations.length,
+  );
 
   @override
   Future<IpAccountResources> resources(

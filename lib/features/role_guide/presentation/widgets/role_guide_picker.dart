@@ -126,7 +126,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       final result = await _repository.fetchPage(
         category: _category,
         page: _page + 1,
-        pageSize: 20,
+        pageSize: 30,
       );
       if (!mounted || generation != _generation) return;
       setState(() {

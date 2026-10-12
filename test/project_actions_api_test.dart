@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
+import 'package:popi_ai_app/core/network/agent_api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
@@ -9,7 +10,98 @@ void main() {
   final studioRequestId = RegExp(
     r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
   );
-  test('creates an account session with the Web resolve contract', () async {
+  test(
+    'queries the fixed account binding, including archived sessions',
+    () async {
+      final dio = Dio();
+      final token = CancelToken();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.method, 'GET');
+            expect(options.path, '/api_agent/v2/sessions/by-account/10');
+            expect(options.queryParameters, isEmpty);
+            expect(options.data, isNull);
+            expect(options.cancelToken, same(token));
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: {'id': 'bound', 'title': 'Existing', 'archived': true},
+              ),
+            );
+          },
+        ),
+      );
+      final session = await ProjectRepository(
+        NetworkApi(dio),
+        NetworkAgentApi(dio),
+      ).boundSession('10', cancelToken: token);
+      expect(session!.id, 'bound');
+      expect(session.archived, isTrue);
+    },
+  );
+
+  for (final (status, code) in [
+    (404, 'ACCOUNT_SESSION_NOT_FOUND'),
+    (404, 'ACCOUNT_NOT_FOUND'),
+    (409, 'SESSION_NOT_READY'),
+    (403, 'FORBIDDEN'),
+    (500, 'ACCOUNT_SESSION_NOT_FOUND'),
+  ]) {
+    test('binding lookup handles $status $code precisely', () async {
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) => handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response(
+                requestOptions: options,
+                statusCode: status,
+                data: {'code': code},
+              ),
+            ),
+          ),
+        ),
+      );
+      final future = ProjectRepository(
+        NetworkApi(dio),
+        NetworkAgentApi(dio),
+      ).boundSession('10');
+      if (status == 404 && code == 'ACCOUNT_SESSION_NOT_FOUND') {
+        expect(await future, isNull);
+      } else {
+        await expectLater(
+          future,
+          throwsA(
+            isA<AgentApiException>()
+                .having((error) => error.statusCode, 'statusCode', status)
+                .having((error) => error.code, 'code', code),
+          ),
+        );
+      }
+    });
+  }
+
+  test('a malformed binding response cannot imply a missing session', () async {
+    final dio = Dio();
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) => handler.resolve(
+          Response(requestOptions: options, data: {'title': 'Existing'}),
+        ),
+      ),
+    );
+    await expectLater(
+      ProjectRepository(
+        NetworkApi(dio),
+        NetworkAgentApi(dio),
+      ).boundSession('10'),
+      throwsA(isA<ApiException>()),
+    );
+  });
+
+  test('creates a session bound to an existing account', () async {
     final dio = Dio();
     late RequestOptions request;
     dio.interceptors.add(
@@ -22,7 +114,8 @@ void main() {
               data: {
                 'id': 'created',
                 'title': 'New conversation',
-                'contextRef': {'kind': 'account', 'id': 'project / 1'},
+                'boundAccountId': '10',
+                'bindingStatus': 'ready',
               },
             ),
           );
@@ -30,22 +123,16 @@ void main() {
       ),
     );
     final requestId = ProjectRepository.createClientRequestId();
-    final session =
-        await ProjectRepository(
-          NetworkApi(dio),
-          NetworkAgentApi(dio),
-        ).createSession(
-          'project / 1',
-          ' New conversation ',
-          clientRequestId: requestId,
-        );
+    final session = await ProjectRepository(
+      NetworkApi(dio),
+      NetworkAgentApi(dio),
+    ).createSession('10', ' New conversation ', clientRequestId: requestId);
     expect(request.method, 'POST');
-    expect(request.path, '/api_agent/v2/sessions/resolve');
+    expect(request.path, '/api_agent/v2/sessions');
     expect(request.data, {
       'clientRequestId': requestId,
-      'mode': 'new',
       'title': 'New conversation',
-      'contextRef': {'kind': 'account', 'id': 'project / 1'},
+      'accountId': '10',
     });
     expect(session.id, 'created');
     expect(request.data['clientRequestId'], matches(studioRequestId));

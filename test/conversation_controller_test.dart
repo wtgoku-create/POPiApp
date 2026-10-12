@@ -137,6 +137,29 @@ void main() {
     },
   );
 
+  test(
+    'opening preferences creates one conversation without sending and the first message reuses it',
+    () async {
+      expect(await controller.ensureSession('Settings'), isTrue);
+      final id = controller.sessionId;
+      expect(id, isNotNull);
+      expect(repository.sends, 0);
+      expect(await controller.ensureSession('Settings'), isTrue);
+      expect(controller.sessionId, id);
+      expect(
+        await controller.send(
+          'Create a video',
+          [],
+          'New conversation',
+          'Media',
+        ),
+        isTrue,
+      );
+      expect(controller.sessionId, id);
+      expect(repository.sends, 1);
+    },
+  );
+
   test('disconnect reconnects from last processed sequence', () async {
     controller.open(chatId);
     await flushConversation();

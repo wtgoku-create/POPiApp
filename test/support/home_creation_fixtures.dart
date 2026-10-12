@@ -16,6 +16,7 @@ class HomeCreationFixture {
   final requests = <RequestOptions>[];
   String accountId = '101';
   int revision = 1;
+  int creationNumber = 0;
   List<int> cast = [1];
   List<Map<String, Object?>> topics = [];
   Map<String, Object?>? selected;
@@ -27,8 +28,17 @@ class HomeCreationFixture {
   bool failGenerateOnce = false;
   bool failMediaOnce = false;
   bool failRoleSaveOnce = false;
+  bool failPreferenceSaveOnce = false;
+  final modelCatalogs = <String, List<Map<String, Object?>>>{};
+  int mediaPreferenceRevision = 1;
+  Map<String, Object?> videoPreference = {
+    'modelId': '501',
+    'params': {'duration': 15, 'ratio': '9:16'},
+  };
+  Map<String, Object?>? imagePreference;
   final creationProfiles = <int, Map<String, Object?>>{};
   Completer<void>? waitForEntry;
+  Completer<void>? waitForTopics;
   HomeCreationRepository get repository =>
       HomeCreationRepository(NetworkApi(business), NetworkAgentApi(agent));
 
@@ -48,7 +58,7 @@ class HomeCreationFixture {
   };
   Map<String, Object?> snapshot() => {
     'creation': {
-      'id': accountId == '101' ? '301' : '302',
+      'id': '${(accountId == '101' ? 301 : 302) + creationNumber}',
       'accountId': accountId,
       'sessionId': '11111111-1111-4111-8111-111111111111',
       'revision': revision,
@@ -77,7 +87,7 @@ class HomeCreationFixture {
       ],
       'specs': {if (config != null) 'homeConfig': config},
     },
-    'editable': task == null || task!['lock'] == 'released',
+    'editable': task == null,
     'topics': topics,
     'customTopics': <Object>[],
     'selectedTopic': selected,
@@ -99,6 +109,9 @@ class HomeCreationFixture {
         : state == 'running' || state == 'queued'
         ? ['pause', 'cancel']
         : <String>[],
+    'confirmationPending': state == 'awaiting_confirmation',
+    if (state == 'awaiting_confirmation')
+      'confirmationReason': 'storyboard_review',
     'steps': [
       for (final key in ['persona', 'script', 'storyboard', 'video', 'review'])
         {
@@ -149,20 +162,25 @@ class HomeCreationFixture {
       }
       if (body['accountId'] != null) accountId = body['accountId'] as String;
       if (body['roleIds'] is List) cast = (body['roleIds'] as List).cast<int>();
-      if (body['sourceCreationId'] != null) {
+      if (body['newCreation'] == true) {
         task = null;
         topics = [];
         selected = null;
-        revision++;
+        config = null;
+        creationNumber++;
+        revision = 1;
       }
       return snapshot();
     }
     if (path.endsWith('/topics')) {
+      if (waitForTopics != null) await waitForTopics!.future;
       recommendationCount++;
       topics = [
         {
           'id': 'topic-$recommendationCount',
-          'title': 'Server story $recommendationCount',
+          'title': body['mode'] == 'custom'
+              ? 'Custom story: ${body['text']}'
+              : 'Server story $recommendationCount',
           'summary': 'A story returned by the server',
         },
       ];
@@ -170,12 +188,12 @@ class HomeCreationFixture {
         failTopicsOnce = false;
         throw StateError('Topic response lost');
       }
-      return {'batch': {}, 'items': topics};
+      return {'batch': {}, 'items': topics, 'snapshot': snapshot()};
     }
     if (path.endsWith('/topic')) {
       selected = topics.firstWhere((topic) => topic['id'] == body['topicId']);
       revision++;
-      return snapshot();
+      return {'snapshot': snapshot()};
     }
     if (path.endsWith('/role-versions')) {
       if (failRoleSaveOnce) {
@@ -190,14 +208,16 @@ class HomeCreationFixture {
       revision++;
       return snapshot();
     }
-    if (path.endsWith('/revisions')) {
-      cast = (body['cast'] as List)
-          .map((item) => (item as Map)['roleId'] as int)
-          .toList();
+    if (path.endsWith('/cast')) {
+      cast = (body['roleIds'] as List).cast<int>();
       selected = null;
       topics = [];
       revision++;
-      return snapshot();
+      return {
+        'cast': [for (final id in cast) role(id)],
+        'messageId': null,
+        'runId': null,
+      };
     }
     if (path.endsWith('/roles')) {
       return {
@@ -218,7 +238,32 @@ class HomeCreationFixture {
         'pageInfo': {'page': page, 'pageSize': 10, 'pageCount': 2, 'total': 2},
       };
     }
+    if (path.endsWith('/session-media-preferences')) {
+      if (request.method == 'PUT') {
+        if (failPreferenceSaveOnce) {
+          failPreferenceSaveOnce = false;
+          throw StateError('Preference save unavailable');
+        }
+        final saved = Map<String, Object?>.from(body['config'] as Map);
+        if (body['mediaType'] == 'video') {
+          videoPreference = saved;
+        } else {
+          imagePreference = saved;
+        }
+        mediaPreferenceRevision++;
+      }
+      return {
+        'revision': mediaPreferenceRevision,
+        'video': videoPreference,
+        'image': imagePreference,
+      };
+    }
     if (path.endsWith('/media-models')) {
+      final mediaType = request.queryParameters['mediaType'] as String;
+      if (modelCatalogs.containsKey(mediaType)) {
+        return {'list': modelCatalogs[mediaType]};
+      }
+      if (mediaType == 'image') return {'list': <Map<String, Object?>>[]};
       return {
         'list': [
           {

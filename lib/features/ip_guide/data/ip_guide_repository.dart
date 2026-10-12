@@ -5,6 +5,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/network/network_api.dart';
 import '../../../core/storage/preferences_storage.dart';
+import '../../ip_accounts/data/ip_account_repository.dart';
+import '../../ip_accounts/domain/account_preferences.dart';
 import '../domain/ip_guide_draft.dart';
 
 /// Serializes writes so an older autosave cannot resurrect a cleared draft.
@@ -19,6 +21,10 @@ class IpGuideRepository {
   final _creationToken = CancelToken();
 
   void dispose() => _creationToken.cancel();
+
+  Future<List<AccountPreferenceStep>> preferenceOptions({
+    CancelToken? cancelToken,
+  }) => IpAccountRepository(_api).preferenceOptions(cancelToken: cancelToken);
 
   void _checkActive() {
     if (_creationToken.isCancelled) throw _creationToken.cancelError!;
@@ -40,6 +46,19 @@ class IpGuideRepository {
           IpContentFormat.shortFilm;
       draft.customFormat = json['customFormat'] as String? ?? '';
       draft.nickname = json['nickname'] as String? ?? '';
+      final preferences = json['preferences'] as Map<String, dynamic>?;
+      if (preferences != null) {
+        for (final entry in preferences.entries) {
+          final value = entry.value as Map<String, dynamic>;
+          final selection = IpGuideSelection<String>();
+          final names = (value['values'] as List).cast<String>();
+          for (final name in names) {
+            selection.toggle(name, maxSelections: names.length);
+          }
+          selection.customText = value['customText'] as String? ?? '';
+          draft.preferences[entry.key] = selection;
+        }
+      }
       draft.step = (json['step'] as int? ?? 1).clamp(1, 5);
       draft.creationRequestId = json['creationRequestId'] as String?;
       draft.profileRequestId = json['profileRequestId'] as String?;
@@ -68,6 +87,13 @@ class IpGuideRepository {
       'format': draft.format.name,
       'customFormat': draft.customFormat,
       'nickname': draft.nickname,
+      'preferences': {
+        for (final entry in draft.preferences.entries)
+          entry.key: {
+            'values': entry.value.values,
+            'customText': entry.value.customText,
+          },
+      },
       'creationRequestId': draft.creationRequestId,
       'profileRequestId': draft.profileRequestId,
       'accountId': draft.accountId,
@@ -105,12 +131,28 @@ class IpGuideRepository {
       draft.accountId!,
       revision: draft.accountRevision!,
       clientRequestId: draft.profileRequestId!,
-      profile: draft.submittedProfile!,
+      profile: _preferences(draft.submittedProfile!),
       cancelToken: _creationToken,
     );
     _checkActive();
     await clear();
     return draft.accountId!;
+  }
+
+  // Drafts persisted before the account API migration contain singular fields.
+  Map<String, Object?> _preferences(Map<String, Object?> profile) {
+    const aliases = {
+      'contentDirection': 'contentDirections',
+      'audienceFeeling': 'audienceFeelings',
+      'presentation': 'presentationFormats',
+      'contentFormat': 'creativeConstraints',
+    };
+    return {
+      for (final entry in profile.entries)
+        aliases[entry.key] ?? entry.key: entry.value is String
+            ? [(entry.value as String)]
+            : entry.value,
+    };
   }
 
   Future<void> _enqueue(Future<void> Function() write) {

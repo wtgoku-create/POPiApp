@@ -41,7 +41,7 @@ void main() {
   });
 
   test(
-    'reads the active profile across pages instead of a newer draft',
+    'reads preferences and memory without profile version requests',
     () async {
       respond = (request) {
         if (request.path.endsWith('/42')) {
@@ -52,6 +52,11 @@ void main() {
             'status': 'active',
             'activeProfileVersionId': 'old-active',
             'residentRoles': [],
+            'preferences': {
+              'contentDirections': ['校园', '家庭'],
+            },
+            'memoryMarkdown': '# Memory',
+            'userPrompt': 'Warm stories',
           };
         }
         final number = request.queryParameters['page'] as int;
@@ -67,23 +72,29 @@ void main() {
         );
       };
       final account = await repository.detail('42');
-      expect(account.text('positioning'), 'Active');
+      expect(account.selections('contentDirections'), ['校园', '家庭']);
+      expect(account.memoryMarkdown, '# Memory');
+      expect(account.userPrompt, 'Warm stories');
       expect(account.revision, 7);
-      expect(requests.map((r) => r.queryParameters['page']), [null, 1, 2]);
+      expect(requests, hasLength(1));
     },
   );
 
-  test('a dangling active version is an error, not an empty profile', () async {
-    respond = (request) => request.path.endsWith('/42')
-        ? {
-            'id': '42',
-            'title': 'Account',
-            'revision': 1,
-            'activeProfileVersionId': 'gone',
-          }
-        : page([]);
-    await expectLater(repository.detail('42'), throwsA(isA<ApiException>()));
-  });
+  test(
+    'historical version IDs do not require an extra profile lookup',
+    () async {
+      respond = (request) => request.path.endsWith('/42')
+          ? {
+              'id': '42',
+              'title': 'Account',
+              'revision': 1,
+              'activeProfileVersionId': 'gone',
+            }
+          : page([]);
+      expect((await repository.detail('42')).preferences, isEmpty);
+      expect(requests, hasLength(1));
+    },
+  );
 
   test(
     'new accounts without an active profile skip version requests',
@@ -95,7 +106,7 @@ void main() {
     },
   );
 
-  test('profile saves preserve unknown fields and revision metadata', () async {
+  test('profile saves patch only submitted preferences', () async {
     respond = (_) => {'id': 'saved-version'};
     const account = IpAccountHome(
       id: 'account / 42',
@@ -108,21 +119,14 @@ void main() {
       },
     );
     await repository.saveProfile(account, {
-      'positioning': 'New',
+      'audienceFeelings': <String>[],
     }, requestId: 'stable');
     expect(
       requests.single.path,
-      '/api_client/agent/v2/accounts/account%20%2F%2042/profile-versions',
+      '/api_client/agent/v2/accounts/account%20%2F%2042',
     );
     expect(requests.single.data, {
-      'clientRequestId': 'stable',
-      'expectedRevision': 8,
-      'activate': true,
-      'profile': {
-        'positioning': 'New',
-        'defaultMedia': {'ratio': '9:16'},
-        'targetAudience': 'Readers',
-      },
+      'preferences': {'audienceFeelings': <String>[]},
     });
   });
 
@@ -154,7 +158,7 @@ void main() {
   test(
     'resources are scoped to the account and exclude archived creations',
     () async {
-      respond = (request) => request.path.endsWith('/creations')
+      respond = (request) => request.path.endsWith('/creation-archives')
           ? page([
               {
                 'id': '1',
@@ -177,7 +181,10 @@ void main() {
       expect(resources.creations.single.title, 'Visible');
       expect(resources.creations.single.sessionId, 'session');
       expect(resources.roles.single.id, '20');
-      expect(requests.first.path, '/api_client/agent/v2/accounts/42/creations');
+      expect(
+        requests.first.path,
+        '/api_client/agent/v2/accounts/42/creation-archives',
+      );
     },
   );
 
@@ -193,17 +200,13 @@ void main() {
     }
     expect(requests.map((r) => r.method), ['PATCH', 'PATCH']);
     expect(requests.first.data, requests.last.data);
-    expect(requests.first.data, {
-      'clientRequestId': 'stable',
-      'expectedRevision': 8,
-      'title': 'Renamed',
-    });
+    expect(requests.first.data, {'title': 'Renamed'});
   });
 
   test('backend errors and malformed pagination are surfaced', () async {
     respond = (_) => {
       'list': [],
-      'pageInfo': {'page': 1, 'pageCount': 0},
+      'pageInfo': {'page': 1, 'pageCount': -1},
     };
     await expectLater(repository.list(), throwsA(isA<ApiException>()));
     respond = (_) => {'status': 'failure'};

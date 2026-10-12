@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/navigation.dart';
 import '../../../app/theme.dart';
+import '../../../core/network/network_api.dart';
+import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
@@ -20,6 +22,8 @@ import '../../attachments/presentation/attachment_picker_sheet.dart';
 import '../../assets/domain/library_role.dart';
 import '../../assets/domain/library_work.dart';
 import '../../role_guide/domain/role_guide_draft.dart';
+import '../../role_guide/data/media_preferences_repository.dart';
+import '../../role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'widgets/popi_message_composer.dart';
 import 'conversation_controller.dart';
@@ -59,6 +63,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   bool _mentionMode = false;
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
+  String? _mediaPreferenceDescription;
   String? _activeSessionId;
   ConversationController? _conversation;
 
@@ -84,6 +89,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       // 新建会话写回路由时沿用正在发送的控制器，避免取消首条消息。
       if (widget.sessionId == _activeSessionId) return;
       _activeSessionId = widget.sessionId;
+      _mediaPreferenceDescription = null;
       _conversation?.open(_activeSessionId);
       _resetComposer();
     }
@@ -133,6 +139,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       if (previous == next) return;
       setState(() {
         _activeSessionId = null;
+        _mediaPreferenceDescription = null;
         _resetComposer();
         _bindConversation();
       });
@@ -387,12 +394,16 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             onStop: () => _conversation?.stop(),
                             onMentionRequested: _showMentionSheet,
                             onModelParametersRequested: _showModelParameters,
-                            modelParametersDescription: [
-                              _generationSettings.model.label,
-                              '${l10n.roleVideoPreference}: ${_generationSettings.videoResolution}P / ${_generationSettings.videoRatio.label}',
-                              '${l10n.roleImagePreference}: ${_generationSettings.imageResolution}P / ${_generationSettings.imageRatio.label}',
-                              '${l10n.roleQuantity}: ${_generationSettings.quantity}',
-                            ].join('\n'),
+                            modelParametersDescription:
+                                _mediaPreferenceDescription ??
+                                (_conversation != null
+                                    ? l10n.roleModelParameters
+                                    : [
+                                        _generationSettings.model.label,
+                                        '${l10n.roleVideoPreference}: ${_generationSettings.videoResolution}P / ${_generationSettings.videoRatio.label}',
+                                        '${l10n.roleImagePreference}: ${_generationSettings.imageResolution}P / ${_generationSettings.imageRatio.label}',
+                                        '${l10n.roleDuration}: ${_generationSettings.duration == null ? l10n.roleDurationAutomatic : l10n.roleDurationSeconds(_generationSettings.duration.toString())}',
+                                      ].join('\n')),
                           ),
                         ),
                       ),
@@ -457,7 +468,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       return;
     }
     final conversation = _conversation;
-    if (conversation == null || conversation.pending || conversation.running) {
+    if (conversation == null ||
+        conversation.pending ||
+        conversation.running ||
+        _generationSheetOpen) {
       return;
     }
     final l10n = AppLocalizations.of(context)!;
@@ -495,6 +509,40 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     _generationSheetOpen = true;
     _messageController.dismissKeyboard();
     try {
+      final conversation = _conversation;
+      if (conversation != null && _activeSessionId == null) {
+        final success = await conversation.ensureSession(
+          AppLocalizations.of(context)!.newSessionTitle,
+        );
+        if (!mounted || !identical(conversation, _conversation)) return;
+        if (!success) {
+          AppToast.error(
+            context,
+            AppLocalizations.of(context)!.roleRequestFailed,
+          );
+          return;
+        }
+      }
+      if (_activeSessionId != null && _conversation != null) {
+        final sessionId = _activeSessionId!;
+        final result = await AppSheet.show<HomeGenerationConfiguration>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: false,
+          backgroundColor: Colors.transparent,
+          builder: (_) => HomeGenerationConfigSheet(
+            repository: MediaPreferencesRepository(
+              NetworkApi(ref.read(dioProvider)),
+            ),
+            sessionId: sessionId,
+            forGeneration: false,
+          ),
+        );
+        if (mounted && result != null && _activeSessionId == sessionId) {
+          setState(() => _mediaPreferenceDescription = result.description);
+        }
+        return;
+      }
       final settings = await AppSheet.show<RoleGenerationSettings>(
         context: context,
         isScrollControlled: true,

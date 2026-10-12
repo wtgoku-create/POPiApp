@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -111,13 +113,13 @@ void main() {
     await pumpGuide(tester);
     await tap(tester, 'ip-guide-start');
     final input = field('ip-custom-direction');
-    final grid = find.byType(IpGuideChoiceGrid<IpContentDirection>);
+    final grid = find.byType(IpGuideChoiceGrid<String>);
     expect(find.byType(IpGuideSelectionSummary), findsNothing);
     expect(tester.getTopLeft(input).dy - tester.getBottomLeft(grid).dy, 20);
     final inputTop = tester.getTopLeft(input).dy;
-    await tap(tester, 'ip-direction-campus');
+    await tap(tester, 'ip-direction-校园');
     expect(find.text('主方向：校园'), findsOneWidget);
-    await tap(tester, 'ip-direction-campus');
+    await tap(tester, 'ip-direction-校园');
     expect(find.byType(IpGuideSelectionSummary), findsNothing);
     expect(tester.getTopLeft(input).dy, inputTop);
   });
@@ -125,6 +127,7 @@ void main() {
   testWidgets(
     'custom answer sheet fits above keyboard and retains limited edits',
     (tester) async {
+      (api.preferenceCatalog['steps'] as List).first['maxNameBytes'] = 2000;
       await pumpGuide(tester, size: const Size(320, 640));
       await tap(tester, 'ip-guide-start');
       final inlineInput = field('ip-custom-direction');
@@ -168,6 +171,170 @@ void main() {
     },
   );
 
+  testWidgets(
+    'server catalog adds choices and controls their selection limit',
+    (tester) async {
+      final step =
+          (api.preferenceCatalog['steps'] as List).first
+              as Map<String, dynamic>;
+      step['maxSelections'] = 3;
+      step['options'] = [
+        for (final name in ['天文观察', '城市散步', '传统工艺'])
+          {'name': name, 'description': '接口新增方向', 'imageUrl': null},
+      ];
+      await pumpGuide(tester);
+      await tap(tester, 'ip-guide-start');
+      expect(api.preferenceRequests, 1);
+      expect(find.text('校园'), findsNothing);
+      for (final name in ['天文观察', '城市散步', '传统工艺']) {
+        await tap(tester, 'ip-direction-$name');
+      }
+      expect(repository.load()!.preferences['contentDirections']!.values, [
+        '天文观察',
+        '城市散步',
+        '传统工艺',
+      ]);
+      await tap(tester, 'ip-guide-next-1');
+      expect(find.text('来自接口的选项描述'), findsWidgets);
+      await tap(tester, 'ip-guide-back');
+      expect(find.text('主方向：天文观察'), findsOneWidget);
+      expect(api.preferenceRequests, 1);
+    },
+  );
+
+  testWidgets(
+    'preference request failure exposes retry without static choices',
+    (tester) async {
+      api.failPreferences = true;
+      await pumpGuide(tester);
+      await tap(tester, 'ip-guide-start');
+      expect(find.text('校园'), findsNothing);
+      expect(find.byKey(const Key('ip-preferences-retry')), findsOneWidget);
+      expect(
+        tester
+            .widget<IpGuideNextButton>(find.byKey(const Key('ip-guide-next-1')))
+            .onPressed,
+        isNull,
+      );
+      api.failPreferences = false;
+      await tap(tester, 'ip-preferences-retry');
+      expect(api.preferenceRequests, 2);
+      expect(find.text('校园'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'preference loading disables advancing until the request finishes',
+    (tester) async {
+      final pending = Completer<void>();
+      api.preferenceWait = pending.future;
+      await pumpGuide(tester);
+      await tester.tap(find.byKey(const Key('ip-guide-start')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const Key('ip-preferences-loading')), findsOneWidget);
+      expect(
+        tester
+            .widget<IpGuideNextButton>(find.byKey(const Key('ip-guide-next-1')))
+            .onPressed,
+        isNull,
+      );
+      pending.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('校园'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'catalog can disable custom input and restrict preset selections',
+    (tester) async {
+      final step =
+          (api.preferenceCatalog['steps'] as List).first
+              as Map<String, dynamic>;
+      step['allowCustom'] = false;
+      step['maxSelections'] = 1;
+      await pumpGuide(tester);
+      await tap(tester, 'ip-guide-start');
+      expect(find.byKey(const Key('ip-custom-direction')), findsNothing);
+      await tap(tester, 'ip-direction-校园');
+      await tap(tester, 'ip-direction-情感');
+      expect(repository.load()!.preferences['contentDirections']!.values, [
+        '校园',
+      ]);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('custom preference input respects the server UTF-8 byte limit', (
+    tester,
+  ) async {
+    (api.preferenceCatalog['steps'] as List).first['maxNameBytes'] = 6;
+    await pumpGuide(tester);
+    await tap(tester, 'ip-guide-start');
+    await enterAnswer(tester, 'ip-custom-direction', '天文');
+    await enterAnswer(tester, 'ip-custom-direction', '天文学');
+    expect(
+      repository.load()!.preferences['contentDirections']!.customText,
+      '天文',
+    );
+  });
+
+  testWidgets('optional server groups can be skipped and submit empty arrays', (
+    tester,
+  ) async {
+    for (final step in api.preferenceCatalog['steps'] as List) {
+      step['required'] = false;
+    }
+    await pumpGuide(tester);
+    await tap(tester, 'ip-guide-start');
+    for (var step = 1; step <= 4; step++) {
+      await tap(tester, 'ip-guide-next-$step');
+    }
+    await tester.enterText(field('ip-nickname'), '新账号');
+    await tap(tester, 'ip-confirm');
+    for (final key in [
+      'contentDirections',
+      'audienceFeelings',
+      'presentationFormats',
+      'targetAudience',
+    ]) {
+      expect(api.savedProfile![key], isEmpty);
+    }
+    expect(find.text('创建成功！'), findsOneWidget);
+  });
+
+  testWidgets(
+    'server presentation names support multiple choices and keep canonical values in English',
+    (tester) async {
+      final step =
+          (api.preferenceCatalog['steps'] as List)[2] as Map<String, dynamic>;
+      step['options'] = [
+        for (final name in ['绘本插画', '纪录片'])
+          {'name': name, 'description': '新增表达形式', 'imageUrl': null},
+      ];
+      await pumpGuide(tester, locale: const Locale('en'));
+      await tap(tester, 'ip-guide-start');
+      await tap(tester, 'ip-direction-校园');
+      await tap(tester, 'ip-guide-next-1');
+      await tap(tester, 'ip-feeling-真实');
+      await tap(tester, 'ip-guide-next-2');
+      await tap(tester, 'ip-presentation-绘本插画');
+      await tap(tester, 'ip-presentation-纪录片');
+      await tap(tester, 'ip-guide-next-3');
+      await tap(tester, 'ip-audience-学生群体');
+      await tap(tester, 'ip-guide-next-4');
+      expect(
+        tester.widget<Text>(find.byKey(const Key('ip-review-value-2'))).data,
+        contains('绘本插画 × 纪录片'),
+      );
+      await tester.enterText(field('ip-nickname'), '新账号');
+      await tap(tester, 'ip-confirm');
+      expect(api.savedProfile!['contentDirections'], ['校园']);
+      expect(api.savedProfile!['presentationFormats'], ['绘本插画', '纪录片']);
+    },
+  );
+
   testWidgets('status bar inset is counted once above the guide progress', (
     tester,
   ) async {
@@ -188,10 +355,10 @@ void main() {
     (tester) async {
       await pumpGuide(tester, size: const Size(320, 640));
       const choices = [
-        'ip-direction-campus',
-        'ip-feeling-authentic',
-        'ip-presentation-animation3d',
-        'ip-audience-students',
+        'ip-direction-校园',
+        'ip-feeling-真实',
+        'ip-presentation-3D动漫',
+        'ip-audience-学生群体',
       ];
       for (var step = 0; step <= 4; step++) {
         final actionKey = step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step';
@@ -438,23 +605,23 @@ void main() {
       expect(find.byType(IpGuidePage), findsOneWidget);
       expect(find.textContaining('帮你创建IP账号'), findsOneWidget);
       await tap(tester, 'ip-guide-start');
-      await tap(tester, 'ip-direction-campus');
-      await tap(tester, 'ip-direction-emotion');
+      await tap(tester, 'ip-direction-校园');
+      await tap(tester, 'ip-direction-情感');
       expect(find.text('主方向：校园'), findsOneWidget);
       expect(find.text('辅助：情感'), findsOneWidget);
       await tap(tester, 'ip-guide-next-1');
-      await tap(tester, 'ip-feeling-authentic');
-      await tap(tester, 'ip-feeling-healing');
+      await tap(tester, 'ip-feeling-真实');
+      await tap(tester, 'ip-feeling-治愈');
       await tap(tester, 'ip-guide-back');
       expect(find.text('主方向：校园'), findsOneWidget);
       await tap(tester, 'ip-guide-next-1');
       expect(find.text('辅助：治愈'), findsOneWidget);
       await tap(tester, 'ip-guide-next-2');
-      await tap(tester, 'ip-presentation-animation3d');
+      await tap(tester, 'ip-presentation-3D动漫');
       await tap(tester, 'ip-format-comicDrama');
       await tap(tester, 'ip-guide-next-3');
-      await tap(tester, 'ip-audience-students');
-      await tap(tester, 'ip-audience-workers');
+      await tap(tester, 'ip-audience-学生群体');
+      await tap(tester, 'ip-audience-职场人群');
       await tap(tester, 'ip-guide-next-4');
       expect(find.text('校园 × 情感'), findsOneWidget);
       expect(find.text('真实 / 治愈'), findsOneWidget);
@@ -465,11 +632,11 @@ void main() {
       await tap(tester, 'ip-confirm');
       expect(find.text('创建成功！'), findsOneWidget);
       expect(api.savedProfile, {
-        'contentDirection': '校园 × 情感',
-        'audienceFeeling': '真实 / 治愈',
-        'presentation': '3D动漫',
-        'contentFormat': '漫剧',
-        'targetAudience': '学生群体 × 职场人群',
+        'contentDirections': ['校园', '情感'],
+        'audienceFeelings': ['真实', '治愈'],
+        'presentationFormats': ['3D动漫'],
+        'creativeConstraints': ['漫剧'],
+        'targetAudience': ['学生群体', '职场人群'],
       });
       expect(repository.load(), isNull);
       expect(tester.takeException(), isNull);
@@ -481,14 +648,14 @@ void main() {
     (tester) async {
       await pumpGuide(tester);
       await tap(tester, 'ip-guide-start');
-      await tap(tester, 'ip-direction-campus');
+      await tap(tester, 'ip-direction-校园');
       await enterAnswer(tester, 'ip-custom-direction', '独立音乐');
       await tester.pumpAndSettle();
       expect(find.text('主方向：校园'), findsNothing);
       await tap(tester, 'ip-guide-next-1');
       await enterAnswer(tester, 'ip-custom-feeling', '好奇而轻松');
       await tap(tester, 'ip-guide-next-2');
-      await tap(tester, 'ip-presentation-aiReal');
+      await tap(tester, 'ip-presentation-AI真人');
       await enterAnswer(tester, 'ip-custom-format', '音乐故事');
       await tap(tester, 'ip-guide-next-3');
       await enterAnswer(tester, 'ip-custom-audience', '独立音乐爱好者');
@@ -523,7 +690,7 @@ void main() {
             .length,
         50,
       );
-      await tap(tester, 'ip-direction-emotion');
+      await tap(tester, 'ip-direction-情感');
       expect(
         tester.widget<TextField>(field('ip-custom-direction')).controller!.text,
         isEmpty,
@@ -559,7 +726,7 @@ void main() {
   ) async {
     await pumpGuide(tester);
     await tap(tester, 'ip-guide-start');
-    await tap(tester, 'ip-direction-campus');
+    await tap(tester, 'ip-direction-校园');
     await tap(tester, 'ip-guide-next-1');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -583,11 +750,11 @@ void main() {
   ) async {
     await pumpGuide(tester);
     await tap(tester, 'ip-guide-start');
-    await tap(tester, 'ip-direction-campus');
-    await tap(tester, 'ip-direction-emotion');
-    await tap(tester, 'ip-direction-growth');
+    await tap(tester, 'ip-direction-校园');
+    await tap(tester, 'ip-direction-情感');
+    await tap(tester, 'ip-direction-成长');
     expect(find.text('辅助：情感'), findsOneWidget);
-    await tap(tester, 'ip-direction-campus');
+    await tap(tester, 'ip-direction-校园');
     expect(find.text('主方向：情感'), findsOneWidget);
     expect(find.text('辅助：情感'), findsNothing);
     await tester.pump(const Duration(seconds: 4));
@@ -629,10 +796,10 @@ void main() {
           expect(find.byKey(Key(key)).hitTestable(), findsOneWidget);
           expect(tester.takeException(), isNull);
           if (step == 5) continue;
-          if (step == 1) await tap(tester, 'ip-direction-campus');
-          if (step == 2) await tap(tester, 'ip-feeling-authentic');
-          if (step == 3) await tap(tester, 'ip-presentation-animation3d');
-          if (step == 4) await tap(tester, 'ip-audience-students');
+          if (step == 1) await tap(tester, 'ip-direction-校园');
+          if (step == 2) await tap(tester, 'ip-feeling-真实');
+          if (step == 3) await tap(tester, 'ip-presentation-3D动漫');
+          if (step == 4) await tap(tester, 'ip-audience-学生群体');
           await tap(tester, key);
         }
       },

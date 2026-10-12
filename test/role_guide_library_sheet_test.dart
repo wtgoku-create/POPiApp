@@ -140,7 +140,7 @@ void main() {
       controller.jumpTo(controller.position.maxScrollExtent);
       await tester.pumpAndSettle();
       expect(requests, [1, 2]);
-      expect(pageSizes, [20, 20]);
+      expect(pageSizes, [30, 30]);
       await tester.scrollUntilVisible(
         find.byKey(const Key('role-guide-library-loading-more')),
         200,

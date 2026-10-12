@@ -90,8 +90,8 @@ void main() {
   ) async {
     await pumpPage(tester);
     expect(find.text('IP账号管理'), findsOneWidget);
-    expect(find.text('Normal'), findsNWidgets(4));
-    expect(find.text('Pause'), findsOneWidget);
+    expect(find.text('正常'), findsNWidgets(4));
+    expect(find.text('已归档'), findsOneWidget);
     expect(find.text('后来才懂'), findsOneWidget);
     expect(find.text('水獭兜兜儿'), findsOneWidget);
 
