@@ -6,6 +6,7 @@ import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../role_guide/presentation/widgets/role_profile_sheet.dart';
 import '../../domain/conversation_role_profile.dart';
 import '../../domain/conversation_snapshot.dart';
 
@@ -21,57 +22,17 @@ class ConversationRoleCard extends StatelessWidget {
   final bool framed;
 
   void _preview(BuildContext context, ConversationRoleProfile role) {
-    AppSheet.showDraggable<void>(
+    AppSheet.show<void>(
       context: context,
-      initialChildSize: .8,
-      minChildSize: .5,
-      builder: (context, controller) {
-        final l10n = AppLocalizations.of(context)!;
-        return ListView(
-          key: const Key('conversation-role-profile'),
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Text(
-              l10n.roleArchive,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                _RolePortrait(role: role, size: 80),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    role.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            for (final (label, value) in [...role.overview, ...role.fullFields])
-              if (value.isNotEmpty) ...[
-                const SizedBox(height: 20),
-                Text(
-                  _fieldLabel(label, l10n),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SelectableText(
-                  value,
-                  style: const TextStyle(fontSize: 16, height: 1.5),
-                ),
-              ],
-          ],
-        );
-      },
+      isScrollControlled: true,
+      useSafeArea: false,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      builder: (_) => RoleProfileSheet(
+        key: const Key('conversation-role-profile'),
+        roles: [role.snapshotRole],
+        useSnapshot: true,
+      ),
     );
   }
 
@@ -216,12 +177,3 @@ class _RolePortrait extends StatelessWidget {
     );
   }
 }
-
-String _fieldLabel(String label, AppLocalizations l10n) => switch (label) {
-  'title' => l10n.chatRoleName,
-  'description' => l10n.roleDescription,
-  'expressionStyle' => l10n.roleStyle,
-  'targetAudience' => l10n.roleAudience,
-  'contentTags' => l10n.roleTags,
-  _ => label,
-};

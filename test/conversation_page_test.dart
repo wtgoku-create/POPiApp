@@ -12,12 +12,136 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_t
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
 
 import 'conversation_controller_test.dart' show StreamingSessionRepository;
 import 'conversation_events_test.dart'
     show chatId, chatEvent, chatMessageJson, chatSnapshotJson;
 
 void main() {
+  for (final (size, locale, dark, scale) in [
+    (const Size(390, 844), const Locale('zh'), false, 1.0),
+    (const Size(320, 844), const Locale('en'), true, 1.5),
+    (const Size(1024, 768), const Locale('zh'), false, 1.0),
+  ]) {
+    testWidgets('progress header keeps the toggle next to text at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      Map<String, Object?> progress(String state, int revision) => {
+        ...chatMessageJson(seq: 3, revision: revision),
+        'id': 'current-progress',
+        'blocks': [
+          {
+            'type': 'object',
+            'kind': 'progress',
+            'data': {
+              'runId': 'run',
+              'state': state,
+              'steps': [
+                {'labelKey': 'script.run.preparing', 'status': 'completed'},
+                {
+                  'labelKey': 'script.run.processing',
+                  'status': state == 'completed' ? 'completed' : 'running',
+                },
+              ],
+            },
+          },
+        ],
+      };
+      final repository = StreamingSessionRepository()
+        ..data = {
+          ...chatSnapshotJson(
+            seq: 1,
+            messages: [
+              {...progress('completed', 1), 'id': 'history', 'seq': 1},
+              {
+                ...chatMessageJson(seq: 2, text: 'Tell me a story'),
+                'id': 'user-message',
+                'role': 'user',
+              },
+            ],
+          ),
+          'runs': [
+            {'id': 'run', 'state': 'running', 'purpose': 'consultation'},
+          ],
+        };
+      final controller = ConversationController(repository, 'a')..open(chatId);
+      addTearDown(() async {
+        controller.dispose();
+        await repository.close();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: dark ? AppTheme.dark : AppTheme.light,
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              disableAnimations: true,
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: child!,
+          ),
+          home: Scaffold(body: ConversationTimeline(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = lookupAppLocalizations(locale);
+      final loading = find.byType(CircularProgressIndicator);
+      expect(find.text(l10n.chatThinking), findsOneWidget);
+      expect(loading, findsNothing);
+      var seq = 1;
+      var revision = 0;
+      for (final state in ['pending', 'started', 'running']) {
+        repository.streams.single.add(
+          chatEvent(++seq, 'message.updated', {
+            'timelineUpdates': [progress(state, ++revision)],
+          }),
+        );
+        await tester.pumpAndSettle();
+        final current = find.byWidgetPredicate(
+          (widget) =>
+              widget is ConversationObjectView && widget.block.status == state,
+        );
+        expect(find.text(l10n.chatThinking), findsOneWidget);
+        expect(loading, findsOneWidget);
+        expect(find.descendant(of: current, matching: loading), findsOneWidget);
+        final toggle = find.descendant(
+          of: current,
+          matching: find.byTooltip(l10n.chatCollapseProgress),
+        );
+        expect(
+          tester.getTopLeft(toggle).dx -
+              tester.getTopRight(find.text(l10n.chatThinking)).dx,
+          inInclusiveRange(0, 8),
+        );
+        expect(tester.takeException(), isNull);
+      }
+      await tester.tap(find.byTooltip(l10n.chatCollapseProgress).last);
+      await tester.pumpAndSettle();
+      expect(loading, findsNothing);
+      expect(find.byTooltip(l10n.chatExpandProgress), findsOneWidget);
+      repository.streams.single.add(
+        chatEvent(++seq, 'run.completed', {
+          'runId': 'run',
+          'timelineUpdates': [progress('completed', ++revision)],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(loading, findsNothing);
+      expect(find.text(l10n.chatThinking), findsNothing);
+      expect(find.text(l10n.chatCompleted), findsNWidgets(2));
+      expect(find.byTooltip(l10n.chatExpandProgress), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   for (final objectId in ['', 'shared-topic']) {
     testWidgets('browses repeated topic IDs "$objectId" through updates', (
       tester,
@@ -179,6 +303,10 @@ void main() {
         ),
       );
       await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AppSkeleton), findsOneWidget);
+      expect(find.byType(AppSkeletonBox), findsNWidgets(7));
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.takeException(), isNull);
       snapshot.complete(
         ConversationSnapshot.fromJson(
           chatSnapshotJson(
@@ -204,6 +332,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(AppSkeleton), findsNothing);
       final list = find
           .descendant(
             of: find.byType(CustomScrollView),

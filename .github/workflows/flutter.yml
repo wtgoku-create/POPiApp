@@ -6,6 +6,14 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      build_environment:
+        description: Build environment (dev uses the test server)
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - dev
       build_android:
         description: Build Android APK
         required: true
@@ -24,6 +32,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && 'development' || 'production' }}
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
@@ -61,13 +73,13 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: dart run tool/flutter_env.dart production test --coverage
+        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" test --coverage
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-coverage
+          name: flutter-coverage${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: coverage/lcov.info
           if-no-files-found: ignore
 
@@ -109,12 +121,12 @@ jobs:
           EOF
 
       - name: Build signed release APK
-        run: dart run tool/flutter_env.dart production build apk --release
+        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: popi-app-android-apk-signed
+          name: popi-app-android-apk-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
@@ -160,7 +172,7 @@ jobs:
           project = Path('ios/Runner.xcodeproj/project.pbxproj')
           content = project.read_text()
           bundle_id = os.environ['IOS_BUNDLE_ID']
-          content = content.replace('com.example.flutterStarter', bundle_id)
+          content = content.replace('com.popistudio.app', bundle_id)
           project.write_text(content)
           PY
 
@@ -260,7 +272,7 @@ jobs:
         run: |
           build_number=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
           echo "Building iOS IPA with build number $build_number"
-          dart run tool/flutter_env.dart production build ipa \
+          dart run tool/flutter_env.dart "$FLUTTER_ENV" build ipa \
             --release \
             --build-number="$build_number" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
@@ -278,7 +290,7 @@ jobs:
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-starter-ios-signed
+          name: flutter-starter-ios-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
 
@@ -297,7 +309,7 @@ jobs:
       - name: Download signed IPA
         uses: actions/download-artifact@v4
         with:
-          name: flutter-starter-ios-signed
+          name: flutter-starter-ios-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/ios/ipa
 
       - name: Resolve downloaded IPA path

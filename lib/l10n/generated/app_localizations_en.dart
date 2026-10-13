@@ -307,6 +307,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleScriptContent => 'Script';
 
   @override
+  String get chatVideoProgress => 'Video generation progress';
+
+  @override
+  String get chatStoryboardReview =>
+      'Storyboard ready, awaiting video confirmation';
+
+  @override
+  String get chatTaskPausing => 'Pausing after the current stage';
+
+  @override
+  String get chatStageGenerateVideo => 'Generate video';
+
+  @override
+  String get chatStageInspectResult => 'Inspect result';
+
+  @override
   String get roleStoryboardContent => 'Storyboard';
 
   @override
@@ -2453,6 +2469,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatGenerationTask => 'Generation task';
+
+  @override
+  String get chatProductionPlan => 'Production plan';
+
+  @override
+  String get chatPlanCast => 'Cast';
+
+  @override
+  String get chatPlanStory => 'Selected story';
+
+  @override
+  String get chatPlanHighlight => 'Core highlight';
+
+  @override
+  String get chatPlanConfiguration => 'Model configuration';
+
+  @override
+  String get chatPlanModel => 'Model';
+
+  @override
+  String get chatPlanPoints => 'Estimated points';
+
+  @override
+  String chatPlanCredits(String points) {
+    return '$points points';
+  }
 
   @override
   String get chatReviseContent => 'Revise content';

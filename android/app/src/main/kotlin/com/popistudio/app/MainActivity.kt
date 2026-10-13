@@ -1,4 +1,4 @@
-package com.popiai.app
+package com.popistudio.app
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

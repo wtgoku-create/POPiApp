@@ -18,6 +18,7 @@ import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/ip_account_provider.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_dialog.dart';
@@ -191,11 +192,16 @@ void main() {
     Size size = const Size(440, 956),
     double textScale = 1,
     bool settle = true,
+    double bottomInset = 0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(bottom: bottomInset);
+    tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     container = ProviderContainer(
       overrides: [
         userProvider.overrideWith(_MemoryUserController.new),
@@ -205,6 +211,9 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    container
+        .read(safeAreaInsetsProvider.notifier)
+        .update(EdgeInsets.only(bottom: bottomInset));
     if (signedIn) {
       await container
           .read(userProvider.notifier)
@@ -458,6 +467,20 @@ void main() {
     expect(confirm.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final bottomInset in [0.0, 16.0, 34.0]) {
+    testWidgets('publish action counts bottom inset once: $bottomInset', (
+      tester,
+    ) async {
+      await pump(tester, bottomInset: bottomInset);
+      final action = find.byKey(const Key('ip-account-start-content'));
+      expect(
+        tester.getBottomLeft(action).dy,
+        closeTo(956 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('publish panel stays at the bottom when overview scrolls', (
     tester,

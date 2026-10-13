@@ -10,6 +10,8 @@ import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
 import 'conversation_card.dart';
+import 'conversation_card_content.dart';
+import 'conversation_home_task_card.dart';
 import 'conversation_timeline.dart'
     show
         ConversationObjectView,
@@ -108,14 +110,22 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     final view = ConversationTaskView(block, widget.controller.snapshot);
     final l10n = AppLocalizations.of(context)!;
     final generation = block.action == 'generation';
-    final actions = block.action == 'home'
-        ? block.allowedActions
-        : ((_capabilities?['allowedActions'] as List?) ?? [])
-              .whereType<String>()
-              .toList();
+    final actions = ((_capabilities?['allowedActions'] as List?) ?? [])
+        .whereType<String>()
+        .toList();
     final state = block.data['intent'] == 'cancel' && block.status != 'canceled'
         ? 'canceling'
         : block.status;
+    if (block.action == 'home') {
+      return ConversationHomeTaskCard(
+        block: block,
+        view: view,
+        controller: widget.controller,
+        state: state,
+        disabled: _disabled,
+        onControl: _control,
+      );
+    }
     return ConversationCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -192,10 +202,13 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
             ),
             if (step.content != null &&
                 (_expandedSteps.contains(step.key) || step.key == 'video'))
-              ConversationObjectView(
-                block: step.content!,
-                controller: widget.controller,
-                framed: false,
+              ConversationCardContent(
+                storageId: 'task:${block.id}:${step.key}',
+                child: ConversationObjectView(
+                  block: step.content!,
+                  controller: widget.controller,
+                  framed: false,
+                ),
               ),
             for (final id in step.mediaIds.where(
               (id) =>
@@ -213,8 +226,17 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
               repository: widget.controller.repository,
             ),
           for (final proposal in view.proposals) ...[
-            for (final prompt in proposal.prompts)
-              MarkdownMessage(text: prompt, compact: true),
+            if (proposal.prompts.isNotEmpty)
+              ConversationCardContent(
+                storageId: 'task:${block.id}:proposal:${proposal.data['id']}',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final prompt in proposal.prompts)
+                      MarkdownMessage(text: prompt, compact: true),
+                  ],
+                ),
+              ),
             if (proposal.estimatedPoints != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -262,25 +284,25 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
               tilePadding: EdgeInsets.zero,
               title: Text(l10n.roleViewPlan),
               children: [
-                for (final prompt in block.planPrompts)
-                  MarkdownMessage(text: prompt, compact: true),
-                if (block.configuration.isNotEmpty) Text(block.configuration),
-                if (block.estimatedPoints != null)
-                  Text(
-                    l10n.chatEstimatedPoints(block.estimatedPoints.toString()),
+                ConversationCardContent(
+                  storageId: 'task:${block.id}:plan',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final prompt in block.planPrompts)
+                        MarkdownMessage(text: prompt, compact: true),
+                      if (block.configuration.isNotEmpty)
+                        Text(block.configuration),
+                      if (block.estimatedPoints != null)
+                        Text(
+                          l10n.chatEstimatedPoints(
+                            block.estimatedPoints.toString(),
+                          ),
+                        ),
+                    ],
                   ),
+                ),
               ],
-            ),
-          if (block.action == 'home' &&
-              block.status == 'awaiting_confirmation' &&
-              block.data['confirmationPending'] == true &&
-              block.data['intent'] != 'cancel')
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: FilledButton(
-                onPressed: _disabled ? null : () => _control('confirm-video'),
-                child: Text(l10n.roleConfirmVideo),
-              ),
             ),
           Wrap(
             alignment: WrapAlignment.end,

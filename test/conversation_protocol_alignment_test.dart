@@ -208,6 +208,120 @@ void main() {
     expect(task.mediaIds, isEmpty);
   });
 
+  test(
+    'home task uses frozen cast and resolves the exact artifact version',
+    () {
+      final snapshot = ConversationSnapshot.fromJson({
+        ...chatSnapshotJson(),
+        'sessionCast': [
+          {
+            'id': 12,
+            'title': 'Current name',
+            'avatar': 'current.png',
+            'profileVersion': {
+              'id': 'role-v2',
+              'profile': {'title': 'Current name'},
+            },
+          },
+        ],
+        'contents': [
+          {
+            'id': 'latest',
+            'ref': {'id': 'script', 'versionId': 'v2'},
+            'kind': 'script',
+            'body': 'Latest revision',
+          },
+          {
+            'id': 'saved',
+            'ref': {'id': 'script', 'versionId': 'v1'},
+            'kind': 'script',
+            'body': 'Approved script',
+          },
+        ],
+      });
+      final block = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'task',
+        'action': 'home',
+        'data': {
+          'input': {
+            'cast': [
+              {
+                'roleId': 12,
+                'versionId': 'role-v1',
+                'profile': {
+                  'title': 'Saved name',
+                  'description': 'Saved character',
+                },
+              },
+            ],
+          },
+          'steps': [
+            {
+              'key': 'script',
+              'state': 'completed',
+              'output': {'id': 'script', 'versionId': 'v1', 'kind': 'script'},
+            },
+          ],
+        },
+      });
+      final task = ConversationTaskView(block, snapshot);
+      expect(task.roles.single.title, 'Saved name');
+      expect(task.roles.single.referenceId, '12');
+      expect(task.roles.single.reference?['versionId'], 'role-v1');
+      expect(task.roles.single.data['profile'], {
+        'title': 'Saved name',
+        'description': 'Saved character',
+      });
+      expect(task.roles.single.avatar, isNull);
+      expect(task.steps.single.content!.body, 'Approved script');
+      expect(task.steps.single.content!.reference?['versionId'], 'v1');
+    },
+  );
+
+  test('home task can use matching saved portrait and legacy cast profile', () {
+    final snapshot = ConversationSnapshot.fromJson({
+      ...chatSnapshotJson(),
+      'sessionCast': [
+        {
+          'id': 12,
+          'title': 'Saved name',
+          'avatar': 'saved.png',
+          'profileVersion': {
+            'id': 'role-v1',
+            'profile': {'title': 'Saved name'},
+          },
+        },
+      ],
+    });
+    ConversationBlock task({bool frozen = true}) => ConversationBlock.fromJson({
+      'type': 'object',
+      'kind': 'task',
+      'action': 'home',
+      'data': {
+        if (frozen)
+          'input': {
+            'cast': [
+              {
+                'roleId': 12,
+                'versionId': 'role-v1',
+                'profile': {'title': 'Saved name'},
+              },
+            ],
+          },
+      },
+    });
+    for (final frozen in [true, false]) {
+      final role = ConversationTaskView(
+        task(frozen: frozen),
+        snapshot,
+      ).roles.single;
+      expect(role.title, 'Saved name');
+      expect(role.avatar, 'saved.png');
+      expect(role.data['profile'], {'title': 'Saved name'});
+    }
+  });
+
   test('proposal exposes backend estimate with quote fallback', () {
     final proposal = ConversationTaskProposal.fromJson({
       'status': 'ready',

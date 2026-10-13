@@ -268,6 +268,7 @@ class _AccountPreferencesSheetState
         ),
         child: SafeArea(
           top: false,
+          minimum: const EdgeInsets.only(bottom: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -305,7 +306,7 @@ class _AccountPreferencesSheetState
                 ),
                 child: Padding(
                   key: const Key('account-form-actions'),
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                   child: _actions(l10n),
                 ),
               ),

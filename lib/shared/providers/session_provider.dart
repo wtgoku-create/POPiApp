@@ -67,6 +67,29 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     );
   }
 
+  Future<void> refresh() async {
+    final userId = ref.read(userProvider)?.id;
+    if (userId == null) return;
+    final generation = _generation;
+    final previous = state;
+    final token = _token ?? CancelToken();
+    try {
+      final items = await ref
+          .read(sessionRepositoryProvider)
+          .list(userId, cancelToken: token);
+      // A refresh must not overwrite a newer account or completed mutation.
+      if (!token.isCancelled &&
+          generation == _generation &&
+          ref.read(userProvider)?.id == userId &&
+          identical(state, previous)) {
+        state = AsyncData(items);
+      }
+    } catch (_) {
+      if (generation != _generation || token.isCancelled) return;
+      rethrow;
+    }
+  }
+
   void upsert(ConversationSession session) {
     final items = state.valueOrNull;
     if (items == null) return;

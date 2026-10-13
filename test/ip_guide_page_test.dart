@@ -41,6 +41,7 @@ void main() {
     double textScale = 1,
     bool reducedMotion = false,
     double systemTopInset = 0,
+    double safeAreaBottom = 34,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -57,7 +58,7 @@ void main() {
         .setUser(const User(id: '1', name: '用户', email: ''));
     container
         .read(safeAreaInsetsProvider.notifier)
-        .update(const EdgeInsets.only(top: 52, bottom: 34));
+        .update(EdgeInsets.only(top: 52, bottom: safeAreaBottom));
     final router = container.read(routerProvider(false));
     addTearDown(router.dispose);
     await tester.pumpWidget(
@@ -350,6 +351,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final bottomInset in [0.0, 16.0, 34.0]) {
+    testWidgets('start action counts bottom inset once: $bottomInset', (
+      tester,
+    ) async {
+      await pumpGuide(tester, safeAreaBottom: bottomInset);
+      final action = find.byKey(const Key('ip-guide-start'));
+      expect(
+        tester.getBottomLeft(action).dy,
+        closeTo(956 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'start and next actions stay at the bottom while content scrolls',
     (tester) async {
@@ -364,7 +379,7 @@ void main() {
         final actionKey = step == 0 ? 'ip-guide-start' : 'ip-guide-next-$step';
         final action = find.byKey(Key(actionKey));
         expect(action.hitTestable(), findsOneWidget);
-        expect(tester.getBottomLeft(action).dy, closeTo(640 - 34 - 20, .01));
+        expect(tester.getBottomLeft(action).dy, closeTo(640 - 34, .01));
         final position = tester.getTopLeft(action);
         await tester.drag(
           find.byKey(Key('ip-guide-scroll-$step')),
@@ -425,10 +440,7 @@ void main() {
       final reselect = find.byKey(const Key('ip-reselect'));
       expect(confirm.hitTestable(), findsOneWidget);
       expect(reselect.hitTestable(), findsOneWidget);
-      expect(
-        tester.getBottomLeft(reselect).dy,
-        closeTo(size.height - 34 - 20, .01),
-      );
+      expect(tester.getBottomLeft(reselect).dy, closeTo(size.height - 34, .01));
       final confirmPosition = tester.getTopLeft(confirm);
       final reselectPosition = tester.getTopLeft(reselect);
       final summaryPosition = tester.getTopLeft(
@@ -472,10 +484,7 @@ void main() {
       await tester.pumpAndSettle();
       final project = find.byKey(const Key('ip-open-project'));
       expect(project.hitTestable(), findsOneWidget);
-      expect(
-        tester.getBottomLeft(project).dy,
-        closeTo(size.height - 34 - 20, .01),
-      );
+      expect(tester.getBottomLeft(project).dy, closeTo(size.height - 34, .01));
       final projectPosition = tester.getTopLeft(project);
       await tester.drag(
         find.byKey(const Key('ip-guide-scroll-5')),

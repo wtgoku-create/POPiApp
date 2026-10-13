@@ -14,6 +14,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
@@ -23,6 +24,7 @@ import '../../domain/conversation_snapshot.dart';
 import '../conversation_controller.dart';
 import 'conversation_role_card.dart';
 import 'conversation_card.dart';
+import 'conversation_card_content.dart';
 import 'conversation_generation_card.dart';
 import 'conversation_task_card.dart';
 
@@ -37,6 +39,10 @@ const _userBubbleRadius = BorderRadius.only(
 bool _hasRoleObjects(ConversationMessage message) => message.blocks.any(
   (block) => block.type == 'object' && block.kind == 'role',
 );
+
+// Progress uses the event suffix "started" while runs use the state "running".
+bool _progressRunning(ConversationBlock block) =>
+    ['pending', 'started', 'running'].contains(block.status);
 
 String conversationErrorText(Object? error, AppLocalizations l10n) {
   if (error is AgentApiException &&
@@ -305,32 +311,22 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                   controller: controller,
                                 ),
                               if (controller.loading)
-                                SizedBox(
-                                  height: 48,
-                                  child: Center(
-                                    child: SizedBox.square(
-                                      dimension: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        semanticsLabel:
-                                            l10n.loadingProjectSessions,
-                                      ),
-                                    ),
-                                  ),
+                                _ConversationSkeleton(
+                                  label: l10n.loadingProjectSessions,
                                 ),
                               if (controller.running &&
                                   !(controller.snapshot?.messages.any(
                                         (message) => message.blocks.any(
                                           (block) =>
                                               block.kind == 'progress' &&
-                                              [
-                                                'pending',
-                                                'running',
-                                              ].contains(block.status),
+                                              _progressRunning(block),
                                         ),
                                       ) ??
                                       false))
-                                _ConversationThinking(label: l10n.chatThinking),
+                                _ConversationProgressHeader(
+                                  label: l10n.chatThinking,
+                                  running: true,
+                                ),
                               if (controller.connection ==
                                   ConversationConnection.reconnecting)
                                 Text(
@@ -461,43 +457,105 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
   );
 }
 
+class _ConversationSkeleton extends StatelessWidget {
+  const _ConversationSkeleton({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => AppSkeleton(
+    label: label,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < 3; index++) ...[
+            if (index > 0) const SizedBox(height: 28),
+            if (index.isOdd)
+              const Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: .48,
+                  child: AppSkeletonBox(height: 16),
+                ),
+              )
+            else
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FractionallySizedBox(
+                    widthFactor: .82,
+                    child: AppSkeletonBox(height: 16),
+                  ),
+                  SizedBox(height: 10),
+                  AppSkeletonBox(height: 16),
+                  SizedBox(height: 10),
+                  FractionallySizedBox(
+                    widthFactor: .55,
+                    child: AppSkeletonBox(height: 16),
+                  ),
+                ],
+              ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
 class MarkdownMessage extends StatelessWidget {
   const MarkdownMessage({
     required this.text,
     this.emphasized = false,
     this.compact = false,
+    this.style,
     super.key,
   });
   final String text;
   final bool emphasized;
   final bool compact;
+  final TextStyle? style;
   @override
   Widget build(BuildContext context) => MarkdownBody(
     data: text,
     selectable: true,
     styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-      p: TextStyle(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: compact ? 16 : 18,
-        height: compact ? 1.5 : 1.6,
-        fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
-      ),
+      p:
+          style ??
+          TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: compact ? 16 : 18,
+            height: compact ? 1.5 : 1.6,
+            fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
+          ),
       blockSpacing: 12,
-      h1: const TextStyle(
-        fontSize: 22,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
-      h2: const TextStyle(
-        fontSize: 20,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
-      h3: const TextStyle(
-        fontSize: 18,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
+      h1:
+          style?.copyWith(fontWeight: FontWeight.w500) ??
+          const TextStyle(
+            fontSize: 22,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+      h2:
+          style?.copyWith(fontWeight: FontWeight.w500) ??
+          const TextStyle(
+            fontSize: 20,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+      h3:
+          style?.copyWith(fontWeight: FontWeight.w500) ??
+          const TextStyle(
+            fontSize: 18,
+            height: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+      h4: style?.copyWith(fontWeight: FontWeight.w500),
+      h5: style?.copyWith(fontWeight: FontWeight.w500),
+      h6: style?.copyWith(fontWeight: FontWeight.w500),
     ),
     onTapLink: (_, href, __) {
       if (href != null) _openUrl(href);
@@ -506,34 +564,49 @@ class MarkdownMessage extends StatelessWidget {
 }
 
 /// Only displays the real run state; backend stages are not inferred locally.
-class _ConversationThinking extends StatelessWidget {
-  const _ConversationThinking({required this.label});
+class _ConversationProgressHeader extends StatelessWidget {
+  const _ConversationProgressHeader({
+    required this.label,
+    required this.running,
+    this.expanded = false,
+    this.onToggle,
+  });
   final String label;
+  final bool running;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
+    liveRegion: running,
     child: Padding(
       padding: _conversationBlockPadding,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const AppSvgIcon.asset('chat_thinking', size: 25),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: Text(
               label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 18,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          SizedBox.square(
-            dimension: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              // A static indicator respects the system's reduced-motion setting.
-              value: MediaQuery.disableAnimationsOf(context) ? .75 : null,
+          if (onToggle != null)
+            IconButton(
+              tooltip: expanded
+                  ? AppLocalizations.of(context)!.chatCollapseProgress
+                  : AppLocalizations.of(context)!.chatExpandProgress,
+              onPressed: onToggle,
+              icon: Icon(
+                expanded ? Icons.expand_more : Icons.chevron_right,
+                size: 20,
+              ),
             ),
-          ),
         ],
       ),
     ),
@@ -938,34 +1011,12 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const AppSvgIcon.asset('chat_thinking', size: 25),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    ['pending', 'running'].contains(block.status)
-                        ? l10n.chatThinking
-                        : statusLabel,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: _progressExpanded
-                      ? l10n.chatCollapseProgress
-                      : l10n.chatExpandProgress,
-                  onPressed: () =>
-                      setState(() => _progressExpanded = !_progressExpanded),
-                  icon: Icon(
-                    _progressExpanded ? Icons.expand_more : Icons.chevron_right,
-                    size: 20,
-                  ),
-                ),
-              ],
+            _ConversationProgressHeader(
+              label: _progressRunning(block) ? l10n.chatThinking : statusLabel,
+              running: _progressRunning(block),
+              expanded: _progressExpanded,
+              onToggle: () =>
+                  setState(() => _progressExpanded = !_progressExpanded),
             ),
             if (_progressExpanded)
               Container(
@@ -979,55 +1030,59 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                       : colors.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(26),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Render only backend-provided steps; never manufacture progress.
-                    for (final (key, state) in block.progressSteps)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (['running', 'waiting'].contains(state))
-                              SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  value: MediaQuery.disableAnimationsOf(context)
-                                      ? .75
-                                      : null,
+                child: ConversationCardContent(
+                  storageId: 'progress:${block.id}',
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Render only backend-provided steps; never manufacture progress.
+                      for (final (key, state) in block.progressSteps)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (['running', 'waiting'].contains(state))
+                                SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    value:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? .75
+                                        : null,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  state == 'completed'
+                                      ? Icons.check
+                                      : state == 'failed'
+                                      ? Icons.error_outline
+                                      : state == 'skipped'
+                                      ? Icons.remove
+                                      : Icons.circle_outlined,
+                                  size: 18,
+                                  color: state == 'failed'
+                                      ? colors.error
+                                      : colors.primary,
                                 ),
-                              )
-                            else
-                              Icon(
-                                state == 'completed'
-                                    ? Icons.check
-                                    : state == 'failed'
-                                    ? Icons.error_outline
-                                    : state == 'skipped'
-                                    ? Icons.remove
-                                    : Icons.circle_outlined,
-                                size: 18,
-                                color: state == 'failed'
-                                    ? colors.error
-                                    : colors.primary,
-                              ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _progressLabel(key, l10n),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _progressLabel(key, l10n),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -1130,38 +1185,59 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                   ),
               ],
             ),
-          if (block.body.isNotEmpty &&
-              !details.any((detail) => detail.$2 == block.body))
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: block.storyboard != null
-                  ? RoleStoryboardBody(storyboard: block.storyboard!)
-                  : MarkdownMessage(text: block.body, compact: true),
+          ConversationCardContent(
+            storageId: 'object:${block.kind}:${block.id}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (block.body.isNotEmpty &&
+                    !details.any((detail) => detail.$2 == block.body))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: block.storyboard != null
+                        ? RoleStoryboardBody(storyboard: block.storyboard!)
+                        : MarkdownMessage(text: block.body, compact: true),
+                  ),
+                if (block.kind == 'topic' &&
+                    block.hook.isNotEmpty &&
+                    !block.body.contains(block.hook))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: MarkdownMessage(text: block.hook, compact: true),
+                  ),
+                if (block.kind == 'plan')
+                  if (block.previewRole case final role?)
+                    ConversationRoleCard(block: role, framed: false),
+                for (final (label, before, after) in block.profileChanges) ...[
+                  _ConversationDetail(
+                    label:
+                        '${_detailLabel(label, l10n)} · ${l10n.chatBeforeChange}',
+                    value: before.isEmpty ? l10n.chatUnavailable : before,
+                  ),
+                  _ConversationDetail(
+                    label:
+                        '${_detailLabel(label, l10n)} · ${l10n.chatAfterChange}',
+                    value: after,
+                  ),
+                ],
+                // Keep long profiles compact in the timeline; expansion retains the
+                // same object identity while SSE updates refresh its contents.
+                for (final (label, value)
+                    in _expanded ? details : details.take(3))
+                  _ConversationDetail(
+                    label: _detailLabel(label, l10n),
+                    value: value,
+                  ),
+                for (final prompt in block.planPrompts)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: MarkdownMessage(text: prompt, compact: true),
+                  ),
+                for (final (label, value) in block.answeredFields)
+                  _ConversationDetail(label: label, value: value),
+              ],
             ),
-          if (block.kind == 'topic' &&
-              block.hook.isNotEmpty &&
-              !block.body.contains(block.hook))
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: MarkdownMessage(text: block.hook, compact: true),
-            ),
-          if (block.kind == 'plan')
-            if (block.previewRole case final role?)
-              ConversationRoleCard(block: role, framed: false),
-          for (final (label, before, after) in block.profileChanges) ...[
-            _ConversationDetail(
-              label: '${_detailLabel(label, l10n)} · ${l10n.chatBeforeChange}',
-              value: before.isEmpty ? l10n.chatUnavailable : before,
-            ),
-            _ConversationDetail(
-              label: '${_detailLabel(label, l10n)} · ${l10n.chatAfterChange}',
-              value: after,
-            ),
-          ],
-          // Keep long profiles compact in the timeline; expansion retains the
-          // same object identity while SSE updates refresh its contents.
-          for (final (label, value) in _expanded ? details : details.take(3))
-            _ConversationDetail(label: _detailLabel(label, l10n), value: value),
+          ),
           if (details.length > 3)
             Padding(
               padding: const EdgeInsets.only(top: 20),
@@ -1183,13 +1259,6 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 ),
               ),
             ),
-          for (final prompt in block.planPrompts)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: MarkdownMessage(text: prompt, compact: true),
-            ),
-          for (final (label, value) in block.answeredFields)
-            _ConversationDetail(label: label, value: value),
           for (final result in block.results)
             ConversationObjectView(
               key: ValueKey(result.id),

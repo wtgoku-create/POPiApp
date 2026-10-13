@@ -29,7 +29,22 @@ class ConversationGenerationView {
                     card.body)
                 .toString()
           : card.planItems.firstOrNull?['prompt'] as String? ?? card.body,
-      hasProfile = _hasInput(card.previewRole?.data['profile']);
+      hasProfile = _hasInput(card.previewRole?.data['profile']),
+      configurationLines = card.configuration
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .toList(),
+      storyHasHeading =
+          card.homeTopic?.body.contains('故事梗概') == true ||
+          RegExp(
+            r'^#{1,6} ',
+            multiLine: true,
+          ).hasMatch(card.homeTopic?.body ?? ''),
+      storyHook =
+          card.homeTopic?.hook.isNotEmpty == true &&
+              !card.homeTopic!.body.contains(card.homeTopic!.hook)
+          ? card.homeTopic!.hook
+          : '';
   final String mediaType;
   final bool threeView;
   final bool useProfile;
@@ -41,6 +56,9 @@ class ConversationGenerationView {
   final HomeConfig? config;
   final String prompt;
   final bool hasProfile;
+  final List<String> configurationLines;
+  final bool storyHasHeading;
+  final String storyHook;
   String? get templateId => template['id']?.toString();
   String get templateTitle => template['title'] as String? ?? '';
   List<String> referenceIds(

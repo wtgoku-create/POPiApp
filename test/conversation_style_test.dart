@@ -410,6 +410,12 @@ void main() {
         find.descendant(of: sheet, matching: find.text('Updated Alice')),
         findsOneWidget,
       );
+      await _capture(tester, '$name-role-profile');
+      final toggle = find.byKey(const Key('role-profile-toggle'));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.descendant(of: sheet, matching: find.text('认真、温柔')),
         150,
@@ -544,6 +550,10 @@ void main() {
             locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
             home: Scaffold(
               body: Container(
                 decoration: const BoxDecoration(
@@ -576,6 +586,8 @@ void main() {
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pump();
       expect(find.text('正在读取角色档案'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await _capture(tester, 'mobile-progress-collapsed');
       await tester.tap(find.text('确认生成'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsOneWidget);

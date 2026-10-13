@@ -1,10 +1,10 @@
-package com.popiai.app.douyinapi
+package com.popistudio.app.douyinapi
 
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.popiai.app.DouyinLoginBridge
-import com.popiai.app.MainActivity
+import com.popistudio.app.DouyinLoginBridge
+import com.popistudio.app.MainActivity
 
 /** Receives the explicit callback from the Douyin SDK. */
 class DouyinEntryActivity : Activity() {

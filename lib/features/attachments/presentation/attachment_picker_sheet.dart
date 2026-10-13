@@ -460,13 +460,14 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                 height: math.min(
                   MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
                   (constraints.maxWidth - 56) / 3 * 4 +
-                      276 +
-                      MediaQuery.paddingOf(context).bottom,
+                      256 +
+                      math.max(20, MediaQuery.paddingOf(context).bottom),
                 ),
                 child: SafeArea(
                   top: false,
+                  minimum: const EdgeInsets.only(bottom: 20),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: Column(
                       children: [
                         Text(

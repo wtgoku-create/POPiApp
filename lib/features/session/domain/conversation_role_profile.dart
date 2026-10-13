@@ -1,3 +1,4 @@
+import '../../assets/domain/library_role.dart';
 import '../../assets/domain/role_profile_edit.dart';
 import 'conversation_snapshot.dart';
 
@@ -23,6 +24,17 @@ class ConversationRoleProfile {
         : avatar.isNotEmpty
         ? avatar
         : threeView;
+    snapshotRole = LibraryRole(
+      id: block.referenceId,
+      title: title,
+      description: description,
+      avatar: portrait,
+      profile: profile,
+      canRead: true,
+      profileComplete: data['profileComplete'] == true,
+      profileVersion: num.tryParse(data['version']?.toString() ?? ''),
+      profileVersionId: block.reference?['versionId']?.toString(),
+    );
     showProfileCard =
         (block.status != 'active' && block.action != 'cast') ||
         published ||
@@ -55,6 +67,7 @@ class ConversationRoleProfile {
   late final String title;
   late final String description;
   late final String portrait;
+  late final LibraryRole snapshotRole;
   late final bool updated;
   late final bool published;
   late final bool showProfileCard;

@@ -48,54 +48,67 @@ class PopiDrawerSessions extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            key: const Key('drawer-session-list'),
-            padding: EdgeInsets.zero,
-            itemExtent: sessions.isEmpty ? null : 40,
-            itemCount: sessions.isEmpty ? 1 : sessions.length,
-            findChildIndexCallback: (key) =>
-                key is ValueKey<String> ? sessionIndices[key.value] : null,
-            itemBuilder: (context, index) {
-              if (sessions.isNotEmpty) {
-                final session = sessions[index];
-                return _SessionItem(
-                  key: ValueKey(session.id),
-                  session: session,
-                  onTap: () => onOpenConversation(session),
-                );
+          child: RefreshIndicator(
+            onRefresh: () async {
+              final userId = ref.read(userProvider)?.id;
+              try {
+                await ref.read(sessionsProvider.notifier).refresh();
+              } catch (_) {
+                if (context.mounted && ref.read(userProvider)?.id == userId) {
+                  AppToast.error(context, l10n.chatHistoryLoadFailed);
+                }
               }
-              if (history.isLoading) {
-                return const _SessionSkeleton(
-                  key: Key('drawer-sessions-skeleton'),
-                );
-              }
-              if (history.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(l10n.chatHistoryLoadFailed)),
-                      IconButton(
-                        tooltip: l10n.retry,
-                        onPressed: () => ref.invalidate(sessionsProvider),
-                        icon: const Icon(Icons.refresh),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              return Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  l10n.noHistory,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              );
             },
+            child: ListView.builder(
+              key: const Key('drawer-session-list'),
+              padding: EdgeInsets.zero,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemExtent: sessions.isEmpty ? null : 40,
+              itemCount: sessions.isEmpty ? 1 : sessions.length,
+              findChildIndexCallback: (key) =>
+                  key is ValueKey<String> ? sessionIndices[key.value] : null,
+              itemBuilder: (context, index) {
+                if (sessions.isNotEmpty) {
+                  final session = sessions[index];
+                  return _SessionItem(
+                    key: ValueKey(session.id),
+                    session: session,
+                    onTap: () => onOpenConversation(session),
+                  );
+                }
+                if (history.isLoading) {
+                  return const _SessionSkeleton(
+                    key: Key('drawer-sessions-skeleton'),
+                  );
+                }
+                if (history.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(l10n.chatHistoryLoadFailed)),
+                        IconButton(
+                          tooltip: l10n.retry,
+                          onPressed: () => ref.invalidate(sessionsProvider),
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    l10n.noHistory,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ],

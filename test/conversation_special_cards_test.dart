@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
@@ -17,6 +18,7 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_t
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:toastification/toastification.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
 
 import 'conversation_events_test.dart' show chatId;
 import 'support/session_fixtures.dart';
@@ -114,22 +116,70 @@ ConversationBlock _task({bool home = false}) => ConversationBlock.fromJson({
   },
 });
 
+ConversationBlock _homePlan({
+  String status = 'confirmed',
+  bool long = false,
+}) => ConversationBlock.fromJson({
+  'type': 'object',
+  'kind': 'plan',
+  'data': {
+    'id': 'home-plan',
+    'title': '生产方案',
+    'status': status,
+    'allowedActions': <String>[],
+    'homePlan': {
+      'cast': [
+        {
+          'ref': {'kind': 'role', 'id': 'cat', 'versionId': 'cat-v1'},
+          'title': '来财',
+          'description': '橘纹软萌猫，戴着写有来财的金牌，慵懒又温柔。',
+          'avatar': 'assets/images/home_welcome_character.png',
+        },
+      ],
+      'topic': {
+        'ref': {'kind': 'topic', 'id': 'story'},
+        'title': '来财的窝边小确幸',
+        'summary':
+            '### 故事梗概\n午后阳光洒在阳台绒布小窝，来财蜷成毛球打着盹。\n\n'
+            '### 适合角色的原因\n软萌慵懒的性格，适合治愈陪伴的角色定位。\n\n'
+            '${long ? List.filled(60, '阳光下的小猫轻轻翻身，继续享受温暖的午后。\n\n').join() : ''}',
+        'hook': '软萌橘猫用金牌当小金币，带你感受午后的慵懒温柔。',
+      },
+    },
+    'configuration': '模型：seedance-2.5\n清晰度：480p\n比例：9:16\n时长：15s',
+    'estimatedPoints': 478,
+    'plan': {
+      'items': [
+        {
+          'modelId': 'saved-model',
+          'mediaType': 'video',
+          'params': {'resolution': '480p', 'ratio': '9:16', 'duration': 15},
+        },
+      ],
+    },
+  },
+});
+
 Future<void> _pump(
   WidgetTester tester,
   Widget child, {
   GlobalKey? capture,
   double textScale = 1,
+  Locale locale = const Locale('en'),
+  bool dark = false,
 }) async {
+  final theme = dark ? AppTheme.dark : AppTheme.light;
   await tester.pumpWidget(
     MaterialApp(
       theme: const String.fromEnvironment('CONVERSATION_CAPTURE_FONT').isEmpty
-          ? AppTheme.light
-          : AppTheme.light.copyWith(
-              textTheme: AppTheme.light.textTheme.apply(
+          ? theme
+          : theme.copyWith(
+              textTheme: theme.textTheme.apply(
                 fontFamily: 'ConversationCapture',
               ),
             ),
-      locale: const Locale('en'),
+      locale: locale,
+      debugShowCheckedModeBanner: false,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: MediaQuery(
@@ -171,6 +221,338 @@ void main() {
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
 
+  for (final size in [
+    const Size(320, 844),
+    const Size(390, 844),
+    const Size(1280, 900),
+  ]) {
+    for (final dark in [false, true]) {
+      testWidgets('production plan matches Web at $size dark=$dark', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final repository = _CardRepository();
+        final controller = ConversationController(repository, 'a')
+          ..sessionId = chatId;
+        addTearDown(controller.dispose);
+        final capture = GlobalKey();
+        await _pump(
+          tester,
+          ConversationGenerationCard(
+            block: _homePlan(),
+            controller: controller,
+          ),
+          capture: capture,
+          locale: const Locale('zh'),
+          dark: dark,
+          textScale: dark ? 1.3 : 1,
+        );
+        for (final label in [
+          '生产方案',
+          '出场角色',
+          '选题故事',
+          '核心看点',
+          '模型配置',
+          '预计消耗积分',
+          '478 积分',
+          '模型：seedance-2.5',
+        ]) {
+          expect(find.text(label), findsOneWidget);
+        }
+        expect(find.text('saved-model'), findsNothing);
+        expect(find.byType(FilledButton), findsNothing);
+        expect(repository.estimates, 0);
+        expect(tester.takeException(), isNull);
+        if (!dark && const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+          await tester.runAsync(
+            () => precacheImage(
+              const AssetImage('assets/images/home_welcome_character.png'),
+              capture.currentContext!,
+            ),
+          );
+          await tester.pump();
+          final boundary =
+              capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          await tester.runAsync(() async {
+            final pixels = await boundary.toImage();
+            final bytes = await pixels.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '/tmp/conversation-home-plan-${size.width.toInt()}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            pixels.dispose();
+          });
+        }
+        await tester.tap(find.byTooltip('收起档案'));
+        await tester.pumpAndSettle();
+        expect(find.text('生产方案'), findsOneWidget);
+        expect(find.text('选题故事'), findsNothing);
+      });
+    }
+  }
+
+  testWidgets(
+    'historical plan falls back to saved parameters and avoids duplicate highlights',
+    (tester) async {
+      final original = _homePlan();
+      final saved = conversationMap(original.data['homePlan']);
+      final topic = conversationMap(saved['topic']);
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        ConversationGenerationCard(
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'plan',
+            'data': {
+              ...original.data,
+              'configuration': '',
+              'homePlan': {
+                ...saved,
+                'topic': {
+                  ...topic,
+                  'summary':
+                      '${topic['summary']}\n\n### 核心看点\n${topic['hook']}',
+                },
+              },
+            },
+          }),
+          controller: controller,
+        ),
+      );
+      expect(find.text('Resolution: 480p'), findsOneWidget);
+      expect(find.text('Aspect ratio: 9:16'), findsOneWidget);
+      expect(find.text('Duration: 15s'), findsOneWidget);
+      expect(find.text('saved-model'), findsNothing);
+      expect(find.text('Core highlight'), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is MarkdownMessage && widget.text == topic['hook'],
+        ),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'production plan keeps current estimate and actions outside long story',
+    (tester) async {
+      final repository = _CardRepository();
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        ConversationGenerationCard(
+          block: _homePlan(status: 'ready', long: true),
+          controller: controller,
+        ),
+      );
+      expect(find.text('10 points'), findsOneWidget);
+      expect(find.text('478 points'), findsNothing);
+      expect(find.text('Model: Model'), findsOneWidget);
+      expect(find.text('模型：seedance-2.5'), findsNothing);
+      final content = find.byWidgetPredicate(
+        (widget) =>
+            widget is ConversationCardContent &&
+            widget.storageId == 'generation:home-plan',
+      );
+      expect(tester.getSize(content).height, 320);
+      final role = find.byKey(const Key('conversation-role-summary'));
+      final configuration = find.byKey(
+        const Key('conversation-plan-configuration'),
+      );
+      expect(find.descendant(of: content, matching: role), findsNothing);
+      final rolePosition = tester.getTopLeft(role);
+      final configurationPosition = tester.getTopLeft(configuration);
+      expect(
+        tester.getBottomLeft(role).dy,
+        lessThan(tester.getTopLeft(content).dy),
+      );
+      expect(
+        tester.getBottomLeft(content).dy,
+        lessThan(configurationPosition.dy),
+      );
+      expect(
+        find.descendant(of: content, matching: find.byType(FilledButton)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: content,
+          matching: find.byKey(const Key('conversation-plan-configuration')),
+        ),
+        findsNothing,
+      );
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNotNull,
+      );
+      await tester.drag(
+        find.descendant(
+          of: content,
+          matching: find.byType(SingleChildScrollView),
+        ),
+        const Offset(0, -500),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('10 points'), findsOneWidget);
+      expect(tester.getTopLeft(role), rolePosition);
+      expect(tester.getTopLeft(configuration), configurationPosition);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final size in [
+    const Size(390, 844),
+    const Size(1280, 900),
+    const Size(320, 844),
+  ]) {
+    testWidgets(
+      'home progress matches Web and keeps expansion on updates at $size',
+      (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final controller = ConversationController(_CardRepository(), 'a')
+          ..sessionId = chatId;
+        addTearDown(controller.dispose);
+        final task = ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'task',
+          'action': 'home',
+          'data': {
+            ..._task(home: true).data,
+            'confirmationReason': 'storyboard_review',
+            'allowedActions': ['cancel'],
+            'input': {
+              'cast': [
+                {
+                  'roleId': 12,
+                  'versionId': 'role-v1',
+                  'profile': {
+                    'title': '来财',
+                    'description': '橘纹软萌懒猫，神态慵懒，是一只治愈的小毛球。',
+                  },
+                },
+              ],
+            },
+            'steps': [
+              {
+                'key': 'script',
+                'state': 'completed',
+                'output': {
+                  'kind': 'script',
+                  'body':
+                      '场景：午后的阳台，金色阳光洒满木质地板。\n\n动作：来财蜷在小窝中，尾巴轻轻晃着，眯着眼睛伸了个懒腰。\n\n对白：无，只有柔软的呼噜声。',
+                },
+              },
+              {
+                'key': 'storyboard',
+                'state': 'completed',
+                'output': {
+                  'kind': 'storyboard',
+                  'body':
+                      '{"shots":[{"duration":5,"description":"镜头缓缓拉近阳光下的小猫。"}]}',
+                },
+              },
+              {'key': 'video', 'state': 'pending'},
+              {'key': 'review', 'state': 'pending'},
+            ],
+          },
+        });
+        final capture = GlobalKey();
+        Future<void> pump(ConversationBlock block) => _pump(
+          tester,
+          ConversationTaskCard(block: block, controller: controller),
+          capture: capture,
+          locale: const Locale('zh'),
+          textScale: size.width == 320 ? 1.5 : 1,
+          dark: size.width == 320,
+        );
+        await pump(task);
+        expect(find.text('视频生成进度'), findsOneWidget);
+        expect(find.text('分镜脚本已完成，待确认生成视频'), findsOneWidget);
+        expect(find.text('来财'), findsOneWidget);
+        expect(find.textContaining('场景：午后的阳台'), findsOneWidget);
+        expect(find.textContaining('镜头缓缓拉近'), findsNothing);
+        final stages = ['撰写剧本', '编排分镜', '生成视频', '检测结果'];
+        final top = tester.getTopLeft(find.text(stages.first)).dy;
+        for (final label in stages) {
+          expect(tester.getTopLeft(find.text(label)).dy, top);
+        }
+        final confirm = find.byKey(
+          const Key('conversation-task-confirm-video-task'),
+        );
+        final cancel = find.byKey(const Key('conversation-task-cancel-task'));
+        await tester.ensureVisible(confirm);
+        expect(
+          tester.getCenter(confirm).dy,
+          closeTo(tester.getCenter(cancel).dy, 1),
+        );
+        expect(
+          tester.getSize(confirm).width,
+          lessThan(tester.getSize(find.byType(ConversationCard)).width - 60),
+        );
+        expect(tester.takeException(), isNull);
+        if (const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+          await tester.runAsync(() async {
+            final boundary =
+                capture.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary;
+            final pixels = await boundary.toImage();
+            final bytes = await pixels.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '/tmp/conversation-home-task-${size.width.toInt()}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            pixels.dispose();
+          });
+        }
+        await tester.tap(
+          find.byKey(const Key('conversation-task-section-storyboard')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('镜头缓缓拉近'), findsOneWidget);
+        await pump(
+          ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'task',
+            'action': 'home',
+            'data': {...task.data, 'revision': 2},
+          }),
+        );
+        expect(find.textContaining('镜头缓缓拉近'), findsOneWidget);
+        await tester.ensureVisible(
+          find.byKey(const Key('conversation-task-toggle-task')),
+        );
+        await tester.tap(
+          find.byKey(const Key('conversation-task-toggle-task')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('撰写剧本'), findsNothing);
+        expect(confirm, findsNothing);
+        await tester.tap(
+          find.byKey(const Key('conversation-task-toggle-task')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('镜头缓缓拉近'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
   testWidgets(
     'estimate failure uses toast and the original generation action can recover',
     (tester) async {
@@ -208,6 +590,207 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
+
+  testWidgets(
+    'long home artifacts scroll and retain reading position through updates and collapse',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      final script = List.generate(
+        50,
+        (i) => 'Scene $i: A quiet afternoon with the character.',
+      ).join('\n\n');
+      ConversationBlock task(int revision) => ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'task',
+        'action': 'home',
+        'data': {
+          ..._task(home: true).data,
+          'revision': revision,
+          'steps': [
+            {
+              'key': 'script',
+              'state': 'completed',
+              'output': {'kind': 'script', 'body': script},
+            },
+            {
+              'key': 'storyboard',
+              'state': 'completed',
+              'output': {
+                'kind': 'storyboard',
+                'body': jsonEncode({
+                  'shots': List.generate(
+                    30,
+                    (i) => {
+                      'duration': 5,
+                      'description':
+                          'Shot $i: The camera moves slowly toward the character.',
+                    },
+                  ),
+                }),
+              },
+            },
+            {'key': 'video', 'state': 'pending'},
+            {'key': 'review', 'state': 'pending'},
+          ],
+        },
+      });
+      final capture = GlobalKey();
+      Future<void> pump(int revision) => _pump(
+        tester,
+        ConversationTaskCard(block: task(revision), controller: controller),
+        capture: capture,
+      );
+      await pump(1);
+      if (const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+        await tester.runAsync(() async {
+          final boundary =
+              capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          final pixels = await boundary.toImage();
+          final bytes = await pixels.toByteData(format: ui.ImageByteFormat.png);
+          await File(
+            '/tmp/conversation-card-long-content.png',
+          ).writeAsBytes(bytes!.buffer.asUint8List());
+          pixels.dispose();
+        });
+      }
+      final content = find.byWidgetPredicate(
+        (widget) =>
+            widget is ConversationCardContent &&
+            widget.storageId == 'home-task:task:script',
+      );
+      expect(tester.getSize(content).height, 320);
+      final position = tester
+          .state<ScrollableState>(
+            find
+                .descendant(of: content, matching: find.byType(Scrollable))
+                .first,
+          )
+          .position;
+      await tester.drag(content, const Offset(0, -220));
+      await tester.pumpAndSettle();
+      final offset = position.pixels;
+      expect(offset, greaterThan(0));
+      await pump(2);
+      expect(position.pixels, offset);
+      await tester.tap(
+        find.byKey(const Key('conversation-task-section-script')),
+      );
+      await tester.pumpAndSettle();
+      expect(content, findsNothing);
+      await tester.tap(
+        find.byKey(const Key('conversation-task-section-script')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .state<ScrollableState>(
+              find
+                  .descendant(of: content, matching: find.byType(Scrollable))
+                  .first,
+            )
+            .position
+            .pixels,
+        offset,
+      );
+      await tester.tap(
+        find.byKey(const Key('conversation-task-section-storyboard')),
+      );
+      await tester.pumpAndSettle();
+      final storyboard = find.byWidgetPredicate(
+        (widget) =>
+            widget is ConversationCardContent &&
+            widget.storageId == 'home-task:task:storyboard',
+      );
+      expect(tester.getSize(storyboard).height, 320);
+      await tester.ensureVisible(
+        find.byKey(const Key('conversation-task-confirm-video-task')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find
+            .byKey(const Key('conversation-task-confirm-video-task'))
+            .hitTestable(),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  for (final kind in ['script', 'storyboard', 'profile_update', 'generation']) {
+    testWidgets('long $kind card content is bounded with actions outside', (
+      tester,
+    ) async {
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      final longText = List.generate(
+        80,
+        (i) => 'Paragraph $i: Saved content stays readable.',
+      ).join('\n\n');
+      final block = kind == 'generation'
+          ? ConversationBlock.fromJson({
+              'type': 'object',
+              'kind': 'plan',
+              'data': {
+                ..._generation().data,
+                'presentation': {'requirements': longText},
+              },
+            })
+          : ConversationBlock.fromJson({
+              'type': 'object',
+              'kind': kind == 'profile_update' ? 'plan' : 'content',
+              'data': {
+                'id': kind,
+                'kind': kind,
+                'title': 'Saved content',
+                'body': longText,
+                'status': 'ready',
+                'allowedActions': ['confirm', 'cancel'],
+                if (kind == 'profile_update')
+                  'profile': {
+                    'description': longText,
+                    'expressionStyle': longText,
+                    'targetAudience': longText,
+                    'contentTags': [longText],
+                  },
+              },
+            });
+      await _pump(
+        tester,
+        ConversationObjectView(block: block, controller: controller),
+      );
+      final content = find.byType(ConversationCardContent).first;
+      expect(tester.getSize(content).height, 320);
+      if (kind == 'profile_update') {
+        await tester.tap(find.text('View full character profile'));
+        await tester.pumpAndSettle();
+        expect(tester.getSize(content).height, 320);
+        expect(find.text('Collapse profile').hitTestable(), findsOneWidget);
+      }
+      if (['generation', 'profile_update'].contains(kind)) {
+        final action = find.byType(FilledButton).first;
+        expect(
+          find.ancestor(
+            of: action,
+            matching: find.byType(ConversationCardContent),
+          ),
+          findsNothing,
+        );
+        await tester.ensureVisible(action);
+        expect(action.hitTestable(), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     for (final scale in [1.0, 1.3]) {
       testWidgets('generation card fits $size at text scale $scale', (
@@ -375,4 +958,66 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets(
+    'home controls preserve busy, cancellation and task retry rules',
+    (tester) async {
+      final repository = _CardRepository();
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      Future<void> pump(Map<String, Object?> data) => _pump(
+        tester,
+        ConversationTaskCard(
+          controller: controller,
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'task',
+            'action': 'home',
+            'data': {..._task(home: true).data, ...data},
+          }),
+        ),
+      );
+      controller.pending = true;
+      await pump({});
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const Key('conversation-task-cancel-task')),
+            )
+            .onPressed,
+        isNull,
+      );
+      controller.pending = false;
+      await pump({'intent': 'cancel', 'allowedActions': []});
+      expect(find.text('Stopping'), findsOneWidget);
+      expect(find.byType(FilledButton), findsNothing);
+      await pump({
+        'state': 'failed',
+        'error': 'INSUFFICIENT_POINTS',
+        'allowedActions': ['retry'],
+      });
+      expect(
+        find.text('Not enough points. Top up and try again'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('conversation-task-retry-task')));
+      await tester.pumpAndSettle();
+      expect(repository.controls, ['retry']);
+      await pump({
+        'allowedActions': ['cancel'],
+      });
+      await tester.tap(find.byKey(const Key('conversation-task-cancel-task')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Stop production'));
+      await tester.pumpAndSettle();
+      expect(repository.controls, ['retry', 'cancel']);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

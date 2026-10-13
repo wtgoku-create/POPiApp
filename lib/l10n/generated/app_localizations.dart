@@ -638,6 +638,36 @@ abstract class AppLocalizations {
   /// **'Script'**
   String get roleScriptContent;
 
+  /// No description provided for @chatVideoProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Video generation progress'**
+  String get chatVideoProgress;
+
+  /// No description provided for @chatStoryboardReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard ready, awaiting video confirmation'**
+  String get chatStoryboardReview;
+
+  /// No description provided for @chatTaskPausing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pausing after the current stage'**
+  String get chatTaskPausing;
+
+  /// No description provided for @chatStageGenerateVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video'**
+  String get chatStageGenerateVideo;
+
+  /// No description provided for @chatStageInspectResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect result'**
+  String get chatStageInspectResult;
+
   /// No description provided for @roleStoryboardContent.
   ///
   /// In en, this message translates to:
@@ -4542,6 +4572,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generation task'**
   String get chatGenerationTask;
+
+  /// No description provided for @chatProductionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Production plan'**
+  String get chatProductionPlan;
+
+  /// No description provided for @chatPlanCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get chatPlanCast;
+
+  /// No description provided for @chatPlanStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected story'**
+  String get chatPlanStory;
+
+  /// No description provided for @chatPlanHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Core highlight'**
+  String get chatPlanHighlight;
+
+  /// No description provided for @chatPlanConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Model configuration'**
+  String get chatPlanConfiguration;
+
+  /// No description provided for @chatPlanModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get chatPlanModel;
+
+  /// No description provided for @chatPlanPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated points'**
+  String get chatPlanPoints;
+
+  /// No description provided for @chatPlanCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} points'**
+  String chatPlanCredits(String points);
 
   /// No description provided for @chatReviseContent.
   ///

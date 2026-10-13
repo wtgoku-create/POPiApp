@@ -1045,7 +1045,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                                 40,
                                 12,
                                 40,
-                                bottomInset + 20,
+                                math.max(20, bottomInset),
                               ),
                               child: _stepActions(l10n),
                             ),

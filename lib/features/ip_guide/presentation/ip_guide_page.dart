@@ -707,7 +707,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         Expanded(child: _scroll(step, child, top: top, bottom: 20)),
         Padding(
           key: Key('ip-guide-actions-$step'),
-          padding: EdgeInsets.fromLTRB(40, 12, 40, bottomInset + 20),
+          padding: EdgeInsets.fromLTRB(40, 12, 40, math.max(20, bottomInset)),
           child: footer,
         ),
       ],

@@ -295,6 +295,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleScriptContent => '脚本内容';
 
   @override
+  String get chatVideoProgress => '视频生成进度';
+
+  @override
+  String get chatStoryboardReview => '分镜脚本已完成，待确认生成视频';
+
+  @override
+  String get chatTaskPausing => '暂停中，等待当前阶段完成';
+
+  @override
+  String get chatStageGenerateVideo => '生成视频';
+
+  @override
+  String get chatStageInspectResult => '检测结果';
+
+  @override
   String get roleStoryboardContent => '分镜内容';
 
   @override
@@ -2346,6 +2361,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatGenerationTask => '生成任务';
+
+  @override
+  String get chatProductionPlan => '生产方案';
+
+  @override
+  String get chatPlanCast => '出场角色';
+
+  @override
+  String get chatPlanStory => '选题故事';
+
+  @override
+  String get chatPlanHighlight => '核心看点';
+
+  @override
+  String get chatPlanConfiguration => '模型配置';
+
+  @override
+  String get chatPlanModel => '模型';
+
+  @override
+  String get chatPlanPoints => '预计消耗积分';
+
+  @override
+  String chatPlanCredits(String points) {
+    return '$points 积分';
+  }
 
   @override
   String get chatReviseContent => '修改内容';

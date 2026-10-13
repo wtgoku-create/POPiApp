@@ -1,4 +1,4 @@
-package com.popiai.app
+package com.popistudio.app
 
 import android.app.Activity
 import android.content.Intent
@@ -56,7 +56,7 @@ object DouyinLoginBridge {
                 this.clientKey = clientKey
                 this.state = state
                 scope = "user_info"
-                callerLocalEntry = "com.popiai.app.douyinapi.DouyinEntryActivity"
+                callerLocalEntry = "com.popistudio.app.douyinapi.DouyinEntryActivity"
             }
             if (!api.authorize(request)) {
                 finish(mapOf("status" to "failed", "reason" to "sdk_launch_failed"))

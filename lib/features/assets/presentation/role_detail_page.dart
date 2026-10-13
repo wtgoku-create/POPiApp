@@ -490,12 +490,13 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                             : colors.surfaceContainer,
                         child: SafeArea(
                           top: false,
+                          minimum: const EdgeInsets.only(bottom: 20),
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(
                               _edit == null ? 40 : 20,
                               20,
                               _edit == null ? 40 : 20,
-                              20,
+                              0,
                             ),
                             child: Center(
                               heightFactor: 1,
