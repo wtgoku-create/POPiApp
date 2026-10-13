@@ -155,32 +155,41 @@ class GenerationOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final count = math.max(1, (constraints.maxWidth / 120).floor());
-      final columns = math.min(count, options.length);
+      final colors = Theme.of(context).colorScheme;
       return Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
           for (final option in options)
-            SizedBox(
-              width: constraints.maxWidth / math.max(1, columns),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: math.min(88, constraints.maxWidth),
+                maxWidth: constraints.maxWidth,
+              ),
               child: Semantics(
                 selected: option.value == value,
                 child: TextButton(
                   key: Key('$keyPrefix-${option.value}'),
                   onPressed: () => onSelected(option.value),
                   style: TextButton.styleFrom(
-                    minimumSize: const Size(0, 38),
+                    minimumSize: const Size(0, 44),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 8,
+                      horizontal: 20,
+                      vertical: 10,
                     ),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     backgroundColor: option.value == value
                         ? roleGuideTint(context)
-                        : Colors.transparent,
+                        : colors.surfaceContainerLow,
                     foregroundColor: option.value == value
                         ? AppColors.brand
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                        : colors.onSurfaceVariant,
                     shape: const StadiumBorder(),
+                    side: BorderSide(
+                      color: option.value == value
+                          ? AppColors.brand.withValues(alpha: .4)
+                          : colors.outlineVariant,
+                    ),
                     textStyle: const TextStyle(fontSize: 14),
                   ),
                   child: Text(option.label, textAlign: TextAlign.center),

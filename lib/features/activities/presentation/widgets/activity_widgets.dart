@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
@@ -130,7 +131,7 @@ class ActivityBanner extends StatelessWidget {
         aspectRatio: 400 / 227,
         child: url.isEmpty
             ? fallback()
-            : Image.network(
+            : AppNetworkImage(
                 url,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => fallback(),

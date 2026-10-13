@@ -907,7 +907,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newConversation => '新建对话';
 
   @override
-  String get newSessionTitle => '新会话';
+  String get newSessionTitle => '新项目';
 
   @override
   String get changeAvatar => '更换头像';

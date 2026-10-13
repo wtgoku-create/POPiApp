@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -475,7 +476,7 @@ class _RoleAvatar extends StatelessWidget {
         dimension: 70,
         child: role.avatar.isEmpty
             ? placeholder
-            : Image.network(
+            : AppNetworkImage(
                 role.avatar,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => placeholder,

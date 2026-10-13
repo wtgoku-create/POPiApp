@@ -156,19 +156,22 @@ class HomeCreationRepository extends MediaPreferencesRepository {
     );
   }
 
-  Future<HomeTask> generate(
+  Future<HomeCreation> generate(
     HomeCreation home,
     HomeConfig config, {
     CancelToken? cancelToken,
   }) => _command(
-    'generate',
-    {
-      'creationId': home.id,
-      'expectedRevision': home.version,
-      'config': config.toJson(),
-    },
-    (body) async =>
-        _task(await _agent.generateHome(body, cancelToken: cancelToken)),
+    'generate:${home.sessionId}:${home.id}',
+    {'config': config.toJson()},
+    (body) async => HomeCreation.fromJson(
+      homeObject(
+        (await _agent.generateHome(
+          home.sessionId,
+          body,
+          cancelToken: cancelToken,
+        ))['snapshot'],
+      ),
+    ),
   );
 
   Future<HomeTask> task(String id, {CancelToken? cancelToken}) async =>
@@ -184,11 +187,8 @@ class HomeCreationRepository extends MediaPreferencesRepository {
       throw const ApiException(message: 'Action unavailable');
     }
     return _command(
-      'control:${task.id}',
-      {
-        'revision': task.revision,
-        if (action != 'confirm-video') 'action': action,
-      },
+      'control:${task.id}:$action',
+      {if (action != 'confirm-video') 'action': action},
       (body) async => _task(
         await _agent.controlHomeTask(
           task.id,

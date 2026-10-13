@@ -174,6 +174,15 @@ void main() {
       await tester.pumpAndSettle();
       final card = tester.getRect(find.byType(ConversationObjectView));
       final button = tester.getRect(next);
+      for (final key in [
+        'conversation-topic-refresh',
+        'conversation-topic-select',
+      ]) {
+        final action = tester.getRect(find.byKey(Key(key)));
+        expect(action.left, greaterThanOrEqualTo(card.left + 20));
+        expect(action.right, lessThanOrEqualTo(card.right - 20));
+        expect(action.bottom, lessThanOrEqualTo(card.bottom - 20));
+      }
       expect(button.right, closeTo(card.right - 20, .01));
       expect(button.top, closeTo(card.top + 24, .01));
       expect(
@@ -234,7 +243,58 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('Web role card collapse survives streamed updates at $name', (
+    testWidgets('cast role uses the horizontal reference layout at $name', (
+      tester,
+    ) async {
+      const title = '来财';
+      const description = '橘纹软萌橘猫，裹着毛边白背心，顽固坚守自己的晒太阳角落。';
+      await _pumpTopicPage(
+        tester,
+        [
+          {
+            'type': 'object',
+            'kind': 'role',
+            'action': 'cast',
+            'data': {
+              'title': title,
+              'status': 'active',
+              'avatar': 'assets/images/role_guide_avatar_1.png',
+              'profile': {'description': description},
+            },
+          },
+        ],
+        size: size,
+        locale: locale,
+        dark: dark,
+        scale: scale,
+        sentByUser: true,
+      );
+      await tester.runAsync(
+        () => precacheImage(
+          const AssetImage('assets/images/role_guide_avatar_1.png'),
+          tester.element(find.text(title)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final card = tester.getRect(
+        find.byKey(const Key('conversation-role-summary')),
+      );
+      final portrait = tester.getRect(
+        find.byKey(const Key('conversation-role-portrait')),
+      );
+      final titleRect = tester.getRect(find.text(title));
+      final descriptionRect = tester.getRect(find.text(description));
+      expect(portrait.size, const Size(44, 44));
+      expect(titleRect.left, closeTo(portrait.right + 18, .01));
+      expect(descriptionRect.left, closeTo(titleRect.left, .01));
+      expect(descriptionRect.right, lessThanOrEqualTo(card.right - 16));
+      expect(tester.widget<Text>(find.text(description)).maxLines, 1);
+      expect(tester.takeException(), isNull);
+      await _capture(tester, '$name-role-summary');
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('compact role card previews the streamed profile at $name', (
       tester,
     ) async {
       tester.view.physicalSize = size;
@@ -325,16 +385,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final toggle = find.byKey(const Key('conversation-role-toggle'));
       final preview = find.byKey(const Key('conversation-role-view-profile'));
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
-      expect(find.text('认真、温柔'), findsOneWidget);
-      await tester.ensureVisible(toggle);
+      expect(find.text('校园, 可爱角色'), findsNothing);
+      expect(find.text('认真、温柔'), findsNothing);
+      await tester.ensureVisible(preview);
       await tester.pumpAndSettle();
       await _capture(tester, '$name-draft');
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(find.text('校园, 可爱角色'), findsNothing);
       role['title'] = 'Updated Alice';
       repository.streams.first.add(
         chatEvent(3, 'message.updated', {
@@ -342,11 +398,8 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Updated Alice'), findsNothing);
-      expect(find.text('校园, 可爱角色'), findsNothing);
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
       expect(find.text('Updated Alice'), findsOneWidget);
+      expect(find.text('校园, 可爱角色'), findsNothing);
       await tester.ensureVisible(preview);
       await tester.pumpAndSettle();
       await tester.tap(preview);
@@ -371,7 +424,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(sheet, findsNothing);
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
+      expect(find.text('校园, 可爱角色'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });

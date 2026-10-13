@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../features/h5/presentation/h5_page.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
@@ -84,7 +85,7 @@ class NotificationDetailPage extends ConsumerWidget {
                         } else {
                           AppImagePreview.show(
                             context: context,
-                            image: NetworkImage(url),
+                            image: AppImageCache.provider(url),
                             heroTag: 'notification-image-${notification.id}',
                             label: title,
                           );

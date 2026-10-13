@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'agent_api_exception.dart';
-import 'api_exception.dart';
 
 /// HTTP contracts for the independently configured /api_agent service.
 class NetworkAgentApi {
@@ -35,10 +34,11 @@ class NetworkAgentApi {
   );
 
   Future<Map<String, dynamic>> generateHome(
+    String sessionId,
     Map<String, Object?> input, {
     CancelToken? cancelToken,
   }) => _request(
-    '/api_agent/v2/home/generate',
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/generate',
     method: 'POST',
     receiveTimeout: const Duration(minutes: 2),
     data: input,
@@ -127,8 +127,7 @@ class NetworkAgentApi {
     int page = 1,
     int pageSize = 20,
     bool archived = false,
-    String? contextKind,
-    String? contextId,
+    String? accountId,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions',
@@ -136,8 +135,7 @@ class NetworkAgentApi {
       'page': page,
       'pageSize': pageSize,
       'archived': archived.toString(),
-      if (contextKind != null) 'contextKind': contextKind,
-      if (contextId != null) 'contextId': contextId,
+      if (accountId != null) 'accountId': accountId,
     },
     cancelToken: cancelToken,
   );
@@ -149,8 +147,7 @@ class NetworkAgentApi {
   }) => sessionsPage(
     page: page,
     pageSize: 100,
-    contextKind: 'account',
-    contextId: projectId,
+    accountId: projectId,
     cancelToken: cancelToken,
   );
 
@@ -162,11 +159,10 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
-  /// Retries must retain the same request ID, revision and complete input.
+  /// Optional request IDs allow retries to retain their complete input.
   Future<Map<String, dynamic>> updateSession(
     String id, {
-    required String clientRequestId,
-    required int expectedRevision,
+    String? clientRequestId,
     String? title,
     bool? archived,
     bool? pinned,
@@ -175,12 +171,20 @@ class NetworkAgentApi {
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}',
     method: 'PATCH',
     data: {
-      'clientRequestId': clientRequestId,
-      'expectedRevision': expectedRevision,
+      if (clientRequestId != null) 'clientRequestId': clientRequestId,
       if (title != null) 'title': title,
       if (archived != null) 'archived': archived,
       if (pinned != null) 'pinned': pinned,
     },
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> archiveSession(
+    String id, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(id)}',
+    method: 'DELETE',
     cancelToken: cancelToken,
   );
 
@@ -192,14 +196,13 @@ class NetworkAgentApi {
     bool? pinned,
     CancelToken? cancelToken,
   }) async {
-    final detail = await sessionSnapshot(id, cancelToken: cancelToken);
-    final session = detail['session'];
-    final revision = session is Map ? session['revision'] : null;
-    if (revision is! int || revision < 1) throw const ApiException();
+    if (archived == true && title == null && pinned == null) {
+      await archiveSession(id, cancelToken: cancelToken);
+      return;
+    }
     await updateSession(
       id,
       clientRequestId: clientRequestId,
-      expectedRevision: revision,
       title: title,
       archived: archived,
       pinned: pinned,
@@ -214,7 +217,6 @@ class NetworkAgentApi {
     required String text,
     String? taskId,
     List<String>? mediaIds,
-    List<Map<String, Object?>>? inputRefs,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/messages',
@@ -224,7 +226,6 @@ class NetworkAgentApi {
       'text': text,
       if (taskId != null) 'taskId': taskId,
       if (mediaIds != null) 'mediaIds': mediaIds,
-      if (inputRefs != null) 'inputRefs': inputRefs,
     },
     cancelToken: cancelToken,
   );

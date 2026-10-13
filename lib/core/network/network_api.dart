@@ -332,22 +332,20 @@ class NetworkApi {
   Future<void> updateProject(
     String id, {
     required String clientRequestId,
-    int? expectedRevision,
     String? title,
     bool archive = false,
     CancelToken? cancelToken,
   }) async {
     final path = '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}';
-    final revision =
-        expectedRevision ??
-        _revision(await ipAccountDetail(id, cancelToken: cancelToken));
+    if (archive) {
+      await archiveIpAccount(id, cancelToken: cancelToken);
+      return;
+    }
     final response = await dio.patch<Map<String, dynamic>>(
       path,
       data: {
         'clientRequestId': clientRequestId,
-        'expectedRevision': revision,
         if (title != null) 'title': title,
-        if (archive) 'action': 'archive',
       },
       cancelToken: cancelToken,
     );
@@ -506,24 +504,6 @@ class NetworkApi {
     null,
     cancelToken,
   );
-
-  Future<void> selectCreationTopic(
-    String id,
-    Map<String, Object?> input, {
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      final response = await dio.put<Object?>(
-        '/api_client/agent/v2/creations/${Uri.encodeComponent(id)}/topic',
-        data: input,
-        cancelToken: cancelToken,
-      );
-      _workBody(response.data);
-    } on DioException catch (error) {
-      if (error.response == null || CancelToken.isCancel(error)) rethrow;
-      throw AgentApiException.fromDioException(error);
-    }
-  }
 
   Future<Map<String, Object?>> roleTemplatesPage(
     int page, {

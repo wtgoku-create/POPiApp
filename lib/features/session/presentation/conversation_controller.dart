@@ -20,11 +20,13 @@ class ConversationController extends ChangeNotifier {
     this.repository,
     this.userId, {
     this.onSessionChanged,
+    this.onError,
     this.reconnectDelay = const Duration(seconds: 1),
   });
   final SessionRepository repository;
   final String userId;
   final void Function(ConversationSession)? onSessionChanged;
+  final void Function(Object)? onError;
   final Duration reconnectDelay;
   ConversationSnapshot? snapshot;
   int mediaPreferencesEpoch = 0;
@@ -45,6 +47,7 @@ class ConversationController extends ChangeNotifier {
   int _epoch = 0;
   int _commandEpoch = 0;
   bool _disposed = false;
+  bool _connectionErrorReported = false;
   CancelToken? _eventsToken;
   CancelToken? _commandToken;
   Timer? _timer;
@@ -58,6 +61,7 @@ class ConversationController extends ChangeNotifier {
     sessionId = id;
     snapshot = null;
     error = null;
+    _connectionErrorReported = false;
     pending = false;
     _awaitingRun = false;
     loading = id != null;
@@ -74,6 +78,7 @@ class ConversationController extends ChangeNotifier {
     _cancelEvents();
     snapshot = null;
     loading = true;
+    _connectionErrorReported = false;
     notifyListeners();
     unawaited(_connect(id, _epoch));
   }
@@ -106,6 +111,7 @@ class ConversationController extends ChangeNotifier {
             if (!current()) return;
             connection = ConversationConnection.connected;
             error = null;
+            _connectionErrorReported = false;
             notifyListeners();
           },
         )) {
@@ -125,6 +131,11 @@ class ConversationController extends ChangeNotifier {
         }
         if (cause is FormatException || cause is TypeError) snapshot = null;
         error = cause;
+        // A failed reconnect episode should not produce a toast on every attempt.
+        if (!_connectionErrorReported) {
+          _connectionErrorReported = true;
+          onError?.call(cause);
+        }
         if (cause is AgentApiException &&
             [401, 403, 404].contains(cause.statusCode)) {
           loading = false;
@@ -342,6 +353,7 @@ class ConversationController extends ChangeNotifier {
       if (!current()) return false;
       if (cause is AgentApiException && cause.statusCode == 409) refresh();
       error = cause;
+      onError?.call(cause);
       return false;
     } finally {
       if (current()) {

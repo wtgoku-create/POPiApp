@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 
@@ -88,7 +89,7 @@ class ProfileAvatar extends StatelessWidget {
                   height: size,
                   fit: BoxFit.cover,
                 )
-              : Image.network(
+              : AppNetworkImage(
                   imageUrl!,
                   width: size,
                   height: size,

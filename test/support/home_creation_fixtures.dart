@@ -26,6 +26,7 @@ class HomeCreationFixture {
   bool failEntryOnce = false;
   bool failTopicsOnce = false;
   bool failGenerateOnce = false;
+  final _generationRequests = <String>{};
   bool failMediaOnce = false;
   bool failRoleSaveOnce = false;
   bool failPreferenceSaveOnce = false;
@@ -87,7 +88,9 @@ class HomeCreationFixture {
       ],
       'specs': {if (config != null) 'homeConfig': config},
     },
-    'editable': task == null,
+    'editable':
+        task == null ||
+        (task!['state'] == 'canceled' && task!['lock'] == 'released'),
     'topics': topics,
     'customTopics': <Object>[],
     'selectedTopic': selected,
@@ -106,6 +109,8 @@ class HomeCreationFixture {
         ? ['resume', 'cancel']
         : state == 'awaiting_confirmation'
         ? ['cancel']
+        : state == 'failed' && lock == 'released'
+        ? ['retry']
         : state == 'running' || state == 'queued'
         ? ['pause', 'cancel']
         : <String>[],
@@ -300,14 +305,18 @@ class HomeCreationFixture {
       };
     }
     if (path.endsWith('/estimate-points')) return {'estimatedPoints': 42};
-    if (path.endsWith('/home/generate')) {
-      config = Map<String, Object?>.from(body['config'] as Map);
-      task = taskValue('queued');
+    if (path ==
+        '/api_agent/v2/sessions/11111111-1111-4111-8111-111111111111/generate') {
+      if (_generationRequests.add(body['clientRequestId'] as String)) {
+        config = Map<String, Object?>.from(body['config'] as Map);
+        revision++;
+        task = taskValue('queued');
+      }
       if (failGenerateOnce) {
         failGenerateOnce = false;
         throw StateError('Generation response lost');
       }
-      return {'task': task};
+      return {'snapshot': snapshot(), 'task': task};
     }
     if (path.endsWith('/control') || path.endsWith('/confirm-video')) {
       task = taskValue(
@@ -319,6 +328,9 @@ class HomeCreationFixture {
         version: (task!['revision'] as int) + 1,
         lock: body['action'] == 'cancel' ? 'released' : 'held',
       );
+      if (body['action'] == 'retry') {
+        task!['id'] = '33333333-3333-4333-8333-333333333333';
+      }
       return {'task': task};
     }
     if (path.contains('/home-tasks/')) return {'task': task};

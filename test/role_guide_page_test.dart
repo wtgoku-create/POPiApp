@@ -646,6 +646,44 @@ void main() {
     },
   );
 
+  for (final overlay in ['sheet', 'drawer']) {
+    testWidgets('$overlay preserves role images and loaded library', (
+      tester,
+    ) async {
+      var requests = 0;
+      await pumpGuide(
+        tester,
+        loader: ({required category, required page, required pageSize}) async {
+          requests++;
+          return LibraryRolePage(
+            items: rolesWithCount(8),
+            page: page,
+            pageCount: 1,
+          );
+        },
+      );
+      final image = find.descendant(
+        of: find.byKey(const Key('role-guide-select-preview-role-1')),
+        matching: find.byType(Image),
+      );
+      final imageState = tester.state(image);
+      expect(requests, 1);
+      await tap(
+        tester,
+        overlay == 'sheet'
+            ? 'role-guide-details-preview-role-1'
+            : 'role-guide-menu',
+      );
+      expect(tester.state(image), same(imageState));
+      expect(requests, 1);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.state(image), same(imageState));
+      expect(requests, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('thumbnail arrow opens a read-only role profile sheet', (
     tester,
   ) async {

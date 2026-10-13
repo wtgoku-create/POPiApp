@@ -85,9 +85,21 @@ void main() {
     'an uncertain send persists exact input across repository recreation',
     () async {
       final commands = <Map<String, Object?>>[];
+      final casts = <Map<String, Object?>>[];
       dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
+            if (options.path.endsWith('/cast')) {
+              expect(options.method, 'PUT');
+              casts.add(Map<String, Object?>.from(options.data as Map));
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  data: {'cast': [], 'runId': null},
+                ),
+              );
+              return;
+            }
             commands.add(Map<String, Object?>.from(options.data as Map));
             if (commands.length == 1) {
               handler.reject(
@@ -126,10 +138,13 @@ void main() {
         roleIds: ['2', '1'],
       );
       expect(commands[1], commands[0]);
-      expect(commands[1]['inputRefs'], [
-        {'kind': 'character', 'id': 2},
-        {'kind': 'character', 'id': 1},
-      ]);
+      expect(commands[1].containsKey('inputRefs'), isFalse);
+      expect(casts[0], casts[1]);
+      expect(casts[1], {
+        'clientRequestId': commands[1]['clientRequestId'],
+        'roleIds': [2, 1],
+        'reply': false,
+      });
       expect(storage.preferences.getKeys(), isEmpty);
       await repository().send(
         'a',
@@ -156,7 +171,97 @@ void main() {
   });
 
   test(
-    'update retry keeps the original revision instead of loading a newer snapshot',
+    'cast failure prevents sending and retries with the same request ID',
+    () async {
+      final requests = <RequestOptions>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requests.add(options);
+            if (requests.length == 1) {
+              handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.connectionError,
+                ),
+              );
+            } else {
+              handler.resolve(
+                Response(requestOptions: options, data: <String, dynamic>{}),
+              );
+            }
+          },
+        ),
+      );
+      await expectLater(
+        repository().send('a', chatId, 'hello', [], roleIds: ['2']),
+        throwsA(isA<DioException>()),
+      );
+      expect(requests.single.path, '/api_agent/v2/sessions/$chatId/cast');
+      await repository().send('a', chatId, 'hello', [], roleIds: ['2']);
+      expect(requests.map((request) => request.method), ['PUT', 'PUT', 'POST']);
+      expect(requests[0].data, requests[1].data);
+      expect(requests.last.path, '/api_agent/v2/sessions/$chatId/messages');
+      expect(
+        requests.last.data.keys,
+        unorderedEquals(['clientRequestId', 'text', 'mediaIds']),
+      );
+    },
+  );
+
+  for (final refresh in [false, true]) {
+    test(
+      'conversation topic ${refresh ? 'refresh' : 'selection'} uses the session contract',
+      () async {
+        final requests = <RequestOptions>[];
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              requests.add(options);
+              if (requests.length == 1) {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.receiveTimeout,
+                  ),
+                );
+              } else {
+                handler.resolve(
+                  Response(requestOptions: options, data: {'snapshot': {}}),
+                );
+              }
+            },
+          ),
+        );
+        final topic = ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'topic',
+          'scope': {'kind': 'creation', 'id': '401'},
+          'data': {'id': '701'},
+        });
+        await expectLater(
+          repository().topicAction('a', chatId, topic, refresh: refresh),
+          throwsA(isA<DioException>()),
+        );
+        await repository().topicAction('a', chatId, topic, refresh: refresh);
+        expect(requests, hasLength(2));
+        expect(requests.first.data, requests.last.data);
+        expect(requests.last.method, refresh ? 'POST' : 'PUT');
+        expect(
+          requests.last.path,
+          '/api_agent/v2/sessions/$chatId/${refresh ? 'topics' : 'topic'}',
+        );
+        expect(requests.last.data, {
+          'clientRequestId': requests.first.data['clientRequestId'],
+          if (refresh) 'mode': 'recommend' else 'topicId': '701',
+        });
+        expect(storage.preferences.getKeys(), isEmpty);
+      },
+    );
+  }
+
+  test(
+    'update retries retain their input without loading a snapshot',
     () async {
       var snapshots = 0;
       final commands = <Map<String, Object?>>[];
@@ -202,9 +307,9 @@ void main() {
         (await repository().update('a', chatId, title: 'renamed')).revision,
         2,
       );
-      expect(snapshots, 1);
+      expect(snapshots, 0);
       expect(commands[0], commands[1]);
-      expect(commands[1]['expectedRevision'], 1);
+      expect(commands[1].keys, unorderedEquals(['clientRequestId', 'title']));
     },
   );
 

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_menu.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../data/media_preferences_repository.dart';
 import '../../domain/home_creation.dart';
 import '../../domain/session_media_preferences.dart';
@@ -51,7 +53,6 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
   bool _failed = false;
   bool _estimateFailed = false;
   bool _saving = false;
-  bool _saveFailed = false;
   ScrollController? _scrollController;
 
   List<HomeModel> get _models => _catalogs[_mediaType] ?? const [];
@@ -141,7 +142,13 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       });
       _estimate();
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (mounted && !_token.isCancelled) {
+        setState(() => _failed = true);
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.roleRequestFailed,
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -159,7 +166,6 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
         modelId: _config!.modelId,
         params: params,
       );
-      _saveFailed = false;
     });
     if (_mediaType == 'video') _estimate();
   }
@@ -185,16 +191,23 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       } catch (_) {
         if (mounted && !token.isCancelled) {
           setState(() => _estimateFailed = true);
+          AppToast.error(
+            context,
+            AppLocalizations.of(context)!.roleRequestFailed,
+          );
         }
       }
     });
   }
 
   Future<void> _save() async {
-    if (_saving || !_valid || (widget.forGeneration && _points == null)) return;
+    if (_saving || !_valid) return;
+    if (widget.forGeneration && _points == null) {
+      if (_estimateFailed) _estimate();
+      return;
+    }
     setState(() {
       _saving = true;
-      _saveFailed = false;
     });
     try {
       if (!widget.forGeneration) {
@@ -224,7 +237,12 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
         ));
       }
     } catch (_) {
-      if (mounted) setState(() => _saveFailed = true);
+      if (mounted && !_token.isCancelled) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.roleRequestFailed,
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -256,7 +274,9 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       if (control != null) return _section(parameter.label, control);
     }
     if (parameter.options.isNotEmpty &&
-        (name.contains('resolution') || name.contains('ratio'))) {
+        (name.contains('resolution') ||
+            name.contains('quality') ||
+            name.contains('ratio'))) {
       return _section(
         parameter.label,
         name.contains('ratio')
@@ -391,7 +411,7 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
 
   int _parameterOrder(HomeParameter parameter) {
     final name = parameter.name.toLowerCase();
-    if (name.contains('resolution')) return 0;
+    if (name.contains('resolution') || name.contains('quality')) return 0;
     if (name.contains('ratio')) return 1;
     if (name.contains('duration')) return 2;
     return 3;
@@ -438,12 +458,22 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             children: [
               if (_loading)
-                const LinearProgressIndicator()
-              else if (_failed)
-                TextButton(
-                  onPressed: _load,
-                  child: Text('${l10n.roleRequestFailed} · ${l10n.retry}'),
+                AppSkeleton(
+                  label: l10n.loadingAssets,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppSkeletonBox(width: 100, height: 20),
+                      const SizedBox(height: 10),
+                      for (var index = 0; index < 3; index++) ...[
+                        const AppSkeletonBox(height: 90),
+                        const SizedBox(height: 10),
+                      ],
+                    ],
+                  ),
                 )
+              else if (_failed)
+                const SizedBox.shrink()
               else if (_models.isEmpty)
                 Text(
                   _mediaType == 'video'
@@ -472,7 +502,6 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
                         _configs[_mediaType] = model.withExplicitDurations(
                           model.defaultConfig,
                         );
-                        _saveFailed = false;
                       });
                       if (_mediaType == 'video') _estimate();
                     },
@@ -482,11 +511,6 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
                 const SizedBox(height: 4),
                 for (final parameter in parameters) _parameter(parameter),
               ],
-              if (_saveFailed)
-                Text(
-                  l10n.roleRequestFailed,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
               const SizedBox(height: 5),
             ],
           ),
@@ -503,26 +527,22 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
                 !_loading &&
                 !_failed &&
                 (_catalogs['video']?.isNotEmpty ?? false)) ...[
-              if (_estimateFailed)
-                TextButton(
-                  onPressed: _saving ? null : _estimate,
-                  child: Text('${l10n.roleRequestFailed} · ${l10n.retry}'),
-                )
-              else
-                Text(
-                  (widget.forGeneration && _points == null)
-                      ? l10n.roleEstimatePending
-                      : l10n.chatEstimatedPoints(_points.toString()),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+              Text(
+                _estimateFailed
+                    ? l10n.chatUnavailable
+                    : (widget.forGeneration && _points == null)
+                    ? l10n.roleEstimatePending
+                    : l10n.chatEstimatedPoints(_points.toString()),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+              ),
               const SizedBox(height: 10),
             ],
             RoleGuideAction(
               key: const Key('home-config-confirm'),
-              label: _saveFailed ? l10n.retry : l10n.confirm,
+              label: l10n.confirm,
               showArrow: false,
               fontSize: 16,
               onPressed:
@@ -530,7 +550,9 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
                       _failed ||
                       _saving ||
                       !_valid ||
-                      (widget.forGeneration && _points == null)
+                      (widget.forGeneration &&
+                          _points == null &&
+                          !_estimateFailed)
                   ? null
                   : _save,
             ),

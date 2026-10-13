@@ -300,7 +300,7 @@
   "ipAccountUnavailable": "Account is paused",
   "ipAccountsPending": "IP accounts are not available yet",
   "newConversation": "New conversation",
-  "newSessionTitle": "New conversation",
+  "newSessionTitle": "New project",
   "changeAvatar": "Change avatar",
   "avatarSelectionFailed": "Could not read the image. Try again or check photo permissions.",
   "home": "Home",

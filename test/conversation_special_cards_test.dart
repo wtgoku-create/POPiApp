@@ -15,12 +15,15 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_g
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_task_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:toastification/toastification.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card.dart';
 
 import 'conversation_events_test.dart' show chatId;
 import 'support/session_fixtures.dart';
 
 class _CardRepository extends FixtureSessionRepository {
   int estimates = 0;
+  bool failEstimateOnce = false;
   ConversationGenerationSelection? submitted;
   final controls = <String>[];
   @override
@@ -30,6 +33,10 @@ class _CardRepository extends FixtureSessionRepository {
     CancelToken? cancelToken,
   }) async {
     estimates++;
+    if (failEstimateOnce) {
+      failEstimateOnce = false;
+      throw StateError('offline');
+    }
     return 10;
   }
 
@@ -163,6 +170,44 @@ void main() {
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
+
+  testWidgets(
+    'estimate failure uses toast and the original generation action can recover',
+    (tester) async {
+      final repository = _CardRepository()..failEstimateOnce = true;
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        ConversationGenerationCard(
+          block: _generation(),
+          controller: controller,
+        ),
+      );
+      expect(find.text('Request failed. Please try again'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ConversationCard),
+          matching: find.text('Request failed. Please try again'),
+        ),
+        findsNothing,
+      );
+      expect(find.byTooltip('Retry'), findsNothing);
+      await tester.tap(find.text('Generate'));
+      await tester.pumpAndSettle();
+      expect(repository.estimates, 2);
+      await tester.tap(find.text('Generate').last);
+      await tester.pumpAndSettle();
+      expect(
+        repository.submitted?.requirements,
+        'Keep the character silhouette and costume',
+      );
+      toastification.dismissAll(delayForAnimation: false);
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     for (final scale in [1.0, 1.3]) {
       testWidgets('generation card fits $size at text scale $scale', (

@@ -4,9 +4,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_sheet.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_generation.dart';
 import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -48,8 +51,8 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   String? _templateMediaId;
   String _templateTitle = '';
   num? _points;
-  Object? _error;
   bool _loading = true;
+  bool _estimating = false;
   bool _uploading = false;
   bool _submitted = false;
   bool _expanded = true;
@@ -130,7 +133,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     _estimateDebounce?.cancel();
     setState(() {
       _loading = true;
-      _error = null;
+      _estimating = false;
     });
     try {
       final options = await widget.controller.repository.generationOptions(
@@ -161,7 +164,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       if (recovery == null) await _estimate();
     } catch (error) {
       if (mounted && !_token.isCancelled && epoch == _loadEpoch) {
-        setState(() => _error = error);
+        _showError(error);
       }
     } finally {
       if (mounted && !_token.isCancelled && epoch == _loadEpoch) {
@@ -175,7 +178,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     _estimateToken?.cancel();
     setState(() {
       _points = null;
-      _error = null;
+      _estimating = _valid && _attempted == null;
     });
     if (!_valid || _attempted != null) return;
     final token = _estimateToken = CancelToken();
@@ -187,7 +190,11 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       );
       if (mounted && !token.isCancelled) setState(() => _points = points);
     } catch (error) {
-      if (mounted && !token.isCancelled) setState(() => _error = error);
+      if (mounted && !token.isCancelled) _showError(error);
+    } finally {
+      if (mounted && !token.isCancelled) {
+        setState(() => _estimating = false);
+      }
     }
   }
 
@@ -210,7 +217,6 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   Future<void> _uploadReference() async {
     setState(() {
       _uploading = true;
-      _error = null;
     });
     try {
       final image = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -229,17 +235,26 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
         await _estimate();
       }
     } catch (error) {
-      if (mounted && !_token.isCancelled) setState(() => _error = error);
+      if (mounted && !_token.isCancelled) _showError(error);
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
   }
 
+  void _showError(Object error) => AppToast.error(
+    context,
+    conversationErrorText(error, AppLocalizations.of(context)!),
+  );
+
   Future<void> _confirm() async {
-    if (_busy ||
-        !_editable ||
-        _attempted == null && (!_valid || _points == null)) {
-      return;
+    if (_busy || _loading || _estimating || !_editable) return;
+    if (_attempted == null) {
+      if (_options == null) {
+        await _load();
+      } else if (_valid && _points == null) {
+        await _estimate();
+      }
+      if (!mounted || _busy || !_editable || !_valid || _points == null) return;
     }
     final selected =
         _attempted ??
@@ -320,15 +335,11 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
           Text(conversationStatusLabel(card.status, l10n)),
           if (_expanded) ...[
             if (card.isHomePlan) ...[
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final role in card.homeCast)
-                    SizedBox(
-                      width: 188,
-                      child: ConversationRoleCard(block: role, framed: false),
-                    ),
+                    ConversationRoleCard(block: role, framed: false),
                 ],
               ),
               if (card.homeTopic case final topic?) ...[
@@ -407,7 +418,10 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                   onChanged: (_) {
                     _estimateToken?.cancel();
                     _estimateDebounce?.cancel();
-                    setState(() => _points = null);
+                    setState(() {
+                      _points = null;
+                      _estimating = true;
+                    });
                     _estimateDebounce = Timer(
                       const Duration(milliseconds: 350),
                       () => unawaited(_estimate()),
@@ -425,7 +439,20 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                 ),
             ],
             if (_loading)
-              const LinearProgressIndicator()
+              AppSkeleton(
+                label: l10n.loadingAssets,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSkeletonBox(width: 160, height: 18),
+                      SizedBox(height: 10),
+                      AppSkeletonBox(height: 14),
+                    ],
+                  ),
+                ),
+              )
             else if (_editable && _config != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -454,7 +481,9 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   _points == null
-                      ? l10n.roleEstimatePending
+                      ? _estimating
+                            ? l10n.roleEstimatePending
+                            : l10n.chatUnavailable
                       : l10n.chatEstimatedPoints(_points.toString()),
                 ),
               ),
@@ -463,17 +492,6 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
               if (card.estimatedPoints != null)
                 Text(l10n.chatEstimatedPoints(card.estimatedPoints.toString())),
             ],
-            if (_error != null)
-              Row(
-                children: [
-                  Expanded(child: Text(conversationErrorText(_error, l10n))),
-                  IconButton(
-                    tooltip: l10n.retry,
-                    onPressed: _busy ? null : _load,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
             if (_editable)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -502,14 +520,11 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                       onPressed:
                           _busy ||
                               _loading ||
-                              _attempted == null && (!_valid || _points == null)
+                              _estimating ||
+                              _attempted == null && _options != null && !_valid
                           ? null
                           : _confirm,
-                      child: Text(
-                        _attempted != null
-                            ? l10n.retry
-                            : l10n.chatConfirmGeneration,
-                      ),
+                      child: Text(l10n.chatConfirmGeneration),
                     ),
                   ],
                 ),
@@ -531,10 +546,24 @@ class _TemplatePicker extends StatefulWidget {
 
 class _TemplatePickerState extends State<_TemplatePicker> {
   final _token = CancelToken();
-  late Future<List<ConversationRoleTemplate>> _templates = widget
-      .controller
-      .repository
-      .roleTemplates(cancelToken: _token);
+  late final Future<List<ConversationRoleTemplate>> _templates = _load();
+
+  Future<List<ConversationRoleTemplate>> _load() async {
+    try {
+      return await widget.controller.repository.roleTemplates(
+        cancelToken: _token,
+      );
+    } catch (error) {
+      if (mounted && !_token.isCancelled) {
+        AppToast.error(
+          context,
+          conversationErrorText(error, AppLocalizations.of(context)!),
+        );
+      }
+      return const [];
+    }
+  }
+
   @override
   void dispose() {
     _token.cancel();
@@ -564,16 +593,7 @@ class _TemplatePickerState extends State<_TemplatePicker> {
               );
             }
             if (items == null) {
-              return snapshot.hasError
-                  ? IconButton(
-                      tooltip: l10n.retry,
-                      onPressed: () => setState(
-                        () => _templates = widget.controller.repository
-                            .roleTemplates(cancelToken: _token),
-                      ),
-                      icon: const Icon(Icons.refresh),
-                    )
-                  : const LinearProgressIndicator();
+              return AppSkeletonList(label: l10n.loadingAssets, itemCount: 3);
             }
             if (index == 1) {
               return ListTile(
@@ -591,7 +611,7 @@ class _TemplatePickerState extends State<_TemplatePicker> {
                   ? const Icon(Icons.palette_outlined)
                   : SizedBox.square(
                       dimension: 56,
-                      child: Image.network(
+                      child: AppNetworkImage(
                         template.coverUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>

@@ -372,7 +372,7 @@ void main() {
       container
           .read(sessionsProvider)
           .requireValue
-          .any((session) => session.title == '新会话'),
+          .any((session) => session.title == '新项目'),
       isTrue,
     );
     expect(

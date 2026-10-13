@@ -1779,7 +1779,7 @@ abstract class AppLocalizations {
   /// No description provided for @newSessionTitle.
   ///
   /// In en, this message translates to:
-  /// **'New conversation'**
+  /// **'New project'**
   String get newSessionTitle;
 
   /// No description provided for @changeAvatar.

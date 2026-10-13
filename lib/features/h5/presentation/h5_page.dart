@@ -198,11 +198,17 @@ class _H5PageState extends State<H5Page> {
                 children: [
                   if (controller != null) WebViewWidget(controller: controller),
                   if (_progress < 100)
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: LinearProgressIndicator(
-                        value: _progress == 0 ? null : _progress / 100,
-                        semanticsLabel: l10n.webPageLoading,
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: IgnorePointer(
+                        child: SizedBox.square(
+                          dimension: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            semanticsLabel: l10n.webPageLoading,
+                          ),
+                        ),
                       ),
                     ),
                 ],

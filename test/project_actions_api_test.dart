@@ -206,7 +206,7 @@ void main() {
           ];
     for (final change in changes) {
       test(
-        '${project ? 'project' : 'session'} $change follows Web revision contract',
+        '${project ? 'project' : 'session'} $change uses the current mutation contract',
         () async {
           final requests = <RequestOptions>[];
           final dio = Dio();
@@ -254,16 +254,19 @@ void main() {
           }
           final path =
               '${project ? '/api_client/agent/v2/accounts' : '/api_agent/v2/sessions'}/id%20%2F%201';
-          expect(requests.map((request) => request.method), ['GET', 'PATCH']);
-          expect(requests.first.path, project ? path : '$path/snapshot');
+          final deletion =
+              change.containsKey('action') || change.containsKey('archived');
+          expect(requests.map((request) => request.method), [
+            deletion ? 'DELETE' : 'PATCH',
+          ]);
           expect(requests.last.path, path);
+          if (deletion) {
+            expect(requests.last.data, isNull);
+            return;
+          }
           final body = requests.last.data as Map<String, dynamic>;
           expect(body['clientRequestId'], matches(studioRequestId));
-          expect(body, {
-            'clientRequestId': body['clientRequestId'],
-            'expectedRevision': 7,
-            ...change,
-          });
+          expect(body, {'clientRequestId': body['clientRequestId'], ...change});
         },
       );
     }
@@ -272,7 +275,7 @@ void main() {
   for (final project in [true, false]) {
     for (final revision in [null, 0, -1]) {
       test(
-        '${project ? 'project' : 'session'} revision $revision cannot mutate',
+        '${project ? 'project' : 'session'} deletion does not require revision $revision',
         () async {
           final requests = <RequestOptions>[];
           final dio = Dio();
@@ -283,30 +286,33 @@ void main() {
                 handler.resolve(
                   Response(
                     requestOptions: options,
-                    data: {
-                      project ? 'data' : 'session': {
-                        'id': '1',
-                        if (revision != null) 'revision': revision,
-                      },
-                    },
+                    data: project
+                        ? {
+                            'data': {
+                              'id': '1',
+                              if (revision != null) 'revision': revision,
+                            },
+                          }
+                        : {
+                            'id': '1',
+                            if (revision != null) 'revision': revision,
+                          },
                   ),
                 );
               },
             ),
           );
-          await expectLater(
-            project
-                ? ProjectRepository(
-                    NetworkApi(dio),
-                    NetworkAgentApi(dio),
-                  ).deleteProject('1')
-                : ProjectRepository(
-                    NetworkApi(dio),
-                    NetworkAgentApi(dio),
-                  ).deleteSession('1'),
-            throwsA(isA<ApiException>()),
-          );
-          expect(requests.map((request) => request.method), ['GET']);
+          await (project
+              ? ProjectRepository(
+                  NetworkApi(dio),
+                  NetworkAgentApi(dio),
+                ).deleteProject('1')
+              : ProjectRepository(
+                  NetworkApi(dio),
+                  NetworkAgentApi(dio),
+                ).deleteSession('1'));
+          expect(requests.map((request) => request.method), ['DELETE']);
+          expect(requests.single.data, isNull);
         },
       );
     }
@@ -392,6 +398,6 @@ void main() {
     }
     expect(requests, 0);
     await repository.renameProject('1', List.filled(200, '😀').join());
-    expect(requests, 2);
+    expect(requests, 1);
   });
 }

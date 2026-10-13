@@ -477,63 +477,66 @@ void main() {
     expect(commands[2]['revision'], 9);
   });
 
-  test('topic retry keeps creation identity and original revision', () async {
-    var reads = 0;
-    final commands = <Map<String, Object?>>[];
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.method == 'GET') {
-            reads++;
-            expect(options.path, '/api_client/agent/v2/creations/40');
-            handler.resolve(
-              Response(
-                requestOptions: options,
-                data: {
-                  'data': {
-                    'creation': {'sessionId': chatId, 'revision': 7},
-                    'editable': true,
-                  },
-                },
-              ),
-            );
-          } else {
-            expect(options.method, 'PUT');
-            expect(options.path, '/api_client/agent/v2/creations/40/topic');
-            commands.add(Map<String, Object?>.from(options.data as Map));
-            if (commands.length == 1) {
-              handler.reject(
-                DioException(
+  test(
+    'topic retry keeps its request ID and uses the session endpoint',
+    () async {
+      var reads = 0;
+      final commands = <Map<String, Object?>>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.method == 'GET') {
+              reads++;
+              expect(options.path, '/api_client/agent/v2/creations/40');
+              handler.resolve(
+                Response(
                   requestOptions: options,
-                  type: DioExceptionType.connectionTimeout,
+                  data: {
+                    'data': {
+                      'creation': {'sessionId': chatId, 'revision': 7},
+                      'editable': true,
+                    },
+                  },
                 ),
               );
             } else {
-              handler.resolve(
-                Response(requestOptions: options, data: {'data': {}}),
-              );
+              expect(options.method, 'PUT');
+              expect(options.path, '/api_agent/v2/sessions/$chatId/topic');
+              commands.add(Map<String, Object?>.from(options.data as Map));
+              if (commands.length == 1) {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.connectionTimeout,
+                  ),
+                );
+              } else {
+                handler.resolve(
+                  Response(requestOptions: options, data: {'snapshot': {}}),
+                );
+              }
             }
-          }
+          },
+        ),
+      );
+      final topic = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'topic',
+        'action': 'generated',
+        'scope': {'kind': 'creation', 'id': '40'},
+        'data': {
+          'ref': {'kind': 'topic', 'id': '50'},
         },
-      ),
-    );
-    final topic = ConversationBlock.fromJson({
-      'type': 'object',
-      'kind': 'topic',
-      'action': 'generated',
-      'scope': {'kind': 'creation', 'id': '40'},
-      'data': {
-        'ref': {'kind': 'topic', 'id': '50'},
-      },
-    });
-    await expectLater(
-      repository().topicAction('a', chatId, topic),
-      throwsA(isA<DioException>()),
-    );
-    await repository().topicAction('a', chatId, topic);
-    expect(reads, 1);
-    expect(commands[0], commands[1]);
-    expect(commands[1]['expectedRevision'], 7);
-    expect(commands[1]['topicId'], '50');
-  });
+      });
+      await expectLater(
+        repository().topicAction('a', chatId, topic),
+        throwsA(isA<DioException>()),
+      );
+      await repository().topicAction('a', chatId, topic);
+      expect(reads, 0);
+      expect(commands[0], commands[1]);
+      expect(commands[1].keys, unorderedEquals(['clientRequestId', 'topicId']));
+      expect(commands[1]['topicId'], '50');
+    },
+  );
 }

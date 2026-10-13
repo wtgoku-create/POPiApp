@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -1120,7 +1121,7 @@ class _WorkItem {
   final bool isNetwork;
   final String videoUrl;
   ImageProvider get image =>
-      isNetwork ? NetworkImage(asset) : AssetImage(asset);
+      isNetwork ? AppImageCache.provider(asset) : AssetImage(asset);
 }
 
 const _sampleWorkGroups = [

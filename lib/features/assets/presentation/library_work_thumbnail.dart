@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../role_guide/presentation/widgets/role_guide_controls.dart';
 import '../domain/library_work.dart';
 
@@ -18,7 +19,7 @@ class LibraryWorkThumbnail extends StatelessWidget {
         Image(
           image: work.previewUrl.startsWith('assets/')
               ? AssetImage(work.previewUrl)
-              : NetworkImage(work.previewUrl),
+              : AppImageCache.provider(work.previewUrl),
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => ColoredBox(
             color: roleGuideTint(context),

@@ -7,6 +7,7 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/network/agent_api_exception.dart';
 import '../../../../core/network/api_exception.dart';
@@ -14,6 +15,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
 import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../data/session_repository.dart';
@@ -303,7 +305,19 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                   controller: controller,
                                 ),
                               if (controller.loading)
-                                const LinearProgressIndicator(),
+                                SizedBox(
+                                  height: 48,
+                                  child: Center(
+                                    child: SizedBox.square(
+                                      dimension: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        semanticsLabel:
+                                            l10n.loadingProjectSessions,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               if (controller.running &&
                                   !(controller.snapshot?.messages.any(
                                         (message) => message.blocks.any(
@@ -367,31 +381,6 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                         ),
                                     ],
                                   ),
-                              if (controller.error != null)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        conversationErrorText(
-                                          controller.error,
-                                          l10n,
-                                        ),
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: l10n.retry,
-                                      onPressed: controller.pending
-                                          ? null
-                                          : controller.refresh,
-                                      icon: const Icon(Icons.refresh),
-                                    ),
-                                  ],
-                                ),
                             ],
                           ),
                         ),
@@ -571,13 +560,32 @@ class ConversationMediaView extends StatefulWidget {
 }
 
 class _ConversationMediaViewState extends State<ConversationMediaView> {
-  late Future<ConversationMedia> _media = widget.repository.media(widget.id);
+  late Future<ConversationMedia> _media = _load();
+
+  Future<ConversationMedia> _load() async {
+    final id = widget.id;
+    final repository = widget.repository;
+    try {
+      return await repository.media(id);
+    } catch (error) {
+      if (mounted &&
+          widget.id == id &&
+          identical(widget.repository, repository)) {
+        AppToast.error(
+          context,
+          conversationErrorText(error, AppLocalizations.of(context)!),
+        );
+      }
+      rethrow;
+    }
+  }
+
   @override
   void didUpdateWidget(ConversationMediaView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.id != widget.id ||
         oldWidget.repository != widget.repository) {
-      _media = widget.repository.media(widget.id);
+      _media = _load();
     }
   }
 
@@ -589,11 +597,9 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
       if (snapshot.hasError) {
         return _MediaFrame(
           child: Center(
-            child: IconButton(
-              tooltip: l10n.retry,
-              onPressed: () =>
-                  setState(() => _media = widget.repository.media(widget.id)),
-              icon: const Icon(Icons.refresh),
+            child: Tooltip(
+              message: l10n.chatUnavailable,
+              child: const Icon(Icons.broken_image_outlined),
             ),
           ),
         );
@@ -616,11 +622,11 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
           child: GestureDetector(
             onTap: () => AppImagePreview.show(
               context: context,
-              image: NetworkImage(media.url),
+              image: AppImageCache.provider(media.url),
               heroTag: 'conversation-media-${media.id}',
             ),
             child: _MediaFrame(
-              child: Image.network(
+              child: AppNetworkImage(
                 media.url,
                 fit: BoxFit.contain,
                 loadingBuilder: (context, child, progress) => progress == null
@@ -632,15 +638,9 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
                         ),
                       ),
                 errorBuilder: (_, __, ___) => Center(
-                  child: IconButton(
-                    tooltip: l10n.retry,
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      NetworkImage(media.url).evict();
-                      setState(
-                        () => _media = widget.repository.media(widget.id),
-                      );
-                    },
+                  child: Tooltip(
+                    message: l10n.chatUnavailable,
+                    child: const Icon(Icons.broken_image_outlined),
                   ),
                 ),
               ),
@@ -740,78 +740,81 @@ class _ConversationTopicsState extends State<_ConversationTopics>
         controller.snapshot?.topicLocked(widget.message, topic) != false;
     final disabled =
         controller.pending || controller.running || controller.loading;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ConversationObjectView(
-          key: ValueKey((topic.referenceId, _index)),
-          block: topic,
-          controller: widget.controller,
-          headerTrailing: widget.topics.length > 1
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.roleStoryPosition(_index + 1, widget.topics.length),
-                      key: const Key('conversation-topic-position'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final selected =
+        _selected ||
+        controller.snapshot?.selectedTopicId(widget.message, topic) ==
+                topic.referenceId &&
+            topic.referenceId.isNotEmpty;
+    return ConversationObjectView(
+      key: ValueKey((topic.referenceId, _index)),
+      block: topic,
+      controller: widget.controller,
+      headerTrailing: widget.topics.length > 1
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.roleStoryPosition(_index + 1, widget.topics.length),
+                  key: const Key('conversation-topic-position'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _arrow(context, l10n.rolePreviousStory, -1),
+                _arrow(context, l10n.roleNextStory, 1),
+              ],
+            )
+          : null,
+      footer: locked && !selected
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!locked && topic.referenceId.isNotEmpty)
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      IconButton(
+                        key: const Key('conversation-topic-refresh'),
+                        tooltip: l10n.roleRefreshStories,
+                        onPressed: disabled
+                            ? null
+                            : () async {
+                                if (await controller.topicAction(
+                                      widget.message,
+                                      topic,
+                                      refreshTopics: true,
+                                    ) &&
+                                    mounted) {
+                                  setState(() => _refreshed = true);
+                                }
+                              },
+                        icon: const Icon(Icons.refresh),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    _arrow(context, l10n.rolePreviousStory, -1),
-                    _arrow(context, l10n.roleNextStory, 1),
-                  ],
-                )
-              : null,
-        ),
-        if (!locked && topic.referenceId.isNotEmpty)
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              IconButton(
-                key: const Key('conversation-topic-refresh'),
-                tooltip: l10n.roleRefreshStories,
-                onPressed: disabled
-                    ? null
-                    : () async {
-                        if (await controller.topicAction(
-                              widget.message,
-                              topic,
-                              refreshTopics: true,
-                            ) &&
-                            mounted) {
-                          setState(() => _refreshed = true);
-                        }
-                      },
-                icon: const Icon(Icons.refresh),
-              ),
-              FilledButton(
-                key: const Key('conversation-topic-select'),
-                onPressed: disabled
-                    ? null
-                    : () async {
-                        if (await controller.topicAction(
-                              widget.message,
-                              topic,
-                            ) &&
-                            mounted) {
-                          setState(() => _selected = true);
-                        }
-                      },
-                child: Text(l10n.roleChooseStory),
-              ),
-            ],
-          ),
-        if (_selected ||
-            controller.snapshot?.selectedTopicId(widget.message, topic) ==
-                    topic.referenceId &&
-                topic.referenceId.isNotEmpty)
-          Text(l10n.chatTopicSelected),
-      ],
+                      FilledButton(
+                        key: const Key('conversation-topic-select'),
+                        onPressed: disabled
+                            ? null
+                            : () async {
+                                if (await controller.topicAction(
+                                      widget.message,
+                                      topic,
+                                    ) &&
+                                    mounted) {
+                                  setState(() => _selected = true);
+                                }
+                              },
+                        child: Text(l10n.roleChooseStory),
+                      ),
+                    ],
+                  ),
+                if (selected) Text(l10n.chatTopicSelected),
+              ],
+            ),
     );
   }
 
@@ -854,6 +857,7 @@ class ConversationObjectView extends StatefulWidget {
     required this.controller,
     this.framed = true,
     this.headerTrailing,
+    this.footer,
     this.onRevise,
     this.onModelParametersRequested,
     super.key,
@@ -862,6 +866,7 @@ class ConversationObjectView extends StatefulWidget {
   final ConversationController controller;
   final bool framed;
   final Widget? headerTrailing;
+  final Widget? footer;
   final ValueChanged<ConversationBlock>? onRevise;
   final VoidCallback? onModelParametersRequested;
   @override
@@ -1090,7 +1095,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                         ? const AppSvgIcon.asset('chat_role_draft', size: 70)
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
+                            child: AppNetworkImage(
                               block.avatar!,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
@@ -1256,6 +1261,11 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                     ),
                 ],
               ),
+            ),
+          if (widget.footer != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: widget.footer,
             ),
         ],
       ),

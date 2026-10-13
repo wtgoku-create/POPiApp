@@ -945,7 +945,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newConversation => 'New conversation';
 
   @override
-  String get newSessionTitle => 'New conversation';
+  String get newSessionTitle => 'New project';
 
   @override
   String get changeAvatar => 'Change avatar';

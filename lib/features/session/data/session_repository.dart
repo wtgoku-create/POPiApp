@@ -239,22 +239,19 @@ class ApiSessionRepository extends SessionRepository {
       if (archived != null) 'archived': archived,
     },
     (input) async => ConversationSession.fromJson(
-      await agent.updateSession(
-        id,
-        clientRequestId: input['clientRequestId'] as String,
-        expectedRevision: input['expectedRevision'] as int,
-        title: input['title'] as String?,
-        pinned: input['pinned'] as bool?,
-        archived: input['archived'] as bool?,
-        cancelToken: cancelToken,
-      ),
+      input['archived'] == true &&
+              input['title'] == null &&
+              input['pinned'] == null
+          ? await agent.archiveSession(id, cancelToken: cancelToken)
+          : await agent.updateSession(
+              id,
+              clientRequestId: input['clientRequestId'] as String,
+              title: input['title'] as String?,
+              pinned: input['pinned'] as bool?,
+              archived: input['archived'] as bool?,
+              cancelToken: cancelToken,
+            ),
     ),
-    prepare: () async => {
-      'expectedRevision': (await snapshot(
-        id,
-        cancelToken: cancelToken,
-      )).session.revision,
-    },
   );
 
   @override
@@ -293,28 +290,35 @@ class ApiSessionRepository extends SessionRepository {
     if (text.trim().isEmpty || text.length > 20000) {
       throw ArgumentError.value(text, 'text');
     }
-    final inputRefs = [
-      for (final value in roleIds) {'kind': 'character', 'id': _roleId(value)},
-    ];
+    final cast = roleIds.map(_roleId).toList();
+    if (cast.length > 5 || cast.toSet().length != cast.length) {
+      throw ArgumentError.value(roleIds, 'roleIds');
+    }
     await _command(
       userId,
       'send:$id',
       {
         'text': text,
         'mediaIds': mediaIds,
-        if (inputRefs.isNotEmpty) 'inputRefs': inputRefs,
+        if (cast.isNotEmpty) 'roleIds': cast,
       },
-      (input) => agent.sendSessionMessage(
-        id,
-        clientRequestId: input['clientRequestId'] as String,
-        text: input['text'] as String,
-        mediaIds: (input['mediaIds'] as List).cast<String>(),
-        inputRefs: [
-          for (final value in (input['inputRefs'] as List?) ?? const [])
-            Map<String, Object?>.from(value as Map),
-        ],
-        cancelToken: cancelToken,
-      ),
+      (input) async {
+        // Save the cast without starting a reply; the message starts one run.
+        if (input['roleIds'] is List) {
+          await agent.updateSessionCast(id, {
+            'clientRequestId': input['clientRequestId'],
+            'roleIds': input['roleIds'],
+            'reply': false,
+          }, cancelToken: cancelToken);
+        }
+        return agent.sendSessionMessage(
+          id,
+          clientRequestId: input['clientRequestId'] as String,
+          text: input['text'] as String,
+          mediaIds: (input['mediaIds'] as List).cast<String>(),
+          cancelToken: cancelToken,
+        );
+      },
     );
   }
 
@@ -545,33 +549,21 @@ class ApiSessionRepository extends SessionRepository {
     await _command(
       userId,
       'topic:$sessionId:$creationId:${refresh ? 'refresh' : topic.referenceId}',
-      const {},
+      {if (refresh) 'mode': 'recommend' else 'topicId': topic.referenceId},
       (input) async {
         if (refresh) {
-          await agent.recommendHomeTopics(sessionId, {
-            'clientRequestId': input['clientRequestId'],
-            'mode': 'recommend',
-          }, cancelToken: cancelToken);
+          await agent.recommendHomeTopics(
+            sessionId,
+            input,
+            cancelToken: cancelToken,
+          );
         } else {
-          await business.selectCreationTopic(creationId, {
-            'clientRequestId': input['clientRequestId'],
-            'expectedRevision': input['expectedRevision'],
-            'topicId': topic.referenceId,
-          }, cancelToken: cancelToken);
+          await agent.selectHomeTopic(
+            sessionId,
+            input,
+            cancelToken: cancelToken,
+          );
         }
-      },
-      prepare: () async {
-        final detail = await business.studioCreation(
-          creationId,
-          cancelToken: cancelToken,
-        );
-        final creation = conversationMap(detail['creation']);
-        if (creation['sessionId'] != sessionId ||
-            detail['editable'] != true ||
-            creation['revision'] is! int) {
-          throw StateError('Creation unavailable');
-        }
-        return {'expectedRevision': creation['revision']};
       },
     );
   }

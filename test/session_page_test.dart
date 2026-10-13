@@ -14,6 +14,7 @@ import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
@@ -108,6 +109,15 @@ void main() {
       await tester.tap(send);
       await tester.pumpAndSettle();
       expect(repository.sentMedia.single, ['media-42']);
+      expect(find.text('请求失败，请稍后重试'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ConversationTimeline),
+          matching: find.text('请求失败，请稍后重试'),
+        ),
+        findsNothing,
+      );
+      expect(find.byTooltip('重试'), findsNothing);
       expect(
         find.byKey(const Key('popi-image-upload-ready-0')),
         findsOneWidget,
@@ -627,7 +637,7 @@ void main() {
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    expect(find.text('新会话'), findsOneWidget);
+    expect(find.text('新项目'), findsOneWidget);
     expect(find.text('搜索对话'), findsNothing);
     expect(find.text('POPi对话'), findsNothing);
     expect(find.text('当前用户'), findsOneWidget);

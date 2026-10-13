@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
@@ -32,7 +33,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     with AutomaticKeepAliveClientMixin {
   CancelToken? _token;
   Map<String, Object?>? _capabilities;
-  Object? _error;
   final Set<String> _expandedSteps = {};
   @override
   bool get wantKeepAlive => true;
@@ -58,7 +58,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     final token = _token = CancelToken();
     setState(() {
       _capabilities = null;
-      _error = null;
     });
     try {
       final result = await widget.controller.repository.taskCapabilities(
@@ -67,7 +66,12 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
       );
       if (mounted && !token.isCancelled) setState(() => _capabilities = result);
     } catch (error) {
-      if (mounted && !token.isCancelled) setState(() => _error = error);
+      if (mounted && !token.isCancelled) {
+        AppToast.error(
+          context,
+          conversationErrorText(error, AppLocalizations.of(context)!),
+        );
+      }
     }
   }
 
@@ -303,17 +307,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 ),
             ],
           ),
-          if (_error != null)
-            Row(
-              children: [
-                Expanded(child: Text(conversationErrorText(_error, l10n))),
-                IconButton(
-                  tooltip: l10n.retry,
-                  onPressed: _load,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            ),
         ],
       ),
     );

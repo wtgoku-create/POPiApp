@@ -96,13 +96,26 @@ void main() {
   ) async {
     await _pump(tester, _role(action: 'edited'));
     expect(find.text('Character profile updated'), findsOneWidget);
-    expect(find.text('Kind、Quiet、Patient'), findsOneWidget);
+    expect(find.text('Kind、Quiet、Patient'), findsNothing);
     final image = tester.widget<Image>(find.byType(Image));
     expect(
       (image.image as AssetImage).assetName,
       'assets/images/role_guide_result_preview.png',
     );
     expect(image.fit, BoxFit.contain);
+    await tester.tap(find.byKey(const Key('conversation-role-view-profile')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Kind、Quiet、Patient'),
+      150,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('conversation-role-profile')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Kind、Quiet、Patient'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -112,9 +125,17 @@ void main() {
     await _pump(tester, _role(action: 'cast'));
     expect(find.byKey(const Key('conversation-role-summary')), findsOneWidget);
     expect(find.byKey(const Key('conversation-role-card')), findsNothing);
+    final portrait = tester.getRect(
+      find.byKey(const Key('conversation-role-portrait')),
+    );
+    expect(portrait.size, const Size(44, 44));
     expect(
-      tester.getSize(find.byKey(const Key('conversation-role-summary'))).width,
-      188,
+      tester.getTopLeft(find.text('Alice')).dx,
+      greaterThan(portrait.right),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('conversation-role-summary'))).height,
+      lessThanOrEqualTo(88),
     );
     expect(find.text('Saved description'), findsOneWidget);
     expect(find.text('Kind、Quiet、Patient'), findsNothing);

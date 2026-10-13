@@ -117,33 +117,28 @@ void main() {
     },
   );
 
-  test(
-    'receives the updated session after a revision checked update',
-    () async {
-      final dio = Dio();
-      addTearDown(() => dio.close(force: true));
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            handler.resolve(
-              Response(
-                requestOptions: options,
-                statusCode: 200,
-                data: options.method == 'PATCH'
-                    ? {'id': 's1', 'title': 'Session', 'revision': 4}
-                    : {
-                        'session': {'revision': 3},
-                      },
-              ),
-            );
-          },
-        ),
-      );
-      await NetworkAgentApi(
-        dio,
-      ).updateProjectSession('s1', clientRequestId: 'key', archived: true);
-    },
-  );
+  test('updates a session directly without fetching a revision', () async {
+    final dio = Dio();
+    addTearDown(() => dio.close(force: true));
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          expect(options.method, 'PATCH');
+          expect(options.data, {'clientRequestId': 'key', 'title': 'Renamed'});
+          handler.resolve(
+            Response(
+              requestOptions: options,
+              statusCode: 200,
+              data: {'id': 's1', 'title': 'Renamed', 'revision': 4},
+            ),
+          );
+        },
+      ),
+    );
+    await NetworkAgentApi(
+      dio,
+    ).updateProjectSession('s1', clientRequestId: 'key', title: 'Renamed');
+  });
 
   for (final nested in [false, true]) {
     test(
