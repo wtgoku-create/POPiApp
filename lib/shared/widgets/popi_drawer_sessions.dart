@@ -27,6 +27,10 @@ class PopiDrawerSessions extends ConsumerWidget {
         : history.valueOrNull ?? const <ConversationSession>[];
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
+    final sessionIndices = {
+      for (var index = 0; index < sessions.length; index++)
+        sessions[index].id: index,
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -44,14 +48,29 @@ class PopiDrawerSessions extends ConsumerWidget {
           ),
         ),
         Expanded(
-          child: ListView(
+          child: ListView.builder(
             key: const Key('drawer-session-list'),
             padding: EdgeInsets.zero,
-            children: [
-              if (history.isLoading)
-                const _SessionSkeleton(key: Key('drawer-sessions-skeleton')),
-              if (!history.isLoading && history.hasError)
-                Padding(
+            itemExtent: sessions.isEmpty ? null : 40,
+            itemCount: sessions.isEmpty ? 1 : sessions.length,
+            findChildIndexCallback: (key) =>
+                key is ValueKey<String> ? sessionIndices[key.value] : null,
+            itemBuilder: (context, index) {
+              if (sessions.isNotEmpty) {
+                final session = sessions[index];
+                return _SessionItem(
+                  key: ValueKey(session.id),
+                  session: session,
+                  onTap: () => onOpenConversation(session),
+                );
+              }
+              if (history.isLoading) {
+                return const _SessionSkeleton(
+                  key: Key('drawer-sessions-skeleton'),
+                );
+              }
+              if (history.hasError) {
+                return Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
@@ -63,26 +82,20 @@ class PopiDrawerSessions extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-              if (sessions.isEmpty && !history.isLoading && !history.hasError)
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    l10n.noHistory,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.onSurfaceVariant,
-                    ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  l10n.noHistory,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
-              for (final session in sessions)
-                _SessionItem(
-                  key: ValueKey(session.id),
-                  session: session,
-                  onTap: () => onOpenConversation(session),
-                ),
-            ],
+              );
+            },
           ),
         ),
       ],
@@ -181,7 +194,7 @@ class _SessionItem extends ConsumerWidget {
       entries: [
         AppMenuItem(
           label: pinned ? l10n.unpinSession : l10n.pinSession,
-          icon: menuIcon('menu_pin', 15),
+          icon: menuIcon('menu_pin', 17),
           onSelected: () async {
             if (ref.read(userProvider)?.id != userId) return;
             try {

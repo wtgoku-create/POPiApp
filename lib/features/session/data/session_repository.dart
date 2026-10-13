@@ -11,6 +11,9 @@ import '../../../core/network/network_agent_api.dart';
 import '../../../core/network/network_api.dart';
 import '../../../core/storage/preferences_storage.dart';
 import '../../assets/domain/library_work.dart';
+import '../../role_guide/domain/home_creation.dart';
+import '../../role_guide/domain/session_media_preferences.dart';
+import '../domain/conversation_generation.dart';
 import '../domain/conversation_session.dart';
 import '../domain/conversation_snapshot.dart';
 import 'conversation_events.dart';
@@ -55,6 +58,7 @@ abstract class SessionRepository {
     String name,
     Uint8List bytes, {
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   });
   Future<ConversationMedia> media(String id, {CancelToken? cancelToken});
   Future<String> importLibraryWork(
@@ -73,6 +77,52 @@ abstract class SessionRepository {
     String userId,
     String id,
     ConversationBlock card,
+    String action, {
+    CancelToken? cancelToken,
+  });
+  Future<void> topicAction(
+    String userId,
+    String sessionId,
+    ConversationBlock topic, {
+    bool refresh = false,
+    CancelToken? cancelToken,
+  });
+  Future<ConversationGenerationOptions> generationOptions(
+    String userId,
+    String sessionId,
+    ConversationBlock card, {
+    CancelToken? cancelToken,
+  });
+  Future<num> estimateGeneration(
+    String mediaType,
+    HomeConfig config, {
+    CancelToken? cancelToken,
+  });
+  Future<List<ConversationRoleTemplate>> roleTemplates({
+    CancelToken? cancelToken,
+  });
+  Future<void> confirmGeneration(
+    String userId,
+    String sessionId,
+    ConversationBlock card,
+    ConversationGenerationSelection selection, {
+    CancelToken? cancelToken,
+  });
+  Future<Map<String, Object?>> taskCapabilities(
+    String id, {
+    CancelToken? cancelToken,
+  });
+  Future<void> controlTask(
+    String userId,
+    ConversationBlock task,
+    String action, {
+    Map<String, Object?>? capabilities,
+    CancelToken? cancelToken,
+  });
+  Future<void> respondProposal(
+    String userId,
+    ConversationBlock task,
+    Map<String, Object?> proposal,
     String action, {
     CancelToken? cancelToken,
   });
@@ -318,6 +368,7 @@ class ApiSessionRepository extends SessionRepository {
     String name,
     Uint8List bytes, {
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   }) async {
     final input = {
       'name': name,
@@ -344,6 +395,7 @@ class ApiSessionRepository extends SessionRepository {
       conversationMap(lease['uploadHeaders']),
       bytes,
       cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
     );
     final uploadId = conversationMap(lease['upload'])['id'] as String;
     final completed = await _command(
@@ -426,10 +478,27 @@ class ApiSessionRepository extends SessionRepository {
     String action, {
     CancelToken? cancelToken,
   }) async {
+    if (card.isHomePlan) {
+      if (card.status != 'ready' || action != 'cancel') {
+        throw StateError('Action unavailable');
+      }
+      await agent.respondHomePlan(
+        id,
+        card.id,
+        'cancel',
+        const {},
+        cancelToken: cancelToken,
+      );
+      await _clearGenerationRecovery(userId, id, card.id);
+      return;
+    }
     if (!card.confirmationAvailable || !card.allowedActions.contains(action)) {
       throw StateError('Confirmation expired');
     }
-    if (action == 'confirm' && card.data['kind'] == 'generation') {
+    if (action == 'confirm' && card.objectKind == 'generation') {
+      if (card.roleImage != null) {
+        throw StateError('Generation selection required');
+      }
       final request = card.request;
       if (request == null || request['method'] != 'POST') {
         throw const FormatException('Missing generation request');
@@ -453,6 +522,405 @@ class ApiSessionRepository extends SessionRepository {
         cancelToken: cancelToken,
       ),
     );
+    if (action == 'cancel') {
+      await _clearGenerationRecovery(userId, id, card.id);
+    }
+  }
+
+  @override
+  Future<void> topicAction(
+    String userId,
+    String sessionId,
+    ConversationBlock topic, {
+    bool refresh = false,
+    CancelToken? cancelToken,
+  }) async {
+    if (topic.scopeKind != 'creation' ||
+        topic.scopeId == null ||
+        topic.referenceId.isEmpty ||
+        topic.action == 'selected') {
+      throw StateError('Topic unavailable');
+    }
+    final creationId = topic.scopeId!;
+    await _command(
+      userId,
+      'topic:$sessionId:$creationId:${refresh ? 'refresh' : topic.referenceId}',
+      const {},
+      (input) async {
+        if (refresh) {
+          await agent.recommendHomeTopics(sessionId, {
+            'clientRequestId': input['clientRequestId'],
+            'mode': 'recommend',
+          }, cancelToken: cancelToken);
+        } else {
+          await business.selectCreationTopic(creationId, {
+            'clientRequestId': input['clientRequestId'],
+            'expectedRevision': input['expectedRevision'],
+            'topicId': topic.referenceId,
+          }, cancelToken: cancelToken);
+        }
+      },
+      prepare: () async {
+        final detail = await business.studioCreation(
+          creationId,
+          cancelToken: cancelToken,
+        );
+        final creation = conversationMap(detail['creation']);
+        if (creation['sessionId'] != sessionId ||
+            detail['editable'] != true ||
+            creation['revision'] is! int) {
+          throw StateError('Creation unavailable');
+        }
+        return {'expectedRevision': creation['revision']};
+      },
+    );
+  }
+
+  String _selectionKey(String userId, String sessionId, String id) =>
+      'agent.generation.$userId.$sessionId.$id';
+
+  Future<void> _clearGenerationRecovery(
+    String userId,
+    String sessionId,
+    String id,
+  ) async {
+    final key = _selectionKey(userId, sessionId, id);
+    final saved = storage().getString(key);
+    if (saved != null) {
+      await storage().remove(
+        _commandKey(
+          userId,
+          'generation:$sessionId:$id',
+          conversationMap(jsonDecode(saved)),
+        ),
+      );
+    }
+    await storage().remove(key);
+    await storage().remove('$key.configuration');
+    await storage().remove('$key.preferencesChanged');
+  }
+
+  @override
+  Future<ConversationGenerationOptions> generationOptions(
+    String userId,
+    String sessionId,
+    ConversationBlock card, {
+    CancelToken? cancelToken,
+  }) async {
+    final models =
+        conversationMaps(
+              (await business.mediaModels(
+                mediaType: card.isHomePlan ? 'video' : card.mediaType,
+                cancelToken: cancelToken,
+              ))['list'],
+            )
+            .map(HomeModel.fromJson)
+            .where(
+              (model) =>
+                  model.available &&
+                  model.mediaType ==
+                      (card.isHomePlan ? 'video' : card.mediaType),
+            )
+            .toList();
+    final preferences = SessionMediaPreferences.fromJson(
+      await business.sessionMediaPreferences(
+        sessionId,
+        cancelToken: cancelToken,
+      ),
+    );
+    final key = _selectionKey(userId, sessionId, card.id);
+    final saved = storage().getString(key);
+    var recovery = saved == null
+        ? null
+        : ConversationGenerationSelection.fromJson(
+            conversationMap(jsonDecode(saved)),
+          );
+    // 配置已固定时只能更新偏好版本，不能给同一卡片换一套生成输入。
+    if (recovery != null &&
+        storage().getString('$key.preferencesChanged') != null) {
+      final preferred = card.mediaType == 'image'
+          ? preferences.image
+          : preferences.video;
+      if (preferred != null &&
+          _canonical(preferred.toJson()) ==
+              _canonical(recovery.config.toJson())) {
+        recovery = ConversationGenerationSelection.fromJson({
+          ...recovery.toJson(),
+          'mediaPreferencesRevision': preferences.revision,
+        });
+        await storage().setString(key, jsonEncode(recovery.toJson()));
+        await storage().remove('$key.preferencesChanged');
+      }
+    }
+    return ConversationGenerationOptions(
+      models: models,
+      preferences: preferences,
+      recovery: recovery,
+    );
+  }
+
+  @override
+  Future<num> estimateGeneration(
+    String mediaType,
+    HomeConfig config, {
+    CancelToken? cancelToken,
+  }) async {
+    final points = (await business.estimateStudioGeneration(
+      mediaType,
+      config.toJson(),
+      cancelToken: cancelToken,
+    ))['estimatedPoints'];
+    if (points is! num || !points.isFinite || points < 0) {
+      throw const FormatException('Invalid estimate');
+    }
+    return points;
+  }
+
+  @override
+  Future<List<ConversationRoleTemplate>> roleTemplates({
+    CancelToken? cancelToken,
+  }) async {
+    final templates = <ConversationRoleTemplate>[];
+    for (var page = 1; page <= 10000; page++) {
+      final result = await business.roleTemplatesPage(
+        page,
+        cancelToken: cancelToken,
+      );
+      templates.addAll(
+        conversationMaps(result['list']).map(ConversationRoleTemplate.fromJson),
+      );
+      final pageCount = conversationMap(result['pageInfo'])['pageCount'];
+      if (pageCount is! int || pageCount < 1) {
+        throw const FormatException('Invalid template pagination');
+      }
+      if (page >= pageCount) return templates;
+    }
+    throw const FormatException('Too many template pages');
+  }
+
+  /// 配置、业务授权、Agent 回执共用同一恢复输入，任何一次超时都可继续。
+  @override
+  Future<void> confirmGeneration(
+    String userId,
+    String sessionId,
+    ConversationBlock card,
+    ConversationGenerationSelection selection, {
+    CancelToken? cancelToken,
+  }) async {
+    if (card.isHomePlan
+        ? card.status != 'ready'
+        : !card.confirmationAvailable ||
+              !card.allowedActions.contains('confirm')) {
+      throw StateError('Confirmation unavailable');
+    }
+    if (!selection.estimatedPoints.isFinite || selection.estimatedPoints < 0) {
+      throw const FormatException('Invalid estimate');
+    }
+    final key = _selectionKey(userId, sessionId, card.id);
+    final saved = storage().getString(key);
+    final fixed = saved == null
+        ? selection
+        : ConversationGenerationSelection.fromJson(
+            conversationMap(jsonDecode(saved)),
+          );
+    await storage().setString(key, jsonEncode(fixed.toJson()));
+    var configurationCompleted = false;
+    var authorizationCompleted = false;
+    try {
+      await _command(
+        userId,
+        'generation:$sessionId:${card.id}',
+        fixed.toJson(),
+        (input) async {
+          if (card.isHomePlan) {
+            await agent.respondHomePlan(sessionId, card.id, 'generate', {
+              'clientRequestId': input['clientRequestId'],
+              'config': fixed.config.toJson(),
+            }, cancelToken: cancelToken);
+            return;
+          }
+          var request = card.request;
+          if (card.roleImage != null) {
+            final configurationKey = '$key.configuration';
+            final configurationId =
+                storage().getString(configurationKey) ?? const Uuid().v4();
+            await storage().setString(configurationKey, configurationId);
+            final configured = await agent.configureRoleImage(
+              sessionId,
+              card.id,
+              {
+                'clientRequestId': configurationId,
+                ...fixed.roleImageConfiguration,
+              },
+              cancelToken: cancelToken,
+            );
+            configurationCompleted = true;
+            request = conversationMap(configured['request']);
+          }
+          if (request == null || request['method'] != 'POST') {
+            throw const FormatException('Missing generation request');
+          }
+          final body = conversationMap(request['body']);
+          var generation = conversationMap(body['input']);
+          final legacyThreeView = card.isThreeView && card.roleImage == null;
+          if (legacyThreeView) {
+            final preview = await agent.previewGenerationTemplate(
+              sessionId,
+              card.id,
+              fixed.roleTemplateId,
+              cancelToken: cancelToken,
+            );
+            generation = conversationMap(preview['generation']);
+          }
+          final item = conversationMap(generation['item']);
+          await business.confirmStudioGeneration(request['path'] as String, {
+            ...body,
+            'input': {
+              ...generation,
+              'item': {
+                ...item,
+                ...fixed.config.toJson(),
+                if (legacyThreeView)
+                  'references': [
+                    for (final ref in conversationMaps(item['references']))
+                      if (ref['purpose'] == 'style') ref,
+                    if (fixed.referenceMediaId != null)
+                      {
+                        'mediaId': fixed.referenceMediaId,
+                        'purpose': 'reference',
+                      },
+                  ],
+              },
+            },
+            'maxEstimatedPoints': fixed.estimatedPoints,
+            'mediaPreferencesRevision': fixed.mediaPreferencesRevision,
+          }, cancelToken: cancelToken);
+          authorizationCompleted = true;
+          await agent.respondConfirmation(
+            sessionId,
+            card.id,
+            clientRequestId: input['clientRequestId'] as String,
+            revision: card.revision,
+            action: 'confirm',
+            generationConfig: {
+              ...fixed.config.toJson(),
+              if (legacyThreeView) ...{
+                'referenceMediaId': fixed.referenceMediaId,
+                'roleTemplateId': fixed.roleTemplateId,
+              },
+            },
+            cancelToken: cancelToken,
+          );
+        },
+      );
+      await _clearGenerationRecovery(userId, sessionId, card.id);
+    } catch (error) {
+      if (error is AgentApiException &&
+          error.code == 'MEDIA_PREFERENCES_CHANGED') {
+        if (card.roleImage == null) {
+          await _clearGenerationRecovery(userId, sessionId, card.id);
+        } else {
+          await storage().setString('$key.preferencesChanged', '1');
+        }
+      } else if (!configurationCompleted &&
+          !authorizationCompleted &&
+          error is AgentApiException &&
+          (error.statusCode ?? 500) < 500 &&
+          !error.retryable &&
+          !['COMMAND_PENDING', 'CONFIRMATION_PENDING'].contains(error.code)) {
+        await _clearGenerationRecovery(userId, sessionId, card.id);
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, Object?>> taskCapabilities(
+    String id, {
+    CancelToken? cancelToken,
+  }) => agent.taskCapabilities(id, cancelToken: cancelToken);
+
+  @override
+  Future<void> controlTask(
+    String userId,
+    ConversationBlock task,
+    String action, {
+    Map<String, Object?>? capabilities,
+    CancelToken? cancelToken,
+  }) async {
+    final home = task.action == 'home';
+    final allowed = home
+        ? task.allowedActions
+        : ((capabilities?['allowedActions'] as List?) ?? [])
+              .whereType<String>()
+              .toList();
+    if (!allowed.contains(action) &&
+        !(home &&
+            action == 'confirm-video' &&
+            task.status == 'awaiting_confirmation' &&
+            task.data['confirmationPending'] == true &&
+            task.data['intent'] != 'cancel')) {
+      throw StateError('Action unavailable');
+    }
+    await _command(
+      userId,
+      'task:${task.id}:$action',
+      {
+        if (!home) 'revision': capabilities?['revision'],
+        if (action != 'confirm-video') 'action': action,
+      },
+      (input) async {
+        if (home) {
+          await agent.controlHomeTask(
+            task.id,
+            input,
+            confirmVideo: action == 'confirm-video',
+            cancelToken: cancelToken,
+          );
+        } else {
+          await agent.controlTask(task.id, action, {
+            'clientRequestId': input['clientRequestId'],
+            'revision': input['revision'],
+          }, cancelToken: cancelToken);
+        }
+      },
+    );
+  }
+
+  @override
+  Future<void> respondProposal(
+    String userId,
+    ConversationBlock task,
+    Map<String, Object?> proposal,
+    String action, {
+    CancelToken? cancelToken,
+  }) async {
+    if (task.status != 'waiting_user' ||
+        proposal['status'] != 'ready' ||
+        action == 'confirm' && proposal['executionAvailable'] == false) {
+      throw StateError('Proposal unavailable');
+    }
+    final quote = proposal['quote'];
+    await _command(
+      userId,
+      'proposal:${proposal['id']}:$action',
+      {
+        'revision': proposal['revision'],
+        if (action == 'confirm') ...{
+          'planHash': proposal['planHash'],
+          if (task.data['executionPolicy'] != 'estimate_only' && quote is Map)
+            'quoteId': quote['id'],
+        },
+      },
+      (input) async {
+        await agent.respondProposal(
+          proposal['id'] as String,
+          action,
+          input,
+          cancelToken: cancelToken,
+        );
+      },
+    );
   }
 
   Future<T> _command<T>(
@@ -463,8 +931,7 @@ class ApiSessionRepository extends SessionRepository {
     Future<Map<String, Object?>> Function()? prepare,
   }) async {
     final preferences = storage();
-    final key =
-        'agent.command.$userId.${sha256.convert(utf8.encode(_canonical([operation, input])))}';
+    final key = _commandKey(userId, operation, input);
     final saved = preferences.getString(key);
     Map<String, Object?> command;
     if (saved == null) {
@@ -493,6 +960,13 @@ class ApiSessionRepository extends SessionRepository {
     }
   }
 }
+
+String _commandKey(
+  String userId,
+  String operation,
+  Map<String, Object?> input,
+) =>
+    'agent.command.$userId.${sha256.convert(utf8.encode(_canonical([operation, input])))}';
 
 String _canonical(Object? value) {
   if (value is List) return '[${value.map(_canonical).join(',')}]';

@@ -275,6 +275,7 @@ class NetworkAgentApi {
     required String clientRequestId,
     required int revision,
     required String action,
+    Map<String, Object?>? generationConfig,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/confirmations/${Uri.encodeComponent(confirmationId)}/respond',
@@ -283,9 +284,95 @@ class NetworkAgentApi {
       'clientRequestId': clientRequestId,
       'revision': revision,
       'action': action,
+      if (generationConfig != null) 'generationConfig': generationConfig,
     },
     cancelToken: cancelToken,
   );
+
+  /// 首页方案与普通生成确认使用不同的业务入口。
+  Future<Map<String, dynamic>> respondHomePlan(
+    String sessionId,
+    String planId,
+    String action,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) {
+    if (!['generate', 'cancel'].contains(action)) {
+      throw ArgumentError.value(action, 'action');
+    }
+    return _request(
+      '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/home-plans/${Uri.encodeComponent(planId)}/$action',
+      method: 'POST',
+      data: input,
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> configureRoleImage(
+    String sessionId,
+    String cardId,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/confirmations/${Uri.encodeComponent(cardId)}/configuration',
+    method: 'POST',
+    data: input,
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> previewGenerationTemplate(
+    String sessionId,
+    String cardId,
+    String? templateId, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/confirmations/${Uri.encodeComponent(cardId)}/template-preview',
+    method: 'POST',
+    data: {'roleTemplateId': templateId},
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> taskCapabilities(
+    String id, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/tasks/${Uri.encodeComponent(id)}/capabilities',
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> controlTask(
+    String id,
+    String action,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) {
+    if (!['pause', 'resume', 'cancel', 'retry'].contains(action)) {
+      throw ArgumentError.value(action, 'action');
+    }
+    return _request(
+      '/api_agent/v2/tasks/${Uri.encodeComponent(id)}/$action',
+      method: 'POST',
+      data: input,
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<Map<String, dynamic>> respondProposal(
+    String id,
+    String action,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) {
+    if (!['confirm', 'cancel'].contains(action)) {
+      throw ArgumentError.value(action, 'action');
+    }
+    return _request(
+      '/api_agent/v2/proposals/${Uri.encodeComponent(id)}/$action',
+      method: 'POST',
+      data: input,
+      cancelToken: cancelToken,
+    );
+  }
 
   /// Returns raw SSE bytes; event parsing and message updates belong outside UI.
   Future<ResponseBody> openSessionEvents(

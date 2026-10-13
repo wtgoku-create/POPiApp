@@ -230,6 +230,67 @@ void main() {
     expect(find.byKey(const Key('assets-work-0')), findsNothing);
   });
 
+  for (final grouped in [false, true]) {
+    testWidgets('long works grid builds on demand, grouped: $grouped', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = TestWorkRepository(
+        (_, __) async => LibraryWorkPage(
+          items: [
+            for (var index = 0; index < 180; index++)
+              LibraryWork(
+                id: 'work-$index',
+                previewUrl: 'https://example.test/work-$index.png',
+                isVideo: false,
+                createdAt: DateTime(2026, 10, grouped ? 8 - index ~/ 60 : 8),
+              ),
+          ],
+          hasMore: false,
+        ),
+      );
+      await pumpLibrary(tester, repository);
+      await tester.pumpAndSettle();
+      final first = find.byKey(const Key('assets-work-0'));
+      final last = find.byKey(const Key('assets-work-179'));
+      final tiles = find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> && key.value.startsWith('assets-work-');
+      });
+      expect(first, findsOneWidget);
+      expect(last, findsNothing);
+      expect(tiles.evaluate().length, lessThan(30));
+
+      await tester.longPress(first);
+      await tester.pumpAndSettle();
+      final scrollable = find.descendant(
+        of: find.byKey(const Key('assets-works-grid')),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(last, 500, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(first, findsNothing);
+      await tester.tap(last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: last, matching: find.text('2')),
+        findsOneWidget,
+      );
+
+      await tester.scrollUntilVisible(first, -500, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: first, matching: find.text('1')),
+        findsOneWidget,
+      );
+      expect(repository.requests, [(0, 1)]);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('shows failure and retries the first page', (tester) async {
     var attempts = 0;
     final repository = TestWorkRepository((_, __) async {

@@ -52,6 +52,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   int _generation = 0;
 
   ScrollController get _scroll => widget.scrollController ?? _localScroll;
+  bool get _showMore => _roles.length > 9;
 
   @override
   void initState() {
@@ -86,11 +87,11 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   }
 
   void _nearBottom() {
-    if (widget.fullLibrary &&
-        !_failed &&
+    if (!_failed &&
         _hasMore &&
-        _scroll.hasClients &&
-        _scroll.position.extentAfter < 200) {
+        (widget.fullLibrary
+            ? _scroll.hasClients && _scroll.position.extentAfter < 200
+            : !_showMore)) {
       _load();
     }
   }
@@ -253,11 +254,11 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
       children: [
         if (_roles.isNotEmpty)
           RoleGuideGrid(
-            roles: _roles.take(8).toList(),
+            roles: _roles.take(_showMore ? 8 : 9).toList(),
             selected: widget.selected(),
             onToggle: _toggle,
             onDetails: widget.onDetails,
-            onMore: widget.onMore,
+            onMore: _showMore ? widget.onMore : null,
           ),
         if (_loading)
           _RoleGuideGridSkeleton(

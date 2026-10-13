@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -27,6 +28,102 @@ import 'support/work_library_fixtures.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
+  testWidgets(
+    'gallery uploads show progress, retry failures and reuse media on send',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = _UploadSessionRepository();
+      final container = ProviderContainer(
+        overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '1', name: 'User', email: ''));
+      final bytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: _LocalizedTestApp(
+            theme: AppTheme.light,
+            home: SessionPage(
+              initialPrompt: 'Create content',
+              pickImages: () async => [
+                XFile.fromData(bytes, name: 'photo.png'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('添加附件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('相册'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('attachment-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(repository.uploads, hasLength(1));
+      expect(repository.sentMedia, isEmpty);
+      expect(find.byKey(const Key('popi-selected-image-0')), findsOneWidget);
+      final send = find.byKey(const Key('popi-send-button'));
+      expect(tester.widget<IconButton>(send).onPressed, isNull);
+      repository.progress!(50, 100);
+      await tester.pump();
+      expect(find.text('50%'), findsOneWidget);
+      expect(
+        tester
+            .getRect(find.byKey(const Key('popi-image-upload-progress-0')))
+            .overlaps(
+              tester.getRect(
+                find.byKey(const Key('popi-remove-selected-image-0')),
+              ),
+            ),
+        isFalse,
+      );
+      repository.progress!(100, 100);
+      await tester.pump();
+      expect(find.text('处理中'), findsOneWidget);
+      expect(tester.widget<IconButton>(send).onPressed, isNull);
+      repository.uploads.single.completeError(StateError('offline'));
+      await tester.pumpAndSettle();
+      expect(find.text('上传失败'), findsOneWidget);
+      expect(tester.widget<IconButton>(send).onPressed, isNull);
+      await tester.tap(find.byKey(const Key('popi-image-upload-retry-0')));
+      await tester.pump();
+      expect(repository.uploads, hasLength(2));
+      repository.uploads.last.complete('media-42');
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('popi-image-upload-ready-0')),
+        findsOneWidget,
+      );
+      expect(tester.widget<IconButton>(send).onPressed, isNotNull);
+      // Failed message sends must retain the uploaded attachment for retry.
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(repository.sentMedia.single, ['media-42']);
+      expect(
+        find.byKey(const Key('popi-image-upload-ready-0')),
+        findsOneWidget,
+      );
+      repository.failSend = false;
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(repository.sentMedia.last, ['media-42']);
+      expect(repository.uploads, hasLength(2));
+      expect(find.byKey(const Key('popi-selected-images')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 4));
+    },
+  );
+
   test('message composer controller exports markdown', () async {
     final controller = PopiMessageComposerController(initialText: '初始内容');
     addTearDown(controller.dispose);
@@ -37,6 +134,61 @@ void main() {
 
     expect(controller.markdown, '做一个新IP');
   });
+
+  testWidgets(
+    'removing images and switching accounts cancel pending gallery uploads',
+    (tester) async {
+      final repository = _UploadSessionRepository();
+      final container = ProviderContainer(
+        overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '1', name: 'User', email: ''));
+      final bytes = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: _LocalizedTestApp(
+            theme: AppTheme.dark,
+            home: SessionPage(
+              initialPrompt: 'Create content',
+              pickImages: () async => [
+                XFile.fromData(bytes, path: 'first.png', name: 'first.png'),
+                XFile.fromData(bytes, path: 'second.png', name: 'second.png'),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('添加附件'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('相册'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('attachment-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(repository.uploads, hasLength(2));
+      await tester.tap(find.byKey(const Key('popi-remove-selected-image-0')));
+      await tester.pump();
+      expect(repository.uploadTokens.first.isCancelled, isTrue);
+      expect(repository.uploadTokens.last.isCancelled, isFalse);
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '2', name: 'Other user', email: ''));
+      await tester.pumpAndSettle();
+      expect(repository.uploadTokens.last.isCancelled, isTrue);
+      repository.uploads.first.complete('late');
+      repository.uploads.last.completeError(StateError('cancelled'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('popi-selected-images')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   test('message composer controller keeps a valid selection on dismiss', () {
     final controller = PopiMessageComposerController(initialText: '输入内容');
@@ -825,6 +977,27 @@ void main() {
     expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _UploadSessionRepository extends _RoleSessionRepository {
+  final uploads = <Completer<String>>[];
+  final uploadTokens = <CancelToken>[];
+  ProgressCallback? progress;
+
+  @override
+  Future<String> upload(
+    String userId,
+    String name,
+    Uint8List bytes, {
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+  }) {
+    final completion = Completer<String>();
+    uploads.add(completion);
+    uploadTokens.add(cancelToken!);
+    progress = onSendProgress;
+    return completion.future;
+  }
 }
 
 class _RoleSessionRepository extends FixtureSessionRepository {

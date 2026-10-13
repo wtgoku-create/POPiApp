@@ -827,25 +827,24 @@ class _WorksLibrary extends StatelessWidget {
       offset += group.items.length;
       if (visible.isEmpty) continue;
       sections.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              group.date,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                group.date,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
         ),
       );
       sections.add(
-        GridView.builder(
-          padding: EdgeInsets.zero,
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
+        SliverGrid.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             crossAxisSpacing: 8,
@@ -870,25 +869,35 @@ class _WorksLibrary extends StatelessWidget {
           },
         ),
       );
-      sections.add(const SizedBox(height: 20));
+      sections.add(const SliverToBoxAdapter(child: SizedBox(height: 20)));
     }
 
     if (sections.isEmpty) {
       return const _WorksEmptyState();
     }
     if (loadingMore) {
-      sections.add(const Center(child: CircularProgressIndicator()));
+      sections.add(
+        const SliverToBoxAdapter(
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
     }
-    if (error != null) sections.add(_retry(context));
+    if (error != null) {
+      sections.add(SliverToBoxAdapter(child: _retry(context)));
+    }
 
     return Stack(
       children: [
-        ListView(
+        CustomScrollView(
           key: const Key('assets-works-grid'),
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(20, 10, 20, selecting ? 120 : 20),
-          children: sections,
+          slivers: [
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 10, 20, selecting ? 120 : 20),
+              sliver: SliverMainAxisGroup(slivers: sections),
+            ),
+          ],
         ),
         if (selecting)
           Align(

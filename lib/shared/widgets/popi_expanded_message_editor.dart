@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import 'app_svg_icon.dart';
 
 /// Provides the Figma long-message editing surface above the keyboard.
@@ -58,7 +59,29 @@ class PopiExpandedMessageEditor extends StatelessWidget {
                         ),
                       ),
                     ),
-                    action,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (MediaQuery.viewInsetsOf(context).bottom > 0) ...[
+                          SizedBox.square(
+                            dimension: 40,
+                            child: IconButton(
+                              key: const Key(
+                                'popi-expanded-editor-hide-keyboard',
+                              ),
+                              tooltip: AppLocalizations.of(
+                                context,
+                              )!.hideKeyboard,
+                              onPressed: () =>
+                                  FocusManager.instance.primaryFocus?.unfocus(),
+                              icon: const Icon(Icons.keyboard_hide_rounded),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        action,
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),

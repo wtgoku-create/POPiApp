@@ -110,6 +110,9 @@ class HomeModel {
       available = json['available'] == true,
       mediaType = json['mediaType']?.toString() ?? '',
       isDefault = json['isDefault'] == true,
+      referenceSchema = json['referenceSchema'] is Map
+          ? homeObject(json['referenceSchema'])
+          : const {},
       parameters = homeObjects(
         json['parameters'],
       ).map(HomeParameter.fromJson).toList();
@@ -119,7 +122,16 @@ class HomeModel {
   final bool available;
   final String mediaType;
   final bool isDefault;
+  final Map<String, Object?> referenceSchema;
   final List<HomeParameter> parameters;
+
+  bool acceptsImageReferences(int count) {
+    final image = referenceSchema['image'];
+    if (image is! Map) return true;
+    return (count == 0 || image['supported'] == true) &&
+        count >= (image['min'] as num? ?? 0) &&
+        (image['max'] is! num || count <= (image['max'] as num));
+  }
 
   HomeConfig get defaultConfig => HomeConfig(
     modelId: id,

@@ -24,7 +24,7 @@ Stream<ConversationEvent> decodeConversationEvents(
   var data = <String>[];
   var firstLine = true;
   await for (var line
-      in bytes.transform(utf8.decoder).transform(const LineSplitter())) {
+      in utf8.decoder.bind(bytes).transform(const LineSplitter())) {
     if (firstLine) {
       line = line.replaceFirst(RegExp('^\uFEFF'), '');
       firstLine = false;
@@ -240,6 +240,9 @@ Map<String, Object?> _messageJson(ConversationMessage message) => {
   'seq': message.seq,
   'revision': message.revision,
   'runId': message.runId,
+  'attempt': message.attempt,
+  'presentation': message.presentation,
+  'transient': message.transient,
   'createdAt': message.createdAt.toIso8601String(),
   'blocks': [
     for (final block in message.blocks)
@@ -251,6 +254,7 @@ Map<String, Object?> _messageJson(ConversationMessage message) => {
           'kind': block.kind,
           'action': block.action,
           'data': block.data,
+          if (block.scope.isNotEmpty) 'scope': block.scope,
         },
       },
   ],

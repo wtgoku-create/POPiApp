@@ -32,6 +32,36 @@ import 'package:popi_ai_app/shared/providers/session_provider.dart';
 
 void main() {
   WidgetController.hitTestWarningShouldBeFatal = true;
+  List<LibraryRole> rolesWithCount(int count) {
+    final examples = roleGuideExamples(
+      lookupAppLocalizations(const Locale('zh')),
+    );
+    return [
+      for (var i = 0; i < count; i++)
+        if (i < examples.length)
+          examples[i]
+        else
+          LibraryRole(
+            id: 'preview-role-${i + 1}',
+            title: 'Role ${i + 1}',
+            description: examples.first.description,
+            avatar: examples.first.avatar,
+            canCreate: true,
+            profileComplete: true,
+          ),
+    ];
+  }
+
+  Future<LibraryRolePage> loadLargeLibrary({
+    required String category,
+    required int page,
+    required int pageSize,
+  }) async => LibraryRolePage(
+    items: rolesWithCount(category == 'official' ? 10 : 2),
+    page: page,
+    pageCount: 1,
+  );
+
   Future<ProviderContainer> pumpGuide(
     WidgetTester tester, {
     Size size = const Size(440, 956),
@@ -170,6 +200,75 @@ void main() {
   Future<void> chooseStory(WidgetTester tester) async {
     await selectProject(tester);
     await tap(tester, 'role-guide-choose-story');
+  }
+
+  for (final count in [0, 1, 8, 9, 10]) {
+    testWidgets('compact role grid shows more only above nine: $count', (
+      tester,
+    ) async {
+      await pumpGuide(
+        tester,
+        loader: ({required category, required page, required pageSize}) async =>
+            LibraryRolePage(
+              items: rolesWithCount(count),
+              page: page,
+              pageCount: 1,
+            ),
+      );
+      expect(
+        find.byKey(const Key('role-guide-more')),
+        count > 9 ? findsOneWidget : findsNothing,
+      );
+      for (var i = 1; i <= (count > 9 ? 8 : count); i++) {
+        expect(
+          find.byKey(Key('role-guide-select-preview-role-$i')),
+          findsOneWidget,
+        );
+      }
+      if (count > 9) {
+        expect(
+          find.byKey(const Key('role-guide-select-preview-role-9')),
+          findsNothing,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final count in [9, 10]) {
+    testWidgets(
+      'short preview pages determine the total before showing more: $count',
+      (tester) async {
+        final roles = rolesWithCount(count);
+        final pages = <int>[];
+        await pumpGuide(
+          tester,
+          loader:
+              ({required category, required page, required pageSize}) async {
+                pages.add(page);
+                return LibraryRolePage(
+                  items: page == 1
+                      ? roles.take(4).toList()
+                      : roles.skip(4).toList(),
+                  page: page,
+                  pageCount: 2,
+                );
+              },
+        );
+        expect(pages, [1, 2]);
+        expect(
+          find.byKey(const Key('role-guide-more')),
+          count > 9 ? findsOneWidget : findsNothing,
+        );
+        if (count == 9) {
+          expect(
+            find.byKey(const Key('role-guide-select-preview-role-9')),
+            findsOneWidget,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   for (final size in [
@@ -340,78 +439,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'full flow preserves project, cast, story and both parameter groups',
-    (tester) async {
-      await pumpGuide(tester);
-      expect(find.byKey(const Key('role-guide-back')), findsNothing);
-      await selectProject(tester);
-      expect(find.byKey(const Key('role-guide-back')), findsNothing);
-      expect(find.text('爱丽丝的项目'), findsOneWidget);
-      expect(find.text('共4个角色'), findsOneWidget);
-      final previous = find.byKey(const Key('role-guide-previous-story'));
-      final next = find.byKey(const Key('role-guide-next-story'));
-      expect(tester.widget<IconButton>(previous).onPressed, isNull);
-      expect(tester.getCenter(next).dx - tester.getCenter(previous).dx, 24);
-      await tap(tester, 'role-guide-next-story');
-      expect(find.text('室友的秘密计划'), findsOneWidget);
-      await tap(tester, 'role-guide-previous-story');
-      await tap(tester, 'role-guide-edit-cast');
-      await tap(tester, 'role-library-select-preview-role-3');
-      expect(find.textContaining('已选3个角色'), findsOneWidget);
-      await tap(tester, 'role-library-create-project');
-      await tap(tester, 'role-guide-choose-story');
-      expect(find.text('开始创作'), findsOneWidget);
-      final back = find.byKey(const Key('role-guide-back'));
-      final menu = find.byKey(const Key('role-guide-menu'));
-      expect(back, findsOneWidget);
-      expect(tester.getSize(back), const Size(40, 40));
-      expect(tester.getTopLeft(back).dx, tester.getTopRight(menu).dx);
-      expect(tester.getTopLeft(back).dy, tester.getTopLeft(menu).dy);
-      expect(find.byKey(const Key('role-guide-refresh-stories')), findsNothing);
-      expect(find.text('查看方案'), findsNothing);
-      await tap(tester, 'role-guide-configure');
-      await tap(tester, 'role-model-veo');
-      await tap(tester, 'role-resolution-1080');
-      await tap(tester, 'role-ratio-portrait');
-      await tap(tester, 'role-segment-1');
-      expect(find.text('模型选择'), findsNothing);
-      await tap(tester, 'role-ratio-square');
-      expect(find.byKey(const Key('role-quantity-2')), findsNothing);
-      await tap(tester, 'role-generation-confirm');
-      expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
-      await tap(tester, 'role-guide-back');
-      expect(find.text('匹配选题'), findsOneWidget);
-      expect(back, findsNothing);
-      await tap(tester, 'role-guide-choose-story');
-      expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
-      await tap(tester, 'role-guide-produce');
-      expect(find.text('生成成功！'), findsOneWidget);
-      expect(back, findsOneWidget);
-      expect(tester.widget<IconButton>(back).onPressed, isNotNull);
-      expect(find.text('交互演示 · 不消耗积分'), findsOneWidget);
-      await tap(tester, 'role-guide-view-plan');
-      final session = tester.widget<SessionPage>(find.byType(SessionPage));
-      expect(session.initialPrompt, contains('爱丽丝的项目'));
-      expect(session.initialPrompt, contains('视频模型：Veo 3.1'));
-      expect(session.initialPrompt, contains('视频参数：1080P / 9:16'));
-      expect(session.initialPrompt, contains('图片参数：720P / 1:1'));
-      expect(session.initialPrompt, contains('生成数量：1'));
-      expect(session.initialPrompt, contains('时长: 20s'));
-      expect(
-        session.initialPrompt,
-        contains(
-          '出场角色：爱丽丝 [preview-role-1], 尔尔 [preview-role-2], 水獭兜兜儿 [preview-role-4]',
-        ),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('full flow preserves project, cast, story and video parameters', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    expect(find.byKey(const Key('role-guide-back')), findsNothing);
+    await selectProject(tester);
+    expect(find.byKey(const Key('role-guide-back')), findsNothing);
+    expect(find.text('爱丽丝的项目'), findsOneWidget);
+    expect(find.text('共4个角色'), findsOneWidget);
+    final previous = find.byKey(const Key('role-guide-previous-story'));
+    final next = find.byKey(const Key('role-guide-next-story'));
+    expect(tester.widget<IconButton>(previous).onPressed, isNull);
+    expect(tester.getCenter(next).dx - tester.getCenter(previous).dx, 24);
+    await tap(tester, 'role-guide-next-story');
+    expect(find.text('室友的秘密计划'), findsOneWidget);
+    await tap(tester, 'role-guide-previous-story');
+    await tap(tester, 'role-guide-edit-cast');
+    await tap(tester, 'role-library-select-preview-role-3');
+    expect(find.textContaining('已选3个角色'), findsOneWidget);
+    await tap(tester, 'role-library-create-project');
+    await tap(tester, 'role-guide-choose-story');
+    expect(find.text('开始创作'), findsOneWidget);
+    final back = find.byKey(const Key('role-guide-back'));
+    final menu = find.byKey(const Key('role-guide-menu'));
+    expect(back, findsOneWidget);
+    expect(tester.getSize(back), const Size(40, 40));
+    expect(tester.getTopLeft(back).dx, tester.getTopRight(menu).dx);
+    expect(tester.getTopLeft(back).dy, tester.getTopLeft(menu).dy);
+    expect(find.byKey(const Key('role-guide-refresh-stories')), findsNothing);
+    expect(find.text('查看方案'), findsNothing);
+    await tap(tester, 'role-guide-configure');
+    await tap(tester, 'role-model-veo');
+    await tap(tester, 'role-resolution-1080');
+    await tap(tester, 'role-ratio-portrait');
+    expect(find.text('图片偏好'), findsNothing);
+    expect(find.byKey(const Key('role-segment-1')), findsNothing);
+    expect(find.byKey(const Key('role-quantity-2')), findsNothing);
+    await tap(tester, 'role-generation-confirm');
+    expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
+    await tap(tester, 'role-guide-back');
+    expect(find.text('匹配选题'), findsOneWidget);
+    expect(back, findsNothing);
+    await tap(tester, 'role-guide-choose-story');
+    expect(find.text('Veo 3.1 / 1080P / 9:16'), findsOneWidget);
+    await tap(tester, 'role-guide-produce');
+    expect(find.text('生成成功！'), findsOneWidget);
+    expect(back, findsOneWidget);
+    expect(tester.widget<IconButton>(back).onPressed, isNotNull);
+    expect(find.text('交互演示 · 不消耗积分'), findsOneWidget);
+    await tap(tester, 'role-guide-view-plan');
+    final session = tester.widget<SessionPage>(find.byType(SessionPage));
+    expect(session.initialPrompt, contains('爱丽丝的项目'));
+    expect(session.initialPrompt, contains('视频模型：Veo 3.1'));
+    expect(session.initialPrompt, contains('视频参数：1080P / 9:16'));
+    expect(session.initialPrompt, contains('图片参数：720P / 16:9'));
+    expect(session.initialPrompt, contains('生成数量：1'));
+    expect(session.initialPrompt, contains('时长: 20s'));
+    expect(
+      session.initialPrompt,
+      contains(
+        '出场角色：爱丽丝 [preview-role-1], 尔尔 [preview-role-2], 水獭兜兜儿 [preview-role-4]',
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'library selection is shared with the grid and survives dismissal',
     (tester) async {
-      await pumpGuide(tester);
+      await pumpGuide(tester, loader: loadLargeLibrary);
       await tap(tester, 'role-guide-select-preview-role-1');
       await tap(tester, 'role-guide-more');
       await tap(tester, 'role-library-select-preview-role-2');
@@ -430,7 +527,7 @@ void main() {
   testWidgets(
     'role library title and controls remain fixed while roles scroll',
     (tester) async {
-      await pumpGuide(tester);
+      await pumpGuide(tester, loader: loadLargeLibrary);
       await tap(tester, 'role-guide-more');
       final title = find.text('角色库');
       final controls = find.byKey(const Key('role-guide-library-controls'));
@@ -494,7 +591,7 @@ void main() {
   testWidgets(
     'library category changes synchronize with the grid without losing choices',
     (tester) async {
-      await pumpGuide(tester);
+      await pumpGuide(tester, loader: loadLargeLibrary);
       await tap(tester, 'role-guide-select-preview-role-3');
       await tap(tester, 'role-guide-more');
       await tester.tap(find.byKey(const Key('role-segment-1')).last);
@@ -506,6 +603,7 @@ void main() {
       );
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('role-guide-more')), findsNothing);
       expect(
         find.byKey(const Key('role-guide-select-preview-role-3')),
         findsNothing,
@@ -782,9 +880,7 @@ void main() {
   testWidgets(
     'failed role request retries and full library fills a short first page',
     (tester) async {
-      final roles = roleGuideExamples(
-        lookupAppLocalizations(const Locale('zh')),
-      );
+      final roles = rolesWithCount(10);
       var failed = false;
       final pages = <int>[];
       await pumpGuide(
@@ -804,8 +900,9 @@ void main() {
       );
       expect(find.byKey(const Key('role-guide-retry')), findsOneWidget);
       await tap(tester, 'role-guide-retry');
+      final previewRequests = pages.length;
       await tap(tester, 'role-guide-more');
-      expect(pages.where((page) => page == 2), hasLength(1));
+      expect(pages.skip(previewRequests), contains(2));
       await tester.scrollUntilVisible(
         find.byKey(const Key('role-library-select-preview-role-8')),
         200,

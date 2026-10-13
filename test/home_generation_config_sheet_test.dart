@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
@@ -107,6 +108,8 @@ Future<void> pumpConfig(
   Locale locale = const Locale('zh'),
   double scale = 1,
   bool dark = false,
+  bool forGeneration = false,
+  HomeConfig? saved,
   ValueChanged<HomeGenerationConfiguration?>? onSaved,
 }) async {
   tester.view.physicalSize = size;
@@ -141,6 +144,8 @@ Future<void> pumpConfig(
                 builder: (_) => HomeGenerationConfigSheet(
                   repository: fixture.repository,
                   sessionId: sessionId,
+                  forGeneration: forGeneration,
+                  saved: saved,
                 ),
               );
               onSaved?.call(result);
@@ -181,6 +186,107 @@ Future<void> configTap(WidgetTester tester, String key) async {
 
 void main() {
   testWidgets(
+    'generation edits only video and returns local config without preferences',
+    (tester) async {
+      final fixture = configFixture();
+      HomeGenerationConfiguration? result;
+      await pumpConfig(
+        tester,
+        fixture,
+        forGeneration: true,
+        saved: const HomeConfig(
+          modelId: '501',
+          params: {'resolution': '1080p', 'ratio': '16:9', 'duration': 12},
+        ),
+        onSaved: (value) => result = value,
+      );
+      expect(find.text('图片偏好'), findsNothing);
+      expect(find.byKey(const Key('role-segment-1')), findsNothing);
+      expect(
+        fixture.requests
+            .where((request) => request.path.endsWith('/media-models'))
+            .map((request) => request.queryParameters['mediaType']),
+        ['video'],
+      );
+      await configVisible(tester, 'home-config-duration-slider');
+      expect(
+        tester
+            .widget<Slider>(
+              find.byKey(const Key('home-config-duration-slider')),
+            )
+            .value,
+        11,
+      );
+      await configTap(tester, 'home-config-ratio-9:16');
+      fixture.failPreferenceSaveOnce = true;
+      await configTap(tester, 'home-config-confirm');
+      expect(result?.config?.toJson(), {
+        'modelId': '501',
+        'params': {'resolution': '1080p', 'ratio': '9:16', 'duration': 12},
+      });
+      expect(result?.points, 42);
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/session-media-preferences'),
+        ),
+        isEmpty,
+      );
+      expect((fixture.videoPreference['params'] as Map)['resolution'], '720p');
+      await pumpConfig(
+        tester,
+        fixture,
+        forGeneration: true,
+        saved: result!.config,
+      );
+      await configVisible(tester, 'home-config-duration-slider');
+      expect(
+        tester
+            .widget<Slider>(
+              find.byKey(const Key('home-config-duration-slider')),
+            )
+            .value,
+        11,
+      );
+      await configTap(tester, 'home-config-confirm');
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/session-media-preferences'),
+        ),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'generation without a saved config uses the video catalog defaults',
+    (tester) async {
+      final fixture = configFixture();
+      fixture.videoPreference = {
+        'modelId': '502',
+        'params': {'duration': 12},
+      };
+      HomeGenerationConfiguration? result;
+      await pumpConfig(
+        tester,
+        fixture,
+        forGeneration: true,
+        onSaved: (value) => result = value,
+      );
+      await configTap(tester, 'home-config-confirm');
+      expect(result?.config?.modelId, '501');
+      expect(result?.config?.params['duration'], 20);
+      expect(result?.points, 42);
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/session-media-preferences'),
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  testWidgets(
     'loads both catalogs and saved preferences; confirmation persists only changed types',
     (tester) async {
       final fixture = configFixture();
@@ -206,7 +312,7 @@ void main() {
       await configTap(tester, 'home-config-resolution-2k');
       await configTap(tester, 'home-config-confirm');
       expect(result?.config?.params['ratio'], '9:16');
-      expect(result?.points, 42);
+      expect(result?.points, isNull);
       final writes = fixture.requests
           .where((request) => request.method == 'PUT')
           .toList();

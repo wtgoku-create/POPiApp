@@ -7,6 +7,9 @@ import 'package:popi_ai_app/features/session/data/conversation_events.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_session.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
+import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
+import 'package:popi_ai_app/features/role_guide/domain/session_media_preferences.dart';
 
 /// Temporary account-scoped data until the new conversation API is available.
 /// Changes survive drawer reopening, but reset when the application restarts.
@@ -196,6 +199,7 @@ class FixtureSessionRepository extends SessionRepository {
     String name,
     Uint8List bytes, {
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   }) async => '801';
   @override
   Future<ConversationMedia> media(
@@ -219,6 +223,82 @@ class FixtureSessionRepository extends SessionRepository {
     String userId,
     String id,
     ConversationBlock card,
+    String action, {
+    CancelToken? cancelToken,
+  }) async {}
+
+  @override
+  Future<void> topicAction(
+    String userId,
+    String sessionId,
+    ConversationBlock topic, {
+    bool refresh = false,
+    CancelToken? cancelToken,
+  }) async {}
+  @override
+  Future<ConversationGenerationOptions> generationOptions(
+    String userId,
+    String sessionId,
+    ConversationBlock card, {
+    CancelToken? cancelToken,
+  }) async => ConversationGenerationOptions(
+    models: [
+      HomeModel.fromJson({
+        'id': 'model',
+        'name': 'Model',
+        'available': true,
+        'mediaType': card.mediaType.isEmpty ? 'video' : card.mediaType,
+        'parameters': [],
+      }),
+    ],
+    preferences: SessionMediaPreferences.fromJson({
+      'revision': 1,
+      'video': {'modelId': 'model', 'params': {}},
+      'image': {
+        'modelId': 'model',
+        'params': {'ratio': '16:9'},
+      },
+    }),
+  );
+  @override
+  Future<num> estimateGeneration(
+    String mediaType,
+    HomeConfig config, {
+    CancelToken? cancelToken,
+  }) async => 10;
+  @override
+  Future<List<ConversationRoleTemplate>> roleTemplates({
+    CancelToken? cancelToken,
+  }) async => [];
+  @override
+  Future<void> confirmGeneration(
+    String userId,
+    String sessionId,
+    ConversationBlock card,
+    ConversationGenerationSelection selection, {
+    CancelToken? cancelToken,
+  }) async {}
+  @override
+  Future<Map<String, Object?>> taskCapabilities(
+    String id, {
+    CancelToken? cancelToken,
+  }) async => {
+    'revision': 1,
+    'allowedActions': ['pause', 'cancel'],
+  };
+  @override
+  Future<void> controlTask(
+    String userId,
+    ConversationBlock task,
+    String action, {
+    Map<String, Object?>? capabilities,
+    CancelToken? cancelToken,
+  }) async {}
+  @override
+  Future<void> respondProposal(
+    String userId,
+    ConversationBlock task,
+    Map<String, Object?> proposal,
     String action, {
     CancelToken? cancelToken,
   }) async {}

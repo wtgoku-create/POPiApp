@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_modal_backdrop.dart';
+import 'app_keyboard_dismiss.dart';
 
 class AppSheet {
   const AppSheet._();
@@ -22,12 +23,13 @@ class AppSheet {
     Color? backgroundColor,
     ShapeBorder? shape,
   }) {
+    FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context);
     final localizations = MaterialLocalizations.of(context);
     final theme = Theme.of(context);
     return navigator.push<T>(
       _AppSheetRoute<T>(
-        builder: builder,
+        builder: (context) => AppKeyboardDismiss(child: builder(context)),
         capturedThemes: InheritedTheme.capture(
           from: context,
           to: navigator.context,

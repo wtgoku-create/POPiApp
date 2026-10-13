@@ -8,8 +8,13 @@ import 'role_guide_sheet.dart';
 
 /// Edits a private copy and returns it only when the user confirms.
 class RoleGenerationSheet extends StatefulWidget {
-  const RoleGenerationSheet({this.initialSettings, super.key});
+  const RoleGenerationSheet({
+    this.initialSettings,
+    this.videoOnly = false,
+    super.key,
+  });
   final RoleGenerationSettings? initialSettings;
+  final bool videoOnly;
 
   @override
   State<RoleGenerationSheet> createState() => _RoleGenerationSheetState();
@@ -43,12 +48,14 @@ class _RoleGenerationSheetState extends State<RoleGenerationSheet> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 20),
-            RoleGuideSegments(
-              labels: [l10n.roleVideoPreference, l10n.roleImagePreference],
-              selected: _image ? 1 : 0,
-              onSelected: (i) => setState(() => _image = i == 1),
-            ),
+            if (!widget.videoOnly) ...[
+              const SizedBox(height: 20),
+              RoleGuideSegments(
+                labels: [l10n.roleVideoPreference, l10n.roleImagePreference],
+                selected: _image ? 1 : 0,
+                onSelected: (i) => setState(() => _image = i == 1),
+              ),
+            ],
           ],
         ),
       ),

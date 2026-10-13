@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'POPi'**
   String get appTitle;
 
+  /// No description provided for @hideKeyboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide keyboard'**
+  String get hideKeyboard;
+
   /// No description provided for @roleGuideTitle.
   ///
   /// In en, this message translates to:
@@ -331,24 +337,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Try another set'**
   String get roleRefreshStories;
-
-  /// No description provided for @roleCustomTopic.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom topic'**
-  String get roleCustomTopic;
-
-  /// No description provided for @roleCustomTopicHint.
-  ///
-  /// In en, this message translates to:
-  /// **'What story would you like to create?'**
-  String get roleCustomTopicHint;
-
-  /// No description provided for @roleGenerateTopic.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate topic'**
-  String get roleGenerateTopic;
 
   /// No description provided for @roleReconfirmVideo.
   ///
@@ -2375,6 +2363,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to read the image. Try again later'**
   String get imageReadFailed;
+
+  /// No description provided for @imageUploadProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {percent}%'**
+  String imageUploadProgress(int percent);
+
+  /// No description provided for @imageUploadProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing'**
+  String get imageUploadProcessing;
+
+  /// No description provided for @imageUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed'**
+  String get imageUploadFailed;
+
+  /// No description provided for @imageUploadComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploaded'**
+  String get imageUploadComplete;
 
   /// No description provided for @gallery.
   ///
@@ -4452,6 +4464,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'POPi is working…'**
   String get chatThinking;
+
+  /// No description provided for @chatQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get chatQueued;
+
+  /// No description provided for @chatWaitingExternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for results'**
+  String get chatWaitingExternal;
+
+  /// No description provided for @chatCanceling.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping'**
+  String get chatCanceling;
+
+  /// No description provided for @chatTopicSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected story'**
+  String get chatTopicSelected;
+
+  /// No description provided for @chatGenerationConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation plan confirmed'**
+  String get chatGenerationConfirmed;
+
+  /// No description provided for @chatGenerationCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation plan canceled'**
+  String get chatGenerationCanceled;
+
+  /// No description provided for @chatReferenceImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference image'**
+  String get chatReferenceImage;
+
+  /// No description provided for @chatImageStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image style'**
+  String get chatImageStyle;
+
+  /// No description provided for @chatUnrestrictedStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrestricted style'**
+  String get chatUnrestrictedStyle;
+
+  /// No description provided for @chatGenerationRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional requirements'**
+  String get chatGenerationRequirements;
+
+  /// No description provided for @chatInvalidGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the model, parameters and reference materials'**
+  String get chatInvalidGeneration;
+
+  /// No description provided for @chatUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get chatUnavailable;
+
+  /// No description provided for @chatGenerationTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation task'**
+  String get chatGenerationTask;
+
+  /// No description provided for @chatReviseContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Revise content'**
+  String get chatReviseContent;
+
+  /// No description provided for @chatRevisePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please revise {title}: '**
+  String chatRevisePrompt(String title);
+
+  /// No description provided for @chatBeforeChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get chatBeforeChange;
+
+  /// No description provided for @chatAfterChange.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get chatAfterChange;
+
+  /// No description provided for @chatCompleteRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create character'**
+  String get chatCompleteRole;
+
+  /// No description provided for @chatConfirmProfileUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update profile'**
+  String get chatConfirmProfileUpdate;
 
   /// No description provided for @chatRoleCreated.
   ///

@@ -8,18 +8,18 @@ import 'support/home_creation_fixtures.dart';
 
 void main() {
   test(
-    'custom topics reuse uncertain request IDs and consume the returned snapshot',
+    'recommended topics reuse uncertain request IDs and consume the returned snapshot',
     () async {
       final fixture = HomeCreationFixture();
       final repository = fixture.repository;
       final home = await repository.open('101');
       fixture.failTopicsOnce = true;
       await expectLater(
-        repository.customTopic(home, '  A campus story  '),
+        repository.recommend(home),
         throwsA(isA<DioException>()),
       );
-      final updated = await repository.customTopic(home, 'A campus story');
-      expect(updated.topics.single.title, 'Custom story: A campus story');
+      final updated = await repository.recommend(home);
+      expect(updated.topics.single.title, 'Server story 2');
       final writes = fixture.requests
           .where((request) => request.path.endsWith('/topics'))
           .toList();
@@ -27,19 +27,15 @@ void main() {
       expect(writes.first.data, writes.last.data);
       expect(
         writes.last.data.keys,
-        unorderedEquals(['clientRequestId', 'mode', 'text']),
+        unorderedEquals(['clientRequestId', 'mode']),
       );
-      expect(writes.last.data['mode'], 'custom');
-      expect(writes.last.data['text'], 'A campus story');
+      expect(writes.last.data['mode'], 'recommend');
       expect(
         fixture.requests.where(
           (request) => request.path.endsWith('/home/enter'),
         ),
         hasLength(1),
       );
-      for (final text in [' ', List.filled(16001, 'a').join()]) {
-        expect(() => repository.customTopic(home, text), throwsArgumentError);
-      }
     },
   );
 

@@ -34,6 +34,7 @@ void main() {
     ThemeData? theme,
     Locale locale = const Locale('zh'),
     bool signedIn = true,
+    FixtureSessionRepository? repository,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -44,7 +45,9 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(preferences),
-        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
+        sessionRepositoryProvider.overrideWithValue(
+          repository ?? FixtureSessionRepository(),
+        ),
         ipAccountRepositoryProvider.overrideWithValue(
           FixtureIpAccountRepository(),
         ),
@@ -279,6 +282,69 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+    testWidgets('long drawer history builds on demand and pins at $size', (
+      tester,
+    ) async {
+      final repository = FixtureSessionRepository();
+      for (var index = 0; index < 180; index++) {
+        await repository.create('1', 'History $index');
+      }
+      final container = await pumpDrawer(
+        tester,
+        size: size,
+        repository: repository,
+      );
+      final first = find.byKey(const Key('drawer-session-mock-1'));
+      final last = find.byKey(const Key('drawer-session-mock-8'));
+      final rows = find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            RegExp(r'^drawer-session-mock-(new-)?\d+$').hasMatch(key.value);
+      });
+      expect(container.read(sessionsProvider).requireValue, hasLength(188));
+      expect(first, findsOneWidget);
+      expect(last, findsNothing);
+      expect(rows.evaluate().length, lessThan(30));
+      final footer = tester.getRect(
+        find.byKey(const Key('drawer-profile-button')),
+      );
+      final scrollable = find.descendant(
+        of: find.byKey(const Key('drawer-session-list')),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(last, 400, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(first, findsNothing);
+      expect(last.hitTestable(), findsOneWidget);
+      expect(rows.evaluate().length, lessThan(30));
+      expect(
+        tester.getRect(find.byKey(const Key('drawer-profile-button'))),
+        footer,
+      );
+      await openMenu(tester, 'mock-8');
+      await tester.tap(find.text('置顶会话'));
+      await tester.pumpAndSettle();
+      expect(container.read(sessionsProvider).requireValue.first.id, 'mock-8');
+      await tester.scrollUntilVisible(last, -400, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(last.hitTestable(), findsOneWidget);
+      expect(tester.getRect(last).top, lessThan(tester.getRect(first).top));
+      await tester.tap(last);
+      await tester.pumpAndSettle();
+      expect(
+        container
+            .read(routerProvider(false))
+            .routeInformationProvider
+            .value
+            .uri
+            .queryParameters['sessionId'],
+        'mock-8',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('opens a conversation and creates a clean new one', (
     tester,

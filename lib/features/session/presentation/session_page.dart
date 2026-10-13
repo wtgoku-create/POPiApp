@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
@@ -27,6 +28,7 @@ import '../../role_guide/presentation/widgets/home_generation_config_sheet.dart'
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import 'widgets/popi_message_composer.dart';
 import 'conversation_controller.dart';
+import 'composer_image_upload_controller.dart';
 import 'widgets/conversation_timeline.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
@@ -57,10 +59,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   double _composerHeight = 0;
   double _keyboardHeight = 0;
   double _bodyOffsetBeforeKeyboard = 0;
-  final List<PopiComposerImage> _selectedImages = [];
+  final _imageUploads = ComposerImageUploadController();
+  List<PopiComposerImage> get _selectedImages => _imageUploads.images;
   final List<LibraryRole> _selectedRoles = [];
   final List<LibraryWork> _selectedAssets = [];
   bool _mentionMode = false;
+  int _composerRevision = 0;
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
   String? _mediaPreferenceDescription;
@@ -73,6 +77,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   void initState() {
     super.initState();
+    _imageUploads.addListener(_onImageUploadsChanged);
     _activeSessionId = widget.sessionId;
     _bindConversation();
     if (widget.initialPrompt != null) {
@@ -96,7 +101,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   void _resetComposer() {
-    _selectedImages.clear();
+    _composerRevision++;
+    _imageUploads.clear();
     _selectedRoles.clear();
     _selectedAssets.clear();
     _mentionMode = false;
@@ -106,10 +112,17 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   @override
   void dispose() {
+    _imageUploads
+      ..removeListener(_onImageUploadsChanged)
+      ..dispose();
     _conversation?.dispose();
     _messageController.dispose();
     _bodyScrollController.dispose();
     super.dispose();
+  }
+
+  void _onImageUploadsChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -274,6 +287,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         '${_conversation!.userId}:$_activeSessionId',
                       ),
                       controller: _conversation!,
+                      onRevise: (content) =>
+                          _selectPrompt(l10n.chatRevisePrompt(content.title)),
+                      onModelParametersRequested: _showModelParameters,
                     ),
                   )
                 else
@@ -385,6 +401,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             onRemoveAsset: _removeSelectedAsset,
                             onAttachment: _showAttachmentSheet,
                             onRemoveImage: _removeSelectedImage,
+                            onRetryImage: _retryImageUpload,
+                            attachmentsReady:
+                                !isLoggedIn || _imageUploads.ready,
                             onHeightChanged: _handleComposerHeightChanged,
                             onSubmitted: _openConversation,
                             sending:
@@ -467,6 +486,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       GoRouter.maybeOf(context)?.push('/login');
       return;
     }
+    if (!_imageUploads.ready) return;
     final conversation = _conversation;
     if (conversation == null ||
         conversation.pending ||
@@ -477,10 +497,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final l10n = AppLocalizations.of(context)!;
     final success = await conversation.send(
       value.trim(),
-      [
-        for (final image in _selectedImages)
-          (name: image.name, bytes: image.bytes),
-      ],
+      const [],
       l10n.newSessionTitle,
       _selectedImages.isEmpty &&
               _selectedAssets.isEmpty &&
@@ -489,6 +506,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           : l10n.chatMediaPrompt,
       roleIds: _selectedRoles.map((role) => role.id).toList(),
       assets: List.of(_selectedAssets),
+      uploadedMediaIds: [for (final image in _selectedImages) image.mediaId!],
     );
     if (!mounted || !identical(conversation, _conversation)) return;
     if (success) {
@@ -540,6 +558,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         );
         if (mounted && result != null && _activeSessionId == sessionId) {
           setState(() => _mediaPreferenceDescription = result.description);
+          _conversation?.mediaPreferencesChanged();
         }
         return;
       }
@@ -570,6 +589,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   Future<void> _addImages(List<XFile> images) async {
+    final revision = _composerRevision;
     if (_conversation?.pending ?? false) return;
     final remaining =
         _maxImageCount - _selectedImages.length - _selectedAssets.length;
@@ -598,9 +618,16 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         if (isDuplicate) continue;
         selected.add(PopiComposerImage(name: image.name, bytes: bytes));
       }
-      if (!mounted) return;
+      if (!mounted || revision != _composerRevision) return;
       if (selected.isNotEmpty) {
-        setState(() => _selectedImages.addAll(selected));
+        _imageUploads.add(selected);
+        final userId = ref.read(userProvider)?.id;
+        if (userId != null) {
+          final repository = ref.read(sessionRepositoryProvider);
+          for (final image in selected) {
+            unawaited(_imageUploads.upload(image, repository, userId));
+          }
+        }
         if (_mentionMode) {
           _mentionMode = false;
           final markdown = _messageController.markdown;
@@ -629,11 +656,28 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   void _removeSelectedImage(int index) {
     if (_conversation?.pending ?? false) return;
     if (index < 0 || index >= _selectedImages.length) return;
-    setState(() => _selectedImages.removeAt(index));
+    _imageUploads.remove(index);
+  }
+
+  void _retryImageUpload(int index) {
+    if (_conversation?.pending ?? false) return;
+    final userId = ref.read(userProvider)?.id;
+    if (userId == null) {
+      GoRouter.maybeOf(context)?.push('/login');
+      return;
+    }
+    unawaited(
+      _imageUploads.upload(
+        _selectedImages[index],
+        ref.read(sessionRepositoryProvider),
+        userId,
+      ),
+    );
   }
 
   Future<void> _showAttachmentSheet() async {
     if (_conversation?.pending ?? false) return;
+    final revision = _composerRevision;
     final remaining =
         _maxImageCount - _selectedImages.length - _selectedAssets.length;
     _messageController.dismissKeyboard();
@@ -644,7 +688,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       selectedRoles: List.of(_selectedRoles),
       selectedAssets: List.of(_selectedAssets),
     );
-    if (!mounted || result == null) return;
+    if (!mounted || revision != _composerRevision || result == null) return;
     if (result.roles != null) {
       setState(() {
         _selectedRoles

@@ -46,7 +46,10 @@ class _PreviewPageState extends State<_PreviewPage> {
       useSafeArea: false,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
-      builder: (_) => RoleGenerationSheet(initialSettings: _settings),
+      builder: (_) => RoleGenerationSheet(
+        initialSettings: _settings,
+        videoOnly: Uri.base.queryParameters['mode'] == 'generation',
+      ),
     );
     _open = false;
     if (mounted && settings != null) setState(() => _settings = settings);

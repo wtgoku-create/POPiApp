@@ -39,7 +39,6 @@ import 'widgets/role_profile_sheet.dart';
 import 'widgets/role_project_sheet.dart';
 import 'widgets/role_generation_panel.dart';
 import 'widgets/home_generation_config_sheet.dart';
-import 'widgets/home_topic_input_sheet.dart';
 import 'widgets/role_guide_markdown.dart';
 import 'widgets/role_storyboard_body.dart';
 import 'widgets/role_generated_video.dart';
@@ -236,17 +235,6 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (home == null || !home.editable) return;
     await _update(
       () => _repository.recommend(home, cancelToken: _requestToken),
-      step: RoleGuideStep.story,
-    );
-  }
-
-  Future<void> _customTopic() async {
-    final home = _home;
-    if (_busy || home == null || !home.editable) return;
-    final text = await _showSheet<String>((_) => const HomeTopicInputSheet());
-    if (!mounted || text == null || !identical(home, _home)) return;
-    await _update(
-      () => _repository.customTopic(home, text, cancelToken: _requestToken),
       step: RoleGuideStep.story,
     );
   }
@@ -558,7 +546,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         useSafeArea: false,
         showDragHandle: false,
         backgroundColor: Colors.transparent,
-        builder: (_) => RoleGenerationSheet(initialSettings: _draft.settings),
+        builder: (_) => RoleGenerationSheet(
+          initialSettings: _draft.settings,
+          videoOnly: true,
+        ),
       );
       if (settings != null && mounted) {
         setState(() => _draft.settings = settings);
@@ -1140,13 +1131,6 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                     _step(RoleGuideStep.story);
                   },
           ),
-          if (_live)
-            TextButton.icon(
-              key: const Key('role-guide-custom-topic'),
-              onPressed: _busy || _home?.editable != true ? null : _customTopic,
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: Text(l10n.roleCustomTopic),
-            ),
         ],
       ],
     );
@@ -1257,26 +1241,30 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             ),
             if (production)
               Flexible(
-                child: TextButton(
-                  key: const Key('role-guide-story-details'),
-                  onPressed: () => _storyDetails(story),
-                  style: TextButton.styleFrom(
-                    backgroundColor: roleGuideTint(context),
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          l10n.roleDetailedStory,
-                          style: const TextStyle(fontSize: 14),
+                fit: FlexFit.tight,
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    key: const Key('role-guide-story-details'),
+                    onPressed: () => _storyDetails(story),
+                    style: TextButton.styleFrom(
+                      backgroundColor: roleGuideTint(context),
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            l10n.roleDetailedStory,
+                            style: const TextStyle(fontSize: 14),
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.chevron_right, size: 18),
-                    ],
+                        const Icon(Icons.chevron_right, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               ),

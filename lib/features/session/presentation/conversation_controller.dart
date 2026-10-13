@@ -10,6 +10,7 @@ import '../data/conversation_events.dart';
 import '../data/session_repository.dart';
 import '../domain/conversation_session.dart';
 import '../domain/conversation_snapshot.dart';
+import '../domain/conversation_generation.dart';
 
 enum ConversationConnection { offline, connecting, connected, reconnecting }
 
@@ -26,6 +27,14 @@ class ConversationController extends ChangeNotifier {
   final void Function(ConversationSession)? onSessionChanged;
   final Duration reconnectDelay;
   ConversationSnapshot? snapshot;
+  int mediaPreferencesEpoch = 0;
+
+  /// 偏好保存后只刷新未确认卡片的配置，不改变历史方案。
+  void mediaPreferencesChanged() {
+    mediaPreferencesEpoch++;
+    notifyListeners();
+  }
+
   ConversationConnection connection = ConversationConnection.offline;
   Object? error;
   bool loading = false;
@@ -166,6 +175,7 @@ class ConversationController extends ChangeNotifier {
     String mediaPrompt, {
     List<String> roleIds = const [],
     List<LibraryWork> assets = const [],
+    List<String> uploadedMediaIds = const [],
   }) => running || loading
       ? Future.value(false)
       : act((token) async {
@@ -180,7 +190,7 @@ class ConversationController extends ChangeNotifier {
             onSessionChanged?.call(session);
             notifyListeners();
           }
-          final mediaIds = <String>[];
+          final mediaIds = List<String>.of(uploadedMediaIds);
           for (final image in images) {
             mediaIds.add(
               await repository.upload(
@@ -241,6 +251,69 @@ class ConversationController extends ChangeNotifier {
       userId,
       sessionId!,
       card,
+      action,
+      cancelToken: token,
+    ),
+    refreshAfter: true,
+  );
+
+  Future<bool> topicAction(
+    ConversationMessage message,
+    ConversationBlock topic, {
+    bool refreshTopics = false,
+  }) => running || loading || snapshot?.topicLocked(message, topic) != false
+      ? Future.value(false)
+      : act(
+          (token) => repository.topicAction(
+            userId,
+            sessionId!,
+            topic,
+            refresh: refreshTopics,
+            cancelToken: token,
+          ),
+          refreshAfter: true,
+        );
+
+  Future<bool> confirmGeneration(
+    ConversationBlock card,
+    ConversationGenerationSelection selection,
+  ) => running || loading
+      ? Future.value(false)
+      : act(
+          (token) => repository.confirmGeneration(
+            userId,
+            sessionId!,
+            card,
+            selection,
+            cancelToken: token,
+          ),
+          refreshAfter: true,
+        );
+
+  Future<bool> controlTask(
+    ConversationBlock task,
+    String action, {
+    Map<String, Object?>? capabilities,
+  }) => act(
+    (token) => repository.controlTask(
+      userId,
+      task,
+      action,
+      capabilities: capabilities,
+      cancelToken: token,
+    ),
+    refreshAfter: true,
+  );
+
+  Future<bool> respondProposal(
+    ConversationBlock task,
+    Map<String, Object?> proposal,
+    String action,
+  ) => act(
+    (token) => repository.respondProposal(
+      userId,
+      task,
+      proposal,
       action,
       cancelToken: token,
     ),

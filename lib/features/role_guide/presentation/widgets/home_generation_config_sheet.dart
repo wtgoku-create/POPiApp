@@ -18,7 +18,7 @@ typedef HomeGenerationConfiguration = ({
   String description,
 });
 
-/// Edits server-owned conversation preferences before returning a generation plan.
+/// Edits a generation plan or saves server-owned conversation preferences.
 class HomeGenerationConfigSheet extends StatefulWidget {
   const HomeGenerationConfigSheet({
     required this.repository,
@@ -69,12 +69,11 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
     return config != null && _modelFor(mediaType)?.accepts(config) == true;
   }
 
-  bool get _valid =>
-      (widget.forGeneration
-          ? _validFor('video')
-          : (_catalogs['video']?.isEmpty ?? true) || _validFor('video')) &&
-      ((_catalogs['image']?.isEmpty ?? true) || _validFor('image')) &&
-      _catalogs.values.any((models) => models.isNotEmpty);
+  bool get _valid => widget.forGeneration
+      ? _validFor('video')
+      : ((_catalogs['video']?.isEmpty ?? true) || _validFor('video')) &&
+            ((_catalogs['image']?.isEmpty ?? true) || _validFor('image')) &&
+            _catalogs.values.any((models) => models.isNotEmpty);
 
   @override
   void initState() {
@@ -96,22 +95,27 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       _failed = false;
     });
     try {
+      final mediaTypes = widget.forGeneration ? ['video'] : ['video', 'image'];
       final results = await Future.wait<Object>([
-        widget.repository.models(cancelToken: _token),
-        widget.repository.models(mediaType: 'image', cancelToken: _token),
-        widget.repository.mediaPreferences(
-          widget.sessionId,
-          cancelToken: _token,
-        ),
+        for (final mediaType in mediaTypes)
+          widget.repository.models(mediaType: mediaType, cancelToken: _token),
+        if (!widget.forGeneration)
+          widget.repository.mediaPreferences(
+            widget.sessionId,
+            cancelToken: _token,
+          ),
       ]);
       if (!mounted) return;
-      final preferences = results[2] as SessionMediaPreferences;
+      final preferences = widget.forGeneration
+          ? null
+          : results[2] as SessionMediaPreferences;
       setState(() {
-        _catalogs['video'] = results[0] as List<HomeModel>;
-        _catalogs['image'] = results[1] as List<HomeModel>;
-        _original['video'] = preferences.video;
-        _original['image'] = preferences.image;
-        for (final mediaType in ['video', 'image']) {
+        for (var i = 0; i < mediaTypes.length; i++) {
+          _catalogs[mediaTypes[i]] = results[i] as List<HomeModel>;
+        }
+        _original['video'] = preferences?.video;
+        _original['image'] = preferences?.image;
+        for (final mediaType in mediaTypes) {
           final models = _catalogs[mediaType]!;
           final saved =
               _original[mediaType] ??
@@ -193,18 +197,20 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       _saveFailed = false;
     });
     try {
-      for (final mediaType in ['video', 'image']) {
-        final config = _configs[mediaType];
-        if (config == null || config.matches(_original[mediaType])) {
-          continue;
+      if (!widget.forGeneration) {
+        for (final mediaType in ['video', 'image']) {
+          final config = _configs[mediaType];
+          if (config == null || config.matches(_original[mediaType])) {
+            continue;
+          }
+          await widget.repository.saveMediaPreference(
+            widget.sessionId,
+            mediaType,
+            config,
+            cancelToken: _token,
+          );
+          _original[mediaType] = config;
         }
-        await widget.repository.saveMediaPreference(
-          widget.sessionId,
-          mediaType,
-          config,
-          cancelToken: _token,
-        );
-        _original[mediaType] = config;
       }
       if (mounted) {
         Navigator.of(context).pop<HomeGenerationConfiguration>((
@@ -408,15 +414,17 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 20),
-            RoleGuideSegments(
-              labels: [l10n.roleVideoPreference, l10n.roleImagePreference],
-              selected: _mediaType == 'image' ? 1 : 0,
-              onSelected: (index) {
-                setState(() => _mediaType = index == 1 ? 'image' : 'video');
-                _scrollController?.jumpTo(0);
-              },
-            ),
+            if (!widget.forGeneration) ...[
+              const SizedBox(height: 20),
+              RoleGuideSegments(
+                labels: [l10n.roleVideoPreference, l10n.roleImagePreference],
+                selected: _mediaType == 'image' ? 1 : 0,
+                onSelected: (index) {
+                  setState(() => _mediaType = index == 1 ? 'image' : 'video');
+                  _scrollController?.jumpTo(0);
+                },
+              ),
+            ],
           ],
         ),
       ),

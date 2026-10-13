@@ -160,34 +160,36 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
                       if (roles.isEmpty) {
                         return Center(child: Text(l10n.ipAccountNoRoles));
                       }
-                      return ListView(
-                        children: [
-                          for (final role in roles)
-                            CheckboxListTile(
-                              key: Key('ip-account-select-role-${role.id}'),
-                              title: Text(role.title),
-                              subtitle: role.description.isEmpty
-                                  ? null
-                                  : Text(
-                                      role.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                              value: _selected.contains(role.id),
-                              onChanged:
-                                  _saving ||
-                                      (!_selected.contains(role.id) &&
-                                          _selected.length >= 20)
-                                  ? null
-                                  : (selected) => setState(() {
-                                      _names[role.id] = role.title;
-                                      selected!
-                                          ? _selected.add(role.id)
-                                          : _selected.remove(role.id);
-                                      _requestId = const Uuid().v4();
-                                    }),
-                            ),
-                        ],
+                      return ListView.builder(
+                        key: const Key('ip-account-roles-list'),
+                        itemCount: roles.length,
+                        itemBuilder: (context, index) {
+                          final role = roles[index];
+                          return CheckboxListTile(
+                            key: Key('ip-account-select-role-${role.id}'),
+                            title: Text(role.title),
+                            subtitle: role.description.isEmpty
+                                ? null
+                                : Text(
+                                    role.description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                            value: _selected.contains(role.id),
+                            onChanged:
+                                _saving ||
+                                    (!_selected.contains(role.id) &&
+                                        _selected.length >= 20)
+                                ? null
+                                : (selected) => setState(() {
+                                    _names[role.id] = role.title;
+                                    selected!
+                                        ? _selected.add(role.id)
+                                        : _selected.remove(role.id);
+                                    _requestId = const Uuid().v4();
+                                  }),
+                          );
+                        },
                       );
                     },
                   ),

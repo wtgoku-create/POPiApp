@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/agent_api_exception.dart';
@@ -79,6 +80,22 @@ void main() {
       expect(events.single.seq, 1);
     },
   );
+
+  test('SSE decodes Dio Uint8List chunks with byte-split UTF-8', () async {
+    final event = chatEvent(1, 'message.delta', {
+      'messageId': 'assistant',
+      'delta': '你好',
+    });
+    final frames = ': heartbeat\r\ndata: ${jsonEncode(event.source)}\r\n\r\n';
+    final bytes = Stream<Uint8List>.fromIterable(
+      utf8.encode(frames).map((byte) => Uint8List.fromList([byte])),
+    );
+
+    final events = await decodeConversationEvents(bytes).toList();
+
+    expect(events, hasLength(1));
+    expect(events.single.source, event.source);
+  });
 
   test(
     'incomplete frames are replayed after reconnect and never partially applied',

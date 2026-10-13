@@ -80,27 +80,9 @@ class HomeCreationRepository extends MediaPreferencesRepository {
   Future<HomeCreation> recommend(
     HomeCreation home, {
     CancelToken? cancelToken,
-  }) => _topics(home, {'mode': 'recommend'}, cancelToken);
-
-  Future<HomeCreation> customTopic(
-    HomeCreation home,
-    String text, {
-    CancelToken? cancelToken,
-  }) {
-    final prompt = text.trim();
-    if (prompt.isEmpty || prompt.runes.length > 16000) {
-      throw ArgumentError.value(text, 'text');
-    }
-    return _topics(home, {'mode': 'custom', 'text': prompt}, cancelToken);
-  }
-
-  Future<HomeCreation> _topics(
-    HomeCreation home,
-    Map<String, Object?> input,
-    CancelToken? cancelToken,
-  ) => _command(
+  }) => _command(
     'topics:${home.sessionId}:${home.id}',
-    input,
+    {'mode': 'recommend'},
     (body) async => HomeCreation.fromJson(
       homeObject(
         (await _agent.recommendHomeTopics(

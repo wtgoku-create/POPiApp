@@ -98,7 +98,7 @@ void main() {
     (const Size(320, 640), const Locale('en'), 1.5),
   ]) {
     testWidgets(
-      'custom topic submits and renders the returned snapshot at $size',
+      'topic selection and refresh remain available without custom input at $size',
       (tester) async {
         final fixture = HomeCreationFixture();
         await pumpLive(
@@ -113,33 +113,26 @@ void main() {
         final entries = fixture.requests
             .where((request) => request.path.endsWith('/home/enter'))
             .length;
-        await tapLive(tester, 'role-guide-custom-topic');
+        expect(find.byKey(const Key('role-guide-custom-topic')), findsNothing);
+        expect(find.text('自定义选题'), findsNothing);
+        expect(find.text('Custom topic'), findsNothing);
         expect(
-          tester
-              .widget<TextButton>(
-                find.descendant(
-                  of: find.byKey(const Key('home-topic-submit')),
-                  matching: find.byType(TextButton),
-                ),
-              )
-              .onPressed,
-          isNull,
+          find.byKey(const Key('role-guide-choose-story')),
+          findsOneWidget,
         );
-        await tester.enterText(
-          find.byKey(const Key('home-topic-input')),
-          'A campus story',
+        await tapLive(tester, 'role-guide-refresh-stories');
+        expect(find.text('Server story 2'), findsOneWidget);
+        final recommendations = fixture.requests.where(
+          (request) => request.path.endsWith('/topics'),
         );
-        tester.view.viewInsets = const FakeViewPadding(bottom: 200);
-        addTearDown(tester.view.resetViewInsets);
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
         expect(
-          tester.getBottomRight(find.byKey(const Key('home-topic-submit'))).dy,
-          lessThanOrEqualTo(size.height - 200),
+          recommendations.every(
+            (request) => request.data['mode'] == 'recommend',
+          ),
+          isTrue,
         );
-        tester.view.resetViewInsets();
-        await tapLive(tester, 'home-topic-submit');
-        expect(find.text('Custom story: A campus story'), findsOneWidget);
+        await tapLive(tester, 'role-guide-choose-story');
+        expect(find.byKey(const Key('role-guide-produce')), findsOneWidget);
         expect(
           fixture.requests.where(
             (request) => request.path.endsWith('/home/enter'),
@@ -364,7 +357,13 @@ void main() {
       await tapLive(tester, 'role-guide-create-project', running: true);
       final cast = find.byKey(const Key('role-guide-view-profiles'));
       final loading = find.byKey(const Key('role-guide-loading'));
-      void expectLoading() {
+      Future<void> expectLoading() async {
+        await Scrollable.ensureVisible(
+          tester.element(loading),
+          alignment: 1,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+        );
+        await tester.pump();
         expect(cast, findsOneWidget);
         expect(
           find.descendant(of: cast, matching: find.text('Character 1')),
@@ -392,7 +391,7 @@ void main() {
         );
       }
 
-      expectLoading();
+      await expectLoading();
       fixture.waitForTopics!.complete();
       await tester.pumpAndSettle();
       expect(loading, findsNothing);
@@ -400,7 +399,7 @@ void main() {
 
       fixture.waitForTopics = Completer<void>();
       await tapLive(tester, 'role-guide-refresh-stories', running: true);
-      expectLoading();
+      await expectLoading();
       expect(find.text('Server story 1'), findsNothing);
       fixture.waitForTopics!.complete();
       await tester.pumpAndSettle();
@@ -469,8 +468,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
       expect(find.text('Server video model'), findsOneWidget);
+      expect(find.text('图片偏好'), findsNothing);
       expect(find.textContaining('42'), findsOneWidget);
       await tapLive(tester, 'home-config-confirm');
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/session-media-preferences'),
+        ),
+        isEmpty,
+      );
       await tapLive(tester, 'role-guide-produce', running: true);
       expect(fixture.task!['state'], 'queued');
       expect(find.textContaining('交互预览'), findsNothing);

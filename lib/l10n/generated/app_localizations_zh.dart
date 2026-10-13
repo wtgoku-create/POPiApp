@@ -12,6 +12,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get hideKeyboard => '收起键盘';
+
+  @override
   String get roleGuideTitle => '从角色出发';
 
   @override
@@ -136,15 +139,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get roleRefreshStories => '都不满意，换一批';
-
-  @override
-  String get roleCustomTopic => '自定义选题';
-
-  @override
-  String get roleCustomTopicHint => '这次想创作什么故事？';
-
-  @override
-  String get roleGenerateTopic => '生成选题';
 
   @override
   String get roleReconfirmVideo => '重新确认生成视频';
@@ -1212,6 +1206,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get imageReadFailed => '无法读取图片，请稍后重试';
+
+  @override
+  String imageUploadProgress(int percent) {
+    return '上传中 $percent%';
+  }
+
+  @override
+  String get imageUploadProcessing => '处理中';
+
+  @override
+  String get imageUploadFailed => '上传失败';
+
+  @override
+  String get imageUploadComplete => '上传完成';
 
   @override
   String get gallery => '相册';
@@ -2299,6 +2307,65 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatThinking => 'POPi正在思考你的内容';
+
+  @override
+  String get chatQueued => '排队中';
+
+  @override
+  String get chatWaitingExternal => '等待生成结果';
+
+  @override
+  String get chatCanceling => '正在停止';
+
+  @override
+  String get chatTopicSelected => '已选择的故事';
+
+  @override
+  String get chatGenerationConfirmed => '已确认生成方案';
+
+  @override
+  String get chatGenerationCanceled => '已取消生成方案';
+
+  @override
+  String get chatReferenceImage => '参考图片';
+
+  @override
+  String get chatImageStyle => '画风';
+
+  @override
+  String get chatUnrestrictedStyle => '不限画风';
+
+  @override
+  String get chatGenerationRequirements => '补充要求';
+
+  @override
+  String get chatInvalidGeneration => '请检查模型、生成参数和参考素材';
+
+  @override
+  String get chatUnavailable => '暂不可用';
+
+  @override
+  String get chatGenerationTask => '生成任务';
+
+  @override
+  String get chatReviseContent => '修改内容';
+
+  @override
+  String chatRevisePrompt(String title) {
+    return '请修改《$title》：';
+  }
+
+  @override
+  String get chatBeforeChange => '修改前';
+
+  @override
+  String get chatAfterChange => '修改后';
+
+  @override
+  String get chatCompleteRole => '创建角色';
+
+  @override
+  String get chatConfirmProfileUpdate => '更新档案';
 
   @override
   String get chatRoleCreated => '角色草案已创建';

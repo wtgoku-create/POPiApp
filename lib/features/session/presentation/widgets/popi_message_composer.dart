@@ -16,13 +16,9 @@ import '../../../assets/domain/library_role.dart';
 import '../../../assets/domain/library_work.dart';
 import '../../../assets/presentation/library_work_thumbnail.dart';
 import '../../../role_guide/presentation/widgets/role_guide_controls.dart';
+import '../composer_image_upload_controller.dart';
 
-class PopiComposerImage {
-  const PopiComposerImage({required this.name, required this.bytes});
-
-  final String name;
-  final Uint8List bytes;
-}
+export '../composer_image_upload_controller.dart' show PopiComposerImage;
 
 class _InlineComposerImage {
   const _InlineComposerImage.bytes(this.bytes);
@@ -182,6 +178,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.onRemoveRole,
     this.selectedAssets = const [],
     this.onRemoveAsset,
+    this.onRetryImage,
+    this.attachmentsReady = true,
     this.onModelParametersRequested,
     this.modelParametersDescription = '',
     this.onMentionRequested,
@@ -201,6 +199,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final ValueChanged<int>? onRemoveAsset;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
+  final ValueChanged<int>? onRetryImage;
+  final bool attachmentsReady;
   final ValueChanged<double> onHeightChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback? onModelParametersRequested;
@@ -230,7 +230,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
   bool _expandedEditorOpen = false;
-  late final ValueNotifier<({bool sending, bool running})> _editorStatus;
+  late final ValueNotifier<
+    ({bool sending, bool running, bool attachmentsReady})
+  >
+  _editorStatus;
 
   @override
   void initState() {
@@ -238,6 +241,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     _editorStatus = ValueNotifier((
       sending: widget.sending,
       running: widget.running,
+      attachmentsReady: widget.attachmentsReady,
     ));
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
     _isExpanded =
@@ -273,12 +277,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     super.didUpdateWidget(oldWidget);
     _syncExpansion();
     if (oldWidget.sending != widget.sending ||
-        oldWidget.running != widget.running) {
+        oldWidget.running != widget.running ||
+        oldWidget.attachmentsReady != widget.attachmentsReady) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _editorStatus.value = (
             sending: widget.sending,
             running: widget.running,
+            attachmentsReady: widget.attachmentsReady,
           );
         }
       });
@@ -318,6 +324,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                       ? null
                       : status.running
                       ? widget.onStop
+                      : !status.attachmentsReady
+                      ? null
                       : widget.controller.markdown.isNotEmpty ||
                             widget.selectedImages.isNotEmpty ||
                             widget.selectedRoles.isNotEmpty ||
@@ -335,7 +343,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
         _dismissEditor();
         widget.onSubmitted(widget.controller.markdown);
       } else {
-        _focusNode.requestFocus();
+        _dismissEditor();
       }
     } finally {
       _expandedEditorOpen = false;
@@ -592,6 +600,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 colorScheme: colorScheme,
                                 onAttachment: widget.onAttachment,
                                 onRemoveImage: widget.onRemoveImage,
+                                onRetryImage: widget.onRetryImage,
+                                attachmentsReady: widget.attachmentsReady,
                                 onSubmitted: () => widget.onSubmitted(text),
                                 onModelParametersRequested:
                                     widget.onModelParametersRequested,
@@ -726,6 +736,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       ),
       focusNode: expandedEditor ? null : _focusNode,
       autofocus: expandedEditor,
+      onTapOutside: (_) => widget.controller.dismissKeyboard(),
       controller: widget.controller.textController,
       readOnly: readOnly ?? widget.sending,
       specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
@@ -804,12 +815,14 @@ class _SelectedImagePreview extends StatelessWidget {
     required this.index,
     required this.size,
     required this.onRemove,
+    this.onRetry,
   });
 
   final PopiComposerImage image;
   final int index;
   final double size;
   final VoidCallback onRemove;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -836,6 +849,15 @@ class _SelectedImagePreview extends StatelessWidget {
                 ),
               ),
             ),
+            if (image.state != ComposerImageUploadState.selected)
+              Positioned.fill(
+                child: _ImageUploadStatus(
+                  image: image,
+                  index: index,
+                  compact: isCompact,
+                  onRetry: onRetry,
+                ),
+              ),
             if (!isCompact)
               Positioned(
                 top: buttonInset,
@@ -889,6 +911,120 @@ class _SelectedImagePreview extends StatelessWidget {
   }
 }
 
+class _ImageUploadStatus extends StatelessWidget {
+  const _ImageUploadStatus({
+    required this.image,
+    required this.index,
+    required this.compact,
+    this.onRetry,
+  });
+
+  final PopiComposerImage image;
+  final int index;
+  final bool compact;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
+    if (image.state == ComposerImageUploadState.ready) {
+      return IgnorePointer(
+        child: Align(
+          alignment: Alignment.bottomLeft,
+          child: Tooltip(
+            message: l10n.imageUploadComplete,
+            child: Container(
+              key: Key('popi-image-upload-ready-$index'),
+              margin: const EdgeInsets.all(2),
+              width: compact ? 12 : 16,
+              height: compact ? 12 : 16,
+              decoration: BoxDecoration(
+                color: colors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_rounded,
+                size: compact ? 10 : 13,
+                color: colors.onPrimary,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    final failed = image.state == ComposerImageUploadState.failed;
+    final processing = image.state == ComposerImageUploadState.processing;
+    final percent = (image.progress * 100).floor();
+    final label = failed
+        ? l10n.imageUploadFailed
+        : processing
+        ? l10n.imageUploadProcessing
+        : l10n.imageUploadProgress(percent);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadii.small),
+      child: ColoredBox(
+        color: Colors.black.withValues(alpha: .5),
+        child: Tooltip(
+          message: failed ? '$label · ${l10n.retry}' : label,
+          child: Stack(
+            children: [
+              Align(
+                alignment: compact
+                    ? Alignment.center
+                    : const Alignment(-.8, -.15),
+                child: failed
+                    ? SizedBox.square(
+                        dimension: compact ? 26 : 24,
+                        child: IconButton(
+                          key: Key('popi-image-upload-retry-$index'),
+                          tooltip: l10n.retry,
+                          padding: EdgeInsets.zero,
+                          onPressed: onRetry,
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            size: compact ? 18 : 22,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : SizedBox.square(
+                        dimension: compact ? 18 : 20,
+                        child: CircularProgressIndicator(
+                          key: Key('popi-image-upload-progress-$index'),
+                          value: processing || image.progress == 0
+                              ? null
+                              : image.progress,
+                          strokeWidth: 2,
+                          color: Colors.white,
+                          backgroundColor: Colors.white24,
+                          semanticsLabel: label,
+                        ),
+                      ),
+              ),
+              if (!compact)
+                Positioned(
+                  left: 2,
+                  right: 2,
+                  bottom: 2,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      failed || processing ? label : '$percent%',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: const TextStyle(fontSize: 10, color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ComposerContent extends StatelessWidget {
   const _ComposerContent({
     required this.isExpanded,
@@ -900,6 +1036,8 @@ class _ComposerContent extends StatelessWidget {
     required this.colorScheme,
     required this.onAttachment,
     required this.onRemoveImage,
+    required this.onRetryImage,
+    required this.attachmentsReady,
     required this.onSubmitted,
     required this.onModelParametersRequested,
     required this.modelParametersDescription,
@@ -917,6 +1055,8 @@ class _ComposerContent extends StatelessWidget {
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
+  final ValueChanged<int>? onRetryImage;
+  final bool attachmentsReady;
   final VoidCallback onSubmitted;
   final VoidCallback? onModelParametersRequested;
   final String modelParametersDescription;
@@ -952,6 +1092,9 @@ class _ComposerContent extends StatelessWidget {
                 index: index,
                 size: isExpanded ? 58 : 28,
                 onRemove: () => onRemoveImage(index),
+                onRetry: onRetryImage == null
+                    ? null
+                    : () => onRetryImage!(index),
               ),
             ),
           ),
@@ -1045,7 +1188,9 @@ class _ComposerContent extends StatelessWidget {
                             ? null
                             : running
                             ? onStop
-                            : onSubmitted,
+                            : attachmentsReady
+                            ? onSubmitted
+                            : null,
                         sending: sending,
                         running: running,
                       )

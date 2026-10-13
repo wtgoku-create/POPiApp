@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
+import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -93,6 +97,144 @@ void main() {
   }
 
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+    testWidgets(
+      'opening message stays at the top of a short conversation at $size',
+      (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        const welcome = '这次想创作什么？可以说一个想法，或发来参考素材。';
+        final repository = StreamingSessionRepository()
+          ..data = chatSnapshotJson(
+            seq: 1,
+            messages: [chatMessageJson(text: welcome)],
+          );
+        final controller = ConversationController(repository, 'a')
+          ..open(chatId);
+        addTearDown(() async {
+          controller.dispose();
+          await repository.close();
+        });
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: ConversationTimeline(controller: controller)),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final openingTop = tester.getTopLeft(find.text(welcome)).dy;
+        final timelineTop = tester
+            .getTopLeft(find.byType(ConversationTimeline))
+            .dy;
+        expect(openingTop - timelineTop, inInclusiveRange(10, 40));
+        repository.streams.single.add(
+          chatEvent(2, 'message.completed', {
+            'timelineUpdates': [
+              {
+                ...chatMessageJson(seq: 2, text: 'A story idea'),
+                'id': 'user-message',
+                'role': 'user',
+              },
+            ],
+          }),
+        );
+        await tester.pumpAndSettle();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getTopLeft(find.text(welcome)).dy,
+          closeTo(openingTop, 1),
+        );
+        expect(
+          tester.getTopLeft(find.text('A story idea')).dy,
+          greaterThan(openingTop),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('delayed history opens at the bottom at $size', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final snapshot = Completer<ConversationSnapshot>();
+      final repository = StreamingSessionRepository()
+        ..delayedSnapshot = snapshot;
+      final controller = ConversationController(repository, 'a')..open(chatId);
+      addTearDown(() async {
+        controller.dispose();
+        await repository.close();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: ConversationTimeline(controller: controller)),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      snapshot.complete(
+        ConversationSnapshot.fromJson(
+          chatSnapshotJson(
+            seq: 41,
+            messages: [
+              for (var i = 0; i < 40; i++)
+                {
+                  ...chatMessageJson(
+                    seq: i + 1,
+                    text: List.filled(
+                      1 + i % 6,
+                      'History $i with a variable-height Markdown paragraph.',
+                    ).join('\n\n'),
+                  ),
+                  'id': 'history-$i',
+                },
+              {
+                ...chatMessageJson(seq: 41, text: 'Latest message'),
+                'id': 'latest',
+              },
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final list = find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final position = tester.state<ScrollableState>(list).position;
+      double distanceFromBottom() => position.axisDirection == AxisDirection.up
+          ? position.extentBefore
+          : position.extentAfter;
+      expect(position.maxScrollExtent, greaterThan(size.height));
+      expect(distanceFromBottom(), closeTo(0, 1));
+      expect(find.text('Latest message').hitTestable(), findsOneWidget);
+
+      await tester.drag(list, const Offset(0, 600));
+      await tester.pumpAndSettle();
+      final historyOffset = position.pixels;
+      expect(distanceFromBottom(), greaterThan(120));
+      repository.streams.single.add(
+        chatEvent(42, 'message.delta', {
+          'messageId': 'latest',
+          'delta': ' updated',
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(position.pixels, closeTo(historyOffset, 1));
+      expect(distanceFromBottom(), greaterThan(120));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets(
       'streams Markdown, stops and renders structured answers at $size',
       (tester) async {

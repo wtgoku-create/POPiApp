@@ -178,9 +178,7 @@ class HomeCreationFixture {
       topics = [
         {
           'id': 'topic-$recommendationCount',
-          'title': body['mode'] == 'custom'
-              ? 'Custom story: ${body['text']}'
-              : 'Server story $recommendationCount',
+          'title': 'Server story $recommendationCount',
           'summary': 'A story returned by the server',
         },
       ];

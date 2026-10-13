@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
@@ -1008,6 +1009,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(requests, [(1, 20), (2, 20)]);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('points-log-21')),
+      200,
+      scrollable: find.descendant(
+        of: find.byKey(const Key('points-details-scroll')),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('points-log-21')), findsOneWidget);
 
     await tester.drag(
@@ -1016,6 +1026,136 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(requests, [(1, 20), (2, 20)]);
+  });
+
+  for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+    testWidgets('long points history builds rows on demand at $size', (
+      tester,
+    ) async {
+      final requests = <int>[];
+      await pumpPage(
+        tester,
+        PointsDetailsPage(
+          refreshOnOpen: false,
+          pointsLogPageLoader: (page, pageSize) async {
+            requests.add(page);
+            return UserPointsLogPage(
+              page: page,
+              pageSize: pageSize,
+              pageCount: 1,
+              total: 180,
+              items: List.generate(180, (index) => _pointsLogEntry(index + 1)),
+            );
+          },
+        ),
+        size: size,
+      );
+      final first = find.byKey(const Key('points-log-1'));
+      final last = find.byKey(const Key('points-log-180'));
+      final rows = find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            RegExp(r'^points-log-\d+$').hasMatch(key.value);
+      });
+      expect(first, findsOneWidget);
+      expect(last, findsNothing);
+      expect(rows.evaluate().length, lessThan(30));
+      final scrollable = find.descendant(
+        of: find.byKey(const Key('points-details-scroll')),
+        matching: find.byType(Scrollable),
+      );
+      await tester.scrollUntilVisible(last, 500, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(first, findsNothing);
+      expect(last, findsOneWidget);
+      await tester.scrollUntilVisible(first, -500, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(first, findsOneWidget);
+      expect(last, findsNothing);
+      expect(requests, [1]);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('points history retries an initial failure', (tester) async {
+    var attempts = 0;
+    await pumpPage(
+      tester,
+      PointsDetailsPage(
+        refreshOnOpen: false,
+        pointsLogPageLoader: (page, pageSize) async {
+          if (attempts++ == 0) throw StateError('Initial load failed');
+          return UserPointsLogPage(
+            page: page,
+            pageSize: pageSize,
+            pageCount: 1,
+            total: 1,
+            items: [_pointsLogEntry(1)],
+          );
+        },
+      ),
+    );
+    expect(find.byKey(const Key('points-log-error')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('points-log-retry')));
+    await tester.pumpAndSettle();
+    expect(attempts, 2);
+    expect(find.byKey(const Key('points-log-error')), findsNothing);
+    expect(find.byKey(const Key('points-log-1')), findsOneWidget);
+  });
+
+  testWidgets('points pagination preserves rows and retries the failed page', (
+    tester,
+  ) async {
+    final requests = <int>[];
+    final second = Completer<UserPointsLogPage>();
+    await pumpPage(
+      tester,
+      PointsDetailsPage(
+        refreshOnOpen: false,
+        pointsLogPageLoader: (page, pageSize) async {
+          requests.add(page);
+          if (page == 2 && requests.length == 2) return second.future;
+          return UserPointsLogPage(
+            page: page,
+            pageSize: pageSize,
+            pageCount: 2,
+            total: 21,
+            items: page == 1
+                ? List.generate(20, (index) => _pointsLogEntry(index + 1))
+                : [_pointsLogEntry(20), _pointsLogEntry(21)],
+          );
+        },
+      ),
+    );
+    await tester.drag(
+      find.byKey(const Key('points-details-scroll')),
+      const Offset(0, -1400),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(requests, [1, 2]);
+    expect(find.byKey(const Key('points-log-loading-more')), findsOneWidget);
+    second.completeError(StateError('Next page failed'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('points-log-loading-more')), findsNothing);
+    final retry = find.byKey(const Key('points-log-retry-more'));
+    expect(retry, findsOneWidget);
+    expect(find.byKey(const Key('points-log-20')), findsOneWidget);
+    await tester.drag(
+      find.byKey(const Key('points-details-scroll')),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+    expect(requests, [1, 2]);
+    await tester.ensureVisible(retry);
+    await tester.pumpAndSettle();
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+    expect(requests, [1, 2, 2]);
+    expect(retry, findsNothing);
+    expect(find.byKey(const Key('points-log-20')), findsOneWidget);
+    expect(find.byKey(const Key('points-log-21')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('separates points cards from the page in dark mode', (
@@ -1027,12 +1167,18 @@ void main() {
       theme: AppTheme.dark,
     );
 
-    for (final key in const [
-      Key('points-summary-card'),
-      Key('points-transaction-card'),
+    for (final decoration in [
+      tester
+              .widget<Container>(find.byKey(const Key('points-summary-card')))
+              .decoration!
+          as BoxDecoration,
+      tester
+              .widget<DecoratedSliver>(
+                find.byKey(const Key('points-transaction-card')),
+              )
+              .decoration
+          as BoxDecoration,
     ]) {
-      final card = tester.widget<Container>(find.byKey(key));
-      final decoration = card.decoration! as BoxDecoration;
       expect(decoration.color, AppTheme.dark.colorScheme.surfaceContainerHigh);
       expect(decoration.color, isNot(AppTheme.dark.scaffoldBackgroundColor));
       expect(decoration.boxShadow, hasLength(2));

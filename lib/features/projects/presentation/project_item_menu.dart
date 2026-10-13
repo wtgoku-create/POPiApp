@@ -102,7 +102,7 @@ class ProjectItemMenu extends ConsumerWidget {
         if (session != null)
           AppMenuItem(
             label: pinned ? l10n.unpinSession : l10n.pinSession,
-            icon: const _ProjectMenuIcon('menu_pin', size: 15),
+            icon: const _ProjectMenuIcon('menu_pin'),
             onSelected: () async {
               if (ref.read(userProvider)?.id != userId) return;
               try {

@@ -118,8 +118,9 @@ void main() {
       );
       expect(
         tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
-        isTrue,
+        isFalse,
       );
+      expect(tester.testTextInput.isVisible, isFalse);
       expect(tester.widget<ExtendedTextField>(input).maxLines, 3);
       await tester.tap(expand);
       await tester.pumpAndSettle();
@@ -128,6 +129,39 @@ void main() {
       expect(editor, findsNothing);
       expect(controller.markdown, '$longText\nFifth');
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'keyboard can be hidden without closing the editor or losing text',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      final controller = await openComposer(tester);
+      await tester.tap(expand);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isTrue);
+      final hide = find.byKey(const Key('popi-expanded-editor-hide-keyboard'));
+      expect(hide, findsOneWidget);
+      expect(tester.getRect(hide).overlaps(tester.getRect(close)), isFalse);
+      await tester.tap(hide);
+      await tester.pumpAndSettle();
+      expect(editor, findsOneWidget);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(controller.markdown, longText);
+      await tester.tap(expandedInput);
+      await tester.pump();
+      expect(tester.testTextInput.isVisible, isTrue);
+      await tester.tap(close);
+      await tester.pumpAndSettle();
+      expect(editor, findsNothing);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(controller.markdown, longText);
       await tester.pumpWidget(const SizedBox());
     },
   );

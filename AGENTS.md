@@ -157,6 +157,14 @@ flutter build macos --debug
 
 ## UI Conventions
 
+## 列表与滚动
+
+- 数据列表和网格默认使用虚拟列表（按需构建）：`ListView.builder`、`ListView.separated`、`GridView.builder`，或 Sliver 的 builder/delegate，保持长列表的滑动体验。
+- 标题、筛选、分组和列表需要一起滚动时，使用 `CustomScrollView` 配合 `SliverToBoxAdapter`、`SliverList` 和 `SliverGrid`，共用一个滚动区域。
+- 不使用 `SingleChildScrollView + Column` 展开长列表，不通过嵌套 `shrinkWrap: true` 且禁用滚动的列表或网格承载持续增长的数据。少量固定内容、表单和空状态可以使用普通布局。
+- 列表项使用稳定的业务标识作为 Key；选择、编辑和展开状态保存在页面状态或业务模型中，避免离屏销毁后丢失。分页、筛选和刷新不得破坏既有滚动与交互行为。
+- 固定高度的条目优先提供 `itemExtent` 或 `mainAxisExtent`；高度不固定时保留动态布局。改造长列表时验证离屏按需构建、滚动加载和状态保留。
+
 ## Environment Configuration
 
 - Manage public environment settings in `config/env/*.json` and read them through `lib/core/config/app_config.dart`; do not add scattered `fromEnvironment` calls or hardcoded service URLs.

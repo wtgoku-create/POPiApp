@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'dart:typed_data';
 
 import 'api_exception.dart';
+import 'agent_api_exception.dart';
 import 'payment_exception.dart';
 import '../../features/auth/domain/captcha_challenge.dart';
 import '../../shared/type/social_app_type.dart';
@@ -80,6 +81,7 @@ class NetworkApi {
     Map<String, Object?> headers,
     Uint8List bytes, {
     CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
   }) async {
     final transport = Dio();
     try {
@@ -91,6 +93,7 @@ class NetworkApi {
           contentType: headers['Content-Type']?.toString(),
         ),
         cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
       );
     } finally {
       transport.close(force: true);
@@ -116,15 +119,20 @@ class NetworkApi {
     Map<String, Object?>? body,
     CancelToken? cancelToken,
   ) async {
-    final response = await dio.request<Object?>(
-      path,
-      data: body,
-      options: Options(method: body == null ? 'GET' : 'POST'),
-      cancelToken: cancelToken,
-    );
-    final data = _workBody(response.data)['data'];
-    if (data is! Map) throw const ApiException();
-    return Map<String, Object?>.from(data);
+    try {
+      final response = await dio.request<Object?>(
+        path,
+        data: body,
+        options: Options(method: body == null ? 'GET' : 'POST'),
+        cancelToken: cancelToken,
+      );
+      final data = _workBody(response.data)['data'];
+      if (data is! Map) throw const ApiException();
+      return Map<String, Object?>.from(data);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
   }
 
   Future<Map<String, Object?>> listLibraryWorks({
@@ -477,12 +485,59 @@ class NetworkApi {
   Future<Map<String, Object?>> estimateHomeGeneration(
     Map<String, Object?> config, {
     CancelToken? cancelToken,
+  }) => estimateStudioGeneration('video', config, cancelToken: cancelToken);
+
+  Future<Map<String, Object?>> estimateStudioGeneration(
+    String mediaType,
+    Map<String, Object?> config, {
+    CancelToken? cancelToken,
   }) => _studioRequest('/api_client/agent/v2/generation/estimate-points', {
-    'mediaType': 'video',
+    'mediaType': mediaType,
     'modelId': config['modelId'],
     'parameters': config['params'],
     'outputCount': 1,
   }, cancelToken);
+
+  Future<Map<String, Object?>> studioCreation(
+    String id, {
+    CancelToken? cancelToken,
+  }) => _studioRequest(
+    '/api_client/agent/v2/creations/${Uri.encodeComponent(id)}',
+    null,
+    cancelToken,
+  );
+
+  Future<void> selectCreationTopic(
+    String id,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await dio.put<Object?>(
+        '/api_client/agent/v2/creations/${Uri.encodeComponent(id)}/topic',
+        data: input,
+        cancelToken: cancelToken,
+      );
+      _workBody(response.data);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  Future<Map<String, Object?>> roleTemplatesPage(
+    int page, {
+    CancelToken? cancelToken,
+  }) async {
+    final response = await dio.get<Object?>(
+      '/api_client/agent/v2/role-templates',
+      queryParameters: {'page': page, 'pageSize': 50},
+      cancelToken: cancelToken,
+    );
+    final data = _workBody(response.data)['data'];
+    if (data is! Map) throw const ApiException();
+    return Map<String, Object?>.from(data);
+  }
 
   Future<Map<String, dynamic>> libraryRoleDetail(
     String id, {

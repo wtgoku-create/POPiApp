@@ -116,7 +116,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
 
   void _handleScroll() {
     if (!_scrollController.hasClients) return;
-    if (_scrollController.position.extentAfter < 240) {
+    if (_loadError == null && _scrollController.position.extentAfter < 240) {
       unawaited(_loadPointsLog());
     }
   }
@@ -226,38 +226,53 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
           ),
         ),
         Expanded(
-          child: ListView(
+          child: CustomScrollView(
             key: const Key('points-details-scroll'),
             controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-            children: [
-              _PointsSummaryCard(
-                totalPoints: totalPoints,
-                memberCoins: memberCoins,
-                otherCoins: otherCoins,
-                pointPackageCoins: pointPackageCoins,
-                onRecharge: () => _showRechargeSheet(totalPoints),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                l10n.pointsDetailsTitle,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                sliver: SliverMainAxisGroup(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _PointsSummaryCard(
+                            totalPoints: totalPoints,
+                            memberCoins: memberCoins,
+                            otherCoins: otherCoins,
+                            pointPackageCoins: pointPackageCoins,
+                            onRecharge: () => _showRechargeSheet(totalPoints),
+                          ),
+                          const SizedBox(height: 18),
+                          Text(
+                            l10n.pointsDetailsTitle,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            l10n.pointsUsageDescription,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              fontSize: 14,
+                              height: 1.45,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                    _buildPointsLogSliver(l10n),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
-              Text(
-                l10n.pointsUsageDescription,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 14,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildPointsLogCard(l10n),
             ],
           ),
         ),
@@ -274,58 +289,74 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     );
   }
 
-  Widget _buildPointsLogCard(AppLocalizations l10n) {
+  Widget _buildPointsLogSliver(AppLocalizations l10n) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
+    return DecoratedSliver(
       key: const Key('points-transaction-card'),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
       decoration: _pointsCardDecoration(context),
-      child: _isInitialLoading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: CircularProgressIndicator(
-                  key: Key('points-log-initial-loading'),
-                ),
-              ),
-            )
-          : _entries.isEmpty
-          ? _PointsLogEmptyState(
-              hasError: _loadError != null,
-              onRetry: () => _loadPointsLog(firstPage: true),
-            )
-          : Column(
-              children: [
-                for (var index = 0; index < _entries.length; index++) ...[
-                  _PointsTransactionRow(entry: _entries[index]),
-                  if (index != _entries.length - 1) const SizedBox(height: 20),
-                ],
-                const SizedBox(height: 24),
-                if (_isLoadingMore)
-                  const SizedBox.square(
-                    key: Key('points-log-loading-more'),
-                    dimension: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else if (_loadError != null)
-                  TextButton.icon(
-                    key: const Key('points-log-retry-more'),
-                    onPressed: _loadPointsLog,
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: Text(l10n.retry),
-                  )
-                else
-                  Text(
-                    l10n.pointsHistoryNotice,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 14,
+      sliver: SliverPadding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        sliver: _isInitialLoading
+            ? const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      key: Key('points-log-initial-loading'),
                     ),
                   ),
-              ],
-            ),
+                ),
+              )
+            : _entries.isEmpty
+            ? SliverToBoxAdapter(
+                child: _PointsLogEmptyState(
+                  hasError: _loadError != null,
+                  onRetry: () => _loadPointsLog(firstPage: true),
+                ),
+              )
+            : SliverMainAxisGroup(
+                slivers: [
+                  SliverList.separated(
+                    itemCount: _entries.length,
+                    itemBuilder: (context, index) => _PointsTransactionRow(
+                      key: ValueKey(_entries[index].id),
+                      entry: _entries[index],
+                    ),
+                    separatorBuilder: (_, _) => const SizedBox(height: 20),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        if (_isLoadingMore)
+                          const SizedBox.square(
+                            key: Key('points-log-loading-more'),
+                            dimension: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else if (_loadError != null)
+                          TextButton.icon(
+                            key: const Key('points-log-retry-more'),
+                            onPressed: _loadPointsLog,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text(l10n.retry),
+                          )
+                        else
+                          Text(
+                            l10n.pointsHistoryNotice,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 14,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -1005,7 +1036,7 @@ class _PointsBalanceRow extends StatelessWidget {
 }
 
 class _PointsTransactionRow extends StatelessWidget {
-  const _PointsTransactionRow({required this.entry});
+  const _PointsTransactionRow({required this.entry, super.key});
 
   final UserPointsLogEntry entry;
 

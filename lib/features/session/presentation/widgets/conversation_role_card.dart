@@ -10,8 +10,13 @@ import '../../domain/conversation_snapshot.dart';
 
 /// Mirrors Web role cards while retaining the role version saved in the message.
 class ConversationRoleCard extends StatefulWidget {
-  const ConversationRoleCard({required this.block, super.key});
+  const ConversationRoleCard({
+    required this.block,
+    this.framed = true,
+    super.key,
+  });
   final ConversationBlock block;
+  final bool framed;
 
   @override
   State<ConversationRoleCard> createState() => _ConversationRoleCardState();
@@ -117,11 +122,15 @@ class _ConversationRoleCardState extends State<ConversationRoleCard> {
               key: const Key('conversation-role-summary'),
               width: 188,
               margin: const EdgeInsets.symmetric(vertical: 4),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: .05),
-                borderRadius: BorderRadius.circular(20),
-              ),
+              padding: widget.framed
+                  ? const EdgeInsets.all(10)
+                  : EdgeInsets.zero,
+              decoration: widget.framed
+                  ? BoxDecoration(
+                      color: colors.primary.withValues(alpha: .05),
+                      borderRadius: BorderRadius.circular(20),
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -177,13 +186,17 @@ class _ConversationRoleCardState extends State<ConversationRoleCard> {
       key: const Key('conversation-role-card'),
       width: double.infinity,
       margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light
-            ? Colors.white.withValues(alpha: .5)
-            : colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      padding: widget.framed
+          ? const EdgeInsets.all(20)
+          : EdgeInsets.symmetric(vertical: 12),
+      decoration: widget.framed
+          ? BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Colors.white.withValues(alpha: .5)
+                  : colors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(20),
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

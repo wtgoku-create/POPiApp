@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'POPi';
 
   @override
+  String get hideKeyboard => 'Hide keyboard';
+
+  @override
   String get roleGuideTitle => 'Start with characters';
 
   @override
@@ -143,15 +146,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get roleRefreshStories => 'Try another set';
-
-  @override
-  String get roleCustomTopic => 'Custom topic';
-
-  @override
-  String get roleCustomTopicHint => 'What story would you like to create?';
-
-  @override
-  String get roleGenerateTopic => 'Generate topic';
 
   @override
   String get roleReconfirmVideo => 'Confirm video again';
@@ -1264,6 +1258,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imageReadFailed => 'Unable to read the image. Try again later';
+
+  @override
+  String imageUploadProgress(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get imageUploadProcessing => 'Processing';
+
+  @override
+  String get imageUploadFailed => 'Upload failed';
+
+  @override
+  String get imageUploadComplete => 'Uploaded';
 
   @override
   String get gallery => 'Photos';
@@ -2405,6 +2413,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatThinking => 'POPi is working…';
+
+  @override
+  String get chatQueued => 'Queued';
+
+  @override
+  String get chatWaitingExternal => 'Waiting for results';
+
+  @override
+  String get chatCanceling => 'Stopping';
+
+  @override
+  String get chatTopicSelected => 'Selected story';
+
+  @override
+  String get chatGenerationConfirmed => 'Generation plan confirmed';
+
+  @override
+  String get chatGenerationCanceled => 'Generation plan canceled';
+
+  @override
+  String get chatReferenceImage => 'Reference image';
+
+  @override
+  String get chatImageStyle => 'Image style';
+
+  @override
+  String get chatUnrestrictedStyle => 'Unrestricted style';
+
+  @override
+  String get chatGenerationRequirements => 'Additional requirements';
+
+  @override
+  String get chatInvalidGeneration =>
+      'Check the model, parameters and reference materials';
+
+  @override
+  String get chatUnavailable => 'Unavailable';
+
+  @override
+  String get chatGenerationTask => 'Generation task';
+
+  @override
+  String get chatReviseContent => 'Revise content';
+
+  @override
+  String chatRevisePrompt(String title) {
+    return 'Please revise $title: ';
+  }
+
+  @override
+  String get chatBeforeChange => 'Before';
+
+  @override
+  String get chatAfterChange => 'After';
+
+  @override
+  String get chatCompleteRole => 'Create character';
+
+  @override
+  String get chatConfirmProfileUpdate => 'Update profile';
 
   @override
   String get chatRoleCreated => 'Character draft created';

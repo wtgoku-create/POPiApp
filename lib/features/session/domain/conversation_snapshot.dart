@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'conversation_session.dart';
+import '../../role_guide/domain/home_storyboard.dart';
 
 Map<String, Object?> conversationMap(Object? value) {
   if (value is! Map) throw const FormatException('Invalid conversation object');
@@ -53,12 +56,112 @@ class ConversationBlock {
               data['configuration'])
           as String? ??
       '';
-  List<String> get mediaIds => [
-    if (mediaId != null) mediaId!,
-    ...((data['mediaIds'] as List?) ?? []).whereType<String>(),
-    for (final output in conversationMaps(data['outputs']))
-      if (output['kind'] == 'media') output['id'].toString(),
+  String get objectKind => data['kind'] as String? ?? '';
+  bool get isHomePlan => kind == 'plan' && data['homePlan'] is Map;
+  Map<String, Object?>? get reference =>
+      data['ref'] is Map ? conversationMap(data['ref']) : null;
+  Map<String, Object?>? get roleImage =>
+      data['roleImage'] is Map ? conversationMap(data['roleImage']) : null;
+  bool get isThreeView => planItems.firstOrNull?['key'] == 'three_view';
+  String get mediaType =>
+      (planItems.firstOrNull?['mediaType'] ?? data['mediaType']) as String? ??
+      '';
+  String get configuration => data['configuration'] as String? ?? '';
+  String get hook => data['hook'] as String? ?? '';
+  List<ConversationBlock> get homeCast => [
+    for (final role in conversationMaps(
+      data['homePlan'] is Map
+          ? conversationMap(data['homePlan'])['cast']
+          : null,
+    ))
+      ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'role',
+        'action': 'cast',
+        'data': role,
+      }),
   ];
+  ConversationBlock? get homeTopic {
+    final plan = data['homePlan'];
+    if (plan is! Map || plan['topic'] is! Map) return null;
+    return ConversationBlock.fromJson({
+      'type': 'object',
+      'kind': 'topic',
+      'action': 'selected',
+      'data': plan['topic'],
+    });
+  }
+
+  ConversationBlock? get previewRole {
+    final role = data['roleDraft'] ?? roleImage?['role'];
+    if (role is Map) {
+      return ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'role',
+        'action': 'edited',
+        'data': role,
+      });
+    }
+    final input = data['roleInput'];
+    if (input is! Map) return null;
+    final profile = input['profile'];
+    if (profile is! Map) return null;
+    return ConversationBlock.fromJson({
+      'type': 'object',
+      'kind': 'role',
+      'action': 'created',
+      'data': {
+        'title': profile['title'],
+        'profile': profile,
+        'description': profile['description'],
+        'avatar': input['avatar'],
+        'threeViewImage': input['threeViewImage'],
+        'status': 'draft',
+      },
+    });
+  }
+
+  List<(String, String, String)> get profileChanges {
+    final before = data['before'] is Map
+        ? conversationMap(data['before'])
+        : <String, Object?>{};
+    final fields = before['profileData'] is Map
+        ? conversationMap(before['profileData'])
+        : <String, Object?>{};
+    final changes = data['changes'] is Map
+        ? conversationMap(data['changes'])
+        : <String, Object?>{};
+    return [
+      for (final entry in changes.entries)
+        (
+          entry.key,
+          _displayValue(
+            before[entry.key] ??
+                (fields[entry.key] is Map
+                    ? (fields[entry.key] as Map)['value']
+                    : null),
+          ),
+          _displayValue(entry.value),
+        ),
+    ];
+  }
+
+  bool get editableContent =>
+      kind == 'content' &&
+      objectKind != 'profile' &&
+      data['editable'] == true &&
+      reference?['versionId'] != null;
+  HomeStoryboard? get storyboard =>
+      objectKind == 'storyboard' ? HomeStoryboard.tryParse(body) : null;
+  List<String> get mediaIds => {
+    if (mediaId != null) mediaId!,
+    if (data['mediaId'] != null) data['mediaId'].toString(),
+    for (final id in (data['mediaIds'] as List?) ?? [])
+      if (id != null) id.toString(),
+    for (final output in conversationMaps(data['outputs']))
+      if (output['kind'] == 'media' && output['id'] != null)
+        output['id'].toString(),
+  }.where((id) => id.isNotEmpty).toList();
   List<ConversationQuestionField> get fields => conversationMaps(
     data['fields'],
   ).map(ConversationQuestionField.fromJson).toList();
@@ -159,6 +262,8 @@ class ConversationMessage {
     this.runId,
     this.sessionId,
     this.transient = false,
+    this.attempt,
+    this.presentation,
   });
 
   factory ConversationMessage.fromJson(
@@ -173,6 +278,8 @@ class ConversationMessage {
     createdAt: DateTime.parse(json['createdAt'] as String),
     runId: json['runId'] as String?,
     transient: json['transient'] == true,
+    attempt: json['attempt'] as int?,
+    presentation: json['presentation'] as String?,
     blocks: timeline
         ? conversationMaps(
             json['blocks'],
@@ -192,6 +299,8 @@ class ConversationMessage {
   final DateTime createdAt;
   final String? runId;
   final bool transient;
+  final int? attempt;
+  final String? presentation;
   final List<ConversationBlock> blocks;
 
   String get text => blocks
@@ -208,6 +317,8 @@ class ConversationMessage {
         createdAt: createdAt,
         runId: runId,
         transient: transient,
+        attempt: attempt,
+        presentation: presentation,
         blocks: value,
       );
   ConversationMessage anchoredTo(ConversationMessage previous) =>
@@ -220,6 +331,8 @@ class ConversationMessage {
         createdAt: previous.createdAt,
         runId: runId,
         transient: transient,
+        attempt: attempt,
+        presentation: presentation,
         blocks: blocks,
       );
 }
@@ -231,15 +344,19 @@ class ConversationRun {
       purpose =
           json['purpose'] as String? ??
           (json['taskId'] == null ? 'conversation' : 'stage'),
-      retryable = json['retryable'] == true,
+      retryable =
+          json['retryable'] as bool? ??
+          ['failed', 'interrupted'].contains(json['state']),
       error = json['message'] as String?,
-      errorCode = json['errorCode'] as String?;
+      errorCode = (json['errorCode'] ?? json['code']) as String?,
+      attempt = json['attempt'] as int?;
   final String id;
   final String state;
   final String purpose;
   final bool retryable;
   final String? error;
   final String? errorCode;
+  final int? attempt;
   bool get running =>
       ['conversation', 'consultation'].contains(purpose) &&
       ['pending', 'running'].contains(state);
@@ -278,6 +395,36 @@ class ConversationSnapshot {
   late final List<ConversationMessage> messages;
   late final List<ConversationRun> runs;
   bool get running => runs.any((run) => run.running);
+
+  /// 历史批次只读；后续选题或确认属于同一作品时锁定原候选。
+  bool topicLocked(ConversationMessage message, ConversationBlock topic) =>
+      topic.action == 'selected' ||
+      topic.scopeKind != 'creation' ||
+      topic.scopeId == null ||
+      messages
+          .where((item) => item.seq > message.seq)
+          .any(
+            (item) => item.blocks.any(
+              (block) =>
+                  block.kind == 'topic' &&
+                  block.scopeId == topic.scopeId &&
+                  ['selected', 'generated'].contains(block.action),
+            ),
+          );
+  String? selectedTopicId(
+    ConversationMessage message,
+    ConversationBlock topic,
+  ) => messages
+      .where((item) => item.seq > message.seq)
+      .expand((item) => item.blocks)
+      .where(
+        (block) =>
+            block.kind == 'topic' &&
+            block.action == 'selected' &&
+            block.scopeId == topic.scopeId,
+      )
+      .firstOrNull
+      ?.referenceId;
   List<ConversationBlock> get legacyObjects => source['timelineVersion'] == 1
       ? const []
       : [
@@ -295,3 +442,11 @@ class ConversationSnapshot {
             }),
         ];
 }
+
+String _displayValue(Object? value) => value is Map
+    ? value.containsKey('value')
+          ? _displayValue(value['value'])
+          : jsonEncode(value)
+    : value is List
+    ? value.map(_displayValue).join(', ')
+    : value?.toString() ?? '';

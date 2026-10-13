@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import 'app_modal_backdrop.dart';
+import 'app_keyboard_dismiss.dart';
 
 class AppDialog extends StatelessWidget {
   const AppDialog({
@@ -19,6 +20,7 @@ class AppDialog extends StatelessWidget {
     required BuildContext context,
     required WidgetBuilder builder,
   }) {
+    FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context, rootNavigator: true);
     return navigator.push<T>(
       _AppDialogRoute<T>(
@@ -141,7 +143,8 @@ class _AppDialogRoute<T> extends DialogRoute<T> {
     required CapturedThemes themes,
     required this.reduceMotion,
   }) : super(
-         builder: (context) => SafeArea(child: builder(context)),
+         builder: (context) =>
+             AppKeyboardDismiss(child: SafeArea(child: builder(context))),
          themes: themes,
          barrierColor: Colors.transparent,
          useSafeArea: false,

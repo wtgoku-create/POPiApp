@@ -431,7 +431,8 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final repository = StreamingSessionRepository();
-      final controller = ConversationController(repository, 'a');
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
       addTearDown(() async {
         controller.dispose();
         await repository.close();
@@ -456,10 +457,22 @@ void main() {
         'kind': 'plan',
         'data': {
           'id': 'plan',
+          'kind': 'generation',
           'title': '角色图生成方案',
           'status': 'ready',
           'body': '让校园爱丽丝穿着校服，站在温暖的校园里。',
           'estimatedPoints': 675,
+          'plan': {
+            'items': [
+              {
+                'key': 'image',
+                'mediaType': 'image',
+                'modelId': 'model',
+                'params': {},
+                'prompt': '让校园爱丽丝穿着校服，站在温暖的校园里。',
+              },
+            ],
+          },
           'allowedActions': ['confirm', 'cancel'],
         },
       });

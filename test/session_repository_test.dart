@@ -426,7 +426,18 @@ void main() {
           },
         ),
       );
-      expect(await repository().upload('a', 'reference.png', bytes), '801');
+      final progress = <(int, int)>[];
+      expect(
+        await repository().upload(
+          'a',
+          'reference.png',
+          bytes,
+          onSendProgress: (sent, total) => progress.add((sent, total)),
+        ),
+        '801',
+      );
+      expect(progress, isNotEmpty);
+      expect(progress.last, (bytes.length, bytes.length));
       expect(await repository().upload('a', 'reference.png', bytes), '801');
       expect(uploads, 1);
     },

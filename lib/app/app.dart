@@ -8,6 +8,7 @@ import '../shared/providers/storage_provider.dart';
 import '../shared/providers/purchase_provider.dart';
 import '../shared/providers/user_provider.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
+import '../shared/widgets/app_keyboard_dismiss.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -114,8 +115,9 @@ class _RouterApp extends StatelessWidget {
         ...AppLocalizations.localizationsDelegates,
       ],
       routerConfig: router,
-      builder: (context, child) =>
-          SafeAreaStoreSync(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => AppKeyboardDismiss(
+        child: SafeAreaStoreSync(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

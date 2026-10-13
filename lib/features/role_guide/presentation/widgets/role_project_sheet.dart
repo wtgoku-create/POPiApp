@@ -91,61 +91,69 @@ class _RoleProjectSheetState extends ConsumerState<RoleProjectSheet> {
       builder: (context, controller) => FutureBuilder<List<Project>>(
         future: _projects,
         builder: (context, snapshot) {
-          return ListView(
+          final projects = snapshot.data ?? const <Project>[];
+          return ListView.builder(
+            key: const Key('role-project-list'),
             controller: controller,
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            children: [
-              if (snapshot.hasError)
-                TextButton(
+            itemCount: snapshot.hasError || projects.isEmpty
+                ? 1
+                : projects.length,
+            itemBuilder: (context, index) {
+              if (snapshot.hasError) {
+                return TextButton(
                   key: const Key('role-project-retry'),
-                  onPressed: () => setState(
-                    () => _projects = ref
+                  onPressed: () => setState(() {
+                    _projects = ref
                         .read(projectRepositoryProvider)
-                        .listProjects(cancelToken: _requestToken),
-                  ),
+                        .listProjects(cancelToken: _requestToken);
+                  }),
                   child: Text('${l10n.projectsLoadFailed} · ${l10n.retry}'),
-                )
-              else if (!snapshot.hasData)
-                const Center(child: CircularProgressIndicator())
-              else if (snapshot.data!.isEmpty)
-                Text(l10n.noProjects, textAlign: TextAlign.center)
-              else
-                for (final project in snapshot.data!)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      key: Key('role-project-select-${project.id}'),
-                      enabled: !_opening,
-                      selected: _selected?.id == project.id,
-                      selectedTileColor: roleGuideTint(context),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      contentPadding: const EdgeInsets.all(15),
-                      leading: Container(
-                        width: 50,
-                        height: 50,
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: roleGuideTint(context),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const AppSvgIcon.asset('home_drawer_project'),
-                      ),
-                      title: Text(
-                        project.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      trailing: _selected?.id == project.id
-                          ? const Icon(Icons.check)
-                          : null,
-                      onTap: () => setState(() => _selected = project),
+                );
+              }
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (projects.isEmpty) {
+                return Text(l10n.noProjects, textAlign: TextAlign.center);
+              }
+              final project = projects[index];
+              return Padding(
+                key: ValueKey(project.id),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  key: Key('role-project-select-${project.id}'),
+                  enabled: !_opening,
+                  selected: _selected?.id == project.id,
+                  selectedTileColor: roleGuideTint(context),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  contentPadding: const EdgeInsets.all(15),
+                  leading: Container(
+                    width: 50,
+                    height: 50,
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: roleGuideTint(context),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const AppSvgIcon.asset('home_drawer_project'),
+                  ),
+                  title: Text(
+                    project.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-            ],
+                  trailing: _selected?.id == project.id
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => setState(() => _selected = project),
+                ),
+              );
+            },
           );
         },
       ),

@@ -126,60 +126,85 @@ class _AccountArchivesPageState extends ConsumerState<AccountArchivesPage> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: _load,
-              child: ListView(
+              child: CustomScrollView(
+                key: const Key('account-archive-list'),
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  if (_loading && _items.isEmpty)
-                    const Center(child: CircularProgressIndicator()),
-                  if (!_loading && !_failed && _items.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        l10n.ipAccountNoAssets,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  for (final item in _items)
-                    ListTile(
-                      key: ValueKey('archive-${item.id}'),
-                      leading: const Icon(Icons.movie_outlined),
-                      title: Text(item.title),
-                      subtitle: item.summary.isEmpty
-                          ? null
-                          : Text(
-                              item.summary,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => AccountArchiveDetailPage(
-                            accountId: widget.accountId,
-                            creationId: item.id,
-                            versionId: item.versionId,
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverMainAxisGroup(
+                      slivers: [
+                        if (_loading && _items.isEmpty)
+                          const SliverToBoxAdapter(
+                            child: Center(child: CircularProgressIndicator()),
                           ),
+                        if (!_loading && !_failed && _items.isEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                l10n.ipAccountNoAssets,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        SliverList.builder(
+                          itemCount: _items.length,
+                          itemBuilder: (context, index) {
+                            final item = _items[index];
+                            return ListTile(
+                              key: ValueKey('archive-${item.id}'),
+                              leading: const Icon(Icons.movie_outlined),
+                              title: Text(item.title),
+                              subtitle: item.summary.isEmpty
+                                  ? null
+                                  : Text(
+                                      item.summary,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => AccountArchiveDetailPage(
+                                    accountId: widget.accountId,
+                                    creationId: item.id,
+                                    versionId: item.versionId,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                  if (_failed)
-                    Column(
-                      children: [
-                        Text(l10n.networkRequestFailed),
-                        TextButton(
-                          onPressed: () => _load(more: _items.isNotEmpty),
-                          child: Text(l10n.retry),
-                        ),
+                        if (_failed)
+                          SliverToBoxAdapter(
+                            child: Column(
+                              children: [
+                                Text(l10n.networkRequestFailed),
+                                TextButton(
+                                  key: const Key('account-archive-retry'),
+                                  onPressed: () =>
+                                      _load(more: _items.isNotEmpty),
+                                  child: Text(l10n.retry),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (!_failed &&
+                            _page != null &&
+                            _page!.page < _page!.pageCount)
+                          SliverToBoxAdapter(
+                            child: TextButton(
+                              key: const Key('account-archive-load-more'),
+                              onPressed: _loading
+                                  ? null
+                                  : () => _load(more: true),
+                              child: Text(l10n.accountLoadMore),
+                            ),
+                          ),
                       ],
                     ),
-                  if (!_failed &&
-                      _page != null &&
-                      _page!.page < _page!.pageCount)
-                    TextButton(
-                      onPressed: _loading ? null : () => _load(more: true),
-                      child: Text(l10n.accountLoadMore),
-                    ),
+                  ),
                 ],
               ),
             ),
