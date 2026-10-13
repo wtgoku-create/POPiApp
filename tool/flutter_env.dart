@@ -90,7 +90,7 @@ Future<void> main(List<String> args) async {
     }
     final douyinLink = Uri.parse(
       config['DOUYIN_UNIVERSAL_LINK'] as String? ??
-          config['WECHAT_UNIVERSAL_LINK'] as String,
+          '${link.origin}/Douyin',
     );
     if (douyinLink.scheme != 'https' ||
         !RegExp(r'^[a-zA-Z0-9.-]+$').hasMatch(douyinLink.host)) {

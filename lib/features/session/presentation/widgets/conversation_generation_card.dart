@@ -17,6 +17,7 @@ import '../../../role_guide/domain/home_creation.dart';
 import '../conversation_controller.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
+import 'conversation_generation_configuration.dart';
 import 'conversation_home_plan_card.dart';
 import 'conversation_role_card.dart';
 import 'conversation_timeline.dart'
@@ -310,6 +311,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     final l10n = AppLocalizations.of(context)!;
     final card = widget.block;
     final locked = _busy || _attempted != null;
+    final colors = Theme.of(context).colorScheme;
     if (card.isHomePlan) {
       return ConversationHomePlanCard(
         block: card,
@@ -341,9 +343,10 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
               Expanded(
                 child: Text(
                   card.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: colors.primary,
                   ),
                 ),
               ),
@@ -352,11 +355,19 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                     ? l10n.chatCollapseProfile
                     : l10n.roleGuideViewMore,
                 onPressed: () => setState(() => _expanded = !_expanded),
-                icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                icon: Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: colors.primary.withValues(alpha: .6),
+                ),
               ),
             ],
           ),
-          Text(conversationStatusLabel(card.status, l10n)),
+          if (card.status != 'ready')
+            Text(
+              conversationStatusLabel(card.status, l10n),
+              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+            ),
           if (_expanded) ...[
             ConversationCardContent(
               storageId: 'generation:${card.id}',
@@ -368,7 +379,15 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                   if (_view.prompt.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: MarkdownMessage(text: _view.prompt, compact: true),
+                      child: MarkdownMessage(
+                        text: _view.prompt,
+                        compact: true,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   if (_editable && !_loading && _view.threeView) ...[
                     Row(
@@ -449,69 +468,35 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                         repository: widget.controller.repository,
                       ),
                   ],
-                  if (_loading)
-                    AppSkeleton(
-                      label: l10n.loadingAssets,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppSkeletonBox(width: 160, height: 18),
-                            SizedBox(height: 10),
-                            AppSkeletonBox(height: 14),
-                          ],
-                        ),
-                      ),
-                    )
-                  else if (_editable && _config != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      '${_model?.name ?? l10n.chatUnavailable}\n${_config!.params.values.join(' / ')}',
-                    ),
-                    if (widget.onModelParametersRequested != null)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: IconButton(
-                          tooltip: l10n.roleModelParameters,
-                          onPressed: _busy
-                              ? null
-                              : widget.onModelParametersRequested,
-                          icon: const Icon(Icons.tune),
-                        ),
-                      ),
-                    if (!_valid && _attempted == null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          l10n.chatInvalidGeneration,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        _points == null
-                            ? _estimating
-                                  ? l10n.roleEstimatePending
-                                  : l10n.chatUnavailable
-                            : l10n.chatEstimatedPoints(_points.toString()),
-                      ),
-                    ),
-                  ] else ...[
-                    if (card.configuration.isNotEmpty) Text(card.configuration),
-                    if (card.estimatedPoints != null)
-                      Text(
-                        l10n.chatEstimatedPoints(
-                          card.estimatedPoints.toString(),
-                        ),
-                      ),
-                  ],
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            ConversationGenerationConfiguration(
+              config: _editable ? _config : _view.config,
+              model: _model,
+              points: _editable ? _points : card.estimatedPoints,
+              savedConfiguration: _editable
+                  ? const []
+                  : _view.configurationLines,
+              loading: _loading,
+              estimating: _estimating,
+              onModelParametersRequested: _editable && !_busy
+                  ? widget.onModelParametersRequested
+                  : null,
+            ),
+            if (!_loading &&
+                _editable &&
+                _config != null &&
+                !_valid &&
+                _attempted == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.chatInvalidGeneration,
+                  style: TextStyle(fontSize: 13, color: colors.error),
+                ),
+              ),
             if (_editable) _actions(l10n),
           ],
         ],
@@ -529,6 +514,17 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
         if (widget.block.isHomePlan ||
             widget.block.allowedActions.contains('cancel'))
           OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+              minimumSize: const Size(80, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontSize: 14),
+            ),
             onPressed: _busy
                 ? null
                 : () async {
@@ -543,6 +539,13 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
             child: Text(l10n.cancel),
           ),
         FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(110, 36),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            textStyle: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontSize: 14),
+          ),
           onPressed:
               _busy ||
                   _loading ||

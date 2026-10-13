@@ -54,7 +54,7 @@ tobias:
   url_scheme: popi-alipay
   ios:
     ignore_security: true
-    universal_link: https://app.popi.art/WeChat/
+    universal_link: https://app.popi.art/ZhiFuBao
 
 flutter:
   uses-material-design: true

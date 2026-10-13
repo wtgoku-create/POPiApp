@@ -47,7 +47,11 @@ final class DouyinLoginBridge {
     let configuredKey = Bundle.main.object(forInfoDictionaryKey: "DouyinClientKey") as? String
     let configuredLink = Bundle.main.object(forInfoDictionaryKey: "douyin_universalLink") as? String
     let isSchemeCallback = url.scheme == configuredKey
-    let isLinkCallback = configuredLink.map { url.absoluteString.hasPrefix($0) } ?? false
+    let isLinkCallback = configuredLink.flatMap(URL.init(string:)).map { link in
+      let path = link.path.hasSuffix("/") ? String(link.path.dropLast()) : link.path
+      return url.scheme == link.scheme && url.host == link.host && url.port == link.port &&
+        (url.path == path || url.path.hasPrefix(path + "/"))
+    } ?? false
     guard isSchemeCallback || isLinkCallback else { return false }
     return DouyinOpenSDKApplicationDelegate.sharedInstance().application(
       UIApplication.shared, open: url, sourceApplication: sourceApplication, annotation: nil

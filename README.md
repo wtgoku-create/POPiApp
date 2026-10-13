@@ -78,9 +78,9 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | `AGENT_API_ORIGIN` | 可选 Origin，原生 App 留空；配置值必须在后台白名单中 |
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
-| `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，需使用 HTTPS 域名 |
+| `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，默认 `https://app.popi.art/WeChat` |
 | `DOUYIN_CLIENT_KEY` | 抖音开放平台移动应用 Client Key |
-| `DOUYIN_UNIVERSAL_LINK` | 抖音 iOS Universal Link，可与微信共用 |
+| `DOUYIN_UNIVERSAL_LINK` | 抖音 iOS Universal Link，默认 `https://app.popi.art/Douyin` |
 | `USER_AGREEMENT_URL` | 用户协议地址 |
 | `PRIVACY_POLICY_URL` | 隐私政策地址 |
 
@@ -102,6 +102,10 @@ dart run tool/flutter_env.dart config/env/development.local.json run
 脚本将 JSON 传给 Flutter 原生 `--dart-define-from-file`，并自动生成
 `ios/Flutter/Environment.xcconfig`，同步微信 URL Scheme 和 Associated Domains。
 新域名仍需在微信开放平台和域名服务器配置对应的 Universal Link/AASA。
+支付宝插件的 iOS Universal Link 在 `pubspec.yaml` 的 `tobias.ios.universal_link`
+中配置为 `https://app.popi.art/ZhiFuBao`。三个回调地址均不带 `/*`；
+AASA 的路径匹配规则独立配置，并应使用当前 Team ID 和 Bundle ID
+组成的 `appID`：`84GT698GKX.com.popistudio.app`。开放平台登记的地址需与应用配置一致。
 使用 Xcode 启动前先运行：
 
 ```bash

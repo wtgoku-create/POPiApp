@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
+import 'package:popi_ai_app/features/role_guide/domain/session_media_preferences.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
@@ -25,9 +26,26 @@ import 'support/session_fixtures.dart';
 
 class _CardRepository extends FixtureSessionRepository {
   int estimates = 0;
+  num estimatedPoints = 10;
   bool failEstimateOnce = false;
+  ConversationGenerationOptions? generationOverride;
   ConversationGenerationSelection? submitted;
   final controls = <String>[];
+  @override
+  Future<ConversationGenerationOptions> generationOptions(
+    String userId,
+    String sessionId,
+    ConversationBlock card, {
+    CancelToken? cancelToken,
+  }) async =>
+      generationOverride ??
+      await super.generationOptions(
+        userId,
+        sessionId,
+        card,
+        cancelToken: cancelToken,
+      );
+
   @override
   Future<num> estimateGeneration(
     String mediaType,
@@ -39,7 +57,7 @@ class _CardRepository extends FixtureSessionRepository {
       failEstimateOnce = false;
       throw StateError('offline');
     }
-    return 10;
+    return estimatedPoints;
   }
 
   @override
@@ -84,6 +102,36 @@ ConversationBlock _generation() => ConversationBlock.fromJson({
           'mediaType': 'image',
           'modelId': 'model',
           'params': {'ratio': '16:9'},
+        },
+      ],
+    },
+  },
+});
+
+ConversationBlock _videoGeneration() => ConversationBlock.fromJson({
+  'type': 'object',
+  'kind': 'plan',
+  'data': {
+    'id': 'video-plan',
+    'kind': 'generation',
+    'title': '确认生成',
+    'status': 'ready',
+    'revision': 1,
+    'allowedActions': ['confirm', 'cancel'],
+    'presentation': {
+      'requirements': List.generate(
+        30,
+        (i) =>
+            '${i + 1}. 画面：主人弯腰在花盆里找到金牌，拿出来轻轻擦了擦，递到来财的嘴边，来财用脑袋蹭主人的手心，画面温馨；音效：温柔的笑声、咕噜声。',
+      ).join('\n\n'),
+    },
+    'plan': {
+      'items': [
+        {
+          'key': 'video',
+          'mediaType': 'video',
+          'modelId': 'model',
+          'params': {'duration': 15, 'ratio': '9:16', 'resolution': '480p'},
         },
       ],
     },
@@ -791,6 +839,130 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+  for (final size in [
+    const Size(320, 844),
+    const Size(390, 844),
+    const Size(1280, 900),
+  ]) {
+    for (final dark in [false, true]) {
+      testWidgets(
+        'video confirmation keeps parameters and actions fixed at $size dark=$dark',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final repository = _CardRepository()
+            ..estimatedPoints = 478
+            ..generationOverride = ConversationGenerationOptions(
+              models: [
+                HomeModel.fromJson({
+                  'id': 'model',
+                  'name': 'seedance-2.5',
+                  'available': true,
+                  'mediaType': 'video',
+                  'parameters': [],
+                }),
+              ],
+              preferences: SessionMediaPreferences.fromJson({
+                'revision': 1,
+                'video': {
+                  'modelId': 'model',
+                  'params': {
+                    'duration': 15,
+                    'ratio': '9:16',
+                    'resolution': '480p',
+                  },
+                },
+              }),
+            );
+          final controller = ConversationController(repository, 'a')
+            ..sessionId = chatId;
+          addTearDown(controller.dispose);
+          var parameterRequests = 0;
+          final capture = GlobalKey();
+          await _pump(
+            tester,
+            ConversationGenerationCard(
+              block: _videoGeneration(),
+              controller: controller,
+              onModelParametersRequested: () => parameterRequests++,
+            ),
+            capture: capture,
+            locale: const Locale('zh'),
+            dark: dark,
+            textScale: dark ? 1.3 : 1,
+          );
+          for (final text in [
+            '模型配置',
+            '模型: seedance-2.5',
+            '时长: 15s',
+            '比例: 9:16',
+            '分辨率: 480p',
+            '预计消耗积分',
+            '478 积分',
+          ]) {
+            expect(find.text(text), findsOneWidget);
+          }
+          final content = find.byWidgetPredicate(
+            (widget) =>
+                widget is ConversationCardContent &&
+                widget.storageId == 'generation:video-plan',
+          );
+          final parameters = find.byKey(
+            const Key('conversation-plan-configuration'),
+          );
+          final confirm = find.byType(FilledButton);
+          final edit = find.byTooltip('模型/参数');
+          expect(
+            find.descendant(of: content, matching: parameters),
+            findsNothing,
+          );
+          expect(find.descendant(of: content, matching: confirm), findsNothing);
+          expect(
+            find.descendant(of: parameters, matching: edit),
+            findsOneWidget,
+          );
+          final parameterPosition = tester.getTopLeft(parameters);
+          final confirmPosition = tester.getTopLeft(confirm);
+          final scroll = tester
+              .state<ScrollableState>(
+                find
+                    .descendant(of: content, matching: find.byType(Scrollable))
+                    .first,
+              )
+              .position;
+          await tester.drag(content, const Offset(0, -250));
+          await tester.pumpAndSettle();
+          expect(scroll.pixels, greaterThan(0));
+          expect(tester.getTopLeft(parameters), parameterPosition);
+          expect(tester.getTopLeft(confirm), confirmPosition);
+          await tester.ensureVisible(edit);
+          await tester.tap(edit);
+          expect(parameterRequests, 1);
+          expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
+          expect(tester.takeException(), isNull);
+          if (!dark &&
+              const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+            final boundary =
+                capture.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary;
+            await tester.runAsync(() async {
+              final pixels = await boundary.toImage();
+              final bytes = await pixels.toByteData(
+                format: ui.ImageByteFormat.png,
+              );
+              await File(
+                '/tmp/conversation-video-confirmation-${size.width.toInt()}.png',
+              ).writeAsBytes(bytes!.buffer.asUint8List());
+              pixels.dispose();
+            });
+          }
+        },
+      );
+    }
+  }
+
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     for (final scale in [1.0, 1.3]) {
       testWidgets('generation card fits $size at text scale $scale', (
@@ -814,7 +986,7 @@ void main() {
           capture: capture,
           textScale: scale,
         );
-        expect(find.text('Estimated cost: 10 points'), findsOneWidget);
+        expect(find.text('10 points'), findsOneWidget);
         expect(
           tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
           isNotNull,

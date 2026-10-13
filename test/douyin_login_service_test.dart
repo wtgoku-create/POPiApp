@@ -26,7 +26,7 @@ void main() {
             expect(call.method, 'authorize');
             final arguments = call.arguments as Map;
             expect(arguments['clientKey'], 'mobile-client-key');
-            expect(arguments['universalLink'], 'https://app.popi.art/WeChat/');
+            expect(arguments['universalLink'], 'https://app.popi.art/Douyin');
             expect(arguments['state'], isNotEmpty);
             return {
               'status': 'authorized',
