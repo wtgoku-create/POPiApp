@@ -1,5 +1,6 @@
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/utils/app_url.dart';
 import '../../../shared/type/notification_type.dart';
 import '../domain/app_notification.dart';
 
@@ -120,7 +121,9 @@ class NotificationRepository {
     for (final candidate in candidates) {
       if (!_isImage(candidate)) continue;
       final url = _webUrl(candidate, relative: true);
-      if (url != null) return url.toString();
+      if (url != null) {
+        return AppUrl.resolve(candidate, baseUrl: api.mediaBaseUrl);
+      }
     }
     return null;
   }
@@ -133,7 +136,7 @@ class NotificationRepository {
     if (uri.hasScheme) {
       resolved = uri;
     } else if (relative || value.startsWith('/')) {
-      resolved = Uri.parse(api.mediaBaseUrl).resolveUri(uri);
+      resolved = Uri.parse(AppUrl.resolve(value, baseUrl: api.mediaBaseUrl));
     } else {
       resolved = Uri.parse('https://$value');
     }

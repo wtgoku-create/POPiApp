@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 /// A completed image/video result nested inside a creation task.
 class LibraryWork {
   const LibraryWork({
@@ -50,12 +52,12 @@ class LibraryWorkPage {
         items.add(
           LibraryWork(
             id: id,
-            previewUrl: _mediaUrl(
+            previewUrl: AppUrl.resolve(
               video.isNotEmpty && cover.isNotEmpty ? cover : image,
-              mediaBaseUrl,
+              baseUrl: mediaBaseUrl,
             ),
             isVideo: video.isNotEmpty,
-            videoUrl: _mediaUrl(video, mediaBaseUrl),
+            videoUrl: AppUrl.resolve(video, baseUrl: mediaBaseUrl),
             createdAt: _date(task['createTime']),
           ),
         );
@@ -82,17 +84,5 @@ class LibraryWorkPage {
       );
     }
     return DateTime.tryParse(_text(value))?.toLocal();
-  }
-
-  static String _mediaUrl(String value, String baseUrl) {
-    if (value.isEmpty) return '';
-    final base = Uri.parse(baseUrl);
-    final url = base.resolve(value);
-    // Development responses can contain server-local media URLs.
-    if (['localhost', '127.0.0.1', '0.0.0.0'].contains(url.host) &&
-        (url.path.startsWith('/media/') || url.path.startsWith('/resource/'))) {
-      return base.resolveUri(Uri(path: url.path, query: url.query)).toString();
-    }
-    return url.toString();
   }
 }

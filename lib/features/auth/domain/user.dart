@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 class User {
   const User({
     required this.id,
@@ -85,7 +87,9 @@ class User {
       name: json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       code: json['code'] as String? ?? '',
-      avatarUrl: (json['avatarUrl'] ?? json['avatar']) as String?,
+      avatarUrl: AppUrl.resolveNullable(
+        (json['avatarUrl'] ?? json['avatar']) as String?,
+      ),
       phone: json['phone'] as String? ?? '',
       signature: json['signature'] as String? ?? '',
       gender: number('gender'),

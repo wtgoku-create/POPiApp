@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/media_image_repository.dart';
 import '../../core/storage/app_image_cache.dart';
+import '../providers/media_image_provider.dart';
 
 export '../../core/storage/app_image_cache.dart';
 
@@ -28,8 +31,13 @@ class AppNetworkImage extends StatelessWidget {
   final bool excludeFromSemantics;
 
   @override
-  Widget build(BuildContext context) => Image(
-    image: AppImageCache.provider(url),
+  Widget build(BuildContext context) =>
+      MediaImageRepository.protectedMediaId(url) == null
+      ? _image(url)
+      : _ProtectedImage(image: this);
+
+  Widget _image(String resolvedUrl) => Image(
+    image: AppImageCache.provider(resolvedUrl),
     width: width,
     height: height,
     fit: fit,
@@ -38,4 +46,34 @@ class AppNetworkImage extends StatelessWidget {
     semanticLabel: semanticLabel,
     excludeFromSemantics: excludeFromSemantics,
   );
+}
+
+class _ProtectedImage extends ConsumerWidget {
+  const _ProtectedImage({required this.image});
+
+  final AppNetworkImage image;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(mediaImageUrlProvider(image.url))
+      .when(
+        skipLoadingOnRefresh: false,
+        skipLoadingOnReload: false,
+        data: image._image,
+        error: (error, stack) =>
+            image.errorBuilder?.call(context, error, stack) ??
+            SizedBox(width: image.width, height: image.height),
+        loading: () {
+          final child = SizedBox(width: image.width, height: image.height);
+          return image.loadingBuilder?.call(
+                context,
+                child,
+                const ImageChunkEvent(
+                  cumulativeBytesLoaded: 0,
+                  expectedTotalBytes: null,
+                ),
+              ) ??
+              child;
+        },
+      );
 }

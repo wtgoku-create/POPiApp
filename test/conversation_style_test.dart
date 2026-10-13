@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
@@ -55,6 +57,25 @@ Map<String, Object?> _topic(
         '### 故事梗概\n\nStory $id\n\n'
         '### 适合角色的原因\n\nA warm, quiet afternoon together.\n\n'
         '### 核心看点\n\nA playful moment in a familiar home.',
+  },
+};
+
+Map<String, Object?> _castRole(
+  String id,
+  String title, {
+  String scopeId = '301',
+  String action = 'cast',
+}) => {
+  'type': 'object',
+  'kind': 'role',
+  'action': action,
+  'scope': {'kind': 'session', 'id': scopeId},
+  'data': {
+    'ref': {'kind': 'role', 'id': id, 'versionId': 'saved-$id'},
+    'title': title,
+    'status': 'active',
+    'avatar': 'assets/images/role_guide_avatar_${id == '1' ? 1 : 2}.png',
+    'profile': {'title': title, 'description': 'Saved profile $id'},
   },
 };
 
@@ -294,6 +315,105 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
+    testWidgets(
+      'multiple cast roles share a card and snapshot preview at $name',
+      (tester) async {
+        final first = locale.languageCode == 'zh' ? '来财' : 'Alice';
+        final second = locale.languageCode == 'zh' ? '来福' : 'Bob';
+        final cast = [_castRole('1', first), _castRole('2', second)];
+        final repository = await _pumpTopicPage(
+          tester,
+          [
+            const {'type': 'text', 'text': 'Cast updated'},
+            ...cast,
+          ],
+          size: size,
+          locale: locale,
+          dark: dark,
+          scale: scale,
+          sentByUser: true,
+        );
+        final card = find.byKey(const Key('conversation-cast-summary'));
+        expect(card, findsOneWidget);
+        expect(
+          find.byKey(const Key('conversation-role-summary')),
+          findsNothing,
+        );
+        expect(find.text('$first、$second'), findsOneWidget);
+        final context = tester.element(card);
+        final l10n = AppLocalizations.of(context)!;
+        expect(find.text(l10n.roleCastCount(2)), findsOneWidget);
+        await tester.runAsync(() async {
+          await precacheImage(
+            const AssetImage('assets/images/role_guide_avatar_1.png'),
+            context,
+          );
+          await precacheImage(
+            const AssetImage('assets/images/role_guide_avatar_2.png'),
+            context,
+          );
+        });
+        await tester.pumpAndSettle();
+        final names = tester.getRect(find.text('$first、$second'));
+        expect(names.right, lessThanOrEqualTo(tester.getRect(card).right - 10));
+        expect(tester.takeException(), isNull);
+        await _capture(tester, '$name-cast-summary');
+        await tester.tap(find.byKey(const Key('role-guide-view-profiles')));
+        await tester.pumpAndSettle();
+        final sheet = tester.widget<RoleProfileSheet>(
+          find.byType(RoleProfileSheet),
+        );
+        expect(sheet.useSnapshot, isTrue);
+        expect(sheet.roles.map((role) => role.id), ['1', '2']);
+        expect(sheet.roles.map((role) => role.profileVersionId), [
+          'saved-1',
+          'saved-2',
+        ]);
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '1',
+        );
+        await tester.tap(find.byTooltip(l10n.roleNextProfile));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '2',
+        );
+        await tester.tap(find.byTooltip(l10n.rolePreviousProfile));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '1',
+        );
+        Navigator.of(tester.element(find.byType(RoleProfileSheet))).pop();
+        await tester.pumpAndSettle();
+        repository.streams.first.add(
+          chatEvent(2, 'message.updated', {
+            'timelineUpdates': [
+              {
+                ...chatMessageJson(revision: 2),
+                'role': 'user',
+                'blocks': [
+                  ...cast,
+                  _castRole(
+                    '3',
+                    List.filled(12, 'Long character name').join(' '),
+                  ),
+                ],
+              },
+            ],
+          }),
+        );
+        await tester.pumpAndSettle();
+        expect(card, findsOneWidget);
+        expect(find.text(l10n.roleCastCount(3)), findsOneWidget);
+        expect(find.text(l10n.roleCastCount(2)), findsNothing);
+        expect(tester.takeException(), isNull);
+        await _capture(tester, '$name-cast-summary-updated');
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
     testWidgets('compact role card previews the streamed profile at $name', (
       tester,
     ) async {
@@ -435,6 +555,32 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('cast groups preserve text, scope and role action boundaries', (
+    tester,
+  ) async {
+    await _pumpTopicPage(tester, [
+      _castRole('1', 'Alice'),
+      _castRole('2', 'Bob'),
+      const {'type': 'text', 'text': 'Another cast'},
+      _castRole('3', 'Carol'),
+      _castRole('4', 'David', scopeId: '302'),
+      _castRole('5', 'Edited draft', action: 'edited'),
+    ], sentByUser: true);
+    expect(find.byKey(const Key('conversation-cast-summary')), findsOneWidget);
+    expect(
+      find.byKey(const Key('conversation-role-summary')),
+      findsNWidgets(2),
+    );
+    expect(find.byKey(const Key('conversation-role-card')), findsOneWidget);
+    expect(find.text('Alice、Bob'), findsOneWidget);
+    expect(find.text('Carol'), findsOneWidget);
+    expect(find.text('David'), findsOneWidget);
+    expect(find.text('Edited draft'), findsOneWidget);
+    expect(find.text('Another cast'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('user role objects use full card width outside the text bubble', (
     tester,

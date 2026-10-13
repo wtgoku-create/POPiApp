@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 class CaptchaChallenge {
   const CaptchaChallenge({
     required this.id,
@@ -11,8 +13,8 @@ class CaptchaChallenge {
 
   factory CaptchaChallenge.fromJson(Map<String, dynamic> json) {
     final id = json['id']?.toString() ?? '';
-    final bgUrl = json['bgUrl'] as String? ?? '';
-    final puzzleUrl = json['puzzleUrl'] as String? ?? '';
+    final bgUrl = AppUrl.resolve(json['bgUrl'] as String? ?? '');
+    final puzzleUrl = AppUrl.resolve(json['puzzleUrl'] as String? ?? '');
     if (id.isEmpty || bgUrl.isEmpty || puzzleUrl.isEmpty) {
       throw const FormatException('Invalid slider captcha challenge');
     }

@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 class LibraryRole {
   const LibraryRole({
     required this.id,
@@ -73,7 +75,9 @@ class LibraryRole {
         json['description'],
         profile['appearance'],
       ]),
-      avatar: firstText([json['avatar'], json['threeViewImage']]),
+      avatar: AppUrl.resolve(
+        firstText([json['avatar'], json['threeViewImage']]),
+      ),
       profile: Map<String, dynamic>.from(profile),
       canRead: json['canRead'] == true,
       canEdit: json['canEdit'] == true,

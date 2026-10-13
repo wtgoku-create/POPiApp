@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
@@ -21,6 +22,9 @@ class IpAccountsPage extends ConsumerWidget {
     this.onOpenAccount,
     this.onRetry,
     this.onCreate,
+    this.onDeleteAccount,
+    this.isDeleting = false,
+    this.deletingAccountId,
     super.key,
   });
 
@@ -29,6 +33,9 @@ class IpAccountsPage extends ConsumerWidget {
     this.onOpenAccount,
     this.onRetry,
     this.onCreate,
+    this.onDeleteAccount,
+    this.isDeleting = false,
+    this.deletingAccountId,
     super.key,
   }) : accounts = ipAccountExamples;
 
@@ -37,6 +44,9 @@ class IpAccountsPage extends ConsumerWidget {
   final ValueChanged<IpAccount>? onOpenAccount;
   final VoidCallback? onRetry;
   final VoidCallback? onCreate;
+  final ValueChanged<IpAccount>? onDeleteAccount;
+  final bool isDeleting;
+  final String? deletingAccountId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,7 +109,7 @@ class IpAccountsPage extends ConsumerWidget {
                   IconButton(
                     key: const Key('account-create'),
                     tooltip: l10n.accountCreate,
-                    onPressed: onCreate,
+                    onPressed: isDeleting ? null : onCreate,
                     icon: const Icon(Icons.add),
                   ),
                 const SizedBox(width: 20),
@@ -133,28 +143,89 @@ class IpAccountsPage extends ConsumerWidget {
                             style: TextStyle(color: colors.onSurfaceVariant),
                           ),
                         )
-                : ListView.separated(
-                    key: const Key('ip-accounts-list'),
-                    padding: listPadding,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: accounts.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final account = accounts[index];
-                      return _AccountCard(
-                        key: ValueKey('ip-account-${account.id}'),
-                        account: account,
-                        onTap: () {
-                          if (onOpenAccount case final callback?) {
-                            callback(account);
-                          } else {
-                            context.push(
-                              '/ip-accounts/${Uri.encodeComponent(account.id)}',
-                            );
-                          }
+                : LayoutBuilder(
+                    builder: (context, constraints) => SlidableAutoCloseBehavior(
+                      child: ListView.separated(
+                        key: const Key('ip-accounts-list'),
+                        padding: listPadding,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: accounts.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final account = accounts[index];
+                          return Slidable(
+                            key: ValueKey('ip-account-slide-${account.id}'),
+                            enabled:
+                                onDeleteAccount != null &&
+                                !isDeleting &&
+                                !isLoading,
+                            endActionPane: ActionPane(
+                              extentRatio: math.min(
+                                1,
+                                100 / math.max(1, constraints.maxWidth - 40),
+                              ),
+                              motion: const ScrollMotion(),
+                              children: [
+                                const SizedBox(width: 10),
+                                CustomSlidableAction(
+                                  key: Key('ip-account-delete-${account.id}'),
+                                  onPressed: (_) {
+                                    if (!isDeleting && !isLoading) {
+                                      onDeleteAccount?.call(account);
+                                    }
+                                  },
+                                  backgroundColor: const Color(0xFFCC4646),
+                                  foregroundColor: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Transform.rotate(
+                                        angle: math.pi / 2,
+                                        child: const AppSvgIcon.asset(
+                                          'role_swipe_delete',
+                                          size: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        l10n.delete,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            child: _AccountCard(
+                              key: ValueKey('ip-account-${account.id}'),
+                              account: account,
+                              deleting: deletingAccountId == account.id,
+                              onTap: isDeleting
+                                  ? null
+                                  : () {
+                                      if (onOpenAccount case final callback?) {
+                                        callback(account);
+                                      } else {
+                                        context.push(
+                                          '/ip-accounts/${Uri.encodeComponent(account.id)}',
+                                        );
+                                      }
+                                    },
+                            ),
+                          );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -164,10 +235,16 @@ class IpAccountsPage extends ConsumerWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account, required this.onTap, super.key});
+  const _AccountCard({
+    required this.account,
+    required this.onTap,
+    required this.deleting,
+    super.key,
+  });
 
   final IpAccount account;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool deleting;
 
   @override
   Widget build(BuildContext context) {
@@ -258,16 +335,18 @@ class _AccountCard extends StatelessWidget {
                 child: SizedBox.square(
                   dimension: 20,
                   child: Center(
-                    child: SizedBox(
-                      width: 8,
-                      height: 12,
-                      child: AppSvgIcon.asset(
-                        'ip_account_chevron',
-                        color: colors.brightness == Brightness.light
-                            ? AppColors.textTertiary
-                            : colors.onSurfaceVariant,
-                      ),
-                    ),
+                    child: deleting
+                        ? const CircularProgressIndicator(strokeWidth: 2)
+                        : SizedBox(
+                            width: 8,
+                            height: 12,
+                            child: AppSvgIcon.asset(
+                              'ip_account_chevron',
+                              color: colors.brightness == Brightness.light
+                                  ? AppColors.textTertiary
+                                  : colors.onSurfaceVariant,
+                            ),
+                          ),
                   ),
                 ),
               ),

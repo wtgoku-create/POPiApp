@@ -1,3 +1,4 @@
+import '../../../core/utils/app_url.dart';
 import '../../assets/domain/library_role.dart';
 import '../../assets/domain/role_profile_edit.dart';
 import 'conversation_snapshot.dart';
@@ -17,8 +18,8 @@ class ConversationRoleProfile {
     );
     updated = block.action == 'edited';
     published = block.action == 'published' && block.status == 'active';
-    final avatar = roleProfileText(data['avatar']);
-    final threeView = roleProfileText(data['threeViewImage']);
+    final avatar = AppUrl.resolve(roleProfileText(data['avatar']));
+    final threeView = AppUrl.resolve(roleProfileText(data['threeViewImage']));
     portrait = updated && threeView.isNotEmpty
         ? threeView
         : avatar.isNotEmpty

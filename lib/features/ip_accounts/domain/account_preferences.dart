@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/utils/app_url.dart';
 import 'ip_account_home.dart';
 
 /// Server-defined choices and validation for an account preference group.
@@ -66,7 +67,7 @@ class AccountPreferenceOption {
       AccountPreferenceOption(
         name: json['name'] as String,
         description: json['description'] as String? ?? '',
-        imageUrl: json['imageUrl'] as String?,
+        imageUrl: AppUrl.resolveNullable(json['imageUrl'] as String?),
       );
 }
 

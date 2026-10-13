@@ -4,11 +4,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_sheet.dart';
-import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_generation.dart';
 import '../../domain/conversation_generation_view.dart';
@@ -20,6 +18,8 @@ import 'conversation_card_content.dart';
 import 'conversation_generation_configuration.dart';
 import 'conversation_home_plan_card.dart';
 import 'conversation_role_card.dart';
+import 'conversation_role_image_setup.dart';
+import 'conversation_style_library_sheet.dart';
 import 'conversation_timeline.dart'
     show MarkdownMessage, ConversationMediaView, conversationErrorText;
 
@@ -28,12 +28,10 @@ class ConversationGenerationCard extends StatefulWidget {
   const ConversationGenerationCard({
     required this.block,
     required this.controller,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationBlock block;
   final ConversationController controller;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationGenerationCard> createState() =>
       _ConversationGenerationCardState();
@@ -202,11 +200,15 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   }
 
   Future<void> _chooseTemplate() async {
-    final template = await AppSheet.showDraggable<ConversationRoleTemplate?>(
+    final template = await AppSheet.show<ConversationRoleTemplate>(
       context: context,
-      initialChildSize: .65,
-      builder: (context, scroll) =>
-          _TemplatePicker(controller: widget.controller, scroll: scroll),
+      isScrollControlled: true,
+      showDragHandle: false,
+      shape: ConversationStyleLibrarySheet.shape,
+      builder: (context) => ConversationStyleLibrarySheet(
+        repository: widget.controller.repository,
+        selectedId: _templateId,
+      ),
     );
     if (!mounted || template == null) return;
     setState(() {
@@ -325,9 +327,6 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
         model: _model,
         points: _points,
         actions: _actions(l10n),
-        onModelParametersRequested: _busy
-            ? null
-            : widget.onModelParametersRequested,
         validationMessage:
             !_loading && _config != null && !_valid && _attempted == null
             ? l10n.chatInvalidGeneration
@@ -369,13 +368,16 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
               style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
             ),
           if (_expanded) ...[
+            if (card.previewRole case final role?)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ConversationRoleCard(block: role, compact: true),
+              ),
             ConversationCardContent(
               storageId: 'generation:${card.id}',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (card.previewRole case final role?)
-                    ConversationRoleCard(block: role, framed: false),
                   if (_view.prompt.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -390,51 +392,25 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                       ),
                     ),
                   if (_editable && !_loading && _view.threeView) ...[
-                    Row(
-                      children: [
-                        Expanded(child: Text(l10n.chatReferenceImage)),
-                        IconButton(
-                          tooltip: l10n.chatReferenceImage,
-                          onPressed: locked ? null : _uploadReference,
-                          icon: const Icon(Icons.add_photo_alternate_outlined),
-                        ),
-                        if (_reference != null)
-                          IconButton(
-                            tooltip: l10n.removeImage,
-                            onPressed: locked
-                                ? null
-                                : () {
-                                    setState(() => _reference = null);
-                                    unawaited(_estimate());
-                                  },
-                            icon: const Icon(Icons.close),
-                          ),
-                      ],
+                    ConversationRoleImageSetup(
+                      reference: _reference == null
+                          ? null
+                          : ConversationMediaView(
+                              id: _reference!,
+                              repository: widget.controller.repository,
+                              thumbnailSize: 80,
+                            ),
+                      styleTitle: _templateTitle,
+                      uploading: _uploading,
+                      onUpload: locked ? null : _uploadReference,
+                      onRemove: locked
+                          ? null
+                          : () {
+                              setState(() => _reference = null);
+                              unawaited(_estimate());
+                            },
+                      onChooseStyle: locked ? null : _chooseTemplate,
                     ),
-                    if (_reference != null)
-                      ConversationMediaView(
-                        id: _reference!,
-                        repository: widget.controller.repository,
-                      ),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.chatImageStyle),
-                      subtitle: Text(
-                        _templateTitle.isEmpty
-                            ? l10n.chatUnrestrictedStyle
-                            : _templateTitle,
-                      ),
-                      trailing: IconButton(
-                        tooltip: l10n.chatImageStyle,
-                        onPressed: locked ? null : _chooseTemplate,
-                        icon: const Icon(Icons.palette_outlined),
-                      ),
-                    ),
-                    if (_templateMediaId != null)
-                      ConversationMediaView(
-                        id: _templateMediaId!,
-                        repository: widget.controller.repository,
-                      ),
                     if (card.roleImage != null)
                       TextField(
                         controller: _requirements,
@@ -442,8 +418,28 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                         maxLength: 8000,
                         minLines: 2,
                         maxLines: 5,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 13,
+                          height: 1.5,
+                        ),
                         decoration: InputDecoration(
-                          labelText: l10n.chatGenerationRequirements,
+                          hintText: l10n.chatGenerationRequirements,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.all(12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: colors.outlineVariant,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: colors.primary),
+                          ),
                         ),
                         onChanged: (_) {
                           _estimateToken?.cancel();
@@ -481,9 +477,6 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                   : _view.configurationLines,
               loading: _loading,
               estimating: _estimating,
-              onModelParametersRequested: _editable && !_busy
-                  ? widget.onModelParametersRequested
-                  : null,
             ),
             if (!_loading &&
                 _editable &&
@@ -558,96 +551,4 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       ],
     ),
   );
-}
-
-class _TemplatePicker extends StatefulWidget {
-  const _TemplatePicker({required this.controller, required this.scroll});
-  final ConversationController controller;
-  final ScrollController scroll;
-  @override
-  State<_TemplatePicker> createState() => _TemplatePickerState();
-}
-
-class _TemplatePickerState extends State<_TemplatePicker> {
-  final _token = CancelToken();
-  late final Future<List<ConversationRoleTemplate>> _templates = _load();
-
-  Future<List<ConversationRoleTemplate>> _load() async {
-    try {
-      return await widget.controller.repository.roleTemplates(
-        cancelToken: _token,
-      );
-    } catch (error) {
-      if (mounted && !_token.isCancelled) {
-        AppToast.error(
-          context,
-          conversationErrorText(error, AppLocalizations.of(context)!),
-        );
-      }
-      return const [];
-    }
-  }
-
-  @override
-  void dispose() {
-    _token.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return FutureBuilder<List<ConversationRoleTemplate>>(
-      future: _templates,
-      builder: (context, snapshot) {
-        final items = snapshot.data;
-        return ListView.builder(
-          controller: widget.scroll,
-          padding: const EdgeInsets.all(20),
-          itemCount: items == null ? 2 : items.length + 2,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Text(
-                l10n.chatImageStyle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              );
-            }
-            if (items == null) {
-              return AppSkeletonList(label: l10n.loadingAssets, itemCount: 3);
-            }
-            if (index == 1) {
-              return ListTile(
-                title: Text(l10n.chatUnrestrictedStyle),
-                onTap: () => Navigator.of(context).pop(
-                  ConversationRoleTemplate.fromJson({'id': '', 'title': ''}),
-                ),
-              );
-            }
-            final template = items[index - 2];
-            return ListTile(
-              key: ValueKey(template.id),
-              minVerticalPadding: 12,
-              leading: template.coverUrl.isEmpty
-                  ? const Icon(Icons.palette_outlined)
-                  : SizedBox.square(
-                      dimension: 56,
-                      child: AppNetworkImage(
-                        template.coverUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.palette_outlined),
-                      ),
-                    ),
-              title: Text(template.title),
-              onTap: () => Navigator.of(context).pop(template),
-            );
-          },
-        );
-      },
-    );
-  }
 }

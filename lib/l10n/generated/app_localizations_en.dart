@@ -760,6 +760,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipAccountsTitle => 'IP Account Management';
 
   @override
+  String get deleteIpAccountTitle => 'Delete this IP account?';
+
+  @override
+  String get deleteIpAccountDescription =>
+      'The account will be archived and removed from the account list. Works, conversations and account data will be preserved.';
+
+  @override
   String get loadingIpAccounts => 'Loading accounts';
 
   @override
@@ -1700,6 +1707,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attachmentTitle => 'Add';
 
   @override
+  String get attachmentFeaturePending => 'Feature under development';
+
+  @override
   String get attachmentCamera => 'Camera';
 
   @override
@@ -2455,6 +2465,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatImageStyle => 'Image style';
 
   @override
+  String get chatStyleLibrary => 'Style library';
+
+  @override
+  String get chatStyleUnrestricted => 'Unrestricted style';
+
+  @override
   String get chatUnrestrictedStyle => 'Unrestricted style';
 
   @override
@@ -2469,6 +2485,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatGenerationTask => 'Generation task';
+
+  @override
+  String get chatExpandTask => 'Expand task';
+
+  @override
+  String get chatCollapseTask => 'Collapse task';
+
+  @override
+  String get chatGenerationWorking => 'Generating...';
+
+  @override
+  String get chatGenerationWorkingHint => 'Creating your work...';
+
+  @override
+  String get chatGenerationTaskCompleted => 'Task completed';
+
+  @override
+  String get chatImageGenerationFailed => 'Image generation failed';
+
+  @override
+  String get chatVideoGenerationFailed => 'Video generation failed';
 
   @override
   String get chatProductionPlan => 'Production plan';
@@ -2574,7 +2611,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPrepareRole => 'Preparing a character plan';
 
   @override
-  String get redemptionCenter => 'Redemption Center';
+  String get redemptionCenter => 'Invite Friends';
 
   @override
   String get redemptionPageTitle => 'Invite Friends';
@@ -2654,7 +2691,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get redemptionLoadMore => 'Load more';
 
   @override
-  String get redemptionLoginRequired => 'Sign in to use the Redemption Center';
+  String get redemptionLoginRequired => 'Sign in to invite friends';
 
   @override
   String get redemptionBindRequired =>

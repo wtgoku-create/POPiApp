@@ -6,42 +6,75 @@ import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../role_guide/presentation/widgets/role_guide_summary.dart';
 import '../../../role_guide/presentation/widgets/role_profile_sheet.dart';
 import '../../domain/conversation_role_profile.dart';
 import '../../domain/conversation_snapshot.dart';
+
+void _showRoleProfiles(
+  BuildContext context,
+  List<ConversationRoleProfile> roles,
+) {
+  AppSheet.show<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: false,
+    showDragHandle: false,
+    backgroundColor: Colors.transparent,
+    builder: (_) => RoleProfileSheet(
+      key: const Key('conversation-role-profile'),
+      roles: roles.map((role) => role.snapshotRole).toList(),
+      useSnapshot: true,
+    ),
+  );
+}
+
+/// Groups the saved cast in one message while retaining each role's profile.
+class ConversationCastCard extends StatelessWidget {
+  const ConversationCastCard({required this.blocks, super.key});
+
+  final List<ConversationBlock> blocks;
+
+  @override
+  Widget build(BuildContext context) {
+    if (blocks.isEmpty) return const SizedBox.shrink();
+    if (blocks.length == 1) return ConversationRoleCard(block: blocks.single);
+    final roles = blocks.map(ConversationRoleProfile.fromBlock).toList();
+    return Padding(
+      key: const Key('conversation-cast-summary'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) => RoleCastSummary(
+          cast: roles.map((role) => role.snapshotRole).toList(),
+          avatarOffset: constraints.maxWidth < 320 && roles.length > 2
+              ? 24
+              : 40,
+          onViewProfiles: () => _showRoleProfiles(context, roles),
+        ),
+      ),
+    );
+  }
+}
 
 /// A compact role link backed by the saved profile version in the message.
 class ConversationRoleCard extends StatelessWidget {
   const ConversationRoleCard({
     required this.block,
     this.framed = true,
+    this.compact = false,
     super.key,
   });
 
   final ConversationBlock block;
   final bool framed;
-
-  void _preview(BuildContext context, ConversationRoleProfile role) {
-    AppSheet.show<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: false,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
-      builder: (_) => RoleProfileSheet(
-        key: const Key('conversation-role-profile'),
-        roles: [role.snapshotRole],
-        useSnapshot: true,
-      ),
-    );
-  }
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final role = ConversationRoleProfile.fromBlock(block);
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final status = role.showProfileCard
+    final status = role.showProfileCard && !compact
         ? role.published
               ? l10n.chatRolePublished
               : role.updated
@@ -60,13 +93,13 @@ class ConversationRoleCard extends StatelessWidget {
         key: const Key('conversation-role-view-profile'),
         onPressed: role.published
             ? () => context.push('/assets?section=roles')
-            : () => _preview(context, role),
+            : () => _showRoleProfiles(context, [role]),
         style: TextButton.styleFrom(
           padding: EdgeInsets.symmetric(
-            horizontal: framed ? 16 : 0,
-            vertical: 16,
+            horizontal: framed ? (compact ? 12 : 16) : 0,
+            vertical: compact ? 12 : 16,
           ),
-          minimumSize: const Size(0, 80),
+          minimumSize: Size(0, compact ? 68 : 80),
           foregroundColor: colors.primary,
           backgroundColor: framed
               ? colors.primary.withValues(alpha: .05)
@@ -78,7 +111,7 @@ class ConversationRoleCard extends StatelessWidget {
         child: Row(
           children: [
             _RolePortrait(role: role, size: 44),
-            const SizedBox(width: 18),
+            SizedBox(width: compact ? 12 : 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

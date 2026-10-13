@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../core/utils/app_url.dart';
 import 'conversation_session.dart';
 import '../../role_guide/domain/home_storyboard.dart';
 
@@ -205,14 +206,50 @@ class ConversationBlock {
   List<Map<String, Object?>> get planItems => data['plan'] == null
       ? const []
       : conversationMaps(conversationMap(data['plan'])['items']);
-  List<(String, String)> get progressSteps => [
-    for (final step in conversationMaps(data['steps']))
-      if (step['labelKey'] is String)
-        (step['labelKey'] as String, step['status'] as String? ?? 'pending'),
-  ];
+
+  /// Old snapshots keep individual calls; display each phase only once.
+  List<(String, String)> get progressSteps {
+    final phases = <String, Map<String, String>>{};
+    for (final step in conversationMaps(data['steps'])) {
+      final label = step['labelKey'];
+      if (label is! String || label.isEmpty) continue;
+      var state = step['status'] as String? ?? 'pending';
+      if (['pending', 'running', 'waiting'].contains(state)) {
+        state = switch (status) {
+          'completed' => 'completed',
+          'canceled' || 'aborted' => 'skipped',
+          'failed' || 'interrupted' => 'failed',
+          _ => state,
+        };
+      }
+      final stepId = step['id']?.toString();
+      (phases[label] ??= {})[stepId == null || stepId.isEmpty
+              ? label
+              : stepId] =
+          state;
+    }
+    return [
+      for (final phase in phases.entries)
+        (
+          phase.key,
+          const [
+                'running',
+                'waiting',
+                'pending',
+                'failed',
+                'completed',
+                'skipped',
+              ].where(phase.value.values.contains).firstOrNull ??
+              phase.value.values.last,
+        ),
+    ];
+  }
+
   Map<String, Object?>? get request =>
       data['request'] == null ? null : conversationMap(data['request']);
-  String? get avatar => (data['avatar'] ?? data['threeViewImage']) as String?;
+  String? get avatar => AppUrl.resolveNullable(
+    (data['avatar'] ?? data['threeViewImage']) as String?,
+  );
   List<(String, String)> get details {
     final profile = data['profile'];
     if (profile is! Map) return const [];
@@ -396,6 +433,55 @@ class ConversationSnapshot {
   late final List<ConversationRun> runs;
   bool get running => runs.any((run) => run.running);
 
+  /// Generation outputs stay in the protocol, but render inside their task card.
+  late final List<ConversationMessage> presentationMessages =
+      _presentMessages();
+
+  List<ConversationMessage> _presentMessages() {
+    final outputs = [
+      for (final message in messages)
+        for (final block in message.blocks)
+          if (block.kind == 'task' && block.action == 'generation')
+            ...conversationMaps(block.data['outputs']),
+    ];
+    return [
+      for (final message in messages)
+        if (message.role == 'user')
+          message
+        else if (message.blocks
+                .where((block) => !_generationOutput(block, outputs))
+                .toList()
+            case final blocks when blocks.isNotEmpty)
+          blocks.length == message.blocks.length
+              ? message
+              : message.withBlocks(blocks, message.revision),
+    ];
+  }
+
+  static bool _generationOutput(
+    ConversationBlock block,
+    List<Map<String, Object?>> outputs,
+  ) =>
+      block.kind == 'content' &&
+      block.action == 'generated' &&
+      outputs.any(
+        (ref) =>
+            conversationReferenceMatches(ref, block.reference) ||
+            ref['kind'] == 'media' &&
+                block.mediaIds.contains(ref['id']?.toString()),
+      );
+
+  List<ConversationBlock> get contents => [
+    for (final item in conversationMaps(source['contents']))
+      ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'content',
+        'data': item,
+      }),
+    for (final message in messages)
+      ...message.blocks.where((block) => block.kind == 'content'),
+  ];
+
   /// 历史批次只读；后续选题或确认属于同一作品时锁定原候选。
   bool topicLocked(ConversationMessage message, ConversationBlock topic) =>
       topic.action == 'selected' ||
@@ -441,6 +527,23 @@ class ConversationSnapshot {
               'data': item,
             }),
         ];
+}
+
+/// Match the kind and saved version, so equal IDs in other domains stay distinct.
+bool conversationReferenceMatches(
+  Map<String, Object?> reference,
+  Map<String, Object?>? candidate,
+) {
+  if (candidate == null || reference['id'] == null || candidate['id'] == null) {
+    return false;
+  }
+  if (reference['kind'] != candidate['kind'] ||
+      reference['id'].toString() != candidate['id'].toString()) {
+    return false;
+  }
+  return reference['versionId'] == null ||
+      candidate['versionId'] == null ||
+      reference['versionId'].toString() == candidate['versionId'].toString();
 }
 
 String _displayValue(Object? value) => value is Map

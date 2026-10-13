@@ -1428,6 +1428,18 @@ abstract class AppLocalizations {
   /// **'IP Account Management'**
   String get ipAccountsTitle;
 
+  /// No description provided for @deleteIpAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this IP account?'**
+  String get deleteIpAccountTitle;
+
+  /// No description provided for @deleteIpAccountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The account will be archived and removed from the account list. Works, conversations and account data will be preserved.'**
+  String get deleteIpAccountDescription;
+
   /// No description provided for @loadingIpAccounts.
   ///
   /// In en, this message translates to:
@@ -3163,6 +3175,12 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get attachmentTitle;
 
+  /// No description provided for @attachmentFeaturePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature under development'**
+  String get attachmentFeaturePending;
+
   /// No description provided for @attachmentCamera.
   ///
   /// In en, this message translates to:
@@ -4543,6 +4561,18 @@ abstract class AppLocalizations {
   /// **'Image style'**
   String get chatImageStyle;
 
+  /// No description provided for @chatStyleLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Style library'**
+  String get chatStyleLibrary;
+
+  /// No description provided for @chatStyleUnrestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrestricted style'**
+  String get chatStyleUnrestricted;
+
   /// No description provided for @chatUnrestrictedStyle.
   ///
   /// In en, this message translates to:
@@ -4572,6 +4602,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generation task'**
   String get chatGenerationTask;
+
+  /// No description provided for @chatExpandTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand task'**
+  String get chatExpandTask;
+
+  /// No description provided for @chatCollapseTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse task'**
+  String get chatCollapseTask;
+
+  /// No description provided for @chatGenerationWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating...'**
+  String get chatGenerationWorking;
+
+  /// No description provided for @chatGenerationWorkingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your work...'**
+  String get chatGenerationWorkingHint;
+
+  /// No description provided for @chatGenerationTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Task completed'**
+  String get chatGenerationTaskCompleted;
+
+  /// No description provided for @chatImageGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image generation failed'**
+  String get chatImageGenerationFailed;
+
+  /// No description provided for @chatVideoGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Video generation failed'**
+  String get chatVideoGenerationFailed;
 
   /// No description provided for @chatProductionPlan.
   ///
@@ -4774,7 +4846,7 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionCenter.
   ///
   /// In en, this message translates to:
-  /// **'Redemption Center'**
+  /// **'Invite Friends'**
   String get redemptionCenter;
 
   /// No description provided for @redemptionPageTitle.
@@ -4924,7 +4996,7 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionLoginRequired.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to use the Redemption Center'**
+  /// **'Sign in to invite friends'**
   String get redemptionLoginRequired;
 
   /// No description provided for @redemptionBindRequired.

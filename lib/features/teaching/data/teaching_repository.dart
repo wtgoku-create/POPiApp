@@ -1,5 +1,6 @@
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/utils/app_url.dart';
 import '../../profile/data/product_plan_repository.dart';
 import '../domain/teaching.dart';
 
@@ -215,10 +216,11 @@ class TeachingRepository {
     if (text.isEmpty) return '';
     final uri = Uri.tryParse(text);
     if (uri == null) return '';
-    final resolved = Uri.parse(networkApi.mediaBaseUrl).resolveUri(uri);
-    return (resolved.scheme == 'https' || resolved.scheme == 'http') &&
-            resolved.host.isNotEmpty
-        ? resolved.toString()
+    final resolved = AppUrl.resolve(text, baseUrl: networkApi.mediaBaseUrl);
+    final resolvedUri = Uri.parse(resolved);
+    return (resolvedUri.scheme == 'https' || resolvedUri.scheme == 'http') &&
+            resolvedUri.host.isNotEmpty
+        ? resolved
         : '';
   }
 }

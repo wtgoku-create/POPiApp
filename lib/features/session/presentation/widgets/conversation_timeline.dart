@@ -18,6 +18,7 @@ import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
+import '../../../../shared/widgets/app_video_player.dart';
 import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../data/session_repository.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -60,12 +61,10 @@ class ConversationTimeline extends StatefulWidget {
   const ConversationTimeline({
     required this.controller,
     this.onRevise,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationController controller;
   final ValueChanged<ConversationBlock>? onRevise;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationTimeline> createState() => _ConversationTimelineState();
 }
@@ -102,11 +101,11 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     final snapshot = widget.controller.snapshot;
     if (snapshot == null || identical(snapshot, _lastSnapshot)) return;
     if (_lastSnapshot?.session.id != snapshot.session.id) {
-      _initialHistoryPending = snapshot.messages.isNotEmpty;
+      _initialHistoryPending = snapshot.presentationMessages.isNotEmpty;
       _latestMessageBuilt = false;
     }
     final messages = [
-      for (final message in snapshot.messages)
+      for (final message in snapshot.presentationMessages)
         chat.TextMessage(
           id: message.id,
           authorId: message.role == 'user'
@@ -118,12 +117,16 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
         ),
     ];
     final previous = _chat.messages;
-    if (_lastSnapshot?.session.id != snapshot.session.id ||
-        previous.any(
-          (item) => !messages.any((message) => message.id == item.id),
-        )) {
+    if (_lastSnapshot?.session.id != snapshot.session.id) {
       unawaited(_chat.setMessages(messages, animated: false));
     } else {
+      // Emit removals and updates separately so retained cards receive new metadata.
+      final ids = messages.map((message) => message.id).toSet();
+      for (final old in previous.reversed.toList()) {
+        if (!ids.contains(old.id)) {
+          unawaited(_chat.removeMessage(old, animated: false));
+        }
+      }
       for (var i = 0; i < messages.length; i++) {
         final old = _chat.messages
             .where((item) => item.id == messages[i].id)
@@ -167,9 +170,32 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     final children = <Widget>[];
     final objectOccurrences = <(String?, String), int>{};
     var topicGroup = 0;
+    var castGroup = 0;
     for (var index = 0; index < message.blocks.length; index++) {
       final block = message.blocks[index];
       if (block.type == 'object' &&
+          block.kind == 'role' &&
+          block.action == 'cast') {
+        final cast = [block];
+        while (index + 1 < message.blocks.length) {
+          final next = message.blocks[index + 1];
+          if (next.type != 'object' ||
+              next.kind != 'role' ||
+              next.action != 'cast' ||
+              next.scopeId != block.scopeId ||
+              next.scopeKind != block.scopeKind) {
+            break;
+          }
+          cast.add(next);
+          index++;
+        }
+        children.add(
+          ConversationCastCard(
+            key: ValueKey((message.id, 'cast', castGroup++)),
+            blocks: cast,
+          ),
+        );
+      } else if (block.type == 'object' &&
           block.kind == 'topic' &&
           block.action != 'selected' &&
           !isSentByMe) {
@@ -244,7 +270,6 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
             block: block,
             controller: controller,
             onRevise: widget.onRevise,
-            onModelParametersRequested: widget.onModelParametersRequested,
           ),
         );
       }
@@ -398,7 +423,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
               }) {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
-                if (item.id == _lastSnapshot?.messages.lastOrNull?.id) {
+                if (item.id ==
+                    _lastSnapshot?.presentationMessages.lastOrNull?.id) {
                   _latestMessageBuilt = true;
                 }
                 final userBubble = isSentByMe && !_hasRoleObjects(item);
@@ -624,10 +650,14 @@ class ConversationMediaView extends StatefulWidget {
   const ConversationMediaView({
     required this.id,
     required this.repository,
+    this.thumbnailSize,
+    this.result = false,
     super.key,
   });
   final String id;
   final SessionRepository repository;
+  final double? thumbnailSize;
+  final bool result;
   @override
   State<ConversationMediaView> createState() => _ConversationMediaViewState();
 }
@@ -669,6 +699,8 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
       final l10n = AppLocalizations.of(context)!;
       if (snapshot.hasError) {
         return _MediaFrame(
+          result: widget.result,
+          thumbnailSize: widget.thumbnailSize,
           child: Center(
             child: Tooltip(
               message: l10n.chatUnavailable,
@@ -679,8 +711,10 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
       }
       final media = snapshot.data;
       if (media == null) {
-        return const _MediaFrame(
-          child: Center(
+        return _MediaFrame(
+          result: widget.result,
+          thumbnailSize: widget.thumbnailSize,
+          child: const Center(
             child: SizedBox.square(
               dimension: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
@@ -689,7 +723,7 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
         );
       }
       if (media.kind == 'image') {
-        return Semantics(
+        final preview = Semantics(
           button: true,
           label: l10n.chatPreviewImage,
           child: GestureDetector(
@@ -699,6 +733,8 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
               heroTag: 'conversation-media-${media.id}',
             ),
             child: _MediaFrame(
+              result: widget.result,
+              thumbnailSize: widget.thumbnailSize,
               child: AppNetworkImage(
                 media.url,
                 fit: BoxFit.contain,
@@ -720,6 +756,19 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
             ),
           ),
         );
+        return preview;
+      }
+      if (media.kind == 'video' && widget.result) {
+        return _MediaFrame(
+          result: true,
+          child: AppVideoPlayer(
+            url: Uri.parse(media.url),
+            aspectRatio: 16 / 9,
+            controlsKeyPrefix: 'conversation-video-${media.id}',
+            onFullscreen: (url) =>
+                AppVideoPreview.show(context: context, url: url),
+          ),
+        );
       }
       return TextButton.icon(
         onPressed: () => media.kind == 'video'
@@ -736,26 +785,58 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
 
 /// Media keeps the same footprint while its URL and image bytes load.
 class _MediaFrame extends StatelessWidget {
-  const _MediaFrame({required this.child});
+  const _MediaFrame({
+    required this.child,
+    this.thumbnailSize,
+    this.result = false,
+  });
   final Widget child;
+  final double? thumbnailSize;
+  final bool result;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: _conversationBlockPadding,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
-      child: AspectRatio(
-        aspectRatio: 4 / 3,
+  Widget build(BuildContext context) {
+    if (thumbnailSize case final size?) {
+      return SizedBox.square(
+        dimension: size,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.card),
+          borderRadius: BorderRadius.circular(8),
           child: ColoredBox(
             color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: child,
           ),
         ),
+      );
+    }
+    if (result) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: child,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: _conversationBlockPadding,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            child: ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              child: child,
+            ),
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ConversationTopics extends StatefulWidget {
@@ -932,7 +1013,6 @@ class ConversationObjectView extends StatefulWidget {
     this.headerTrailing,
     this.footer,
     this.onRevise,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationBlock block;
@@ -941,7 +1021,6 @@ class ConversationObjectView extends StatefulWidget {
   final Widget? headerTrailing;
   final Widget? footer;
   final ValueChanged<ConversationBlock>? onRevise;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationObjectView> createState() => _ConversationObjectViewState();
 }
@@ -989,7 +1068,6 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
         key: ValueKey(block.id),
         block: block,
         controller: controller,
-        onModelParametersRequested: widget.onModelParametersRequested,
       );
     }
     if (block.kind == 'task') {
@@ -1031,7 +1109,9 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                   borderRadius: BorderRadius.circular(26),
                 ),
                 child: ConversationCardContent(
-                  storageId: 'progress:${block.id}',
+                  storageId:
+                      'progress:${block.data['runId'] ?? block.id}:${block.data['attempt'] ?? 1}',
+                  maxViewportHeight: 360,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1039,6 +1119,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                       // Render only backend-provided steps; never manufacture progress.
                       for (final (key, state) in block.progressSteps)
                         Padding(
+                          key: ValueKey('conversation-progress-step-$key'),
                           padding: const EdgeInsets.symmetric(vertical: 5),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,

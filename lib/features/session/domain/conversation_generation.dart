@@ -1,3 +1,4 @@
+import '../../../core/utils/app_url.dart';
 import '../../role_guide/domain/home_creation.dart';
 import '../../role_guide/domain/session_media_preferences.dart';
 import 'conversation_snapshot.dart';
@@ -74,10 +75,17 @@ class ConversationGenerationSelection {
 }
 
 class ConversationRoleTemplate {
+  const ConversationRoleTemplate({
+    required this.id,
+    required this.title,
+    this.coverUrl = '',
+    this.mediaId,
+  });
+
   ConversationRoleTemplate.fromJson(Map<String, Object?> json)
     : id = json['id'].toString(),
       title = json['title'] as String,
-      coverUrl = json['coverUrl'] as String? ?? '',
+      coverUrl = AppUrl.resolve(json['coverUrl'] as String? ?? ''),
       mediaId = json['mediaId']?.toString();
   final String id;
   final String title;

@@ -32,6 +32,16 @@ class _CardRepository extends FixtureSessionRepository {
   ConversationGenerationSelection? submitted;
   final controls = <String>[];
   @override
+  Future<List<ConversationRoleTemplate>> roleTemplates({
+    CancelToken? cancelToken,
+  }) async => [
+    ConversationRoleTemplate.fromJson({
+      'id': 'watercolor',
+      'title': 'Watercolor',
+      'mediaId': 'style-image',
+    }),
+  ];
+  @override
   Future<ConversationGenerationOptions> generationOptions(
     String userId,
     String sessionId,
@@ -134,6 +144,32 @@ ConversationBlock _videoGeneration() => ConversationBlock.fromJson({
           'params': {'duration': 15, 'ratio': '9:16', 'resolution': '480p'},
         },
       ],
+    },
+  },
+});
+
+ConversationBlock _roleImageGeneration({
+  bool long = false,
+  bool reference = false,
+}) => ConversationBlock.fromJson({
+  'type': 'object',
+  'kind': 'plan',
+  'data': {
+    ..._generation().data,
+    'title': '生成角色形象',
+    'roleImage': {
+      'requirements': '',
+      if (reference) 'referenceMediaId': 'reference-image',
+      'role': {
+        'title': '林小绘',
+        'description': '热爱插画创作的年轻自由职业者，热衷于用画笔记录生活。',
+        'profile': {'description': '热爱插画创作的年轻自由职业者'},
+      },
+    },
+    'presentation': {
+      'requirements': long
+          ? List.filled(40, '保留角色轮廓和服饰，三视图使用一致的画风。\n\n').join()
+          : '',
     },
   },
 });
@@ -311,6 +347,7 @@ void main() {
           expect(find.text(label), findsOneWidget);
         }
         expect(find.text('saved-model'), findsNothing);
+        expect(find.byTooltip('模型/参数'), findsNothing);
         expect(find.byType(FilledButton), findsNothing);
         expect(repository.estimates, 0);
         expect(tester.takeException(), isNull);
@@ -408,6 +445,7 @@ void main() {
       expect(find.text('478 points'), findsNothing);
       expect(find.text('Model: Model'), findsOneWidget);
       expect(find.text('模型：seedance-2.5'), findsNothing);
+      expect(find.byTooltip('Model / settings'), findsNothing);
       final content = find.byWidgetPredicate(
         (widget) =>
             widget is ConversationCardContent &&
@@ -846,7 +884,7 @@ void main() {
   ]) {
     for (final dark in [false, true]) {
       testWidgets(
-        'video confirmation keeps parameters and actions fixed at $size dark=$dark',
+        'video confirmation keeps read-only parameters and actions fixed at $size dark=$dark',
         (tester) async {
           tester.view.physicalSize = size;
           tester.view.devicePixelRatio = 1;
@@ -879,14 +917,12 @@ void main() {
           final controller = ConversationController(repository, 'a')
             ..sessionId = chatId;
           addTearDown(controller.dispose);
-          var parameterRequests = 0;
           final capture = GlobalKey();
           await _pump(
             tester,
             ConversationGenerationCard(
               block: _videoGeneration(),
               controller: controller,
-              onModelParametersRequested: () => parameterRequests++,
             ),
             capture: capture,
             locale: const Locale('zh'),
@@ -913,15 +949,15 @@ void main() {
             const Key('conversation-plan-configuration'),
           );
           final confirm = find.byType(FilledButton);
-          final edit = find.byTooltip('模型/参数');
+          expect(find.byTooltip('模型/参数'), findsNothing);
           expect(
             find.descendant(of: content, matching: parameters),
             findsNothing,
           );
           expect(find.descendant(of: content, matching: confirm), findsNothing);
           expect(
-            find.descendant(of: parameters, matching: edit),
-            findsOneWidget,
+            find.descendant(of: parameters, matching: find.byType(IconButton)),
+            findsNothing,
           );
           final parameterPosition = tester.getTopLeft(parameters);
           final confirmPosition = tester.getTopLeft(confirm);
@@ -937,9 +973,6 @@ void main() {
           expect(scroll.pixels, greaterThan(0));
           expect(tester.getTopLeft(parameters), parameterPosition);
           expect(tester.getTopLeft(confirm), confirmPosition);
-          await tester.ensureVisible(edit);
-          await tester.tap(edit);
-          expect(parameterRequests, 1);
           expect(tester.widget<FilledButton>(confirm).onPressed, isNotNull);
           expect(tester.takeException(), isNull);
           if (!dark &&
@@ -962,6 +995,138 @@ void main() {
       );
     }
   }
+
+  for (final size in [
+    const Size(320, 844),
+    const Size(390, 844),
+    const Size(1280, 900),
+  ]) {
+    testWidgets('role image editor keeps role and footer fixed at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      final capture = GlobalKey();
+      Future<void> pump({required bool long}) => _pump(
+        tester,
+        ConversationGenerationCard(
+          block: _roleImageGeneration(long: long),
+          controller: controller,
+        ),
+        capture: capture,
+        locale: const Locale('zh'),
+        textScale: size.width == 320 ? 1.5 : 1,
+        dark: size.width == 320,
+      );
+      await pump(long: false);
+      expect(
+        tester.getSize(find.byKey(const Key('conversation-reference-tile'))),
+        const Size(80, 80),
+      );
+      expect(find.text('角色档案已更新'), findsNothing);
+      expect(find.text('0/8000'), findsNothing);
+      expect(tester.takeException(), isNull);
+      if (const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+        await tester.runAsync(() async {
+          final boundary =
+              capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          final pixels = await boundary.toImage();
+          final bytes = await pixels.toByteData(format: ui.ImageByteFormat.png);
+          await File(
+            '/tmp/conversation-role-image-${size.width.toInt()}.png',
+          ).writeAsBytes(bytes!.buffer.asUint8List());
+          pixels.dispose();
+        });
+      }
+      await pump(long: true);
+      final content = find.byWidgetPredicate(
+        (widget) =>
+            widget is ConversationCardContent &&
+            widget.storageId == 'generation:image-plan',
+      );
+      final role = find.byKey(const Key('conversation-role-card'));
+      final footer = find.byKey(const Key('conversation-plan-configuration'));
+      final confirm = find.byType(FilledButton);
+      expect(find.descendant(of: content, matching: role), findsNothing);
+      expect(find.descendant(of: content, matching: footer), findsNothing);
+      expect(find.descendant(of: content, matching: confirm), findsNothing);
+      final rolePosition = tester.getTopLeft(role);
+      final footerPosition = tester.getTopLeft(footer);
+      final confirmPosition = tester.getTopLeft(confirm);
+      final scroll = find.descendant(
+        of: content,
+        matching: find.byType(SingleChildScrollView),
+      );
+      await tester.drag(scroll, const Offset(0, -250));
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(role), rolePosition);
+      expect(tester.getTopLeft(footer), footerPosition);
+      expect(tester.getTopLeft(confirm), confirmPosition);
+      expect(
+        Scrollable.of(
+          tester.element(
+            find.descendant(
+              of: content,
+              matching: find.byType(MarkdownMessage),
+            ),
+          ),
+        ).position.pixels,
+        greaterThan(0),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'reference removal and visual style selection update the submitted inputs',
+    (tester) async {
+      final repository = _CardRepository();
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        ConversationGenerationCard(
+          block: _roleImageGeneration(reference: true),
+          controller: controller,
+        ),
+      );
+      expect(
+        tester
+            .widget<ConversationMediaView>(find.byType(ConversationMediaView))
+            .thumbnailSize,
+        80,
+      );
+      await tester.tap(find.byTooltip('Remove image'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ConversationMediaView), findsNothing);
+      await tester.tap(find.byKey(const Key('conversation-role-style-select')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SliverGrid), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('role-template:watercolor')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('conversation-style-confirm')));
+      await tester.pumpAndSettle();
+      expect(find.text('Watercolor'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Keep the silhouette');
+      await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Generate'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Generate').last);
+      await tester.pumpAndSettle();
+      expect(repository.submitted!.referenceMediaId, isNull);
+      expect(repository.submitted!.roleTemplateId, 'watercolor');
+      expect(repository.submitted!.roleTemplateMediaId, 'style-image');
+      expect(repository.submitted!.requirements, 'Keep the silhouette');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     for (final scale in [1.0, 1.3]) {
@@ -987,6 +1152,7 @@ void main() {
           textScale: scale,
         );
         expect(find.text('10 points'), findsOneWidget);
+        expect(find.byTooltip('Model / settings'), findsNothing);
         expect(
           tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
           isNotNull,

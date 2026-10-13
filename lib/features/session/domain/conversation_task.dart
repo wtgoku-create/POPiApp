@@ -32,13 +32,11 @@ class ConversationTaskView {
       ).expand((proposal) => conversationMaps(proposal['businessTasks'])))
         for (final ref in conversationMaps(receipt['outputs']))
           if (ref['kind'] == 'media') ref['id'].toString(),
-      for (final message in snapshot?.messages ?? <ConversationMessage>[])
-        for (final content in message.blocks)
-          if (content.kind == 'content' &&
-              conversationMaps(
-                block.data['outputs'],
-              ).any((ref) => ref['id'].toString() == content.referenceId))
-            ...content.mediaIds,
+      for (final content in snapshot?.contents ?? <ConversationBlock>[])
+        if (conversationMaps(
+          block.data['outputs'],
+        ).any((ref) => conversationReferenceMatches(ref, content.reference)))
+          ...content.mediaIds,
     }.where((id) => !stepMediaIds.contains(id)).toList();
   }
   final List<ConversationTaskStep> steps;
@@ -95,6 +93,103 @@ class ConversationTaskView {
       },
     });
   }
+}
+
+/// Generation cards resolve their immutable confirmation and versioned outputs.
+class ConversationGenerationTaskView {
+  ConversationGenerationTaskView(this.block, ConversationSnapshot? snapshot)
+    : mediaIds = ConversationTaskView(block, snapshot).mediaIds {
+    final confirmationId = block.data['confirmationId']?.toString();
+    final blocks = [
+      for (final message in snapshot?.messages ?? <ConversationMessage>[])
+        ...message.blocks,
+    ];
+    final decision = confirmationId == null
+        ? null
+        : blocks
+              .where(
+                (candidate) =>
+                    candidate.kind == 'generation_decision' &&
+                    candidate.action == 'confirm' &&
+                    candidate.id == confirmationId,
+              )
+              .firstOrNull;
+    final plan = confirmationId == null
+        ? null
+        : blocks
+              .where(
+                (candidate) =>
+                    candidate.kind == 'plan' &&
+                    candidate.status == 'confirmed' &&
+                    candidate.id == confirmationId,
+              )
+              .firstOrNull;
+    final legacy = confirmationId == null
+        ? null
+        : conversationMaps(snapshot?.source['confirmations'])
+              .where(
+                (candidate) => candidate['id']?.toString() == confirmationId,
+              )
+              .firstOrNull;
+    final source = decision?.data ?? plan?.data ?? legacy;
+    final target = source?['targetRef'];
+    final savedRole = target is Map
+        ? blocks.reversed
+              .where(
+                (candidate) =>
+                    candidate.kind == 'role' &&
+                    conversationReferenceMatches(
+                      conversationMap(target),
+                      candidate.reference,
+                    ) &&
+                    candidate.reference?['versionId']?.toString() ==
+                        target['versionId']?.toString(),
+              )
+              .firstOrNull
+        : null;
+    fixedPlan = source == null && block.planItems.isEmpty
+        ? null
+        : ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'plan',
+            'data': {
+              ...?source,
+              if (source?['roleDraft'] == null && savedRole != null)
+                'roleDraft': savedRole.data,
+              for (final key in [
+                'plan',
+                'roleImage',
+                'roleTemplate',
+                'roleDraft',
+                'configuration',
+                'estimatedPoints',
+              ])
+                if (block.data[key] != null) key: block.data[key],
+              'id': confirmationId ?? 'task-plan:${block.id}',
+              'kind': 'generation',
+              'status': 'confirmed',
+              'allowedActions': <String>[],
+            },
+          });
+  }
+
+  final ConversationBlock block;
+  final List<String> mediaIds;
+  late final ConversationBlock? fixedPlan;
+  String get state => switch (block.status) {
+    'pending' => 'queued',
+    'waiting_external' => 'running',
+    'cancelled' => 'canceled',
+    _ => block.status,
+  };
+  bool get active => [
+    'queued',
+    'running',
+    'saving',
+    'resuming',
+    'pause_requested',
+  ].contains(state);
+  bool get completed => state == 'completed';
 }
 
 class ConversationTaskProposal {

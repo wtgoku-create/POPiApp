@@ -96,11 +96,13 @@ class RoleCastSummary extends StatelessWidget {
     required this.cast,
     required this.onViewProfiles,
     this.onEdit,
+    this.avatarOffset = 16,
     super.key,
   });
   final List<LibraryRole> cast;
   final VoidCallback onViewProfiles;
   final VoidCallback? onEdit;
+  final double avatarOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +119,13 @@ class RoleCastSummary extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 50 + (cast.length.clamp(1, 3) - 1) * 16,
+                width: 50 + (cast.length.clamp(1, 3) - 1) * avatarOffset,
                 height: 50,
                 child: Stack(
                   children: [
                     for (var i = cast.length.clamp(0, 3) - 1; i >= 0; i--)
                       Positioned(
-                        left: i * 16,
+                        left: i * avatarOffset,
                         top: 0,
                         child: Container(
                           padding: const EdgeInsets.all(3),
@@ -166,6 +168,8 @@ class RoleCastSummary extends StatelessWidget {
                     ),
                     Text(
                       cast.map((role) => role.title).join('、'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 14),
                     ),
                   ],

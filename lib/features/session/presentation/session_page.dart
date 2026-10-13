@@ -289,7 +289,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       controller: _conversation!,
                       onRevise: (content) =>
                           _selectPrompt(l10n.chatRevisePrompt(content.title)),
-                      onModelParametersRequested: _showModelParameters,
                     ),
                   )
                 else

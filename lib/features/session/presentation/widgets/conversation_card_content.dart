@@ -5,12 +5,14 @@ class ConversationCardContent extends StatefulWidget {
   const ConversationCardContent({
     required this.storageId,
     required this.child,
+    this.maxViewportHeight = maxHeight,
     super.key,
-  });
+  }) : assert(maxViewportHeight >= 160);
 
   static const maxHeight = 320.0;
   final String storageId;
   final Widget child;
+  final double maxViewportHeight;
 
   @override
   State<ConversationCardContent> createState() =>
@@ -56,7 +58,7 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
     }
     final height = (MediaQuery.sizeOf(context).height * .45).clamp(
       160.0,
-      ConversationCardContent.maxHeight,
+      widget.maxViewportHeight,
     );
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: height),

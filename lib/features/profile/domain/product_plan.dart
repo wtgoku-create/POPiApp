@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 class ProductPlan {
   const ProductPlan({
     required this.id,
@@ -64,7 +66,7 @@ class ProductPlan {
     return ProductPlan(
       id: _integer(json['id']),
       type: _integer(json['type']),
-      image: json['image']?.toString() ?? '',
+      image: AppUrl.resolve(json['image']?.toString() ?? ''),
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       details: json['details'],

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/utils/app_url.dart';
 import '../domain/activity.dart';
 
 /// Mirrors the web activity list and activation contracts.
@@ -53,7 +54,7 @@ class ActivityRepository {
       throw const ApiException();
     }
     final data = await api.activateActivityCode(value);
-    return activity.isBookCard ? _qrUrl(data['url']) : null;
+    return activity.isBookCard ? _qrUrl(data['url'], api.mediaBaseUrl) : null;
   }
 
   Activity _activity(Map<String, Object?> json) {
@@ -81,8 +82,8 @@ class ActivityRepository {
     if (text.isEmpty) return '';
     final uri = Uri.tryParse(text);
     if (uri == null) return '';
-    final resolved = Uri.parse(api.mediaBaseUrl).resolveUri(uri);
-    return _isHttp(resolved) ? resolved.toString() : '';
+    final resolved = AppUrl.resolve(text, baseUrl: api.mediaBaseUrl);
+    return _isHttp(Uri.parse(resolved)) ? resolved : '';
   }
 }
 
@@ -111,14 +112,17 @@ int? _color(Object? value) {
   return 0xFF000000 | int.parse(text.substring(1), radix: 16);
 }
 
-String? _qrUrl(Object? value) {
+String? _qrUrl(Object? value, String baseUrl) {
   final text = _text(value);
   final match = RegExp(
-    r'^\[[^\]]*\]\((https?://[^)]+)\)$',
+    r'^\[[^\]]*\]\(([^)]+)\)$',
     caseSensitive: false,
   ).firstMatch(text);
-  final uri = Uri.tryParse(match?.group(1)?.trim() ?? text);
-  return uri != null && _isHttp(uri) ? uri.toString() : null;
+  final source = match?.group(1)?.trim() ?? text;
+  if (source.isEmpty) return null;
+  final resolved = AppUrl.resolve(source, baseUrl: baseUrl);
+  final uri = Uri.tryParse(resolved);
+  return uri != null && _isHttp(uri) ? resolved : null;
 }
 
 bool _isHttp(Uri uri) =>

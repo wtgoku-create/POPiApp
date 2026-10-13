@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'api_exception.dart';
 import 'agent_api_exception.dart';
 import 'payment_exception.dart';
+import '../utils/app_url.dart';
 import '../../features/auth/domain/captcha_challenge.dart';
 import '../../shared/type/social_app_type.dart';
 import '../../shared/type/payment_type.dart';
@@ -21,7 +22,8 @@ class NetworkApi {
     String url, {
     CancelToken? cancelToken,
   }) async {
-    final uri = Uri.parse(url);
+    final resolved = AppUrl.resolve(url, baseUrl: mediaBaseUrl);
+    final uri = Uri.parse(resolved);
     if (!uri.hasAuthority || (uri.scheme != 'http' && uri.scheme != 'https')) {
       throw const ApiException(message: 'Invalid media URL');
     }
@@ -33,7 +35,7 @@ class NetworkApi {
     );
     try {
       final response = await transport.get<ResponseBody>(
-        url,
+        resolved,
         options: Options(responseType: ResponseType.stream),
         cancelToken: cancelToken,
       );
@@ -86,7 +88,7 @@ class NetworkApi {
     final transport = Dio();
     try {
       await transport.put<Object?>(
-        Uri.parse(mediaBaseUrl).resolve(url).toString(),
+        AppUrl.resolve(url, baseUrl: mediaBaseUrl),
         data: bytes,
         options: Options(
           headers: headers,
@@ -530,6 +532,33 @@ class NetworkApi {
     final data = response.data?['data'];
     if (data is! Map<String, dynamic>) throw const ApiException();
     return data;
+  }
+
+  /// Resolve the authenticated media endpoint without forwarding tokens to CDN.
+  Future<String> mediaImageUrl(String id, {CancelToken? cancelToken}) async {
+    final response = await dio.get<void>(
+      '/api_client/agent/v2/media/${Uri.encodeComponent(id)}/content',
+      cancelToken: cancelToken,
+      options: Options(
+        followRedirects: false,
+        validateStatus: (status) => status == 302 || status == 307,
+      ),
+    );
+    final location = response.headers.value('location');
+    if (location == null || location.trim().isEmpty) {
+      throw const ApiException(message: 'Invalid media image redirect');
+    }
+    final resolved = AppUrl.resolve(
+      location,
+      baseUrl: response.requestOptions.uri.toString(),
+    );
+    final uri = Uri.parse(resolved);
+    if (!uri.hasAuthority ||
+        uri.userInfo.isNotEmpty ||
+        (uri.scheme != 'https' && uri.scheme != 'http')) {
+      throw const ApiException(message: 'Invalid media image redirect');
+    }
+    return resolved;
   }
 
   Future<void> deleteLibraryRole(String id, String clientRequestId) async {
@@ -1047,7 +1076,7 @@ class NetworkApi {
     final data = body['data'];
     final url = body['url'] ?? (data is Map ? data['url'] : null);
     if (url is! String || url.isEmpty) throw const ApiException();
-    return url;
+    return AppUrl.resolve(url, baseUrl: mediaBaseUrl);
   }
 
   Future<void> logout() async {

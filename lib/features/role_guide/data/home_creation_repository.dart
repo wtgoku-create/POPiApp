@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_agent_api.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/utils/app_url.dart';
 import '../../assets/domain/library_role.dart';
 import '../domain/home_creation.dart';
 import 'media_preferences_repository.dart';
@@ -205,6 +206,8 @@ class HomeCreationRepository extends MediaPreferencesRepository {
 
   Future<Uri> media(String id, {CancelToken? cancelToken}) async {
     final result = await _api.studioMedia(id, cancelToken: cancelToken);
-    return Uri.parse(_api.mediaBaseUrl).resolve(homeId(result['url']));
+    return Uri.parse(
+      AppUrl.resolve(homeId(result['url']), baseUrl: _api.mediaBaseUrl),
+    );
   }
 }

@@ -731,6 +731,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipAccountsTitle => 'IP账号管理';
 
   @override
+  String get deleteIpAccountTitle => '确认删除该IP账号？';
+
+  @override
+  String get deleteIpAccountDescription => '删除后，账号将被归档，不再显示在账号列表中。作品、会话和资料会保留。';
+
+  @override
   String get loadingIpAccounts => '正在加载账号';
 
   @override
@@ -1627,6 +1633,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get attachmentTitle => '添加';
 
   @override
+  String get attachmentFeaturePending => '功能待开发';
+
+  @override
   String get attachmentCamera => '拍摄';
 
   @override
@@ -2348,6 +2357,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatImageStyle => '画风';
 
   @override
+  String get chatStyleLibrary => '风格库';
+
+  @override
+  String get chatStyleUnrestricted => '不限制风格';
+
+  @override
   String get chatUnrestrictedStyle => '不限画风';
 
   @override
@@ -2361,6 +2376,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatGenerationTask => '生成任务';
+
+  @override
+  String get chatExpandTask => '展开任务';
+
+  @override
+  String get chatCollapseTask => '收起任务';
+
+  @override
+  String get chatGenerationWorking => '任务正在生成...';
+
+  @override
+  String get chatGenerationWorkingHint => '作品努力生成中...';
+
+  @override
+  String get chatGenerationTaskCompleted => '任务已完成';
+
+  @override
+  String get chatImageGenerationFailed => '图片生成失败';
+
+  @override
+  String get chatVideoGenerationFailed => '视频生成失败';
 
   @override
   String get chatProductionPlan => '生产方案';
@@ -2466,7 +2502,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatPrepareRole => '正在整理角色方案';
 
   @override
-  String get redemptionCenter => '兑换中心';
+  String get redemptionCenter => '邀请好友';
 
   @override
   String get redemptionPageTitle => '邀请好友';
@@ -2543,7 +2579,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get redemptionLoadMore => '加载更多';
 
   @override
-  String get redemptionLoginRequired => '登录后即可使用兑换中心';
+  String get redemptionLoginRequired => '登录后即可邀请好友';
 
   @override
   String get redemptionBindRequired => '绑定微信公众号后可查看邀请码';

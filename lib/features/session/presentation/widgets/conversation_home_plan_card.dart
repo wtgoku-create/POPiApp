@@ -24,7 +24,6 @@ class ConversationHomePlanCard extends StatelessWidget {
     required this.model,
     required this.points,
     required this.actions,
-    this.onModelParametersRequested,
     this.validationMessage,
     super.key,
   });
@@ -40,7 +39,6 @@ class ConversationHomePlanCard extends StatelessWidget {
   final HomeModel? model;
   final num? points;
   final Widget actions;
-  final VoidCallback? onModelParametersRequested;
   final String? validationMessage;
 
   @override
@@ -133,9 +131,6 @@ class ConversationHomePlanCard extends StatelessWidget {
               savedConfiguration: editable ? const [] : view.configurationLines,
               loading: loading,
               estimating: estimating,
-              onModelParametersRequested: editable
-                  ? onModelParametersRequested
-                  : null,
             ),
             if (validationMessage != null)
               Padding(

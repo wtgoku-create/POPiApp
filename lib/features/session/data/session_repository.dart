@@ -10,6 +10,7 @@ import '../../../core/network/agent_api_exception.dart';
 import '../../../core/network/network_agent_api.dart';
 import '../../../core/network/network_api.dart';
 import '../../../core/storage/preferences_storage.dart';
+import '../../../core/utils/app_url.dart';
 import '../../assets/domain/library_work.dart';
 import '../../role_guide/domain/home_creation.dart';
 import '../../role_guide/domain/session_media_preferences.dart';
@@ -450,9 +451,10 @@ class ApiSessionRepository extends SessionRepository {
     return ConversationMedia(
       id: value['id'].toString(),
       kind: value['kind'] as String,
-      url: Uri.parse(
-        business.mediaBaseUrl,
-      ).resolve(value['url'] as String).toString(),
+      url: AppUrl.resolve(
+        value['url'] as String,
+        baseUrl: business.mediaBaseUrl,
+      ),
     );
   }
 

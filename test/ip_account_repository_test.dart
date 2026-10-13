@@ -188,6 +188,22 @@ void main() {
     },
   );
 
+  test(
+    'archive uses DELETE with an encoded account ID and cancellation',
+    () async {
+      respond = (_) => {'id': 'account / 42', 'status': 'archived'};
+      final token = CancelToken();
+      await repository.archive('account / 42', cancelToken: token);
+      expect(requests.single.method, 'DELETE');
+      expect(
+        requests.single.path,
+        '/api_client/agent/v2/accounts/account%20%2F%2042',
+      );
+      expect(requests.single.data, isNull);
+      expect(requests.single.cancelToken, same(token));
+    },
+  );
+
   test('rename retries keep the same revision and request ID', () async {
     respond = (_) => {'id': '42', 'revision': 9};
     for (var attempt = 0; attempt < 2; attempt++) {

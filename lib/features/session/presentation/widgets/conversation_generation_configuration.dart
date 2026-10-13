@@ -4,7 +4,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../role_guide/domain/home_creation.dart';
 
-/// Shared model summary displayed outside a generation card's scroll viewport.
+/// Read-only model summary outside a generation card's scroll viewport.
 class ConversationGenerationConfiguration extends StatelessWidget {
   const ConversationGenerationConfiguration({
     required this.config,
@@ -13,7 +13,6 @@ class ConversationGenerationConfiguration extends StatelessWidget {
     this.savedConfiguration = const [],
     this.loading = false,
     this.estimating = false,
-    this.onModelParametersRequested,
     super.key,
   });
 
@@ -23,7 +22,6 @@ class ConversationGenerationConfiguration extends StatelessWidget {
   final List<String> savedConfiguration;
   final bool loading;
   final bool estimating;
-  final VoidCallback? onModelParametersRequested;
 
   @override
   Widget build(BuildContext context) {
@@ -42,17 +40,7 @@ class ConversationGenerationConfiguration extends StatelessWidget {
     final configuration = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(child: Text(l10n.chatPlanConfiguration, style: heading)),
-            if (onModelParametersRequested != null)
-              IconButton(
-                tooltip: l10n.roleModelParameters,
-                onPressed: onModelParametersRequested,
-                icon: const Icon(Icons.tune, size: 18),
-              ),
-          ],
-        ),
+        Text(l10n.chatPlanConfiguration, style: heading),
         const SizedBox(height: 8),
         if (loading)
           AppSkeleton(

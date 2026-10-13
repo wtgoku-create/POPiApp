@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/core/network/agent_api_exception.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
@@ -317,7 +318,7 @@ void main() {
         snapshot,
       ).roles.single;
       expect(role.title, 'Saved name');
-      expect(role.avatar, 'saved.png');
+      expect(role.avatar, '${AppConfig.apiBaseUrl}/saved.png');
       expect(role.data['profile'], {'title': 'Saved name'});
     }
   });

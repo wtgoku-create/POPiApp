@@ -12,6 +12,7 @@ import '../conversation_controller.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_home_task_card.dart';
+import 'conversation_generation_task_card.dart';
 import 'conversation_timeline.dart'
     show
         ConversationObjectView,
@@ -109,7 +110,12 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     final block = widget.block;
     final view = ConversationTaskView(block, widget.controller.snapshot);
     final l10n = AppLocalizations.of(context)!;
-    final generation = block.action == 'generation';
+    if (block.action == 'generation') {
+      return ConversationGenerationTaskCard(
+        block: block,
+        controller: widget.controller,
+      );
+    }
     final actions = ((_capabilities?['allowedActions'] as List?) ?? [])
         .whereType<String>()
         .toList();
@@ -134,11 +140,7 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
             children: [
               Expanded(
                 child: Text(
-                  view.title.isEmpty
-                      ? generation
-                            ? l10n.chatGenerationTask
-                            : l10n.roleViewPlan
-                      : view.title,
+                  view.title.isEmpty ? l10n.roleViewPlan : view.title,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -279,31 +281,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 ],
               ),
           ],
-          if (generation && block.planItems.isNotEmpty)
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: Text(l10n.roleViewPlan),
-              children: [
-                ConversationCardContent(
-                  storageId: 'task:${block.id}:plan',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final prompt in block.planPrompts)
-                        MarkdownMessage(text: prompt, compact: true),
-                      if (block.configuration.isNotEmpty)
-                        Text(block.configuration),
-                      if (block.estimatedPoints != null)
-                        Text(
-                          l10n.chatEstimatedPoints(
-                            block.estimatedPoints.toString(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           Wrap(
             alignment: WrapAlignment.end,
             children: [

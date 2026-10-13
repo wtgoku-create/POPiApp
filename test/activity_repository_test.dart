@@ -126,7 +126,7 @@ void main() {
   );
 
   test(
-    'book-card QR accepts HTTP URLs and Markdown links and rejects unsafe schemes',
+    'book-card QR completes relative URLs and rejects unsafe schemes',
     () async {
       for (final value in [
         'https://example.test/qr.png',
@@ -142,10 +142,16 @@ void main() {
           isNull,
         );
       }
+      for (final value in ['/relative.png', '[QR](/relative.png)']) {
+        fixture.qrUrl = value;
+        expect(
+          await repository.redeem(book, 'ORDER', memberLevel: 1),
+          'https://example.test/relative.png',
+        );
+      }
       for (final value in [
         'javascript:alert(1)',
         'file:///private/qr.png',
-        '/relative.png',
         '',
       ]) {
         fixture.qrUrl = value;

@@ -3,8 +3,15 @@ import 'dart:io';
 import 'package:file/file.dart' as fs;
 import 'package:file/local.dart';
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:popi_ai_app/core/network/auth_interceptor.dart';
+import 'package:popi_ai_app/core/storage/secure_storage.dart';
+import 'package:popi_ai_app/shared/providers/media_image_provider.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_network_image.dart';
 
 final _imageBytes = File(
@@ -31,6 +38,7 @@ void main() {
   var requests = 0;
   var failNext = false;
   final requestHeaders = <String?>[];
+  final authorizationHeaders = <String, String?>{};
   BaseCacheManager? original;
 
   CacheManager createManager() => HttpOverrides.runWithHttpOverrides(
@@ -53,8 +61,18 @@ void main() {
     requests = 0;
     failNext = false;
     requestHeaders.clear();
+    authorizationHeaders.clear();
     server.listen((request) async {
       requests++;
+      authorizationHeaders[request.uri.path] = request.headers.value(
+        HttpHeaders.authorizationHeader,
+      );
+      if (request.uri.path == '/api_client/agent/v2/media/16524/content') {
+        request.response.statusCode = HttpStatus.temporaryRedirect;
+        request.response.headers.set(HttpHeaders.locationHeader, url);
+        await request.response.close();
+        return;
+      }
       requestHeaders.add(request.headers.value(HttpHeaders.ifNoneMatchHeader));
       if (failNext) {
         failNext = false;
@@ -77,6 +95,64 @@ void main() {
     manager = createManager();
     AppImageCache.debugCacheManager = manager;
   });
+
+  testWidgets(
+    'protected relative avatar renders without sending tokens to CDN',
+    (tester) async {
+      const path = '/api_client/agent/v2/media/16524/content';
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'http://127.0.0.1:${server.port}',
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+      dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () =>
+            HttpOverrides.runWithHttpOverrides(HttpClient.new, _RealHttp()),
+      );
+      dio.interceptors.add(const AuthInterceptor(_ImageTokenStorage()));
+      addTearDown(dio.close);
+      final container = ProviderContainer(
+        overrides: [dioProvider.overrideWithValue(dio)],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        const MaterialApp(home: SizedBox(key: Key('protected-image-page'))),
+      );
+      late String signed;
+      await tester.runAsync(() async {
+        final listener = container.listen(
+          mediaImageUrlProvider(path),
+          (_, __) {},
+        );
+        addTearDown(listener.close);
+        signed = await container
+            .read(mediaImageUrlProvider(path).future)
+            .timeout(const Duration(seconds: 5));
+        await manager.getSingleFile(signed).timeout(const Duration(seconds: 5));
+        await precacheImage(
+          AppImageCache.provider(signed),
+          tester.element(find.byKey(const Key('protected-image-page'))),
+        ).timeout(const Duration(seconds: 5));
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Center(child: AppNetworkImage(path, width: 70, height: 70)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Image), findsOneWidget);
+      expect(authorizationHeaders[path], 'Bearer image-test-token');
+      expect(authorizationHeaders['/cover.png'], isNull);
+      expect(requests, 2);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   tearDown(() async {
     AppImageCache.debugCacheManager = original;
@@ -194,4 +270,15 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
+}
+
+class _ImageTokenStorage implements TokenStorage {
+  const _ImageTokenStorage();
+
+  @override
+  Future<String?> readAccessToken() async => 'image-test-token';
+  @override
+  Future<void> writeAccessToken(String token) async {}
+  @override
+  Future<void> deleteAccessToken() async {}
 }
