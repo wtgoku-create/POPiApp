@@ -5,6 +5,7 @@ import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_role_card.dart';
@@ -151,12 +152,11 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
-                  [
-                        'INSUFFICIENT_POINTS',
-                        'INSUFFICIENT_COINS',
-                      ].contains(view.errorCode ?? view.error)
-                      ? l10n.chatInsufficientPoints
-                      : view.error ?? l10n.chatRunFailed,
+                  conversationTaskErrorText(
+                    l10n,
+                    code: view.errorCode,
+                    message: view.error,
+                  ),
                   style: TextStyle(color: colors.error),
                 ),
               ),

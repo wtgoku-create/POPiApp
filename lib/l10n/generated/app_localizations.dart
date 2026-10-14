@@ -4663,6 +4663,96 @@ abstract class AppLocalizations {
   /// **'Video generation failed'**
   String get chatVideoGenerationFailed;
 
+  /// No description provided for @chatTextGenerationTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Text generation timed out. Please try again'**
+  String get chatTextGenerationTimeout;
+
+  /// No description provided for @chatTextGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Text generation failed. Please try again'**
+  String get chatTextGenerationFailed;
+
+  /// No description provided for @chatScriptGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Script generation failed. Please try again'**
+  String get chatScriptGenerationFailed;
+
+  /// No description provided for @chatTopicGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic generation failed. Please try again'**
+  String get chatTopicGenerationFailed;
+
+  /// No description provided for @chatResultCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The video integrity check failed. The generated result has been kept'**
+  String get chatResultCheckFailed;
+
+  /// No description provided for @chatOutputValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated result failed validation. Please try again'**
+  String get chatOutputValidationFailed;
+
+  /// No description provided for @chatStoryboardMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved storyboard is missing. Confirm the storyboard before generating'**
+  String get chatStoryboardMissing;
+
+  /// No description provided for @chatVideoMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated video could not be found. Please try again'**
+  String get chatVideoMissing;
+
+  /// No description provided for @chatTaskInputChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The creation content has changed. Confirm the generation plan again'**
+  String get chatTaskInputChanged;
+
+  /// No description provided for @chatTaskConfirmationMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The storyboard version does not match the confirmation. Confirm the storyboard again'**
+  String get chatTaskConfirmationMismatch;
+
+  /// No description provided for @chatVideoPromptInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation prompt is invalid. Update the content and confirm again'**
+  String get chatVideoPromptInvalid;
+
+  /// No description provided for @chatTaskResultUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated result is temporarily unavailable. Please try again later'**
+  String get chatTaskResultUnavailable;
+
+  /// No description provided for @chatTaskSubmissionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation task could not be submitted. Please try again later'**
+  String get chatTaskSubmissionFailed;
+
+  /// No description provided for @chatTaskServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation service is temporarily unavailable. Please try again later'**
+  String get chatTaskServiceUnavailable;
+
+  /// No description provided for @chatRoleReferenceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The character reference image is unavailable. Update the image and select the cast again before generating'**
+  String get chatRoleReferenceUnavailable;
+
   /// No description provided for @chatProductionPlan.
   ///
   /// In en, this message translates to:

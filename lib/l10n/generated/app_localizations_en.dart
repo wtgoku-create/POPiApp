@@ -2517,6 +2517,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatVideoGenerationFailed => 'Video generation failed';
 
   @override
+  String get chatTextGenerationTimeout =>
+      'Text generation timed out. Please try again';
+
+  @override
+  String get chatTextGenerationFailed =>
+      'Text generation failed. Please try again';
+
+  @override
+  String get chatScriptGenerationFailed =>
+      'Script generation failed. Please try again';
+
+  @override
+  String get chatTopicGenerationFailed =>
+      'Topic generation failed. Please try again';
+
+  @override
+  String get chatResultCheckFailed =>
+      'The video integrity check failed. The generated result has been kept';
+
+  @override
+  String get chatOutputValidationFailed =>
+      'The generated result failed validation. Please try again';
+
+  @override
+  String get chatStoryboardMissing =>
+      'The saved storyboard is missing. Confirm the storyboard before generating';
+
+  @override
+  String get chatVideoMissing =>
+      'The generated video could not be found. Please try again';
+
+  @override
+  String get chatTaskInputChanged =>
+      'The creation content has changed. Confirm the generation plan again';
+
+  @override
+  String get chatTaskConfirmationMismatch =>
+      'The storyboard version does not match the confirmation. Confirm the storyboard again';
+
+  @override
+  String get chatVideoPromptInvalid =>
+      'The generation prompt is invalid. Update the content and confirm again';
+
+  @override
+  String get chatTaskResultUnavailable =>
+      'The generated result is temporarily unavailable. Please try again later';
+
+  @override
+  String get chatTaskSubmissionFailed =>
+      'The generation task could not be submitted. Please try again later';
+
+  @override
+  String get chatTaskServiceUnavailable =>
+      'The generation service is temporarily unavailable. Please try again later';
+
+  @override
+  String get chatRoleReferenceUnavailable =>
+      'The character reference image is unavailable. Update the image and select the cast again before generating';
+
+  @override
   String get chatProductionPlan => 'Production plan';
 
   @override

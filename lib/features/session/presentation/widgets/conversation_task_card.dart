@@ -9,6 +9,7 @@ import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_home_task_card.dart';
@@ -160,12 +161,11 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
           ),
           if (view.errorCode != null || view.error != null)
             Text(
-              [
-                    'INSUFFICIENT_POINTS',
-                    'INSUFFICIENT_COINS',
-                  ].contains(view.errorCode)
-                  ? l10n.chatInsufficientPoints
-                  : view.error ?? l10n.chatRunFailed,
+              conversationTaskErrorText(
+                l10n,
+                code: view.errorCode,
+                message: view.error,
+              ),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           for (final step in view.steps) ...[

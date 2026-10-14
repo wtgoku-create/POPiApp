@@ -1298,6 +1298,43 @@ void main() {
   });
 
   testWidgets(
+    'home video failure shows Chinese guidance and keeps task retry',
+    (tester) async {
+      final repository = _CardRepository();
+      final controller = ConversationController(repository, 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      await _pump(
+        tester,
+        ConversationTaskCard(
+          controller: controller,
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'task',
+            'action': 'home',
+            'data': {
+              ..._task(home: true).data,
+              'state': 'failed',
+              'error': 'VIDEO_GENERATION_FAILED',
+              'allowedActions': ['retry'],
+            },
+          }),
+        ),
+        locale: const Locale('zh'),
+      );
+      expect(find.text('视频生成失败'), findsOneWidget);
+      expect(find.text('VIDEO_GENERATION_FAILED'), findsNothing);
+      final retry = find.byKey(const Key('conversation-task-retry-task'));
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      expect(repository.controls, ['retry']);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
     'home controls preserve busy, cancellation and task retry rules',
     (tester) async {
       final repository = _CardRepository();

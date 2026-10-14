@@ -24,6 +24,7 @@ import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../data/session_repository.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_role_card.dart';
 import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
@@ -51,9 +52,13 @@ bool _progressRunning(ConversationBlock block) =>
     ['pending', 'started', 'running'].contains(block.status);
 
 String conversationErrorText(Object? error, AppLocalizations l10n) {
-  if (error is AgentApiException &&
-      ['INSUFFICIENT_POINTS', 'INSUFFICIENT_COINS'].contains(error.code)) {
-    return l10n.chatInsufficientPoints;
+  if (error is AgentApiException) {
+    return conversationTaskErrorText(
+      l10n,
+      code: error.code,
+      message: error.message,
+      fallback: l10n.chatRequestFailed,
+    );
   }
   if (error is ApiException && error.message?.isNotEmpty == true) {
     return error.message!;
@@ -380,15 +385,14 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          [
-                                                'INSUFFICIENT_POINTS',
-                                                'INSUFFICIENT_COINS',
-                                              ].contains(run.errorCode)
-                                              ? l10n.chatInsufficientPoints
-                                              : run.error ??
-                                                    (run.state == 'failed'
-                                                        ? l10n.chatRunFailed
-                                                        : l10n.chatStopped),
+                                          conversationTaskErrorText(
+                                            l10n,
+                                            code: run.errorCode,
+                                            message: run.error,
+                                            fallback: run.state == 'failed'
+                                                ? l10n.chatRunFailed
+                                                : l10n.chatStopped,
+                                          ),
                                         ),
                                       ),
                                       if (run.retryable &&

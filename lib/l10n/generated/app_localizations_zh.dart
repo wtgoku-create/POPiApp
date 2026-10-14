@@ -2408,6 +2408,51 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatVideoGenerationFailed => '视频生成失败';
 
   @override
+  String get chatTextGenerationTimeout => '文本生成超时，请重试';
+
+  @override
+  String get chatTextGenerationFailed => '文本生成失败，请重试';
+
+  @override
+  String get chatScriptGenerationFailed => '剧本生成失败，请重试';
+
+  @override
+  String get chatTopicGenerationFailed => '选题生成失败，请重试';
+
+  @override
+  String get chatResultCheckFailed => '视频完整性检查未通过，已保留生成结果';
+
+  @override
+  String get chatOutputValidationFailed => '生成结果校验未通过，请重试';
+
+  @override
+  String get chatStoryboardMissing => '缺少已保存的分镜内容，请确认分镜后再生成';
+
+  @override
+  String get chatVideoMissing => '未找到生成的视频结果，请重试';
+
+  @override
+  String get chatTaskInputChanged => '创作内容已变更，请重新确认生成方案';
+
+  @override
+  String get chatTaskConfirmationMismatch => '分镜版本与确认内容不一致，请重新确认分镜';
+
+  @override
+  String get chatVideoPromptInvalid => '生成提示词无效，请修改内容后重新确认';
+
+  @override
+  String get chatTaskResultUnavailable => '生成结果暂时无法读取，请稍后重试';
+
+  @override
+  String get chatTaskSubmissionFailed => '生成任务提交失败，请稍后重试';
+
+  @override
+  String get chatTaskServiceUnavailable => '生成服务暂时不可用，请稍后重试';
+
+  @override
+  String get chatRoleReferenceUnavailable => '角色参考图不可用，请更新角色图片并重新选择出场角色后再生成';
+
+  @override
   String get chatProductionPlan => '生产方案';
 
   @override

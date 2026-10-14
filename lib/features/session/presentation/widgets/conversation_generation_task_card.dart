@@ -7,6 +7,7 @@ import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_generation_configuration.dart';
@@ -46,20 +47,18 @@ class _ConversationGenerationTaskCardState
         : view.completed
         ? l10n.chatGenerationTaskCompleted
         : conversationStatusLabel(view.state, l10n);
-    final failure =
-        view.state == 'failed' &&
-            [
-              'INSUFFICIENT_POINTS',
-              'INSUFFICIENT_COINS',
-            ].contains(widget.block.data['errorCode'])
-        ? l10n.chatInsufficientPoints
-        : view.state != 'failed'
+    final failure = view.state != 'failed'
         ? conversationStatusLabel(view.state, l10n)
-        : switch (widget.block.mediaType) {
-            'image' => l10n.chatImageGenerationFailed,
-            'video' => l10n.chatVideoGenerationFailed,
-            _ => l10n.chatRunFailed,
-          };
+        : conversationTaskErrorText(
+            l10n,
+            code: widget.block.data['errorCode'] as String?,
+            message: widget.block.data['error'] as String?,
+            fallback: switch (widget.block.mediaType) {
+              'image' => l10n.chatImageGenerationFailed,
+              'video' => l10n.chatVideoGenerationFailed,
+              _ => l10n.chatRunFailed,
+            },
+          );
     return Semantics(
       key: Key('conversation-generation-task-${widget.block.id}'),
       liveRegion: true,
