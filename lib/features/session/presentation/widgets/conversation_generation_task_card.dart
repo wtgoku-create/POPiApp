@@ -72,9 +72,7 @@ class _ConversationGenerationTaskCardState
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.4,
+                    style: ConversationCardTypography.title.copyWith(
                       color: colors.primary,
                     ),
                   ),
@@ -264,8 +262,7 @@ class _SavedGenerationPlan extends StatelessWidget {
             child: MarkdownMessage(
               text: prompt,
               compact: true,
-              style: TextStyle(
-                fontSize: 13,
+              style: ConversationCardTypography.body.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../role_guide/domain/home_creation.dart';
+import 'conversation_card.dart';
 
 /// Read-only model summary outside a generation card's scroll viewport.
 class ConversationGenerationConfiguration extends StatelessWidget {
@@ -27,14 +28,10 @@ class ConversationGenerationConfiguration extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final heading = TextStyle(
-      fontSize: 14,
-      height: 1.5,
+    final heading = ConversationCardTypography.title.copyWith(
       color: colors.onSurface,
     );
-    final body = TextStyle(
-      fontSize: 13,
-      height: 1.6,
+    final body = ConversationCardTypography.body.copyWith(
       color: colors.onSurfaceVariant,
     );
     final configuration = Column(

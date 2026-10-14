@@ -141,10 +141,7 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
               Expanded(
                 child: Text(
                   view.title.isEmpty ? l10n.roleViewPlan : view.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: ConversationCardTypography.title,
                 ),
               ),
               if (['queued', 'running', 'saving', 'resuming'].contains(state))
@@ -156,7 +153,10 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(conversationStatusLabel(state, l10n)),
+            child: Text(
+              conversationStatusLabel(state, l10n),
+              style: ConversationCardTypography.caption,
+            ),
           ),
           if (view.errorCode != null || view.error != null)
             Text(
@@ -182,7 +182,10 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 const SizedBox(width: 8),
                 Expanded(child: Text(_stepLabel(step.key, l10n))),
                 Flexible(
-                  child: Text(conversationStatusLabel(step.state, l10n)),
+                  child: Text(
+                    conversationStatusLabel(step.state, l10n),
+                    style: ConversationCardTypography.caption,
+                  ),
                 ),
                 if (step.content != null)
                   IconButton(

@@ -78,7 +78,9 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
                   children: [
                     Text(
                       l10n.chatVideoProgress,
-                      style: TextStyle(fontSize: 14, color: colors.primary),
+                      style: ConversationCardTypography.title.copyWith(
+                        color: colors.primary,
+                      ),
                     ),
                     if (status.isNotEmpty)
                       Container(
@@ -92,9 +94,7 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
                         ),
                         child: Text(
                           status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            height: 1.4,
+                          style: ConversationCardTypography.caption.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
                         ),
@@ -187,7 +187,7 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
                           ),
                           textStyle: Theme.of(
                             context,
-                          ).textTheme.labelLarge?.copyWith(fontSize: 12),
+                          ).textTheme.labelLarge?.copyWith(fontSize: 14),
                         ),
                         onPressed: widget.disabled
                             ? null
@@ -245,9 +245,7 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
             padding: EdgeInsets.zero,
             foregroundColor: Theme.of(context).colorScheme.onSurface,
             alignment: Alignment.centerLeft,
-            textStyle: Theme.of(
-              context,
-            ).textTheme.labelLarge?.copyWith(fontSize: 14),
+            textStyle: ConversationCardTypography.title,
           ),
           onPressed: () => setState(() => _sections[step.key] = !open),
           child: Row(
@@ -274,7 +272,14 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (content.storyboard != null)
-                  RoleStoryboardBody(storyboard: content.storyboard!)
+                  RoleStoryboardBody(
+                    storyboard: content.storyboard!,
+                    markdownBuilder: (text) => MarkdownMessage(
+                      text: text,
+                      compact: true,
+                      softLineBreak: true,
+                    ),
+                  )
                 else
                   MarkdownMessage(text: content.body, compact: true),
                 for (final id in content.mediaIds)
@@ -372,9 +377,7 @@ class _HomeTaskStages extends StatelessWidget {
                       _ => l10n.chatStageInspectResult,
                     },
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      height: 1.4,
+                    style: ConversationCardTypography.caption.copyWith(
                       color: ['completed', 'running'].contains(step.state)
                           ? colors.primary
                           : colors.onSurfaceVariant,

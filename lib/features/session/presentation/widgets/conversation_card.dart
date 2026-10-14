@@ -3,6 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
+/// Shared text hierarchy for conversation cards and their embedded documents.
+abstract final class ConversationCardTypography {
+  static const title = TextStyle(
+    fontSize: 16,
+    height: 1.5,
+    fontWeight: FontWeight.w600,
+  );
+  static const body = TextStyle(fontSize: 14, height: 1.6);
+  static const caption = TextStyle(fontSize: 13, height: 1.5);
+}
+
 /// 会话业务卡片共用外观，内部段落保持无边框布局。
 class ConversationCard extends StatelessWidget {
   const ConversationCard({required this.child, this.framed = true, super.key});
@@ -22,7 +33,13 @@ class ConversationCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadii.card),
           )
         : null,
-    child: Material(type: MaterialType.transparency, child: child),
+    child: Material(
+      type: MaterialType.transparency,
+      child: DefaultTextStyle.merge(
+        style: ConversationCardTypography.body,
+        child: child,
+      ),
+    ),
   );
 }
 

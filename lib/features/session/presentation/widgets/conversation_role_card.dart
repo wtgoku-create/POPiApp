@@ -10,6 +10,7 @@ import '../../../role_guide/presentation/widgets/role_guide_summary.dart';
 import '../../../role_guide/presentation/widgets/role_profile_sheet.dart';
 import '../../domain/conversation_role_profile.dart';
 import '../../domain/conversation_snapshot.dart';
+import 'conversation_card.dart';
 
 void _showRoleProfiles(
   BuildContext context,
@@ -46,9 +47,7 @@ class ConversationCastCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) => RoleCastSummary(
           cast: roles.map((role) => role.snapshotRole).toList(),
-          avatarOffset: constraints.maxWidth < 320 && roles.length > 2
-              ? 24
-              : 40,
+          avatarOffset: constraints.maxWidth < 320 ? 16 : 22,
           onViewProfiles: () => _showRoleProfiles(context, roles),
         ),
       ),
@@ -124,10 +123,8 @@ class ConversationRoleCard extends StatelessWidget {
                           role.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.4,
-                            fontWeight: FontWeight.w500,
+                          style: ConversationCardTypography.title.copyWith(
+                            fontSize: compact ? 14 : 16,
                             color: colors.primary,
                           ),
                         ),
@@ -141,9 +138,7 @@ class ConversationRoleCard extends StatelessWidget {
                     role.description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.4,
+                    style: ConversationCardTypography.caption.copyWith(
                       fontWeight: FontWeight.w400,
                       color: colors.onSurfaceVariant,
                     ),
@@ -152,8 +147,7 @@ class ConversationRoleCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       status,
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: ConversationCardTypography.caption.copyWith(
                         fontWeight: FontWeight.w400,
                         color: colors.onSurfaceVariant,
                       ),

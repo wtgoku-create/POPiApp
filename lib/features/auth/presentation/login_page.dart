@@ -21,6 +21,7 @@ import '../data/douyin_auth_api.dart';
 import '../data/douyin_login_service.dart';
 import 'slider_captcha_sheet.dart';
 import 'phone_binding_page.dart';
+import 'formatters/phone_number_formatter.dart';
 import '../domain/wechat_app_login.dart';
 import '../domain/douyin_app_login.dart';
 
@@ -153,6 +154,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       onWechatLogin: _loginWithWechat,
                       onDouyinLogin: _loginWithDouyin,
                       onBack: _closePage,
+                      showBackButton: keyboardInset == 0,
                       onAgreementChanged: _toggleAgreement,
                     ),
                   ],
@@ -653,6 +655,7 @@ class _PhoneLoginForm extends StatelessWidget {
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.telephoneNumber],
+                  inputFormatters: const [PhoneNumberFormatter()],
                   maxLength: 11,
                   style: textStyle,
                   decoration: _fieldDecoration(l10n.phoneNumberHint),
@@ -796,6 +799,7 @@ class _PhoneLoginDesign extends StatelessWidget {
     required this.onWechatLogin,
     required this.onDouyinLogin,
     required this.onBack,
+    required this.showBackButton,
     required this.onAgreementChanged,
   });
 
@@ -807,6 +811,7 @@ class _PhoneLoginDesign extends StatelessWidget {
   final VoidCallback onWechatLogin;
   final VoidCallback onDouyinLogin;
   final VoidCallback onBack;
+  final bool showBackButton;
   final VoidCallback onAgreementChanged;
 
   @override
@@ -815,7 +820,7 @@ class _PhoneLoginDesign extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
-        _LoginBackButton(onPressed: onBack),
+        if (showBackButton) _LoginBackButton(onPressed: onBack),
         Positioned(
           left: 0,
           top: 351,

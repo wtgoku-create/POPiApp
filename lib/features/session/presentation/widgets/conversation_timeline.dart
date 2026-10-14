@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../shared/widgets/app_network_image.dart';
@@ -537,56 +538,77 @@ class MarkdownMessage extends StatelessWidget {
     required this.text,
     this.emphasized = false,
     this.compact = false,
+    this.softLineBreak = false,
     this.style,
     super.key,
   });
   final String text;
   final bool emphasized;
   final bool compact;
+  final bool softLineBreak;
   final TextStyle? style;
   @override
-  Widget build(BuildContext context) => MarkdownBody(
-    data: text,
-    selectable: true,
-    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-      p:
-          style ??
-          TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: compact ? 16 : 18,
-            height: compact ? 1.5 : 1.6,
-            fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
-          ),
-      blockSpacing: 12,
-      h1:
-          style?.copyWith(fontWeight: FontWeight.w500) ??
-          const TextStyle(
-            fontSize: 22,
-            height: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-      h2:
-          style?.copyWith(fontWeight: FontWeight.w500) ??
-          const TextStyle(
-            fontSize: 20,
-            height: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-      h3:
-          style?.copyWith(fontWeight: FontWeight.w500) ??
-          const TextStyle(
-            fontSize: 18,
-            height: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-      h4: style?.copyWith(fontWeight: FontWeight.w500),
-      h5: style?.copyWith(fontWeight: FontWeight.w500),
-      h6: style?.copyWith(fontWeight: FontWeight.w500),
-    ),
-    onTapLink: (_, href, __) {
-      if (href != null) _openUrl(href);
-    },
-  );
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final body =
+        style ??
+        (compact
+                ? ConversationCardTypography.body
+                : const TextStyle(fontSize: 18, height: 1.6))
+            .copyWith(
+              color: colors.onSurface,
+              fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
+            );
+    final heading = compact
+        ? ConversationCardTypography.title.copyWith(color: body.color)
+        : body.copyWith(fontSize: 20, fontWeight: FontWeight.w600);
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      softLineBreak: softLineBreak,
+      builders: {'pre': _WrappedPromptBuilder(style: body)},
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: body,
+        tableBody: body,
+        blockquote: body,
+        listBullet: body,
+        blockSpacing: 12,
+        codeblockDecoration: BoxDecoration(
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: .035),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        h1: heading,
+        h2: heading,
+        h3: heading,
+        h4: heading,
+        h5: heading,
+        h6: heading,
+      ),
+      onTapLink: (_, href, __) {
+        if (href != null) _openUrl(href);
+      },
+    );
+  }
+}
+
+/// Agent prompts in fenced blocks wrap within the card's reading viewport.
+class _WrappedPromptBuilder extends MarkdownElementBuilder {
+  _WrappedPromptBuilder({this.style});
+
+  final TextStyle? style;
+
+  @override
+  Widget visitText(md.Text text, TextStyle? preferredStyle) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: SelectableText(
+        text.text.replaceFirst(RegExp(r'\n$'), ''),
+        style: style ?? const TextStyle(fontSize: 14, height: 1.6),
+      ),
+    );
+  }
 }
 
 /// Only displays the real run state; backend stages are not inferred locally.
@@ -758,15 +780,18 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
         );
         return preview;
       }
-      if (media.kind == 'video' && widget.result) {
+      if (media.kind == 'video' && widget.thumbnailSize == null) {
         return _MediaFrame(
           result: true,
-          child: AppVideoPlayer(
-            url: Uri.parse(media.url),
-            aspectRatio: 16 / 9,
-            controlsKeyPrefix: 'conversation-video-${media.id}',
-            onFullscreen: (url) =>
-                AppVideoPreview.show(context: context, url: url),
+          child: ColoredBox(
+            color: Colors.black,
+            child: AppVideoPlayer(
+              url: Uri.parse(media.url),
+              aspectRatio: 16 / 9,
+              controlsKeyPrefix: 'conversation-video-${media.id}',
+              onFullscreen: (url) =>
+                  AppVideoPreview.show(context: context, url: url),
+            ),
           ),
         );
       }
@@ -910,8 +935,7 @@ class _ConversationTopicsState extends State<_ConversationTopics>
                 Text(
                   l10n.roleStoryPosition(_index + 1, widget.topics.length),
                   key: const Key('conversation-topic-position'),
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: ConversationCardTypography.caption.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -1204,8 +1228,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 Expanded(
                   child: Text(
                     statusLabel,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: ConversationCardTypography.caption.copyWith(
                       color: block.status == 'failed'
                           ? colors.error
                           : colors.primary,
@@ -1247,11 +1270,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 Expanded(
                   child: Text(
                     block.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: ConversationCardTypography.title,
                   ),
                 ),
                 if (widget.headerTrailing != null) ...[
@@ -1276,7 +1295,14 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: block.storyboard != null
-                        ? RoleStoryboardBody(storyboard: block.storyboard!)
+                        ? RoleStoryboardBody(
+                            storyboard: block.storyboard!,
+                            markdownBuilder: (text) => MarkdownMessage(
+                              text: text,
+                              compact: true,
+                              softLineBreak: true,
+                            ),
+                          )
                         : MarkdownMessage(text: block.body, compact: true),
                   ),
                 if (block.kind == 'topic' &&
@@ -1436,14 +1462,12 @@ class _ConversationDetail extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.4,
+          style: ConversationCardTypography.body.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 5),
-        Text(value, style: const TextStyle(fontSize: 16, height: 1.5)),
+        Text(value, style: ConversationCardTypography.body),
       ],
     ),
   );
@@ -1542,21 +1566,13 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.block.title,
-            style: const TextStyle(
-              fontSize: 18,
-              height: 1.4,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(widget.block.title, style: ConversationCardTypography.title),
           for (final field in widget.block.fields) ...[
             Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 6),
               child: Text(
                 field.label,
-                style: TextStyle(
-                  fontSize: 16,
+                style: ConversationCardTypography.body.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -1572,7 +1588,7 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
                   selectedTileColor: Theme.of(
                     context,
                   ).colorScheme.primary.withValues(alpha: .05),
-                  title: Text(option),
+                  title: Text(option, style: ConversationCardTypography.body),
                   value: (_answers[field.id] as List<String>? ?? []).contains(
                     option,
                   ),
@@ -1606,7 +1622,10 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
                         selectedTileColor: Theme.of(
                           context,
                         ).colorScheme.primary.withValues(alpha: .05),
-                        title: Text(option),
+                        title: Text(
+                          option,
+                          style: ConversationCardTypography.body,
+                        ),
                         value: option,
                         enabled: !disabled,
                       ),

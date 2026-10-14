@@ -64,15 +64,25 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
       constraints: BoxConstraints(maxHeight: height),
       child: ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-        child: Scrollbar(
+        child: RawScrollbar(
           controller: _scroll,
           thumbVisibility: true,
+          thickness: 3,
+          radius: const Radius.circular(3),
+          crossAxisMargin: 2,
+          mainAxisMargin: 4,
+          thumbColor: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: .24),
+          notificationPredicate: (notification) =>
+              notification.depth == 0 &&
+              notification.metrics.axis == Axis.vertical,
           child: SingleChildScrollView(
             key: PageStorageKey(widget.storageId),
             controller: _scroll,
             primary: false,
             physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 12),
             child: _CardContentScope(child: widget.child),
           ),
         ),

@@ -342,9 +342,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
               Expanded(
                 child: Text(
                   card.title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
+                  style: ConversationCardTypography.title.copyWith(
                     color: colors.primary,
                   ),
                 ),
@@ -365,7 +363,9 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
           if (card.status != 'ready')
             Text(
               conversationStatusLabel(card.status, l10n),
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+              style: ConversationCardTypography.caption.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
           if (_expanded) ...[
             if (card.previewRole case final role?)
@@ -419,7 +419,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                         minLines: 2,
                         maxLines: 5,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 13,
+                          fontSize: 14,
                           height: 1.5,
                         ),
                         decoration: InputDecoration(

@@ -45,14 +45,10 @@ class ConversationHomePlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final heading = TextStyle(
-      fontSize: 14,
-      height: 1.5,
+    final heading = ConversationCardTypography.title.copyWith(
       color: colors.onSurface,
     );
-    final body = TextStyle(
-      fontSize: 13,
-      height: 1.6,
+    final body = ConversationCardTypography.body.copyWith(
       color: colors.onSurfaceVariant,
     );
     return ConversationCard(
@@ -108,10 +104,7 @@ class ConversationHomePlanCard extends StatelessWidget {
                     ),
                     if (view.storyHook.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      Text(
-                        l10n.chatPlanHighlight,
-                        style: heading.copyWith(fontSize: 13),
-                      ),
+                      Text(l10n.chatPlanHighlight, style: heading),
                       const SizedBox(height: 4),
                       MarkdownMessage(
                         text: view.storyHook,
