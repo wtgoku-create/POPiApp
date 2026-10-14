@@ -5,6 +5,7 @@
       "label": "POPi: prepare production",
       "type": "process",
       "command": "dart",
+      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
       "args": ["run", "tool/flutter_env.dart", "production", "prepare"],
       "options": {"cwd": "${workspaceFolder}"},
       "problemMatcher": []
@@ -13,6 +14,7 @@
       "label": "POPi: prepare development",
       "type": "process",
       "command": "dart",
+      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
       "args": ["run", "tool/flutter_env.dart", "development", "prepare"],
       "options": {"cwd": "${workspaceFolder}"},
       "problemMatcher": []
