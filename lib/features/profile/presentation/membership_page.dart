@@ -232,9 +232,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
           widget.planLoader ??
           PurchaseCatalogRepository(
             NetworkApi(ref.read(dioProvider)),
-            appleStore: usesApplePayments
-                ? ref.read(applePurchaseServiceProvider).store
-                : null,
+            useAppleCatalog: usesApplePayments,
           ).plans;
       final plans = await loader();
       if (!mounted) return;

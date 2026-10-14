@@ -153,7 +153,7 @@ Debug 默认使用本机调试签名，真机登录前需要在平台配置相�
 
 - Android 使用 standard 套餐和积分包。会员先调用 `previewApp`，显示 `pay_money`
   对应的金额和 `grant_points`；微信、支付宝分别建单，仅发送 `subscriptionId` 或 `packageId`。
-- iOS 从 Apple 商品列表加载会员、升级和积分包，并用 `product_id` 查询 StoreKit 本地化价格。
+- iOS 直接使用 Apple 商品列表的标题、积分和 `amount_fen` 渲染会员、升级和积分包，列表不依赖 StoreKit。购买时再用 `product_id` 查询 StoreKit 商品并确认本地化价格。
   选中后以映射 `id` 请求报价，再使用 `quote_id` 创建购买意图；StoreKit 使用返回的
   `app_account_token`，验单提交完整交易 JWS。会员是固定期限商品，不代表已接入自动续订。
 - 只有 `payment_status=paid`、`fulfillment_status=completed`、`refund_status=none`
