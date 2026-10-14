@@ -8,7 +8,6 @@ import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
-import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/social_app_type.dart';
@@ -389,9 +388,7 @@ class MembershipCard extends ConsumerWidget {
                             pointPackageLoader ??
                             PurchaseCatalogRepository(
                               NetworkApi(ref.read(dioProvider)),
-                              appleStore: usesApplePayments
-                                  ? ref.read(applePurchaseServiceProvider).store
-                                  : null,
+                              useAppleCatalog: usesApplePayments,
                             ).pointPackages;
                         await showRechargePointsSheet(
                           context: context,

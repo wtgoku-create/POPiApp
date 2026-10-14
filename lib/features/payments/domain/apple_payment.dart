@@ -8,6 +8,7 @@ class AppleProductMapping {
     required this.kind,
     required this.businessId,
     this.title = '',
+    this.description = '',
     this.amountFen = 0,
     this.grantPoints = 0,
     this.pointsAmount = 0,
@@ -25,6 +26,7 @@ class AppleProductMapping {
   final PaymentProductKind kind;
   final int businessId;
   final String title;
+  final String description;
   final int amountFen;
   final int grantPoints;
   final int pointsAmount;
@@ -53,6 +55,7 @@ class AppleProductMapping {
                   as num)
               .toInt(),
       title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
       amountFen: integer('amount_fen'),
       grantPoints: integer('grant_points'),
       pointsAmount: integer('points_amount'),

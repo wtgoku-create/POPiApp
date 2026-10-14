@@ -4,26 +4,25 @@ import '../../../core/config/app_config.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../payments/data/apple_payment_repository.dart';
-import '../../payments/data/apple_payment_store.dart';
 import '../../payments/domain/apple_payment.dart';
 import '../domain/point_package.dart';
 import '../domain/product_plan.dart';
 import 'point_package_repository.dart';
 import 'product_plan_repository.dart';
 
-/// Apple catalogs come exclusively from eligible mappings and StoreKit prices.
+/// Apple catalogs render server mappings without requiring StoreKit access.
 class PurchaseCatalogRepository {
   const PurchaseCatalogRepository(
     this.api, {
-    this.appleStore,
+    this.useAppleCatalog = false,
     this.environment = AppConfig.applePaymentEnvironment,
   });
 
   final NetworkApi api;
-  final ApplePaymentStore? appleStore;
+  final bool useAppleCatalog;
   final String environment;
 
-  Future<List<(AppleProductMapping, AppleStoreProduct)>> _appleProducts(
+  Future<List<AppleProductMapping>> _appleProducts(
     PaymentProductKind kind,
   ) async {
     final mappings = (await ApplePaymentRepository(
@@ -35,42 +34,21 @@ class PurchaseCatalogRepository {
         'eligible=${mappings.length}',
       );
     }
-    if (mappings.isEmpty) return const [];
-    final store = appleStore!;
-    if (!await store.available()) throw StateError('StoreKit unavailable');
-    final products = {
-      for (final product in await store.products(
-        mappings.map((item) => item.productId).toSet(),
-      ))
-        product.id: product,
-    };
-    if (kDebugMode) {
-      debugPrint(
-        'Apple catalog: StoreKit matched=${products.length}, '
-        'requested=${mappings.length}',
-      );
-    }
-    if (!mappings.any((mapping) => products.containsKey(mapping.productId))) {
-      throw StateError('StoreKit returned no matching Apple products');
-    }
-    return [
-      for (final mapping in mappings)
-        if (products[mapping.productId] case final product?) (mapping, product),
-    ];
+    return mappings;
   }
 
   Future<List<ProductPlan>> plans() async {
-    if (appleStore == null) return ProductPlanRepository(api).fetchAll();
+    if (!useAppleCatalog) return ProductPlanRepository(api).fetchAll();
     return [
-      for (final (mapping, product) in await _appleProducts(
+      for (final mapping in await _appleProducts(
         PaymentProductKind.subscription,
       ))
         ProductPlan(
           id: mapping.businessId,
           type: 1,
           image: '',
-          title: mapping.title.isEmpty ? product.title : mapping.title,
-          description: '',
+          title: mapping.title,
+          description: mapping.description,
           details: null,
           level: mapping.memberLevel,
           coins: mapping.pointsAmount,
@@ -99,21 +77,18 @@ class PurchaseCatalogRepository {
           deleteTime: null,
           appleProductId: mapping.productId,
           appleProductVersionId: mapping.id,
-          localizedPrice: product.price,
         ),
     ];
   }
 
   Future<List<PointPackage>> pointPackages() async {
-    if (appleStore == null) return PointPackageRepository(api).fetchAll();
+    if (!useAppleCatalog) return PointPackageRepository(api).fetchAll();
     return [
-      for (final (mapping, product) in await _appleProducts(
-        PaymentProductKind.points,
-      ))
+      for (final mapping in await _appleProducts(PaymentProductKind.points))
         PointPackage(
           id: mapping.businessId,
-          name: mapping.title.isEmpty ? product.title : mapping.title,
-          currency: '',
+          name: mapping.title,
+          currency: 'CNY',
           priceAmount: mapping.amountFen / 100,
           pointsAmount: mapping.pointsAmount,
           bonusPoints: mapping.bonusPoints,
@@ -123,7 +98,6 @@ class PurchaseCatalogRepository {
           updatedAt: null,
           appleProductId: mapping.productId,
           appleProductVersionId: mapping.id,
-          localizedPrice: product.price,
           validityPeriod: mapping.validityPeriod,
         ),
     ];

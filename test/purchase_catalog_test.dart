@@ -54,6 +54,8 @@ Map<String, Object?> _mapping({
   'enabled': enabled,
   'sales_channel': 'ios',
   'title': 'Apple product $id',
+  'description':
+      'Included courses\n\n<title>Video models</title>\n\n<mark>Seedance 2.0</mark> model',
   'member_level': '2',
   'plan_category': 'yearly',
   'duration_unit': 'year',
@@ -96,42 +98,43 @@ void main() {
       );
     repository = PurchaseCatalogRepository(
       NetworkApi(dio),
-      appleStore: store,
+      useAppleCatalog: true,
       environment: 'Sandbox',
     );
   });
 
   test(
-    'Apple membership uses mapping IDs and StoreKit prices without quoting',
+    'Apple membership uses server mapping IDs and prices without StoreKit',
     () async {
       final plans = await repository.plans();
       expect(plans.map((item) => item.id), [202, 202]);
       expect(plans.map((item) => item.appleProductVersionId), [301, 303]);
-      expect(plans.first.localizedPrice, 'HK\$38.00');
+      expect(plans.first.localizedPrice, isNull);
       expect(plans.first.price, 3800);
+      expect(plans.first.description, _mapping()['description']);
       expect(plans.first.level, 2);
       expect(plans.first.months, 12);
       expect(plans.first.planCategory, 'yearly');
       expect(plans.first.coins + plans.first.bonusPointsAmount, 2000);
-      expect(store.queries, [
-        {'com.popi.ios.301', 'com.popi.ios.303'},
-      ]);
+      expect(store.queries, isEmpty);
       expect(requests.single.path, '/api_client/trade/payment/apple/products');
       expect(requests.single.queryParameters, {'environment': 'Sandbox'});
     },
   );
 
   test(
-    'Apple points preserve mapping, localized price and package validity',
+    'Apple points preserve server mapping, price and package validity',
     () async {
       final package = (await repository.pointPackages()).single;
       expect(package.id, 203);
       expect(package.appleProductVersionId, 302);
       expect(package.appleProductId, 'com.popi.ios.302');
-      expect(package.localizedPrice, 'HK\$38.00');
+      expect(package.localizedPrice, isNull);
+      expect(package.priceAmount, 38);
+      expect(package.name, 'Apple product 302');
       expect(package.totalPoints, 2000);
       expect(package.validityPeriod, 'year');
-      expect(store.queries.single, {'com.popi.ios.302'});
+      expect(store.queries, isEmpty);
       expect(requests.single.path, '/api_client/trade/payment/apple/products');
     },
   );
@@ -144,7 +147,7 @@ void main() {
       expect(store.queries, isEmpty);
       mappings = [_mapping()];
       store.missing.add('com.popi.ios.301');
-      await expectLater(repository.plans(), throwsStateError);
+      expect(await repository.plans(), hasLength(1));
       expect(
         requests.every((item) => item.path.endsWith('/apple/products')),
         isTrue,
@@ -152,14 +155,13 @@ void main() {
     },
   );
 
-  test(
-    'StoreKit failure remains a catalog error without standard fallback',
-    () async {
-      store.isAvailable = false;
-      await expectLater(repository.plans(), throwsStateError);
-      expect(requests, hasLength(1));
-    },
-  );
+  test('StoreKit unavailable does not block either Apple catalog', () async {
+    store.isAvailable = false;
+    expect(await repository.plans(), hasLength(2));
+    expect(await repository.pointPackages(), hasLength(1));
+    expect(store.queries, isEmpty);
+    expect(requests, hasLength(2));
+  });
 
   test('Android catalogs use standard list envelopes and units', () async {
     requests.clear();
@@ -242,24 +244,31 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'iOS membership loads Apple catalog and displays localized annual price',
-    (tester) async {
-      await pumpApplePage(tester, const MembershipPage());
-      expect(requests.single.path, '/api_client/trade/payment/apple/products');
-      expect(find.text('HK\$38.00'), findsOneWidget);
-      expect(find.text('每年'), findsOneWidget);
-      expect(find.text('积分/月'), findsNothing);
-      expect(find.text('¥'), findsNothing);
-      expect(find.text('确认支付'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+  testWidgets('iOS membership displays server annual price without StoreKit', (
+    tester,
+  ) async {
+    await pumpApplePage(tester, const MembershipPage());
+    expect(requests.single.path, '/api_client/trade/payment/apple/products');
+    expect(find.text('38'), findsOneWidget);
+    expect(find.text('每年'), findsOneWidget);
+    expect(find.text('积分/月'), findsNothing);
+    expect(find.text('¥'), findsOneWidget);
+    expect(find.text('确认支付'), findsOneWidget);
+    expect(
+      find.textContaining('Included courses', findRichText: true),
+      findsWidgets,
+    );
+    expect(
+      find.textContaining('Seedance 2.0', findRichText: true),
+      findsWidgets,
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets(
-    'iOS points entry loads only Apple packages with localized prices',
+    'iOS points entry displays server prices even when StoreKit is unavailable',
     (tester) async {
+      store.isAvailable = false;
       await pumpApplePage(
         tester,
         const PointsDetailsPage(
@@ -270,7 +279,8 @@ void main() {
       await tester.tap(find.byKey(const Key('points-recharge-entry')));
       await tester.pumpAndSettle();
       expect(requests.single.path, '/api_client/trade/payment/apple/products');
-      expect(find.text('HK\$38.00'), findsOneWidget);
+      expect(find.text('¥38'), findsOneWidget);
+      expect(store.queries, isEmpty);
       expect(find.byKey(const Key('points-package-2000')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

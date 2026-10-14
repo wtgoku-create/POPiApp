@@ -129,9 +129,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     if (loader != null) return loader();
     return PurchaseCatalogRepository(
       NetworkApi(ref.read(dioProvider)),
-      appleStore: usesApplePayments
-          ? ref.read(applePurchaseServiceProvider).store
-          : null,
+      useAppleCatalog: usesApplePayments,
     ).pointPackages();
   }
 
