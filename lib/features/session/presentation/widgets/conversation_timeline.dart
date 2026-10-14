@@ -5,22 +5,30 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../core/network/agent_api_exception.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
+import '../../../../shared/widgets/app_video_player.dart';
 import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../data/session_repository.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_role_card.dart';
+import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
+import 'conversation_card_content.dart';
 import 'conversation_generation_card.dart';
 import 'conversation_task_card.dart';
 
@@ -32,14 +40,25 @@ const _userBubbleRadius = BorderRadius.only(
   bottomRight: Radius.circular(26),
 );
 
-bool _hasRoleObjects(ConversationMessage message) => message.blocks.any(
-  (block) => block.type == 'object' && block.kind == 'role',
+bool _hasFullWidthObjects(ConversationMessage message) => message.blocks.any(
+  (block) =>
+      block.type == 'object' &&
+      (block.kind == 'role' ||
+          block.kind == 'topic' && block.action == 'selected'),
 );
 
+// Progress uses the event suffix "started" while runs use the state "running".
+bool _progressRunning(ConversationBlock block) =>
+    ['pending', 'started', 'running'].contains(block.status);
+
 String conversationErrorText(Object? error, AppLocalizations l10n) {
-  if (error is AgentApiException &&
-      ['INSUFFICIENT_POINTS', 'INSUFFICIENT_COINS'].contains(error.code)) {
-    return l10n.chatInsufficientPoints;
+  if (error is AgentApiException) {
+    return conversationTaskErrorText(
+      l10n,
+      code: error.code,
+      message: error.message,
+      fallback: l10n.chatRequestFailed,
+    );
   }
   if (error is ApiException && error.message?.isNotEmpty == true) {
     return error.message!;
@@ -52,12 +71,10 @@ class ConversationTimeline extends StatefulWidget {
   const ConversationTimeline({
     required this.controller,
     this.onRevise,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationController controller;
   final ValueChanged<ConversationBlock>? onRevise;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationTimeline> createState() => _ConversationTimelineState();
 }
@@ -94,11 +111,11 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     final snapshot = widget.controller.snapshot;
     if (snapshot == null || identical(snapshot, _lastSnapshot)) return;
     if (_lastSnapshot?.session.id != snapshot.session.id) {
-      _initialHistoryPending = snapshot.messages.isNotEmpty;
+      _initialHistoryPending = snapshot.presentationMessages.isNotEmpty;
       _latestMessageBuilt = false;
     }
     final messages = [
-      for (final message in snapshot.messages)
+      for (final message in snapshot.presentationMessages)
         chat.TextMessage(
           id: message.id,
           authorId: message.role == 'user'
@@ -110,12 +127,16 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
         ),
     ];
     final previous = _chat.messages;
-    if (_lastSnapshot?.session.id != snapshot.session.id ||
-        previous.any(
-          (item) => !messages.any((message) => message.id == item.id),
-        )) {
+    if (_lastSnapshot?.session.id != snapshot.session.id) {
       unawaited(_chat.setMessages(messages, animated: false));
     } else {
+      // Emit removals and updates separately so retained cards receive new metadata.
+      final ids = messages.map((message) => message.id).toSet();
+      for (final old in previous.reversed.toList()) {
+        if (!ids.contains(old.id)) {
+          unawaited(_chat.removeMessage(old, animated: false));
+        }
+      }
       for (var i = 0; i < messages.length; i++) {
         final old = _chat.messages
             .where((item) => item.id == messages[i].id)
@@ -140,8 +161,10 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       _initialScrollScheduled = false;
       if (!mounted || !_initialHistoryPending || !_scroll.hasClients) return;
       final position = _scroll.position;
-      if (_latestMessageBuilt && position.extentAfter <= 1) {
-        _initialHistoryPending = false;
+      if (_latestMessageBuilt &&
+          (position.pixels - position.maxScrollExtent).abs() <= 1 &&
+          !position.isScrollingNotifier.value) {
+        setState(() => _initialHistoryPending = false);
         return;
       }
       // Lazy items refine the estimated extent until the actual last message is laid out.
@@ -159,9 +182,32 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     final children = <Widget>[];
     final objectOccurrences = <(String?, String), int>{};
     var topicGroup = 0;
+    var castGroup = 0;
     for (var index = 0; index < message.blocks.length; index++) {
       final block = message.blocks[index];
       if (block.type == 'object' &&
+          block.kind == 'role' &&
+          block.action == 'cast') {
+        final cast = [block];
+        while (index + 1 < message.blocks.length) {
+          final next = message.blocks[index + 1];
+          if (next.type != 'object' ||
+              next.kind != 'role' ||
+              next.action != 'cast' ||
+              next.scopeId != block.scopeId ||
+              next.scopeKind != block.scopeKind) {
+            break;
+          }
+          cast.add(next);
+          index++;
+        }
+        children.add(
+          ConversationCastCard(
+            key: ValueKey((message.id, 'cast', castGroup++)),
+            blocks: cast,
+          ),
+        );
+      } else if (block.type == 'object' &&
           block.kind == 'topic' &&
           block.action != 'selected' &&
           !isSentByMe) {
@@ -190,7 +236,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       } else if (block.type == 'text' && block.text.isNotEmpty) {
         final text = MarkdownMessage(text: block.text, emphasized: isSentByMe);
         children.add(
-          isSentByMe && _hasRoleObjects(message)
+          isSentByMe && _hasFullWidthObjects(message)
               ? LayoutBuilder(
                   builder: (context, constraints) => Align(
                     alignment: Alignment.centerRight,
@@ -236,7 +282,6 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
             block: block,
             controller: controller,
             onRevise: widget.onRevise,
-            onModelParametersRequested: widget.onModelParametersRequested,
           ),
         );
       }
@@ -258,7 +303,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     builder: (context, _) {
       final l10n = AppLocalizations.of(context)!;
       final controller = widget.controller;
-      return Chat(
+      final positioning = controller.loading || _initialHistoryPending;
+      final timeline = Chat(
         currentUserId: controller.userId,
         resolveUser: (id) async =>
             chat.User(id: id, name: id == 'popi-agent' ? 'POPi' : null),
@@ -279,6 +325,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                   // Short conversations start at the top; long histories open at the end.
                   scrollController: _scroll,
                   initialScrollToEndMode: InitialScrollToEndMode.none,
+                  shouldScrollToEndWhenAtBottom: !positioning,
+                  shouldScrollToEndWhenSendingMessage: !positioning,
                   itemBuilder: itemBuilder,
                   handleSafeArea: false,
                   topPadding: 10,
@@ -302,21 +350,19 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                   block: block,
                                   controller: controller,
                                 ),
-                              if (controller.loading)
-                                const LinearProgressIndicator(),
                               if (controller.running &&
                                   !(controller.snapshot?.messages.any(
                                         (message) => message.blocks.any(
                                           (block) =>
                                               block.kind == 'progress' &&
-                                              [
-                                                'pending',
-                                                'running',
-                                              ].contains(block.status),
+                                              _progressRunning(block),
                                         ),
                                       ) ??
                                       false))
-                                _ConversationThinking(label: l10n.chatThinking),
+                                _ConversationProgressHeader(
+                                  label: l10n.chatThinking,
+                                  running: true,
+                                ),
                               if (controller.connection ==
                                   ConversationConnection.reconnecting)
                                 Text(
@@ -340,15 +386,14 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          [
-                                                'INSUFFICIENT_POINTS',
-                                                'INSUFFICIENT_COINS',
-                                              ].contains(run.errorCode)
-                                              ? l10n.chatInsufficientPoints
-                                              : run.error ??
-                                                    (run.state == 'failed'
-                                                        ? l10n.chatRunFailed
-                                                        : l10n.chatStopped),
+                                          conversationTaskErrorText(
+                                            l10n,
+                                            code: run.errorCode,
+                                            message: run.error,
+                                            fallback: run.state == 'failed'
+                                                ? l10n.chatRunFailed
+                                                : l10n.chatStopped,
+                                          ),
                                         ),
                                       ),
                                       if (run.retryable &&
@@ -367,31 +412,6 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                         ),
                                     ],
                                   ),
-                              if (controller.error != null)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        conversationErrorText(
-                                          controller.error,
-                                          l10n,
-                                        ),
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.error,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: l10n.retry,
-                                      onPressed: controller.pending
-                                          ? null
-                                          : controller.refresh,
-                                      icon: const Icon(Icons.refresh),
-                                    ),
-                                  ],
-                                ),
                             ],
                           ),
                         ),
@@ -413,10 +433,11 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
               }) {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
-                if (item.id == _lastSnapshot?.messages.lastOrNull?.id) {
+                if (item.id ==
+                    _lastSnapshot?.presentationMessages.lastOrNull?.id) {
                   _latestMessageBuilt = true;
                 }
-                final userBubble = isSentByMe && !_hasRoleObjects(item);
+                final userBubble = isSentByMe && !_hasFullWidthObjects(item);
                 return Padding(
                   padding: _conversationMessagePadding,
                   child: Center(
@@ -446,7 +467,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
                 final colors = Theme.of(context).colorScheme;
-                final userBubble = isSentByMe && !_hasRoleObjects(item);
+                final userBubble = isSentByMe && !_hasFullWidthObjects(item);
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     color: userBubble ? colors.surface : Colors.transparent,
@@ -468,7 +489,82 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
               },
         ),
       );
+      // Keep lazy history laid out, but reveal it only at its final scroll offset.
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            ignoring: positioning,
+            child: ExcludeSemantics(
+              excluding: positioning,
+              child: Opacity(opacity: positioning ? 0 : 1, child: timeline),
+            ),
+          ),
+          if (positioning)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: _ConversationSkeleton(
+                    label: l10n.loadingProjectSessions,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
     },
+  );
+}
+
+class _ConversationSkeleton extends StatelessWidget {
+  const _ConversationSkeleton({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => AppSkeleton(
+    label: label,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var index = 0; index < 3; index++) ...[
+            if (index > 0) const SizedBox(height: 28),
+            if (index.isOdd)
+              const Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: .48,
+                  child: AppSkeletonBox(height: 16),
+                ),
+              )
+            else
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FractionallySizedBox(
+                    widthFactor: .82,
+                    child: AppSkeletonBox(height: 16),
+                  ),
+                  SizedBox(height: 10),
+                  AppSkeletonBox(height: 16),
+                  SizedBox(height: 10),
+                  FractionallySizedBox(
+                    widthFactor: .55,
+                    child: AppSkeletonBox(height: 16),
+                  ),
+                ],
+              ),
+          ],
+        ],
+      ),
+    ),
   );
 }
 
@@ -477,74 +573,123 @@ class MarkdownMessage extends StatelessWidget {
     required this.text,
     this.emphasized = false,
     this.compact = false,
+    this.softLineBreak = false,
+    this.style,
     super.key,
   });
   final String text;
   final bool emphasized;
   final bool compact;
+  final bool softLineBreak;
+  final TextStyle? style;
   @override
-  Widget build(BuildContext context) => MarkdownBody(
-    data: text,
-    selectable: true,
-    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-      p: TextStyle(
-        color: Theme.of(context).colorScheme.onSurface,
-        fontSize: compact ? 16 : 18,
-        height: compact ? 1.5 : 1.6,
-        fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final body =
+        style ??
+        (compact
+                ? ConversationCardTypography.body
+                : const TextStyle(fontSize: 18, height: 1.6))
+            .copyWith(
+              color: colors.onSurface,
+              fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
+            );
+    final heading = compact
+        ? ConversationCardTypography.title.copyWith(color: body.color)
+        : body.copyWith(fontSize: 20, fontWeight: FontWeight.w600);
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      softLineBreak: softLineBreak,
+      builders: {'pre': _WrappedPromptBuilder(style: body)},
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: body,
+        tableBody: body,
+        blockquote: body,
+        listBullet: body,
+        blockSpacing: 12,
+        codeblockDecoration: BoxDecoration(
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: .035),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        h1: heading,
+        h2: heading,
+        h3: heading,
+        h4: heading,
+        h5: heading,
+        h6: heading,
       ),
-      blockSpacing: 12,
-      h1: const TextStyle(
-        fontSize: 22,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
+      onTapLink: (_, href, __) {
+        if (href != null) _openUrl(href);
+      },
+    );
+  }
+}
+
+/// Agent prompts in fenced blocks wrap within the card's reading viewport.
+class _WrappedPromptBuilder extends MarkdownElementBuilder {
+  _WrappedPromptBuilder({this.style});
+
+  final TextStyle? style;
+
+  @override
+  Widget visitText(md.Text text, TextStyle? preferredStyle) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: SelectableText(
+        text.text.replaceFirst(RegExp(r'\n$'), ''),
+        style: style ?? const TextStyle(fontSize: 14, height: 1.6),
       ),
-      h2: const TextStyle(
-        fontSize: 20,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
-      h3: const TextStyle(
-        fontSize: 18,
-        height: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-    onTapLink: (_, href, __) {
-      if (href != null) _openUrl(href);
-    },
-  );
+    );
+  }
 }
 
 /// Only displays the real run state; backend stages are not inferred locally.
-class _ConversationThinking extends StatelessWidget {
-  const _ConversationThinking({required this.label});
+class _ConversationProgressHeader extends StatelessWidget {
+  const _ConversationProgressHeader({
+    required this.label,
+    required this.running,
+    this.expanded = false,
+    this.onToggle,
+  });
   final String label;
+  final bool running;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) => Semantics(
-    liveRegion: true,
+    liveRegion: running,
     child: Padding(
       padding: _conversationBlockPadding,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           const AppSvgIcon.asset('chat_thinking', size: 25),
           const SizedBox(width: 8),
-          Expanded(
+          Flexible(
             child: Text(
               label,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 18,
+                height: 1.4,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          SizedBox.square(
-            dimension: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              // A static indicator respects the system's reduced-motion setting.
-              value: MediaQuery.disableAnimationsOf(context) ? .75 : null,
+          if (onToggle != null)
+            IconButton(
+              tooltip: expanded
+                  ? AppLocalizations.of(context)!.chatCollapseProgress
+                  : AppLocalizations.of(context)!.chatExpandProgress,
+              onPressed: onToggle,
+              icon: Icon(
+                expanded ? Icons.expand_more : Icons.chevron_right,
+                size: 20,
+              ),
             ),
-          ),
         ],
       ),
     ),
@@ -562,22 +707,45 @@ class ConversationMediaView extends StatefulWidget {
   const ConversationMediaView({
     required this.id,
     required this.repository,
+    this.thumbnailSize,
+    this.result = false,
     super.key,
   });
   final String id;
   final SessionRepository repository;
+  final double? thumbnailSize;
+  final bool result;
   @override
   State<ConversationMediaView> createState() => _ConversationMediaViewState();
 }
 
 class _ConversationMediaViewState extends State<ConversationMediaView> {
-  late Future<ConversationMedia> _media = widget.repository.media(widget.id);
+  late Future<ConversationMedia> _media = _load();
+
+  Future<ConversationMedia> _load() async {
+    final id = widget.id;
+    final repository = widget.repository;
+    try {
+      return await repository.media(id);
+    } catch (error) {
+      if (mounted &&
+          widget.id == id &&
+          identical(widget.repository, repository)) {
+        AppToast.error(
+          context,
+          conversationErrorText(error, AppLocalizations.of(context)!),
+        );
+      }
+      rethrow;
+    }
+  }
+
   @override
   void didUpdateWidget(ConversationMediaView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.id != widget.id ||
         oldWidget.repository != widget.repository) {
-      _media = widget.repository.media(widget.id);
+      _media = _load();
     }
   }
 
@@ -588,20 +756,22 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
       final l10n = AppLocalizations.of(context)!;
       if (snapshot.hasError) {
         return _MediaFrame(
+          result: widget.result,
+          thumbnailSize: widget.thumbnailSize,
           child: Center(
-            child: IconButton(
-              tooltip: l10n.retry,
-              onPressed: () =>
-                  setState(() => _media = widget.repository.media(widget.id)),
-              icon: const Icon(Icons.refresh),
+            child: Tooltip(
+              message: l10n.chatUnavailable,
+              child: const Icon(Icons.broken_image_outlined),
             ),
           ),
         );
       }
       final media = snapshot.data;
       if (media == null) {
-        return const _MediaFrame(
-          child: Center(
+        return _MediaFrame(
+          result: widget.result,
+          thumbnailSize: widget.thumbnailSize,
+          child: const Center(
             child: SizedBox.square(
               dimension: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
@@ -610,17 +780,19 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
         );
       }
       if (media.kind == 'image') {
-        return Semantics(
+        final preview = Semantics(
           button: true,
           label: l10n.chatPreviewImage,
           child: GestureDetector(
             onTap: () => AppImagePreview.show(
               context: context,
-              image: NetworkImage(media.url),
+              image: AppImageCache.provider(media.url),
               heroTag: 'conversation-media-${media.id}',
             ),
             child: _MediaFrame(
-              child: Image.network(
+              result: widget.result,
+              thumbnailSize: widget.thumbnailSize,
+              child: AppNetworkImage(
                 media.url,
                 fit: BoxFit.contain,
                 loadingBuilder: (context, child, progress) => progress == null
@@ -632,18 +804,28 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
                         ),
                       ),
                 errorBuilder: (_, __, ___) => Center(
-                  child: IconButton(
-                    tooltip: l10n.retry,
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      NetworkImage(media.url).evict();
-                      setState(
-                        () => _media = widget.repository.media(widget.id),
-                      );
-                    },
+                  child: Tooltip(
+                    message: l10n.chatUnavailable,
+                    child: const Icon(Icons.broken_image_outlined),
                   ),
                 ),
               ),
+            ),
+          ),
+        );
+        return preview;
+      }
+      if (media.kind == 'video' && widget.thumbnailSize == null) {
+        return _MediaFrame(
+          result: true,
+          child: ColoredBox(
+            color: Colors.black,
+            child: AppVideoPlayer(
+              url: Uri.parse(media.url),
+              aspectRatio: 16 / 9,
+              controlsKeyPrefix: 'conversation-video-${media.id}',
+              onFullscreen: (url) =>
+                  AppVideoPreview.show(context: context, url: url),
             ),
           ),
         );
@@ -663,26 +845,58 @@ class _ConversationMediaViewState extends State<ConversationMediaView> {
 
 /// Media keeps the same footprint while its URL and image bytes load.
 class _MediaFrame extends StatelessWidget {
-  const _MediaFrame({required this.child});
+  const _MediaFrame({
+    required this.child,
+    this.thumbnailSize,
+    this.result = false,
+  });
   final Widget child;
+  final double? thumbnailSize;
+  final bool result;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: _conversationBlockPadding,
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
-      child: AspectRatio(
-        aspectRatio: 4 / 3,
+  Widget build(BuildContext context) {
+    if (thumbnailSize case final size?) {
+      return SizedBox.square(
+        dimension: size,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadii.card),
+          borderRadius: BorderRadius.circular(8),
           child: ColoredBox(
             color: Theme.of(context).colorScheme.surfaceContainerLow,
             child: child,
           ),
         ),
+      );
+    }
+    if (result) {
+      return AspectRatio(
+        aspectRatio: 16 / 9,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surfaceContainerLow,
+            child: child,
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: _conversationBlockPadding,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            child: ColoredBox(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              child: child,
+            ),
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ConversationTopics extends StatefulWidget {
@@ -740,78 +954,80 @@ class _ConversationTopicsState extends State<_ConversationTopics>
         controller.snapshot?.topicLocked(widget.message, topic) != false;
     final disabled =
         controller.pending || controller.running || controller.loading;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ConversationObjectView(
-          key: ValueKey((topic.referenceId, _index)),
-          block: topic,
-          controller: widget.controller,
-          headerTrailing: widget.topics.length > 1
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n.roleStoryPosition(_index + 1, widget.topics.length),
-                      key: const Key('conversation-topic-position'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+    final selected =
+        _selected ||
+        controller.snapshot?.selectedTopicId(widget.message, topic) ==
+                topic.referenceId &&
+            topic.referenceId.isNotEmpty;
+    return ConversationObjectView(
+      key: ValueKey((topic.referenceId, _index)),
+      block: topic,
+      controller: widget.controller,
+      headerTrailing: widget.topics.length > 1
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.roleStoryPosition(_index + 1, widget.topics.length),
+                  key: const Key('conversation-topic-position'),
+                  style: ConversationCardTypography.caption.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                _arrow(context, l10n.rolePreviousStory, -1),
+                _arrow(context, l10n.roleNextStory, 1),
+              ],
+            )
+          : null,
+      footer: locked && !selected
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!locked && topic.referenceId.isNotEmpty)
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      IconButton(
+                        key: const Key('conversation-topic-refresh'),
+                        tooltip: l10n.roleRefreshStories,
+                        onPressed: disabled
+                            ? null
+                            : () async {
+                                if (await controller.topicAction(
+                                      widget.message,
+                                      topic,
+                                      refreshTopics: true,
+                                    ) &&
+                                    mounted) {
+                                  setState(() => _refreshed = true);
+                                }
+                              },
+                        icon: const Icon(Icons.refresh),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    _arrow(context, l10n.rolePreviousStory, -1),
-                    _arrow(context, l10n.roleNextStory, 1),
-                  ],
-                )
-              : null,
-        ),
-        if (!locked && topic.referenceId.isNotEmpty)
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              IconButton(
-                key: const Key('conversation-topic-refresh'),
-                tooltip: l10n.roleRefreshStories,
-                onPressed: disabled
-                    ? null
-                    : () async {
-                        if (await controller.topicAction(
-                              widget.message,
-                              topic,
-                              refreshTopics: true,
-                            ) &&
-                            mounted) {
-                          setState(() => _refreshed = true);
-                        }
-                      },
-                icon: const Icon(Icons.refresh),
-              ),
-              FilledButton(
-                key: const Key('conversation-topic-select'),
-                onPressed: disabled
-                    ? null
-                    : () async {
-                        if (await controller.topicAction(
-                              widget.message,
-                              topic,
-                            ) &&
-                            mounted) {
-                          setState(() => _selected = true);
-                        }
-                      },
-                child: Text(l10n.roleChooseStory),
-              ),
-            ],
-          ),
-        if (_selected ||
-            controller.snapshot?.selectedTopicId(widget.message, topic) ==
-                    topic.referenceId &&
-                topic.referenceId.isNotEmpty)
-          Text(l10n.chatTopicSelected),
-      ],
+                      FilledButton(
+                        key: const Key('conversation-topic-select'),
+                        onPressed: disabled
+                            ? null
+                            : () async {
+                                if (await controller.topicAction(
+                                      widget.message,
+                                      topic,
+                                    ) &&
+                                    mounted) {
+                                  setState(() => _selected = true);
+                                }
+                              },
+                        child: Text(l10n.roleChooseStory),
+                      ),
+                    ],
+                  ),
+                if (selected) Text(l10n.chatTopicSelected),
+              ],
+            ),
     );
   }
 
@@ -854,16 +1070,16 @@ class ConversationObjectView extends StatefulWidget {
     required this.controller,
     this.framed = true,
     this.headerTrailing,
+    this.footer,
     this.onRevise,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationBlock block;
   final ConversationController controller;
   final bool framed;
   final Widget? headerTrailing;
+  final Widget? footer;
   final ValueChanged<ConversationBlock>? onRevise;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationObjectView> createState() => _ConversationObjectViewState();
 }
@@ -896,6 +1112,13 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
     super.build(context);
     final block = widget.block;
     if (block.kind == 'role') return ConversationRoleCard(block: block);
+    if (block.kind == 'topic' && block.action == 'selected') {
+      return ConversationSelectedTopicCard(
+        key: ValueKey((block.referenceId, block.scopeId)),
+        block: block,
+        framed: widget.framed,
+      );
+    }
     final controller = widget.controller;
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
@@ -911,7 +1134,6 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
         key: ValueKey(block.id),
         block: block,
         controller: controller,
-        onModelParametersRequested: widget.onModelParametersRequested,
       );
     }
     if (block.kind == 'task') {
@@ -933,34 +1155,12 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const AppSvgIcon.asset('chat_thinking', size: 25),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    ['pending', 'running'].contains(block.status)
-                        ? l10n.chatThinking
-                        : statusLabel,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: _progressExpanded
-                      ? l10n.chatCollapseProgress
-                      : l10n.chatExpandProgress,
-                  onPressed: () =>
-                      setState(() => _progressExpanded = !_progressExpanded),
-                  icon: Icon(
-                    _progressExpanded ? Icons.expand_more : Icons.chevron_right,
-                    size: 20,
-                  ),
-                ),
-              ],
+            _ConversationProgressHeader(
+              label: _progressRunning(block) ? l10n.chatThinking : statusLabel,
+              running: _progressRunning(block),
+              expanded: _progressExpanded,
+              onToggle: () =>
+                  setState(() => _progressExpanded = !_progressExpanded),
             ),
             if (_progressExpanded)
               Container(
@@ -974,55 +1174,62 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                       : colors.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(26),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Render only backend-provided steps; never manufacture progress.
-                    for (final (key, state) in block.progressSteps)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (['running', 'waiting'].contains(state))
-                              SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  value: MediaQuery.disableAnimationsOf(context)
-                                      ? .75
-                                      : null,
+                child: ConversationCardContent(
+                  storageId:
+                      'progress:${block.data['runId'] ?? block.id}:${block.data['attempt'] ?? 1}',
+                  maxViewportHeight: 360,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Render only backend-provided steps; never manufacture progress.
+                      for (final (key, state) in block.progressSteps)
+                        Padding(
+                          key: ValueKey('conversation-progress-step-$key'),
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (['running', 'waiting'].contains(state))
+                                SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    value:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? .75
+                                        : null,
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  state == 'completed'
+                                      ? Icons.check
+                                      : state == 'failed'
+                                      ? Icons.error_outline
+                                      : state == 'skipped'
+                                      ? Icons.remove
+                                      : Icons.circle_outlined,
+                                  size: 18,
+                                  color: state == 'failed'
+                                      ? colors.error
+                                      : colors.primary,
                                 ),
-                              )
-                            else
-                              Icon(
-                                state == 'completed'
-                                    ? Icons.check
-                                    : state == 'failed'
-                                    ? Icons.error_outline
-                                    : state == 'skipped'
-                                    ? Icons.remove
-                                    : Icons.circle_outlined,
-                                size: 18,
-                                color: state == 'failed'
-                                    ? colors.error
-                                    : colors.primary,
-                              ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _progressLabel(key, l10n),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  _progressLabel(key, l10n),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -1063,8 +1270,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 Expanded(
                   child: Text(
                     statusLabel,
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: ConversationCardTypography.caption.copyWith(
                       color: block.status == 'failed'
                           ? colors.error
                           : colors.primary,
@@ -1090,7 +1296,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                         ? const AppSvgIcon.asset('chat_role_draft', size: 70)
                         : ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
+                            child: AppNetworkImage(
                               block.avatar!,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
@@ -1106,11 +1312,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 Expanded(
                   child: Text(
                     block.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: ConversationCardTypography.title,
                   ),
                 ),
                 if (widget.headerTrailing != null) ...[
@@ -1125,38 +1327,66 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                   ),
               ],
             ),
-          if (block.body.isNotEmpty &&
-              !details.any((detail) => detail.$2 == block.body))
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: block.storyboard != null
-                  ? RoleStoryboardBody(storyboard: block.storyboard!)
-                  : MarkdownMessage(text: block.body, compact: true),
+          ConversationCardContent(
+            storageId: 'object:${block.kind}:${block.id}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (block.body.isNotEmpty &&
+                    !details.any((detail) => detail.$2 == block.body))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: block.storyboard != null
+                        ? RoleStoryboardBody(
+                            storyboard: block.storyboard!,
+                            markdownBuilder: (text) => MarkdownMessage(
+                              text: text,
+                              compact: true,
+                              softLineBreak: true,
+                            ),
+                          )
+                        : MarkdownMessage(text: block.body, compact: true),
+                  ),
+                if (block.kind == 'topic' &&
+                    block.hook.isNotEmpty &&
+                    !block.body.contains(block.hook))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: MarkdownMessage(text: block.hook, compact: true),
+                  ),
+                if (block.kind == 'plan')
+                  if (block.previewRole case final role?)
+                    ConversationRoleCard(block: role, framed: false),
+                for (final (label, before, after) in block.profileChanges) ...[
+                  _ConversationDetail(
+                    label:
+                        '${_detailLabel(label, l10n)} · ${l10n.chatBeforeChange}',
+                    value: before.isEmpty ? l10n.chatUnavailable : before,
+                  ),
+                  _ConversationDetail(
+                    label:
+                        '${_detailLabel(label, l10n)} · ${l10n.chatAfterChange}',
+                    value: after,
+                  ),
+                ],
+                // Keep long profiles compact in the timeline; expansion retains the
+                // same object identity while SSE updates refresh its contents.
+                for (final (label, value)
+                    in _expanded ? details : details.take(3))
+                  _ConversationDetail(
+                    label: _detailLabel(label, l10n),
+                    value: value,
+                  ),
+                for (final prompt in block.planPrompts)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: MarkdownMessage(text: prompt, compact: true),
+                  ),
+                for (final (label, value) in block.answeredFields)
+                  _ConversationDetail(label: label, value: value),
+              ],
             ),
-          if (block.kind == 'topic' &&
-              block.hook.isNotEmpty &&
-              !block.body.contains(block.hook))
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: MarkdownMessage(text: block.hook, compact: true),
-            ),
-          if (block.kind == 'plan')
-            if (block.previewRole case final role?)
-              ConversationRoleCard(block: role, framed: false),
-          for (final (label, before, after) in block.profileChanges) ...[
-            _ConversationDetail(
-              label: '${_detailLabel(label, l10n)} · ${l10n.chatBeforeChange}',
-              value: before.isEmpty ? l10n.chatUnavailable : before,
-            ),
-            _ConversationDetail(
-              label: '${_detailLabel(label, l10n)} · ${l10n.chatAfterChange}',
-              value: after,
-            ),
-          ],
-          // Keep long profiles compact in the timeline; expansion retains the
-          // same object identity while SSE updates refresh its contents.
-          for (final (label, value) in _expanded ? details : details.take(3))
-            _ConversationDetail(label: _detailLabel(label, l10n), value: value),
+          ),
           if (details.length > 3)
             Padding(
               padding: const EdgeInsets.only(top: 20),
@@ -1178,13 +1408,6 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 ),
               ),
             ),
-          for (final prompt in block.planPrompts)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: MarkdownMessage(text: prompt, compact: true),
-            ),
-          for (final (label, value) in block.answeredFields)
-            _ConversationDetail(label: label, value: value),
           for (final result in block.results)
             ConversationObjectView(
               key: ValueKey(result.id),
@@ -1257,6 +1480,11 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 ],
               ),
             ),
+          if (widget.footer != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: widget.footer,
+            ),
         ],
       ),
     );
@@ -1276,14 +1504,12 @@ class _ConversationDetail extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            fontSize: 16,
-            height: 1.4,
+          style: ConversationCardTypography.body.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 5),
-        Text(value, style: const TextStyle(fontSize: 16, height: 1.5)),
+        Text(value, style: ConversationCardTypography.body),
       ],
     ),
   );
@@ -1382,21 +1608,13 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            widget.block.title,
-            style: const TextStyle(
-              fontSize: 18,
-              height: 1.4,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(widget.block.title, style: ConversationCardTypography.title),
           for (final field in widget.block.fields) ...[
             Padding(
               padding: const EdgeInsets.only(top: 20, bottom: 6),
               child: Text(
                 field.label,
-                style: TextStyle(
-                  fontSize: 16,
+                style: ConversationCardTypography.body.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
@@ -1412,7 +1630,7 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
                   selectedTileColor: Theme.of(
                     context,
                   ).colorScheme.primary.withValues(alpha: .05),
-                  title: Text(option),
+                  title: Text(option, style: ConversationCardTypography.body),
                   value: (_answers[field.id] as List<String>? ?? []).contains(
                     option,
                   ),
@@ -1446,7 +1664,10 @@ class _ConversationQuestionState extends State<_ConversationQuestion>
                         selectedTileColor: Theme.of(
                           context,
                         ).colorScheme.primary.withValues(alpha: .05),
-                        title: Text(option),
+                        title: Text(
+                          option,
+                          style: ConversationCardTypography.body,
+                        ),
                         value: option,
                         enabled: !disabled,
                       ),

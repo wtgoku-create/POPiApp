@@ -96,11 +96,13 @@ class RoleCastSummary extends StatelessWidget {
     required this.cast,
     required this.onViewProfiles,
     this.onEdit,
+    this.avatarOffset = 16,
     super.key,
   });
   final List<LibraryRole> cast;
   final VoidCallback onViewProfiles;
   final VoidCallback? onEdit;
+  final double avatarOffset;
 
   @override
   Widget build(BuildContext context) {
@@ -117,21 +119,26 @@ class RoleCastSummary extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 50 + (cast.length.clamp(1, 3) - 1) * 16,
-                height: 50,
+                width: 74 + (cast.length.clamp(1, 3) - 1) * avatarOffset,
+                height: 70,
                 child: Stack(
                   children: [
                     for (var i = cast.length.clamp(0, 3) - 1; i >= 0; i--)
                       Positioned(
-                        left: i * 16,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: AppColors.brand.withValues(alpha: .1),
-                            borderRadius: BorderRadius.circular(15),
+                        left: 12 + i * avatarOffset,
+                        top: 10,
+                        child: Transform.rotate(
+                          key: ValueKey('role-cast-fan-$i'),
+                          angle: (i - (cast.length.clamp(1, 3) - 1) / 2) * .22,
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: AppColors.brand.withValues(alpha: .1),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: RoleGuideAvatar(role: cast[i], size: 44),
                           ),
-                          child: RoleGuideAvatar(role: cast[i], size: 44),
                         ),
                       ),
                   ],
@@ -166,6 +173,8 @@ class RoleCastSummary extends StatelessWidget {
                     ),
                     Text(
                       cast.map((role) => role.title).join('、'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 14),
                     ),
                   ],

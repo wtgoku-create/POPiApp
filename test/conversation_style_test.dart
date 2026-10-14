@@ -7,10 +7,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_selected_topic_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
@@ -55,6 +59,25 @@ Map<String, Object?> _topic(
         '### 故事梗概\n\nStory $id\n\n'
         '### 适合角色的原因\n\nA warm, quiet afternoon together.\n\n'
         '### 核心看点\n\nA playful moment in a familiar home.',
+  },
+};
+
+Map<String, Object?> _castRole(
+  String id,
+  String title, {
+  String scopeId = '301',
+  String action = 'cast',
+}) => {
+  'type': 'object',
+  'kind': 'role',
+  'action': action,
+  'scope': {'kind': 'session', 'id': scopeId},
+  'data': {
+    'ref': {'kind': 'role', 'id': id, 'versionId': 'saved-$id'},
+    'title': title,
+    'status': 'active',
+    'avatar': 'assets/images/role_guide_avatar_${id == '1' ? 1 : 2}.png',
+    'profile': {'title': title, 'description': 'Saved profile $id'},
   },
 };
 
@@ -146,6 +169,122 @@ void main() {
     ('desktop', const Size(1280, 900), const Locale('en'), false, 1.0),
     ('accessible-dark', const Size(320, 844), const Locale('en'), true, 1.5),
   ]) {
+    testWidgets('confirmed topic reads and collapses at $name', (tester) async {
+      final chinese = locale.languageCode == 'zh';
+      final title = chinese
+          ? '来财的专属晒太阳角落'
+          : 'A quiet afternoon in a sunny cardboard home';
+      final story = chinese
+          ? '午后的阳光落在窗边，来财抱着自己的小纸箱，认真寻找最暖和的位置。'
+                '当朋友悄悄靠近，它把纸箱挪出一点空间，邀请对方一起享受这段安静的时光。'
+          : 'Afternoon sunlight reaches the window. Carrying a small cardboard '
+                'box, the character searches for the warmest corner. When a friend '
+                'arrives, it quietly makes room to share a peaceful moment.';
+      final hook = chinese
+          ? '从独占阳光到主动分享，用一个小动作完成温暖的转变。'
+          : 'A small gesture turns a private sunny corner into a shared home.';
+      Map<String, Object?> topic({bool long = false}) {
+        final value = _topic('confirmed', action: 'selected', title: title);
+        final data = value['data'] as Map<String, Object?>;
+        data['summary'] = chinese
+            ? '### 故事梗概\n\n$story'
+            : '### Synopsis\n\n$story';
+        if (long) {
+          data['summary'] =
+              '${data['summary']}\n\n'
+              '${List.generate(15, (index) => '$index. $story').join('\n\n')}';
+        }
+        data['hook'] = hook;
+        return value;
+      }
+
+      final repository = await _pumpTopicPage(
+        tester,
+        [
+          {'type': 'text', 'text': chinese ? '确认这个选题' : 'Use this story'},
+          topic(),
+        ],
+        size: size,
+        locale: locale,
+        dark: dark,
+        scale: scale,
+        sentByUser: true,
+      );
+      final card = find.byType(ConversationSelectedTopicCard);
+      final content = find.byType(ConversationCardContent);
+      final toggle = find.byKey(
+        const Key('conversation-selected-topic-toggle'),
+      );
+      final l10n = lookupAppLocalizations(locale);
+      expect(card, findsOneWidget);
+      final cardRect = tester.getRect(card);
+      expect(cardRect.width, closeTo((size.width - 40).clamp(0, 640), .01));
+      expect(
+        tester
+            .getBottomLeft(find.text(chinese ? '确认这个选题' : 'Use this story'))
+            .dy,
+        lessThan(cardRect.top),
+      );
+      expect(find.text(l10n.chatTopicConfirmed), findsOneWidget);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(hook), findsOneWidget);
+      expect(find.byKey(const Key('conversation-topic-select')), findsNothing);
+      expect(find.byKey(const Key('conversation-topic-refresh')), findsNothing);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(tester.getSize(content).height, lessThanOrEqualTo(320));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await _capture(tester, '$name-confirmed-topic');
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(content, findsNothing);
+      expect(find.text(title), findsOneWidget);
+      expect(find.byTooltip(l10n.chatExpandStory), findsOneWidget);
+      await _capture(tester, '$name-confirmed-topic-collapsed');
+      repository.streams.single.add(
+        chatEvent(2, 'message.updated', {
+          'timelineUpdates': [
+            {
+              ...chatMessageJson(revision: 2),
+              'role': 'user',
+              'blocks': [topic(long: true)],
+            },
+          ],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(content, findsNothing);
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(content);
+      await tester.pumpAndSettle();
+      await tester.drag(content, const Offset(0, -150));
+      await tester.pumpAndSettle();
+      ScrollPosition position() => tester
+          .state<ScrollableState>(
+            find
+                .descendant(of: content, matching: find.byType(Scrollable))
+                .first,
+          )
+          .position;
+      final offset = position().pixels;
+      expect(offset, greaterThan(0));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(position().pixels, closeTo(offset, .01));
+      expect(repository.sends, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('topics share one card and retain the selected item at $name', (
       tester,
     ) async {
@@ -174,6 +313,15 @@ void main() {
       await tester.pumpAndSettle();
       final card = tester.getRect(find.byType(ConversationObjectView));
       final button = tester.getRect(next);
+      for (final key in [
+        'conversation-topic-refresh',
+        'conversation-topic-select',
+      ]) {
+        final action = tester.getRect(find.byKey(Key(key)));
+        expect(action.left, greaterThanOrEqualTo(card.left + 20));
+        expect(action.right, lessThanOrEqualTo(card.right - 20));
+        expect(action.bottom, lessThanOrEqualTo(card.bottom - 20));
+      }
       expect(button.right, closeTo(card.right - 20, .01));
       expect(button.top, closeTo(card.top + 24, .01));
       expect(
@@ -234,7 +382,157 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('Web role card collapse survives streamed updates at $name', (
+    testWidgets('cast role uses the horizontal reference layout at $name', (
+      tester,
+    ) async {
+      const title = '来财';
+      const description = '橘纹软萌橘猫，裹着毛边白背心，顽固坚守自己的晒太阳角落。';
+      await _pumpTopicPage(
+        tester,
+        [
+          {
+            'type': 'object',
+            'kind': 'role',
+            'action': 'cast',
+            'data': {
+              'title': title,
+              'status': 'active',
+              'avatar': 'assets/images/role_guide_avatar_1.png',
+              'profile': {'description': description},
+            },
+          },
+        ],
+        size: size,
+        locale: locale,
+        dark: dark,
+        scale: scale,
+        sentByUser: true,
+      );
+      await tester.runAsync(
+        () => precacheImage(
+          const AssetImage('assets/images/role_guide_avatar_1.png'),
+          tester.element(find.text(title)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final card = tester.getRect(
+        find.byKey(const Key('conversation-role-summary')),
+      );
+      final portrait = tester.getRect(
+        find.byKey(const Key('conversation-role-portrait')),
+      );
+      final titleRect = tester.getRect(find.text(title));
+      final descriptionRect = tester.getRect(find.text(description));
+      expect(portrait.size, const Size(44, 44));
+      expect(titleRect.left, closeTo(portrait.right + 18, .01));
+      expect(descriptionRect.left, closeTo(titleRect.left, .01));
+      expect(descriptionRect.right, lessThanOrEqualTo(card.right - 16));
+      expect(tester.widget<Text>(find.text(description)).maxLines, 1);
+      expect(tester.takeException(), isNull);
+      await _capture(tester, '$name-role-summary');
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets(
+      'multiple cast roles share a card and snapshot preview at $name',
+      (tester) async {
+        final first = locale.languageCode == 'zh' ? '来财' : 'Alice';
+        final second = locale.languageCode == 'zh' ? '来福' : 'Bob';
+        final cast = [_castRole('1', first), _castRole('2', second)];
+        final repository = await _pumpTopicPage(
+          tester,
+          [
+            const {'type': 'text', 'text': 'Cast updated'},
+            ...cast,
+          ],
+          size: size,
+          locale: locale,
+          dark: dark,
+          scale: scale,
+          sentByUser: true,
+        );
+        final card = find.byKey(const Key('conversation-cast-summary'));
+        expect(card, findsOneWidget);
+        expect(
+          find.byKey(const Key('conversation-role-summary')),
+          findsNothing,
+        );
+        expect(find.text('$first、$second'), findsOneWidget);
+        final context = tester.element(card);
+        final l10n = AppLocalizations.of(context)!;
+        expect(find.text(l10n.roleCastCount(2)), findsOneWidget);
+        await tester.runAsync(() async {
+          await precacheImage(
+            const AssetImage('assets/images/role_guide_avatar_1.png'),
+            context,
+          );
+          await precacheImage(
+            const AssetImage('assets/images/role_guide_avatar_2.png'),
+            context,
+          );
+        });
+        await tester.pumpAndSettle();
+        final names = tester.getRect(find.text('$first、$second'));
+        expect(names.right, lessThanOrEqualTo(tester.getRect(card).right - 10));
+        expect(tester.takeException(), isNull);
+        await _capture(tester, '$name-cast-summary');
+        await tester.tap(find.byKey(const Key('role-guide-view-profiles')));
+        await tester.pumpAndSettle();
+        final sheet = tester.widget<RoleProfileSheet>(
+          find.byType(RoleProfileSheet),
+        );
+        expect(sheet.useSnapshot, isTrue);
+        expect(sheet.roles.map((role) => role.id), ['1', '2']);
+        expect(sheet.roles.map((role) => role.profileVersionId), [
+          'saved-1',
+          'saved-2',
+        ]);
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '1',
+        );
+        await tester.tap(find.byTooltip(l10n.roleNextProfile));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '2',
+        );
+        await tester.tap(find.byTooltip(l10n.rolePreviousProfile));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+          '1',
+        );
+        Navigator.of(tester.element(find.byType(RoleProfileSheet))).pop();
+        await tester.pumpAndSettle();
+        repository.streams.first.add(
+          chatEvent(2, 'message.updated', {
+            'timelineUpdates': [
+              {
+                ...chatMessageJson(revision: 2),
+                'role': 'user',
+                'blocks': [
+                  ...cast,
+                  _castRole(
+                    '3',
+                    List.filled(12, 'Long character name').join(' '),
+                  ),
+                ],
+              },
+            ],
+          }),
+        );
+        await tester.pumpAndSettle();
+        expect(card, findsOneWidget);
+        expect(find.text(l10n.roleCastCount(3)), findsOneWidget);
+        expect(find.text(l10n.roleCastCount(2)), findsNothing);
+        expect(tester.takeException(), isNull);
+        await _capture(tester, '$name-cast-summary-updated');
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('compact role card previews the streamed profile at $name', (
       tester,
     ) async {
       tester.view.physicalSize = size;
@@ -325,16 +623,12 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final toggle = find.byKey(const Key('conversation-role-toggle'));
       final preview = find.byKey(const Key('conversation-role-view-profile'));
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
-      expect(find.text('认真、温柔'), findsOneWidget);
-      await tester.ensureVisible(toggle);
+      expect(find.text('校园, 可爱角色'), findsNothing);
+      expect(find.text('认真、温柔'), findsNothing);
+      await tester.ensureVisible(preview);
       await tester.pumpAndSettle();
       await _capture(tester, '$name-draft');
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(find.text('校园, 可爱角色'), findsNothing);
       role['title'] = 'Updated Alice';
       repository.streams.first.add(
         chatEvent(3, 'message.updated', {
@@ -342,11 +636,8 @@ void main() {
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Updated Alice'), findsNothing);
-      expect(find.text('校园, 可爱角色'), findsNothing);
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
       expect(find.text('Updated Alice'), findsOneWidget);
+      expect(find.text('校园, 可爱角色'), findsNothing);
       await tester.ensureVisible(preview);
       await tester.pumpAndSettle();
       await tester.tap(preview);
@@ -357,6 +648,12 @@ void main() {
         find.descendant(of: sheet, matching: find.text('Updated Alice')),
         findsOneWidget,
       );
+      await _capture(tester, '$name-role-profile');
+      final toggle = find.byKey(const Key('role-profile-toggle'));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.descendant(of: sheet, matching: find.text('认真、温柔')),
         150,
@@ -371,11 +668,37 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(sheet, findsNothing);
-      expect(find.text('校园, 可爱角色'), findsOneWidget);
+      expect(find.text('校园, 可爱角色'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('cast groups preserve text, scope and role action boundaries', (
+    tester,
+  ) async {
+    await _pumpTopicPage(tester, [
+      _castRole('1', 'Alice'),
+      _castRole('2', 'Bob'),
+      const {'type': 'text', 'text': 'Another cast'},
+      _castRole('3', 'Carol'),
+      _castRole('4', 'David', scopeId: '302'),
+      _castRole('5', 'Edited draft', action: 'edited'),
+    ], sentByUser: true);
+    expect(find.byKey(const Key('conversation-cast-summary')), findsOneWidget);
+    expect(
+      find.byKey(const Key('conversation-role-summary')),
+      findsNWidgets(2),
+    );
+    expect(find.byKey(const Key('conversation-role-card')), findsOneWidget);
+    expect(find.text('Alice、Bob'), findsOneWidget);
+    expect(find.text('Carol'), findsOneWidget);
+    expect(find.text('David'), findsOneWidget);
+    expect(find.text('Edited draft'), findsOneWidget);
+    expect(find.text('Another cast'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('user role objects use full card width outside the text bubble', (
     tester,
@@ -491,6 +814,10 @@ void main() {
             locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
             home: Scaffold(
               body: Container(
                 decoration: const BoxDecoration(
@@ -523,6 +850,8 @@ void main() {
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pump();
       expect(find.text('正在读取角色档案'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await _capture(tester, 'mobile-progress-collapsed');
       await tester.tap(find.text('确认生成'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsOneWidget);

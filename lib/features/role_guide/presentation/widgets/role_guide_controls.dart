@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
@@ -209,7 +210,7 @@ class RoleGuideAvatar extends StatelessWidget {
             ? fallback
             : role.avatar.startsWith('assets/')
             ? Image.asset(role.avatar, fit: BoxFit.cover)
-            : Image.network(
+            : AppNetworkImage(
                 role.avatar,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => fallback,

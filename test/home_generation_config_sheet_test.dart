@@ -5,6 +5,7 @@ import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
+import 'package:toastification/toastification.dart';
 
 import 'support/home_creation_fixtures.dart';
 
@@ -185,6 +186,39 @@ Future<void> configTap(WidgetTester tester, String key) async {
 }
 
 void main() {
+  for (final mediaType in ['video', 'image']) {
+    testWidgets(
+      '$mediaType quality options select and save through pill buttons',
+      (tester) async {
+        final fixture = configFixture();
+        final model = fixture.modelCatalogs[mediaType]!.first;
+        final parameter = (model['parameters'] as List).first as Map;
+        parameter['name'] = 'quality';
+        parameter['label'] = '画质';
+        final preference = mediaType == 'video'
+            ? fixture.videoPreference
+            : fixture.imagePreference;
+        final params = preference!['params'] as Map;
+        params['quality'] = params.remove('resolution');
+        await pumpConfig(tester, fixture);
+        if (mediaType == 'image') {
+          await configTap(tester, 'role-segment-1');
+        }
+        final value = mediaType == 'video' ? '1080p' : '2k';
+        final buttonKey = 'home-config-quality-$value';
+        await configVisible(tester, buttonKey);
+        expect(tester.widget(find.byKey(Key(buttonKey))), isA<TextButton>());
+        await configTap(tester, buttonKey);
+        await configTap(tester, 'home-config-confirm');
+        final saved = mediaType == 'video'
+            ? fixture.videoPreference
+            : fixture.imagePreference;
+        expect((saved!['params'] as Map)['quality'], value);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'generation edits only video and returns local config without preferences',
     (tester) async {
@@ -356,7 +390,7 @@ void main() {
   );
 
   testWidgets(
-    'save failure keeps edits and blocks returning a generation config until retry succeeds',
+    'save failure shows one toast and retains the original confirmation action',
     (tester) async {
       final fixture = configFixture();
       HomeGenerationConfiguration? result;
@@ -365,6 +399,15 @@ void main() {
       fixture.failPreferenceSaveOnce = true;
       await configTap(tester, 'home-config-confirm');
       expect(result, isNull);
+      expect(find.text('创作请求失败，请重试'), findsOneWidget);
+      expect(find.text('重试'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('home-generation-config-sheet')),
+          matching: find.text('创作请求失败，请重试'),
+        ),
+        findsNothing,
+      );
       expect(
         find.byKey(const Key('home-generation-config-sheet')),
         findsOneWidget,
@@ -372,6 +415,8 @@ void main() {
       await configTap(tester, 'home-config-confirm');
       expect(result?.config?.params['ratio'], '9:16');
       expect(tester.takeException(), isNull);
+      toastification.dismissAll(delayForAnimation: false);
+      await tester.pumpAndSettle();
     },
   );
 

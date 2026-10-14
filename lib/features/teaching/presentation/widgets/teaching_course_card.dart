@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
@@ -60,7 +61,7 @@ class TeachingCourseCard extends StatelessWidget {
                               color: scheme.onSurfaceVariant,
                               size: 36,
                             )
-                          : Image.network(
+                          : AppNetworkImage(
                               course.coverUrl,
                               fit: BoxFit.cover,
                               excludeFromSemantics: true,
@@ -137,7 +138,7 @@ class TeachingCourseCard extends StatelessWidget {
                                             .instructorAvatarUrl
                                             .isNotEmpty) ...[
                                           ClipOval(
-                                            child: Image.network(
+                                            child: AppNetworkImage(
                                               course.instructorAvatarUrl,
                                               width: 20,
                                               height: 20,

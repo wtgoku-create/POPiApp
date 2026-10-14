@@ -76,8 +76,9 @@ void main() {
         InterceptorsWrapper(
           onRequest: (options, handler) {
             expect(options.path, '/api_agent/v2/sessions');
-            expect(options.queryParameters['contextKind'], 'account');
-            expect(options.queryParameters['contextId'], 'project / 1');
+            expect(options.queryParameters['accountId'], 'project / 1');
+            expect(options.queryParameters.containsKey('contextKind'), isFalse);
+            expect(options.queryParameters.containsKey('contextId'), isFalse);
             expect(options.queryParameters['pageSize'], 100);
             final page = options.queryParameters['page'] as int;
             handler.resolve(

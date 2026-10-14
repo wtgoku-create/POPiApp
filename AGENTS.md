@@ -115,6 +115,10 @@ flutter gen-l10n
 - SVG 图标统一通过 `AppSvgIcon` 加载，不要在页面中散落资源路径。
 - 独立图标按钮使用 `IconButton`，通过 `AppTheme` 中的 `IconButtonTheme` 统一显示圆形中性灰 hover/聚焦热区；保持既定按钮尺寸，禁用时不显示热区，不在业务页面关闭 hover 反馈。
 - Toast 统一通过 `AppToast` 调用，不要在业务页面直接使用第三方 Toast API。
+- 普通接口调用失败优先通过 `AppToast.error` 提示，页面、卡片和弹层不为请求错误新增错误条、错误面板或额外重试按钮。
+- 请求失败保留用户输入、已选附件和已有数据，允许通过原有发送、确认等操作再次提交；不要将原有操作按钮改为“重试”。
+- 同一次请求失败避免重复 Toast；后台自动重连期间不反复提示，已取消或已过期请求不弹错误 Toast。
+- 区分接口请求失败与业务任务失败：业务任务的失败状态及服务端允许的任务重试保留。
 - Bottom Sheet 统一通过 `AppSheet` 调用，不要在业务页面直接调用 Flutter Sheet API。
 - 弹出菜单统一使用 `lib/shared/widgets/app_menu.dart` 的 `AppMenuButton`；长按内容预览菜单使用 `AppContextMenu`，第三方 `cupertino_context_menu_plus` 仅在共享组件内使用。菜单项使用 `AppMenuItem`，二级菜单使用 `AppSubmenu`，分隔线使用 `AppMenuDivider`。业务页面不直接使用 `PopupMenuButton`、`showMenu`、`MenuAnchor`、`MenuItemButton` 或 `SubmenuButton`，不要自行覆盖菜单样式。
 - 菜单和二级菜单外层统一使用 20px 大圆角，内部菜单项使用两端半圆的胶囊矩形（StadiumBorder）；浅色主题为白底，深色主题跟随 surface，选中和悬停使用中性灰背景。
@@ -156,6 +160,11 @@ flutter build macos --debug
 - 修改完成后报告改动文件和验证结果。
 
 ## UI Conventions
+
+## 加载状态
+
+- 所有页面及页面内的弹窗、列表、分页和操作加载状态，统一使用骨架屏/骨架条或 loading 图标；禁止使用条形进度条（如 `LinearProgressIndicator`）及自绘进度条。
+- 内容区域加载优先复用 `lib/shared/widgets/app_skeleton.dart`；不适合骨架屏的场景使用 loading 图标，例如不确定进度的 `CircularProgressIndicator`。加载占位保持稳定尺寸，避免布局跳动。
 
 ## 列表与滚动
 

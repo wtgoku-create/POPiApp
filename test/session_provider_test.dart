@@ -32,9 +32,78 @@ void main() {
 
   test('guest starts empty and cannot mutate server history', () async {
     expect(await container.read(sessionsProvider.future), isEmpty);
+    await container.read(sessionsProvider.notifier).refresh();
     await expectLater(
       container.read(sessionsProvider.notifier).create('New'),
       throwsStateError,
+    );
+  });
+
+  test('refresh updates shared history with server changes', () async {
+    await signIn('a');
+    final session = await repository.create('a', 'Created elsewhere');
+    expect(container.read(sessionsProvider).requireValue.length, 8);
+    await container.read(sessionsProvider.notifier).refresh();
+    expect(
+      container.read(sessionsProvider).requireValue.map((item) => item.id),
+      contains(session.id),
+    );
+  });
+
+  test('failed refresh preserves history and a later pull recovers', () async {
+    final refreshing = _RefreshingRepository();
+    repository = refreshing;
+    await signIn('a');
+    final before = container.read(sessionsProvider).requireValue;
+    refreshing.pending = Completer<List<ConversationSession>>();
+    final refresh = container.read(sessionsProvider.notifier).refresh();
+    final failure = expectLater(refresh, throwsStateError);
+    refreshing.pending!.completeError(StateError('offline'));
+    await failure;
+    expect(container.read(sessionsProvider).requireValue, same(before));
+    refreshing.pending = null;
+    await repository.create('a', 'Created elsewhere');
+    await container.read(sessionsProvider.notifier).refresh();
+    expect(container.read(sessionsProvider).requireValue.length, 9);
+  });
+
+  test('refresh cannot overwrite a newer session mutation', () async {
+    final refreshing = _RefreshingRepository();
+    repository = refreshing;
+    await signIn('a');
+    final previous = container.read(sessionsProvider).requireValue;
+    refreshing.pending = Completer<List<ConversationSession>>();
+    final actions = container.read(sessionsProvider.notifier);
+    final refresh = actions.refresh();
+    await actions.rename('mock-1', 'Changed while refreshing');
+    refreshing.pending!.complete(previous);
+    await refresh;
+    expect(
+      container.read(sessionsProvider).requireValue.first.title,
+      'Changed while refreshing',
+    );
+  });
+
+  test('account switch cancels refresh and ignores its old result', () async {
+    final refreshing = _RefreshingRepository();
+    repository = refreshing;
+    await signIn('a');
+    await container
+        .read(sessionsProvider.notifier)
+        .rename('mock-1', 'Account A');
+    final previous = container.read(sessionsProvider).requireValue;
+    final pending = Completer<List<ConversationSession>>();
+    refreshing.pending = pending;
+    final refresh = container.read(sessionsProvider.notifier).refresh();
+    final token = refreshing.token!;
+    refreshing.pending = null;
+    await signIn('b');
+    expect(token.isCancelled, isTrue);
+    pending.complete(previous);
+    await refresh;
+    expect(
+      container.read(sessionsProvider).requireValue.first.title,
+      isNot('Account A'),
     );
   });
 
@@ -166,4 +235,18 @@ class _FailingRepository extends FixtureSessionRepository {
     String userId, {
     CancelToken? cancelToken,
   }) async => throw StateError('offline');
+}
+
+class _RefreshingRepository extends FixtureSessionRepository {
+  Completer<List<ConversationSession>>? pending;
+  CancelToken? token;
+
+  @override
+  Future<List<ConversationSession>> list(
+    String userId, {
+    CancelToken? cancelToken,
+  }) {
+    token = cancelToken;
+    return pending?.future ?? super.list(userId, cancelToken: cancelToken);
+  }
 }

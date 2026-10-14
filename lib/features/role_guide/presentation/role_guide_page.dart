@@ -290,6 +290,15 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         _progress = task.progress;
         _draft.step = RoleGuideStep.generation;
       });
+      if (!task.needsPolling && task.state != 'paused' && _home != null) {
+        final home = _home!;
+        _retry = () => _update(
+          () => _repository.refresh(home, cancelToken: _requestToken),
+        );
+        final current = await _repository.refresh(home, cancelToken: token);
+        if (!mounted || token.isCancelled) return;
+        setState(() => _apply(current));
+      }
     } catch (error) {
       await _recoverConflict(error, token);
       if (mounted && !token.isCancelled) setState(() => _failed = true);
@@ -586,7 +595,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       }
       final home = _home!;
       final config = _config!;
-      _taskCommand(
+      _update(
         () => _repository.generate(home, config, cancelToken: _requestToken),
       );
       return;
@@ -815,12 +824,12 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     );
   }
 
-  Widget _blur(Widget child) => _drawerOpen || _sheetOpen
-      ? ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 6.5, sigmaY: 6.5),
-          child: child,
-        )
-      : child;
+  // Keep the subtree mounted when an overlay toggles the background blur.
+  Widget _blur(Widget child) => ImageFiltered(
+    enabled: _drawerOpen || _sheetOpen,
+    imageFilter: ImageFilter.blur(sigmaX: 6.5, sigmaY: 6.5),
+    child: child,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -1036,7 +1045,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                                 40,
                                 12,
                                 40,
-                                bottomInset + 20,
+                                math.max(20, bottomInset),
                               ),
                               child: _stepActions(l10n),
                             ),

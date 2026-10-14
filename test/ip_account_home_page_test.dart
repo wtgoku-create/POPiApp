@@ -13,14 +13,17 @@ import 'package:popi_ai_app/features/ip_accounts/domain/account_preferences.dart
 import 'package:popi_ai_app/features/ip_accounts/presentation/ip_account_home_page.dart';
 import 'package:popi_ai_app/features/ip_accounts/presentation/ip_account_history_page.dart';
 import 'package:popi_ai_app/features/ip_accounts/presentation/ip_accounts_live_page.dart';
+import 'package:popi_ai_app/features/ip_accounts/presentation/widgets/account_preferences_sheet.dart';
 import 'package:popi_ai_app/features/ip_accounts/presentation/account_archives_page.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/ip_account_provider.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_dialog.dart';
+import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
 
 import 'support/ip_account_fixtures.dart';
 import 'support/project_fixtures.dart';
@@ -191,11 +194,16 @@ void main() {
     Size size = const Size(440, 956),
     double textScale = 1,
     bool settle = true,
+    double bottomInset = 0,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(bottom: bottomInset);
+    tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     container = ProviderContainer(
       overrides: [
         userProvider.overrideWith(_MemoryUserController.new),
@@ -205,6 +213,9 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    container
+        .read(safeAreaInsetsProvider.notifier)
+        .update(EdgeInsets.only(bottom: bottomInset));
     if (signedIn) {
       await container
           .read(userProvider.notifier)
@@ -458,6 +469,20 @@ void main() {
     expect(confirm.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final bottomInset in [0.0, 16.0, 34.0]) {
+    testWidgets('publish action counts bottom inset once: $bottomInset', (
+      tester,
+    ) async {
+      await pump(tester, bottomInset: bottomInset);
+      final action = find.byKey(const Key('ip-account-start-content'));
+      expect(
+        tester.getBottomLeft(action).dy,
+        closeTo(956 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('publish panel stays at the bottom when overview scrolls', (
     tester,
@@ -1277,7 +1302,16 @@ void main() {
     tester,
   ) async {
     await pump(tester, list: true);
-    await tap(tester, 'account-create');
+    unawaited(
+      AppSheet.show<String>(
+        context: tester.element(find.byType(IpAccountsLivePage)),
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (_) => const AccountPreferencesSheet(),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('account-form-title')), '新账号');
     repository.failSave = true;
     await tester.ensureVisible(find.byKey(const Key('ip-account-edit-save')));
@@ -1290,7 +1324,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(repository.createRequestIds, hasLength(2));
     expect(repository.createRequestIds.toSet(), hasLength(1));
-    expect(find.text('账号主页'), findsOneWidget);
+    expect(find.byType(AccountPreferencesSheet), findsNothing);
   });
 
   testWidgets('archived accounts stay read-only without a status action', (
@@ -1312,6 +1346,8 @@ void main() {
       expect(find.text('已归档'), findsNothing);
       expect(find.text('全部'), findsNothing);
       expect(find.text('后来才懂'), findsOneWidget);
+      expect(find.byKey(const Key('account-create')), findsNothing);
+      expect(find.byIcon(Icons.add), findsNothing);
     },
   );
 
@@ -1319,7 +1355,16 @@ void main() {
     tester,
   ) async {
     await pump(tester, list: true);
-    await tap(tester, 'account-create');
+    unawaited(
+      AppSheet.show<String>(
+        context: tester.element(find.byType(IpAccountsLivePage)),
+        isScrollControlled: true,
+        isDismissible: false,
+        enableDrag: false,
+        builder: (_) => const AccountPreferencesSheet(),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('account-form-title')),
       List.filled(16, '中').join(),

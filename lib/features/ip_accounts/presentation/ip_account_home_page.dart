@@ -536,6 +536,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
               ),
               child: SafeArea(
                 top: false,
+                minimum: EdgeInsets.only(bottom: math.max(20, insets.bottom)),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
                     (MediaQuery.sizeOf(context).width < 360 ? 20 : 40) +
@@ -549,7 +550,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                           0,
                           (MediaQuery.sizeOf(context).width - 640) / 2,
                         ),
-                    math.max(20, insets.bottom),
+                    0,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

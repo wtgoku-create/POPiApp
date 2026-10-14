@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 /// Pagination shared by invitation codes and invitation records.
 class InvitationPage<T> {
   const InvitationPage({required this.items, required this.hasMore});
@@ -129,11 +131,14 @@ class WechatBindingQrCode {
 }
 
 String? redemptionImageUrl(Object? value) {
-  final uri = Uri.tryParse(value?.toString().trim() ?? '');
+  final source = value?.toString().trim() ?? '';
+  if (source.isEmpty) return null;
+  final resolved = AppUrl.resolve(source);
+  final uri = Uri.tryParse(resolved);
   return uri != null &&
           uri.hasAuthority &&
           (uri.scheme == 'https' || uri.scheme == 'http')
-      ? uri.toString()
+      ? resolved
       : null;
 }
 

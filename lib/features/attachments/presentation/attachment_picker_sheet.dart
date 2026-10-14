@@ -39,6 +39,7 @@ class AttachmentPickerSheet extends StatefulWidget {
     required this.limit,
     this.pickImages,
     this.repository,
+    this.additionalSourcesEnabled = false,
     this.selectedRoles = const [],
     this.selectedAssets = const [],
     super.key,
@@ -47,6 +48,7 @@ class AttachmentPickerSheet extends StatefulWidget {
   final int limit;
   final Future<List<XFile>> Function()? pickImages;
   final GalleryRepository? repository;
+  final bool additionalSourcesEnabled;
   final List<LibraryRole> selectedRoles;
   final List<LibraryWork> selectedAssets;
 
@@ -55,6 +57,7 @@ class AttachmentPickerSheet extends StatefulWidget {
     required int limit,
     Future<List<XFile>> Function()? pickImages,
     GalleryRepository? repository,
+    bool additionalSourcesEnabled = false,
     List<LibraryRole> selectedRoles = const [],
     List<LibraryWork> selectedAssets = const [],
   }) => AppSheet.show<AttachmentPickerResult>(
@@ -69,6 +72,7 @@ class AttachmentPickerSheet extends StatefulWidget {
       limit: limit,
       pickImages: pickImages,
       repository: repository,
+      additionalSourcesEnabled: additionalSourcesEnabled,
       selectedRoles: selectedRoles,
       selectedAssets: selectedAssets,
     ),
@@ -371,6 +375,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       ),
       _SourceTile(
         key: const Key('attachment-source-files'),
+        pending: !widget.additionalSourcesEnabled,
         label: l10n.file,
         icon: AppSvgIcon.asset(
           'attachment_file',
@@ -381,6 +386,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       ),
       _SourceTile(
         key: const Key('attachment-source-roles'),
+        pending: !widget.additionalSourcesEnabled,
         label: l10n.roles,
         icon: AppSvgIcon.asset(
           'attachment_role_upright',
@@ -391,6 +397,7 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
       ),
       _SourceTile(
         key: const Key('attachment-source-assets'),
+        pending: !widget.additionalSourcesEnabled,
         label: l10n.assets,
         icon: AppSvgIcon.asset(
           'attachment_asset',
@@ -460,13 +467,14 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                 height: math.min(
                   MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
                   (constraints.maxWidth - 56) / 3 * 4 +
-                      276 +
-                      MediaQuery.paddingOf(context).bottom,
+                      256 +
+                      math.max(20, MediaQuery.paddingOf(context).bottom),
                 ),
                 child: SafeArea(
                   top: false,
+                  minimum: const EdgeInsets.only(bottom: 20),
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: Column(
                       children: [
                         Text(
@@ -662,11 +670,13 @@ class _SourceTile extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
+    this.pending = false,
     super.key,
   });
   final String label;
   final Widget icon;
   final VoidCallback? onTap;
+  final bool pending;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -680,19 +690,35 @@ class _SourceTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap,
+          onTap: pending
+              ? () => AppToast.info(
+                  context,
+                  AppLocalizations.of(context)!.attachmentFeaturePending,
+                )
+              : onTap,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox.square(dimension: 44, child: Center(child: icon)),
+              Opacity(
+                opacity: pending ? .4 : 1,
+                child: SizedBox.square(
+                  dimension: 44,
+                  child: Center(child: icon),
+                ),
+              ),
               const SizedBox(height: 8),
               Flexible(
                 child: Text(
                   label,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    color: pending
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: .4)
+                        : null,
                   ),
                 ),
               ),

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +17,7 @@ import 'package:popi_ai_app/features/assets/presentation/assets_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_session.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
@@ -88,6 +92,69 @@ void main() {
     await tester.longPress(find.byKey(Key('drawer-session-$id')));
     await tester.pumpAndSettle();
   }
+
+  for (final count in [0, 1, 40]) {
+    testWidgets('pull refreshes drawer history with $count sessions', (
+      tester,
+    ) async {
+      final repository = _RefreshingDrawerRepository(count);
+      final container = await pumpDrawer(tester, repository: repository);
+      final requestsBefore = repository.requests;
+      repository.pending = Completer<List<ConversationSession>>();
+      await tester.drag(
+        find.byKey(const Key('drawer-session-list')),
+        const Offset(0, 240),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(repository.requests, requestsBefore + 1);
+      if (count > 0) {
+        expect(find.text('History 0'), findsOneWidget);
+      }
+      expect(find.byKey(const Key('drawer-sessions-skeleton')), findsNothing);
+      final updated = ConversationSession(
+        id: 'refreshed',
+        title: 'Refreshed history',
+        updatedAt: DateTime(2026),
+      );
+      repository.pending!.complete([updated]);
+      await tester.pumpAndSettle();
+      expect(find.text('Refreshed history'), findsOneWidget);
+      expect(container.read(sessionsProvider).requireValue.single, updated);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('failed drawer refresh keeps history and allows another pull', (
+    tester,
+  ) async {
+    final repository = _RefreshingDrawerRepository(1);
+    await pumpDrawer(tester, repository: repository);
+    repository.failNext = true;
+    await tester.drag(
+      find.byKey(const Key('drawer-session-list')),
+      const Offset(0, 240),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('History 0'), findsOneWidget);
+    expect(
+      find.text(
+        lookupAppLocalizations(const Locale('zh')).chatHistoryLoadFailed,
+      ),
+      findsOneWidget,
+    );
+    final requestsBefore = repository.requests;
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byKey(const Key('drawer-session-list')),
+      const Offset(0, 240),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.requests, requestsBefore + 1);
+    expect(find.text('History 0'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('sidebar destinations retain home beneath the selected page', (
     tester,
@@ -372,7 +439,7 @@ void main() {
       container
           .read(sessionsProvider)
           .requireValue
-          .any((session) => session.title == '新会话'),
+          .any((session) => session.title == '新项目'),
       isTrue,
     );
     expect(
@@ -602,5 +669,35 @@ void main() {
         );
       }
     }
+  }
+}
+
+class _RefreshingDrawerRepository extends FixtureSessionRepository {
+  _RefreshingDrawerRepository(int count)
+    : items = List.generate(
+        count,
+        (index) => ConversationSession(
+          id: 'history-$index',
+          title: 'History $index',
+          updatedAt: DateTime(2026),
+        ),
+      );
+
+  final List<ConversationSession> items;
+  Completer<List<ConversationSession>>? pending;
+  bool failNext = false;
+  int requests = 0;
+
+  @override
+  Future<List<ConversationSession>> list(
+    String userId, {
+    CancelToken? cancelToken,
+  }) async {
+    requests++;
+    if (failNext) {
+      failNext = false;
+      throw StateError('offline');
+    }
+    return pending?.future ?? items;
   }
 }

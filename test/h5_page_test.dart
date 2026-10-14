@@ -28,27 +28,40 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('loads the URL without credentials and shows progress', (
+  testWidgets('loads the URL without credentials and shows a loading icon', (
     tester,
   ) async {
     await openPage(tester);
     expect(platform.controller.requests.single.uri, url);
     expect(platform.controller.requests.single.headers, isEmpty);
     expect(find.byType(WebViewWidget), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    final loadingRect = tester.getRect(find.byType(CircularProgressIndicator));
 
     platform.delegate.onProgress(60);
     await tester.pump();
     expect(
       tester
-          .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
+          .widget<CircularProgressIndicator>(
+            find.byType(CircularProgressIndicator),
+          )
           .value,
-      .6,
+      isNull,
     );
+    expect(tester.getRect(find.byType(CircularProgressIndicator)), loadingRect);
 
     platform.delegate.onPageFinished(url.toString());
     await tester.pump();
     expect(find.byType(LinearProgressIndicator), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    platform.delegate.onPageStarted(url.toString());
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    platform.delegate.onPageFinished(url.toString());
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('ignores subresource errors and retries main-frame failures', (

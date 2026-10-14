@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'app_network_image.dart';
 import '../../app/navigation.dart';
 import '../../app/theme.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -389,7 +390,7 @@ class _DrawerFooter extends ConsumerWidget {
         children: [
           ClipOval(
             child: user?.avatarUrl?.isNotEmpty == true
-                ? Image.network(
+                ? AppNetworkImage(
                     user!.avatarUrl!,
                     width: 47,
                     height: 47,

@@ -1,3 +1,5 @@
+import '../../../core/utils/app_url.dart';
+
 /// The server is the source of truth for a user's social account binding.
 class SocialAppBinding {
   const SocialAppBinding({
@@ -18,7 +20,7 @@ class SocialAppBinding {
     return SocialAppBinding(
       bound: bound,
       nickname: json['nickname'] as String? ?? '',
-      avatar: json['avatar'] as String? ?? '',
+      avatar: AppUrl.resolve(json['avatar'] as String? ?? ''),
     );
   }
 }

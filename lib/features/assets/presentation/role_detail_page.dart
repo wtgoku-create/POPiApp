@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
@@ -328,9 +329,17 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                             children: [
                               _summary(l10n),
                               if (_loading)
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 12),
-                                  child: LinearProgressIndicator(minHeight: 2),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 12),
+                                  child: Center(
+                                    child: SizedBox.square(
+                                      dimension: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        semanticsLabel: l10n.loadingRoles,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               if (_failed)
                                 Align(
@@ -481,12 +490,13 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                             : colors.surfaceContainer,
                         child: SafeArea(
                           top: false,
+                          minimum: const EdgeInsets.only(bottom: 20),
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(
                               _edit == null ? 40 : 20,
                               20,
                               _edit == null ? 40 : 20,
-                              20,
+                              0,
                             ),
                             child: Center(
                               heightFactor: 1,
@@ -686,7 +696,7 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => placeholder,
                       )
-                    : Image.network(
+                    : AppNetworkImage(
                         _role.avatar,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => placeholder,

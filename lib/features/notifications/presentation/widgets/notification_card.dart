@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/type/notification_type.dart';
@@ -188,7 +189,7 @@ class NotificationImage extends StatelessWidget {
     aspectRatio: 16 / 9,
     child: Uri.parse(url).path.toLowerCase().endsWith('.svg')
         ? AppSvgIcon.network(url)
-        : Image.network(
+        : AppNetworkImage(
             url,
             fit: BoxFit.contain,
             loadingBuilder: (_, child, progress) => progress == null

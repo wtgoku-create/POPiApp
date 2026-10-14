@@ -3,6 +3,29 @@ PODS:
   - Flutter (1.0.0)
   - flutter_secure_storage (6.0.0):
     - Flutter
+<<<<<<< HEAD
+  - fluwx (2.0.5):
+    - Flutter
+    - WechatOpenSDK-XCFramework (~> 2.0.7)
+  - gal (1.0.0):
+    - Flutter
+    - FlutterMacOS
+  - image_picker_ios (0.0.1):
+    - Flutter
+  - in_app_purchase_storekit (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - photo_manager (3.12.0):
+    - Flutter
+    - FlutterMacOS
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
+  - sqflite_darwin (0.0.4):
+    - Flutter
+    - FlutterMacOS
+=======
+>>>>>>> 683ab60 (feat(payments): refine mobile checkout and Apple purchase catalog)
   - tobias (0.0.1):
     - Flutter
     - tobias/normal (= 0.0.1)
@@ -13,6 +36,16 @@ DEPENDENCIES:
   - DouyinOpenSDK (= 4.2.5)
   - Flutter (from `Flutter`)
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
+<<<<<<< HEAD
+  - fluwx (from `.symlinks/plugins/fluwx/ios`)
+  - gal (from `.symlinks/plugins/gal/darwin`)
+  - image_picker_ios (from `.symlinks/plugins/image_picker_ios/ios`)
+  - in_app_purchase_storekit (from `.symlinks/plugins/in_app_purchase_storekit/darwin`)
+  - photo_manager (from `.symlinks/plugins/photo_manager/darwin`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
+=======
+>>>>>>> 683ab60 (feat(payments): refine mobile checkout and Apple purchase catalog)
   - tobias (from `.symlinks/plugins/tobias/ios`)
 
 SPEC REPOS:
@@ -24,6 +57,23 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_secure_storage:
     :path: ".symlinks/plugins/flutter_secure_storage/ios"
+<<<<<<< HEAD
+  fluwx:
+    :path: ".symlinks/plugins/fluwx/ios"
+  gal:
+    :path: ".symlinks/plugins/gal/darwin"
+  image_picker_ios:
+    :path: ".symlinks/plugins/image_picker_ios/ios"
+  in_app_purchase_storekit:
+    :path: ".symlinks/plugins/in_app_purchase_storekit/darwin"
+  photo_manager:
+    :path: ".symlinks/plugins/photo_manager/darwin"
+  shared_preferences_foundation:
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  sqflite_darwin:
+    :path: ".symlinks/plugins/sqflite_darwin/darwin"
+=======
+>>>>>>> 683ab60 (feat(payments): refine mobile checkout and Apple purchase catalog)
   tobias:
     :path: ".symlinks/plugins/tobias/ios"
 
@@ -31,6 +81,16 @@ SPEC CHECKSUMS:
   DouyinOpenSDK: f7ef5783f185e612dd957d8e231cc4972f965190
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
+<<<<<<< HEAD
+  fluwx: 21f30eca2f470e526e076434cb0b28c736aa8a78
+  gal: baecd024ebfd13c441269ca7404792a7152fde89
+  image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
+  in_app_purchase_storekit: 22cca7d08eebca9babdf4d07d0baccb73325d3c8
+  photo_manager: c303e4476f6c220274119f0212a7753e45edd4a2
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
+  sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
+=======
+>>>>>>> 683ab60 (feat(payments): refine mobile checkout and Apple purchase catalog)
   tobias: 7bc370eaccba2e7c7c345902a4a47dc5916cf8bb
 
 PODFILE CHECKSUM: c64eb33c43ecbc8b7cc1391892bcf2912a64e748

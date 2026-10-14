@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/core/network/agent_api_exception.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
@@ -206,6 +207,120 @@ void main() {
     expect(task.steps.single.content!.mediaIds, ['81']);
     expect(task.steps.single.mediaIds, ['81']);
     expect(task.mediaIds, isEmpty);
+  });
+
+  test(
+    'home task uses frozen cast and resolves the exact artifact version',
+    () {
+      final snapshot = ConversationSnapshot.fromJson({
+        ...chatSnapshotJson(),
+        'sessionCast': [
+          {
+            'id': 12,
+            'title': 'Current name',
+            'avatar': 'current.png',
+            'profileVersion': {
+              'id': 'role-v2',
+              'profile': {'title': 'Current name'},
+            },
+          },
+        ],
+        'contents': [
+          {
+            'id': 'latest',
+            'ref': {'id': 'script', 'versionId': 'v2'},
+            'kind': 'script',
+            'body': 'Latest revision',
+          },
+          {
+            'id': 'saved',
+            'ref': {'id': 'script', 'versionId': 'v1'},
+            'kind': 'script',
+            'body': 'Approved script',
+          },
+        ],
+      });
+      final block = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'task',
+        'action': 'home',
+        'data': {
+          'input': {
+            'cast': [
+              {
+                'roleId': 12,
+                'versionId': 'role-v1',
+                'profile': {
+                  'title': 'Saved name',
+                  'description': 'Saved character',
+                },
+              },
+            ],
+          },
+          'steps': [
+            {
+              'key': 'script',
+              'state': 'completed',
+              'output': {'id': 'script', 'versionId': 'v1', 'kind': 'script'},
+            },
+          ],
+        },
+      });
+      final task = ConversationTaskView(block, snapshot);
+      expect(task.roles.single.title, 'Saved name');
+      expect(task.roles.single.referenceId, '12');
+      expect(task.roles.single.reference?['versionId'], 'role-v1');
+      expect(task.roles.single.data['profile'], {
+        'title': 'Saved name',
+        'description': 'Saved character',
+      });
+      expect(task.roles.single.avatar, isNull);
+      expect(task.steps.single.content!.body, 'Approved script');
+      expect(task.steps.single.content!.reference?['versionId'], 'v1');
+    },
+  );
+
+  test('home task can use matching saved portrait and legacy cast profile', () {
+    final snapshot = ConversationSnapshot.fromJson({
+      ...chatSnapshotJson(),
+      'sessionCast': [
+        {
+          'id': 12,
+          'title': 'Saved name',
+          'avatar': 'saved.png',
+          'profileVersion': {
+            'id': 'role-v1',
+            'profile': {'title': 'Saved name'},
+          },
+        },
+      ],
+    });
+    ConversationBlock task({bool frozen = true}) => ConversationBlock.fromJson({
+      'type': 'object',
+      'kind': 'task',
+      'action': 'home',
+      'data': {
+        if (frozen)
+          'input': {
+            'cast': [
+              {
+                'roleId': 12,
+                'versionId': 'role-v1',
+                'profile': {'title': 'Saved name'},
+              },
+            ],
+          },
+      },
+    });
+    for (final frozen in [true, false]) {
+      final role = ConversationTaskView(
+        task(frozen: frozen),
+        snapshot,
+      ).roles.single;
+      expect(role.title, 'Saved name');
+      expect(role.avatar, '${AppConfig.apiBaseUrl}/saved.png');
+      expect(role.data['profile'], {'title': 'Saved name'});
+    }
   });
 
   test('proposal exposes backend estimate with quote fallback', () {
@@ -477,63 +592,66 @@ void main() {
     expect(commands[2]['revision'], 9);
   });
 
-  test('topic retry keeps creation identity and original revision', () async {
-    var reads = 0;
-    final commands = <Map<String, Object?>>[];
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.method == 'GET') {
-            reads++;
-            expect(options.path, '/api_client/agent/v2/creations/40');
-            handler.resolve(
-              Response(
-                requestOptions: options,
-                data: {
-                  'data': {
-                    'creation': {'sessionId': chatId, 'revision': 7},
-                    'editable': true,
-                  },
-                },
-              ),
-            );
-          } else {
-            expect(options.method, 'PUT');
-            expect(options.path, '/api_client/agent/v2/creations/40/topic');
-            commands.add(Map<String, Object?>.from(options.data as Map));
-            if (commands.length == 1) {
-              handler.reject(
-                DioException(
+  test(
+    'topic retry keeps its request ID and uses the session endpoint',
+    () async {
+      var reads = 0;
+      final commands = <Map<String, Object?>>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.method == 'GET') {
+              reads++;
+              expect(options.path, '/api_client/agent/v2/creations/40');
+              handler.resolve(
+                Response(
                   requestOptions: options,
-                  type: DioExceptionType.connectionTimeout,
+                  data: {
+                    'data': {
+                      'creation': {'sessionId': chatId, 'revision': 7},
+                      'editable': true,
+                    },
+                  },
                 ),
               );
             } else {
-              handler.resolve(
-                Response(requestOptions: options, data: {'data': {}}),
-              );
+              expect(options.method, 'PUT');
+              expect(options.path, '/api_agent/v2/sessions/$chatId/topic');
+              commands.add(Map<String, Object?>.from(options.data as Map));
+              if (commands.length == 1) {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.connectionTimeout,
+                  ),
+                );
+              } else {
+                handler.resolve(
+                  Response(requestOptions: options, data: {'snapshot': {}}),
+                );
+              }
             }
-          }
+          },
+        ),
+      );
+      final topic = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'topic',
+        'action': 'generated',
+        'scope': {'kind': 'creation', 'id': '40'},
+        'data': {
+          'ref': {'kind': 'topic', 'id': '50'},
         },
-      ),
-    );
-    final topic = ConversationBlock.fromJson({
-      'type': 'object',
-      'kind': 'topic',
-      'action': 'generated',
-      'scope': {'kind': 'creation', 'id': '40'},
-      'data': {
-        'ref': {'kind': 'topic', 'id': '50'},
-      },
-    });
-    await expectLater(
-      repository().topicAction('a', chatId, topic),
-      throwsA(isA<DioException>()),
-    );
-    await repository().topicAction('a', chatId, topic);
-    expect(reads, 1);
-    expect(commands[0], commands[1]);
-    expect(commands[1]['expectedRevision'], 7);
-    expect(commands[1]['topicId'], '50');
-  });
+      });
+      await expectLater(
+        repository().topicAction('a', chatId, topic),
+        throwsA(isA<DioException>()),
+      );
+      await repository().topicAction('a', chatId, topic);
+      expect(reads, 0);
+      expect(commands[0], commands[1]);
+      expect(commands[1].keys, unorderedEquals(['clientRequestId', 'topicId']));
+      expect(commands[1]['topicId'], '50');
+    },
+  );
 }

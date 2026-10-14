@@ -22,6 +22,7 @@ class StreamingSessionRepository extends FixtureSessionRepository {
   int stops = 0;
   int retries = 0;
   bool failSend = false;
+  bool failSnapshot = false;
   Map<String, Object?> data = chatSnapshotJson(
     seq: 1,
     messages: [chatMessageJson()],
@@ -38,10 +39,16 @@ class StreamingSessionRepository extends FixtureSessionRepository {
     CancelToken? cancelToken,
   }) async {
     snapshots++;
+    if (failSnapshot) throw StateError('offline');
     if (delayedSnapshot != null) return delayedSnapshot!.future;
     return ConversationSnapshot.fromJson({
       ...data,
       'session': {...data['session'] as Map, 'id': id},
+      if (data['timelineVersion'] == 1)
+        'timelineMessages': [
+          for (final message in data['timelineMessages'] as List)
+            {...message as Map, 'sessionId': id},
+        ],
     });
   }
 
@@ -116,6 +123,51 @@ void main() {
     await repository.close();
     await flushConversation();
   });
+
+  test(
+    'reconnecting reports a request failure once until connection recovers',
+    () async {
+      controller.dispose();
+      final errors = <Object>[];
+      controller = ConversationController(
+        repository,
+        'a',
+        onError: errors.add,
+        reconnectDelay: const Duration(milliseconds: 1),
+      );
+      repository.failSnapshot = true;
+      controller.open(chatId);
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(repository.snapshots, greaterThan(1));
+      expect(errors, hasLength(1));
+      repository.failSnapshot = false;
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      expect(controller.connection, ConversationConnection.connected);
+      repository.streams.single.addError(StateError('disconnected'));
+      await flushConversation();
+      expect(errors, hasLength(2));
+    },
+  );
+
+  test(
+    'commands report failure once and obsolete requests remain silent',
+    () async {
+      controller.dispose();
+      final errors = <Object>[];
+      controller = ConversationController(repository, 'a', onError: errors.add);
+      expect(
+        await controller.act((_) async => throw StateError('failed')),
+        isFalse,
+      );
+      expect(errors, hasLength(1));
+      final command = Completer<void>();
+      final result = controller.act((_) => command.future);
+      controller.open(null);
+      command.completeError(StateError('obsolete'));
+      expect(await result, isFalse);
+      expect(errors, hasLength(1));
+    },
+  );
 
   test(
     'initial state is empty, snapshot restores and SSE updates the same message',

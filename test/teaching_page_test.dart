@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/storage/app_image_cache.dart';
 import 'package:popi_ai_app/features/teaching/presentation/teaching_document_page.dart';
 import 'package:popi_ai_app/features/teaching/data/teaching_repository.dart';
 import 'package:popi_ai_app/features/teaching/domain/teaching.dart';
@@ -406,8 +407,8 @@ void main() {
               const AssetImage('assets/images/teaching_creator.png'),
               const AssetImage('assets/images/teaching_member_background.png'),
               for (var i = 1; i <= 4; i++)
-                NetworkImage('https://teaching.test/cover$i.png'),
-              const NetworkImage('https://teaching.test/avatar.png'),
+                AppImageCache.provider('https://teaching.test/cover$i.png'),
+              AppImageCache.provider('https://teaching.test/avatar.png'),
               const NetworkImage('https://teaching.test/community.png'),
             ])
               precacheImage(image, imageContext),

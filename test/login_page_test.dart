@@ -108,6 +108,22 @@ void main() {
     expect(find.byKey(const Key('login-password-field')), findsNothing);
   });
 
+  testWidgets(
+    'autofilled country code is removed before limiting phone length',
+    (tester) async {
+      await pumpLoginPage(tester);
+      final field = find.byKey(const Key('login-phone-field'));
+      await tester.enterText(field, '+86 138-0013-8000');
+      final controller = tester.widget<TextField>(field).controller!;
+      expect(controller.text, '13800138000');
+      expect(controller.selection, const TextSelection.collapsed(offset: 11));
+      expect(find.text('+86'), findsOneWidget);
+      await tester.enterText(field, '1380013800');
+      expect(controller.text, '1380013800');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   group('password login', () {
     testWidgets(
       'signs in with the original password and initializes the user',
@@ -547,6 +563,13 @@ void main() {
   ) async {
     await pumpLoginPage(tester);
     addTearDown(tester.view.resetViewInsets);
+    final pageBackButton = find.byKey(const Key('login-back-button'));
+    final keyboardBackButton = find.byKey(
+      const Key('login-keyboard-back-button'),
+    );
+    expect(pageBackButton, findsOneWidget);
+    expect(keyboardBackButton, findsNothing);
+    expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
     final field = find.byKey(const Key('login-code-field'));
     final fieldPosition = tester.getTopLeft(field);
     final viewportSize = tester.getSize(
@@ -580,10 +603,9 @@ void main() {
       tester.widget<Scaffold>(find.byType(Scaffold)).resizeToAvoidBottomInset,
       isFalse,
     );
-    final keyboardBackButton = find.byKey(
-      const Key('login-keyboard-back-button'),
-    );
+    expect(pageBackButton, findsNothing);
     expect(keyboardBackButton, findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
     expect(tester.getTopLeft(keyboardBackButton).dy, greaterThanOrEqualTo(0));
     expect(
       tester.getBottomRight(keyboardBackButton).dy,
@@ -595,6 +617,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('login-phone-field')), findsOneWidget);
     expect(tester.testTextInput.isVisible, isFalse);
+    tester.view.viewInsets = const FakeViewPadding();
+    await tester.pumpAndSettle();
+    expect(pageBackButton, findsOneWidget);
+    expect(keyboardBackButton, findsNothing);
+    expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
   });
 
   testWidgets('sends an SMS then initializes the signed-in user', (
@@ -604,7 +631,7 @@ void main() {
 
     await tester.enterText(
       find.byKey(const Key('login-phone-field')),
-      '13800138000',
+      '+8613800138000',
     );
     await tester.tap(find.byKey(const Key('agreement-checkbox')));
     await tester.pump();

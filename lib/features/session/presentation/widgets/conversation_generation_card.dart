@@ -7,13 +7,19 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_sheet.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_generation.dart';
 import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../../role_guide/domain/home_creation.dart';
 import '../conversation_controller.dart';
 import 'conversation_card.dart';
+import 'conversation_card_content.dart';
+import 'conversation_generation_configuration.dart';
+import 'conversation_home_plan_card.dart';
 import 'conversation_role_card.dart';
+import 'conversation_role_image_setup.dart';
+import 'conversation_style_library_sheet.dart';
 import 'conversation_timeline.dart'
     show MarkdownMessage, ConversationMediaView, conversationErrorText;
 
@@ -22,12 +28,10 @@ class ConversationGenerationCard extends StatefulWidget {
   const ConversationGenerationCard({
     required this.block,
     required this.controller,
-    this.onModelParametersRequested,
     super.key,
   });
   final ConversationBlock block;
   final ConversationController controller;
-  final VoidCallback? onModelParametersRequested;
   @override
   State<ConversationGenerationCard> createState() =>
       _ConversationGenerationCardState();
@@ -48,8 +52,8 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   String? _templateMediaId;
   String _templateTitle = '';
   num? _points;
-  Object? _error;
   bool _loading = true;
+  bool _estimating = false;
   bool _uploading = false;
   bool _submitted = false;
   bool _expanded = true;
@@ -130,7 +134,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     _estimateDebounce?.cancel();
     setState(() {
       _loading = true;
-      _error = null;
+      _estimating = false;
     });
     try {
       final options = await widget.controller.repository.generationOptions(
@@ -161,7 +165,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       if (recovery == null) await _estimate();
     } catch (error) {
       if (mounted && !_token.isCancelled && epoch == _loadEpoch) {
-        setState(() => _error = error);
+        _showError(error);
       }
     } finally {
       if (mounted && !_token.isCancelled && epoch == _loadEpoch) {
@@ -175,7 +179,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     _estimateToken?.cancel();
     setState(() {
       _points = null;
-      _error = null;
+      _estimating = _valid && _attempted == null;
     });
     if (!_valid || _attempted != null) return;
     final token = _estimateToken = CancelToken();
@@ -187,16 +191,24 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       );
       if (mounted && !token.isCancelled) setState(() => _points = points);
     } catch (error) {
-      if (mounted && !token.isCancelled) setState(() => _error = error);
+      if (mounted && !token.isCancelled) _showError(error);
+    } finally {
+      if (mounted && !token.isCancelled) {
+        setState(() => _estimating = false);
+      }
     }
   }
 
   Future<void> _chooseTemplate() async {
-    final template = await AppSheet.showDraggable<ConversationRoleTemplate?>(
+    final template = await AppSheet.show<ConversationRoleTemplate>(
       context: context,
-      initialChildSize: .65,
-      builder: (context, scroll) =>
-          _TemplatePicker(controller: widget.controller, scroll: scroll),
+      isScrollControlled: true,
+      showDragHandle: false,
+      shape: ConversationStyleLibrarySheet.shape,
+      builder: (context) => ConversationStyleLibrarySheet(
+        repository: widget.controller.repository,
+        selectedId: _templateId,
+      ),
     );
     if (!mounted || template == null) return;
     setState(() {
@@ -210,7 +222,6 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   Future<void> _uploadReference() async {
     setState(() {
       _uploading = true;
-      _error = null;
     });
     try {
       final image = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -229,17 +240,26 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
         await _estimate();
       }
     } catch (error) {
-      if (mounted && !_token.isCancelled) setState(() => _error = error);
+      if (mounted && !_token.isCancelled) _showError(error);
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
   }
 
+  void _showError(Object error) => AppToast.error(
+    context,
+    conversationErrorText(error, AppLocalizations.of(context)!),
+  );
+
   Future<void> _confirm() async {
-    if (_busy ||
-        !_editable ||
-        _attempted == null && (!_valid || _points == null)) {
-      return;
+    if (_busy || _loading || _estimating || !_editable) return;
+    if (_attempted == null) {
+      if (_options == null) {
+        await _load();
+      } else if (_valid && _points == null) {
+        await _estimate();
+      }
+      if (!mounted || _busy || !_editable || !_valid || _points == null) return;
     }
     final selected =
         _attempted ??
@@ -293,6 +313,26 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     final l10n = AppLocalizations.of(context)!;
     final card = widget.block;
     final locked = _busy || _attempted != null;
+    final colors = Theme.of(context).colorScheme;
+    if (card.isHomePlan) {
+      return ConversationHomePlanCard(
+        block: card,
+        view: _view,
+        expanded: _expanded,
+        onToggle: () => setState(() => _expanded = !_expanded),
+        editable: _editable,
+        loading: _loading,
+        estimating: _estimating,
+        config: _config,
+        model: _model,
+        points: _points,
+        actions: _actions(l10n),
+        validationMessage:
+            !_loading && _config != null && !_valid && _attempted == null
+            ? l10n.chatInvalidGeneration
+            : null,
+      );
+    }
     return ConversationCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -302,9 +342,8 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
               Expanded(
                 child: Text(
                   card.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  style: ConversationCardTypography.title.copyWith(
+                    color: colors.primary,
                   ),
                 ),
               ),
@@ -313,297 +352,203 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                     ? l10n.chatCollapseProfile
                     : l10n.roleGuideViewMore,
                 onPressed: () => setState(() => _expanded = !_expanded),
-                icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                icon: Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: colors.primary.withValues(alpha: .6),
+                ),
               ),
             ],
           ),
-          Text(conversationStatusLabel(card.status, l10n)),
-          if (_expanded) ...[
-            if (card.isHomePlan) ...[
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final role in card.homeCast)
-                    SizedBox(
-                      width: 188,
-                      child: ConversationRoleCard(block: role, framed: false),
-                    ),
-                ],
+          if (card.status != 'ready')
+            Text(
+              conversationStatusLabel(card.status, l10n),
+              style: ConversationCardTypography.caption.copyWith(
+                color: colors.onSurfaceVariant,
               ),
-              if (card.homeTopic case final topic?) ...[
-                const SizedBox(height: 12),
-                Text(
-                  topic.title,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                MarkdownMessage(text: topic.body, compact: true),
-              ],
-            ] else ...[
-              if (card.previewRole case final role?)
-                ConversationRoleCard(block: role, framed: false),
-              if (_view.prompt.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: MarkdownMessage(text: _view.prompt, compact: true),
-                ),
-            ],
-            if (_editable && !_loading && _view.threeView) ...[
-              Row(
+            ),
+          if (_expanded) ...[
+            if (card.previewRole case final role?)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ConversationRoleCard(block: role, compact: true),
+              ),
+            ConversationCardContent(
+              storageId: 'generation:${card.id}',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: Text(l10n.chatReferenceImage)),
-                  IconButton(
-                    tooltip: l10n.chatReferenceImage,
-                    onPressed: locked ? null : _uploadReference,
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                  ),
-                  if (_reference != null)
-                    IconButton(
-                      tooltip: l10n.removeImage,
-                      onPressed: locked
+                  if (_view.prompt.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: MarkdownMessage(
+                        text: _view.prompt,
+                        compact: true,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  if (_editable && !_loading && _view.threeView) ...[
+                    ConversationRoleImageSetup(
+                      reference: _reference == null
+                          ? null
+                          : ConversationMediaView(
+                              id: _reference!,
+                              repository: widget.controller.repository,
+                              thumbnailSize: 80,
+                            ),
+                      styleTitle: _templateTitle,
+                      uploading: _uploading,
+                      onUpload: locked ? null : _uploadReference,
+                      onRemove: locked
                           ? null
                           : () {
                               setState(() => _reference = null);
                               unawaited(_estimate());
                             },
-                      icon: const Icon(Icons.close),
+                      onChooseStyle: locked ? null : _chooseTemplate,
                     ),
-                ],
-              ),
-              if (_reference != null)
-                ConversationMediaView(
-                  id: _reference!,
-                  repository: widget.controller.repository,
-                ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.chatImageStyle),
-                subtitle: Text(
-                  _templateTitle.isEmpty
-                      ? l10n.chatUnrestrictedStyle
-                      : _templateTitle,
-                ),
-                trailing: IconButton(
-                  tooltip: l10n.chatImageStyle,
-                  onPressed: locked ? null : _chooseTemplate,
-                  icon: const Icon(Icons.palette_outlined),
-                ),
-              ),
-              if (_templateMediaId != null)
-                ConversationMediaView(
-                  id: _templateMediaId!,
-                  repository: widget.controller.repository,
-                ),
-              if (card.roleImage != null)
-                TextField(
-                  controller: _requirements,
-                  enabled: !locked,
-                  maxLength: 8000,
-                  minLines: 2,
-                  maxLines: 5,
-                  decoration: InputDecoration(
-                    labelText: l10n.chatGenerationRequirements,
-                  ),
-                  onChanged: (_) {
-                    _estimateToken?.cancel();
-                    _estimateDebounce?.cancel();
-                    setState(() => _points = null);
-                    _estimateDebounce = Timer(
-                      const Duration(milliseconds: 350),
-                      () => unawaited(_estimate()),
-                    );
-                  },
-                ),
-            ] else if (!_editable) ...[
-              for (final ref in _view.referenceIds(
-                _view.referenceMediaId,
-                _view.template['mediaId']?.toString(),
-              ))
-                ConversationMediaView(
-                  id: ref,
-                  repository: widget.controller.repository,
-                ),
-            ],
-            if (_loading)
-              const LinearProgressIndicator()
-            else if (_editable && _config != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                '${_model?.name ?? l10n.chatUnavailable}\n${_config!.params.values.join(' / ')}',
-              ),
-              if (widget.onModelParametersRequested != null)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
-                    tooltip: l10n.roleModelParameters,
-                    onPressed: _busy ? null : widget.onModelParametersRequested,
-                    icon: const Icon(Icons.tune),
-                  ),
-                ),
-              if (!_valid && _attempted == null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    l10n.chatInvalidGeneration,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  _points == null
-                      ? l10n.roleEstimatePending
-                      : l10n.chatEstimatedPoints(_points.toString()),
-                ),
-              ),
-            ] else ...[
-              if (card.configuration.isNotEmpty) Text(card.configuration),
-              if (card.estimatedPoints != null)
-                Text(l10n.chatEstimatedPoints(card.estimatedPoints.toString())),
-            ],
-            if (_error != null)
-              Row(
-                children: [
-                  Expanded(child: Text(conversationErrorText(_error, l10n))),
-                  IconButton(
-                    tooltip: l10n.retry,
-                    onPressed: _busy ? null : _load,
-                    icon: const Icon(Icons.refresh),
-                  ),
-                ],
-              ),
-            if (_editable)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    if (card.isHomePlan ||
-                        card.allowedActions.contains('cancel'))
-                      OutlinedButton(
-                        onPressed: _busy
-                            ? null
-                            : () async {
-                                if (await widget.controller.confirm(
-                                      card,
-                                      'cancel',
-                                    ) &&
-                                    mounted) {
-                                  setState(() => _submitted = true);
-                                }
-                              },
-                        child: Text(l10n.cancel),
+                    if (card.roleImage != null)
+                      TextField(
+                        controller: _requirements,
+                        enabled: !locked,
+                        maxLength: 8000,
+                        minLines: 2,
+                        maxLines: 5,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: l10n.chatGenerationRequirements,
+                          counterText: '',
+                          isDense: true,
+                          contentPadding: const EdgeInsets.all(12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(
+                              color: colors.outlineVariant,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: colors.primary),
+                          ),
+                        ),
+                        onChanged: (_) {
+                          _estimateToken?.cancel();
+                          _estimateDebounce?.cancel();
+                          setState(() {
+                            _points = null;
+                            _estimating = true;
+                          });
+                          _estimateDebounce = Timer(
+                            const Duration(milliseconds: 350),
+                            () => unawaited(_estimate()),
+                          );
+                        },
                       ),
-                    FilledButton(
-                      onPressed:
-                          _busy ||
-                              _loading ||
-                              _attempted == null && (!_valid || _points == null)
-                          ? null
-                          : _confirm,
-                      child: Text(
-                        _attempted != null
-                            ? l10n.retry
-                            : l10n.chatConfirmGeneration,
+                  ] else if (!_editable) ...[
+                    for (final ref in _view.referenceIds(
+                      _view.referenceMediaId,
+                      _view.template['mediaId']?.toString(),
+                    ))
+                      ConversationMediaView(
+                        id: ref,
+                        repository: widget.controller.repository,
                       ),
-                    ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ConversationGenerationConfiguration(
+              config: _editable ? _config : _view.config,
+              model: _model,
+              points: _editable ? _points : card.estimatedPoints,
+              savedConfiguration: _editable
+                  ? const []
+                  : _view.configurationLines,
+              loading: _loading,
+              estimating: _estimating,
+            ),
+            if (!_loading &&
+                _editable &&
+                _config != null &&
+                !_valid &&
+                _attempted == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.chatInvalidGeneration,
+                  style: TextStyle(fontSize: 13, color: colors.error),
                 ),
               ),
+            if (_editable) _actions(l10n),
           ],
         ],
       ),
     );
   }
-}
 
-class _TemplatePicker extends StatefulWidget {
-  const _TemplatePicker({required this.controller, required this.scroll});
-  final ConversationController controller;
-  final ScrollController scroll;
-  @override
-  State<_TemplatePicker> createState() => _TemplatePickerState();
-}
-
-class _TemplatePickerState extends State<_TemplatePicker> {
-  final _token = CancelToken();
-  late Future<List<ConversationRoleTemplate>> _templates = widget
-      .controller
-      .repository
-      .roleTemplates(cancelToken: _token);
-  @override
-  void dispose() {
-    _token.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return FutureBuilder<List<ConversationRoleTemplate>>(
-      future: _templates,
-      builder: (context, snapshot) {
-        final items = snapshot.data;
-        return ListView.builder(
-          controller: widget.scroll,
-          padding: const EdgeInsets.all(20),
-          itemCount: items == null ? 2 : items.length + 2,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Text(
-                l10n.chatImageStyle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              );
-            }
-            if (items == null) {
-              return snapshot.hasError
-                  ? IconButton(
-                      tooltip: l10n.retry,
-                      onPressed: () => setState(
-                        () => _templates = widget.controller.repository
-                            .roleTemplates(cancelToken: _token),
-                      ),
-                      icon: const Icon(Icons.refresh),
-                    )
-                  : const LinearProgressIndicator();
-            }
-            if (index == 1) {
-              return ListTile(
-                title: Text(l10n.chatUnrestrictedStyle),
-                onTap: () => Navigator.of(context).pop(
-                  ConversationRoleTemplate.fromJson({'id': '', 'title': ''}),
-                ),
-              );
-            }
-            final template = items[index - 2];
-            return ListTile(
-              key: ValueKey(template.id),
-              minVerticalPadding: 12,
-              leading: template.coverUrl.isEmpty
-                  ? const Icon(Icons.palette_outlined)
-                  : SizedBox.square(
-                      dimension: 56,
-                      child: Image.network(
-                        template.coverUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.palette_outlined),
-                      ),
-                    ),
-              title: Text(template.title),
-              onTap: () => Navigator.of(context).pop(template),
-            );
-          },
-        );
-      },
-    );
-  }
+  Widget _actions(AppLocalizations l10n) => Padding(
+    padding: const EdgeInsets.only(top: 12),
+    child: Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        if (widget.block.isHomePlan ||
+            widget.block.allowedActions.contains('cancel'))
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+              minimumSize: const Size(80, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontSize: 14),
+            ),
+            onPressed: _busy
+                ? null
+                : () async {
+                    if (await widget.controller.confirm(
+                          widget.block,
+                          'cancel',
+                        ) &&
+                        mounted) {
+                      setState(() => _submitted = true);
+                    }
+                  },
+            child: Text(l10n.cancel),
+          ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(110, 36),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            textStyle: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontSize: 14),
+          ),
+          onPressed:
+              _busy ||
+                  _loading ||
+                  _estimating ||
+                  _attempted == null && _options != null && !_valid
+              ? null
+              : _confirm,
+          child: Text(l10n.chatConfirmGeneration),
+        ),
+      ],
+    ),
+  );
 }

@@ -307,6 +307,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleScriptContent => 'Script';
 
   @override
+  String get chatVideoProgress => 'Video generation progress';
+
+  @override
+  String get chatStoryboardReview =>
+      'Storyboard ready, awaiting video confirmation';
+
+  @override
+  String get chatTaskPausing => 'Pausing after the current stage';
+
+  @override
+  String get chatStageGenerateVideo => 'Generate video';
+
+  @override
+  String get chatStageInspectResult => 'Inspect result';
+
+  @override
   String get roleStoryboardContent => 'Storyboard';
 
   @override
@@ -744,6 +760,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipAccountsTitle => 'IP Account Management';
 
   @override
+  String get deleteIpAccountTitle => 'Delete this IP account?';
+
+  @override
+  String get deleteIpAccountDescription =>
+      'The account will be archived and removed from the account list. Works, conversations and account data will be preserved.';
+
+  @override
   String get loadingIpAccounts => 'Loading accounts';
 
   @override
@@ -945,7 +968,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newConversation => 'New conversation';
 
   @override
-  String get newSessionTitle => 'New conversation';
+  String get newSessionTitle => 'New project';
 
   @override
   String get changeAvatar => 'Change avatar';
@@ -1682,6 +1705,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get attachmentTitle => 'Add';
+
+  @override
+  String get attachmentFeaturePending => 'Feature under development';
 
   @override
   String get attachmentCamera => 'Camera';
@@ -2438,6 +2464,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTopicSelected => 'Selected story';
 
   @override
+  String get chatTopicConfirmed => 'Topic confirmed';
+
+  @override
+  String get chatCollapseStory => 'Collapse story';
+
+  @override
+  String get chatExpandStory => 'Expand story';
+
+  @override
   String get chatGenerationConfirmed => 'Generation plan confirmed';
 
   @override
@@ -2448,6 +2483,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatImageStyle => 'Image style';
+
+  @override
+  String get chatStyleLibrary => 'Style library';
+
+  @override
+  String get chatStyleUnrestricted => 'Unrestricted style';
 
   @override
   String get chatUnrestrictedStyle => 'Unrestricted style';
@@ -2464,6 +2505,113 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatGenerationTask => 'Generation task';
+
+  @override
+  String get chatExpandTask => 'Expand task';
+
+  @override
+  String get chatCollapseTask => 'Collapse task';
+
+  @override
+  String get chatGenerationWorking => 'Generating...';
+
+  @override
+  String get chatGenerationWorkingHint => 'Creating your work...';
+
+  @override
+  String get chatGenerationTaskCompleted => 'Task completed';
+
+  @override
+  String get chatImageGenerationFailed => 'Image generation failed';
+
+  @override
+  String get chatVideoGenerationFailed => 'Video generation failed';
+
+  @override
+  String get chatTextGenerationTimeout =>
+      'Text generation timed out. Please try again';
+
+  @override
+  String get chatTextGenerationFailed =>
+      'Text generation failed. Please try again';
+
+  @override
+  String get chatScriptGenerationFailed =>
+      'Script generation failed. Please try again';
+
+  @override
+  String get chatTopicGenerationFailed =>
+      'Topic generation failed. Please try again';
+
+  @override
+  String get chatResultCheckFailed =>
+      'The video integrity check failed. The generated result has been kept';
+
+  @override
+  String get chatOutputValidationFailed =>
+      'The generated result failed validation. Please try again';
+
+  @override
+  String get chatStoryboardMissing =>
+      'The saved storyboard is missing. Confirm the storyboard before generating';
+
+  @override
+  String get chatVideoMissing =>
+      'The generated video could not be found. Please try again';
+
+  @override
+  String get chatTaskInputChanged =>
+      'The creation content has changed. Confirm the generation plan again';
+
+  @override
+  String get chatTaskConfirmationMismatch =>
+      'The storyboard version does not match the confirmation. Confirm the storyboard again';
+
+  @override
+  String get chatVideoPromptInvalid =>
+      'The generation prompt is invalid. Update the content and confirm again';
+
+  @override
+  String get chatTaskResultUnavailable =>
+      'The generated result is temporarily unavailable. Please try again later';
+
+  @override
+  String get chatTaskSubmissionFailed =>
+      'The generation task could not be submitted. Please try again later';
+
+  @override
+  String get chatTaskServiceUnavailable =>
+      'The generation service is temporarily unavailable. Please try again later';
+
+  @override
+  String get chatRoleReferenceUnavailable =>
+      'The character reference image is unavailable. Update the image and select the cast again before generating';
+
+  @override
+  String get chatProductionPlan => 'Production plan';
+
+  @override
+  String get chatPlanCast => 'Cast';
+
+  @override
+  String get chatPlanStory => 'Selected story';
+
+  @override
+  String get chatPlanHighlight => 'Core highlight';
+
+  @override
+  String get chatPlanConfiguration => 'Model configuration';
+
+  @override
+  String get chatPlanModel => 'Model';
+
+  @override
+  String get chatPlanPoints => 'Estimated points';
+
+  @override
+  String chatPlanCredits(String points) {
+    return '$points points';
+  }
 
   @override
   String get chatReviseContent => 'Revise content';
@@ -2543,7 +2691,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatPrepareRole => 'Preparing a character plan';
 
   @override
-  String get redemptionCenter => 'Redemption Center';
+  String get redemptionCenter => 'Invite Friends';
 
   @override
   String get redemptionPageTitle => 'Invite Friends';
@@ -2623,7 +2771,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get redemptionLoadMore => 'Load more';
 
   @override
-  String get redemptionLoginRequired => 'Sign in to use the Redemption Center';
+  String get redemptionLoginRequired => 'Sign in to invite friends';
 
   @override
   String get redemptionBindRequired =>

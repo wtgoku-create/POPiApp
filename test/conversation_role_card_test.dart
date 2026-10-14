@@ -1,11 +1,16 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_role_profile.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_role_card.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 
 ConversationBlock _role({
   String action = 'created',
@@ -18,6 +23,7 @@ ConversationBlock _role({
     'ref': {'kind': 'role', 'id': 'alice', 'versionId': 'saved-v1'},
     'title': 'Alice',
     'status': status,
+    'version': 2,
     'avatar': 'assets/images/role_guide_avatar_1.png',
     'threeViewImage': 'assets/images/role_guide_result_preview.png',
     'profile': {
@@ -43,24 +49,53 @@ ConversationBlock _role({
   },
 });
 
-Future<void> _pump(WidgetTester tester, ConversationBlock block) async {
+Future<List<RequestOptions>> _pump(
+  WidgetTester tester,
+  ConversationBlock block,
+) async {
+  final requests = <RequestOptions>[];
+  final dio = Dio()
+    ..interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (request, handler) {
+          requests.add(request);
+          handler.reject(DioException(requestOptions: request));
+        },
+      ),
+    );
+  addTearDown(dio.close);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: AppTheme.light,
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: SingleChildScrollView(child: ConversationRoleCard(block: block)),
+    ProviderScope(
+      overrides: [dioProvider.overrideWithValue(dio)],
+      child: MaterialApp(
+        theme: AppTheme.light,
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ConversationRoleCard(block: block),
+          ),
+        ),
       ),
     ),
   );
+  await tester.pumpAndSettle();
+  return requests;
+}
+
+Future<void> _expandProfile(WidgetTester tester) async {
+  final toggle = find.byKey(const Key('role-profile-toggle'));
+  await tester.ensureVisible(toggle);
+  await tester.pumpAndSettle();
+  await tester.tap(toggle);
   await tester.pumpAndSettle();
 }
 
 void main() {
   test('saved profile follows Web field order and value formatting', () {
-    final role = ConversationRoleProfile.fromBlock(_role());
+    final block = _role();
+    final role = ConversationRoleProfile.fromBlock(block);
     expect(role.fields, [
       ('title', 'Alice'),
       ('description', 'Saved description'),
@@ -72,6 +107,10 @@ void main() {
       ('Details', '{"favorite":"Books"}'),
     ]);
     expect(role.portrait, 'assets/images/role_guide_avatar_1.png');
+    expect(role.snapshotRole.id, 'alice');
+    expect(role.snapshotRole.profileVersionId, 'saved-v1');
+    expect(role.snapshotRole.profileVersion, 2);
+    expect(role.snapshotRole.profile, block.data['profile']);
     expect(role.showProfileCard, isTrue);
     expect(
       ConversationRoleProfile.fromBlock(_role(action: 'cast')).showProfileCard,
@@ -94,27 +133,53 @@ void main() {
   testWidgets('edited active role shows three-view image without cropping', (
     tester,
   ) async {
-    await _pump(tester, _role(action: 'edited'));
+    final requests = await _pump(tester, _role(action: 'edited'));
     expect(find.text('Character profile updated'), findsOneWidget);
-    expect(find.text('Kind、Quiet、Patient'), findsOneWidget);
+    expect(find.text('Kind、Quiet、Patient'), findsNothing);
     final image = tester.widget<Image>(find.byType(Image));
     expect(
       (image.image as AssetImage).assetName,
       'assets/images/role_guide_result_preview.png',
     );
     expect(image.fit, BoxFit.contain);
+    await tester.tap(find.byKey(const Key('conversation-role-view-profile')));
+    await tester.pumpAndSettle();
+    final detail = tester.widget<RoleDetailPage>(find.byType(RoleDetailPage));
+    expect(detail.useSnapshot, isTrue);
+    expect(detail.role.avatar, 'assets/images/role_guide_result_preview.png');
+    await _expandProfile(tester);
+    await tester.scrollUntilVisible(
+      find.text('Kind / Quiet / Patient'),
+      150,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('conversation-role-profile')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Kind / Quiet / Patient'), findsOneWidget);
+    expect(requests, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('cast role has compact card and saved profile preview', (
     tester,
   ) async {
-    await _pump(tester, _role(action: 'cast'));
+    final requests = await _pump(tester, _role(action: 'cast'));
     expect(find.byKey(const Key('conversation-role-summary')), findsOneWidget);
     expect(find.byKey(const Key('conversation-role-card')), findsNothing);
+    final portrait = tester.getRect(
+      find.byKey(const Key('conversation-role-portrait')),
+    );
+    expect(portrait.size, const Size(44, 44));
     expect(
-      tester.getSize(find.byKey(const Key('conversation-role-summary'))).width,
-      188,
+      tester.getTopLeft(find.text('Alice')).dx,
+      greaterThan(portrait.right),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('conversation-role-summary'))).height,
+      lessThanOrEqualTo(88),
     );
     expect(find.text('Saved description'), findsOneWidget);
     expect(find.text('Kind、Quiet、Patient'), findsNothing);
@@ -122,21 +187,27 @@ void main() {
     await tester.pumpAndSettle();
     final sheet = find.byKey(const Key('conversation-role-profile'));
     expect(sheet, findsOneWidget);
+    expect(tester.widget(sheet), isA<RoleProfileSheet>());
+    expect(find.byKey(const Key('role-profile-summary')), findsOneWidget);
+    expect(find.byKey(const Key('role-profile-actions')), findsNothing);
+    expect(find.byKey(const Key('role-creation-edit-entry')), findsNothing);
     expect(
       find.descendant(of: sheet, matching: find.text('Saved description')),
       findsOneWidget,
     );
+    await _expandProfile(tester);
     await tester.scrollUntilVisible(
-      find.descendant(of: sheet, matching: find.text('Kind、Quiet、Patient')),
+      find.descendant(of: sheet, matching: find.text('Kind / Quiet / Patient')),
       150,
       scrollable: find
           .descendant(of: sheet, matching: find.byType(Scrollable))
           .first,
     );
     expect(
-      find.descendant(of: sheet, matching: find.text('Kind、Quiet、Patient')),
+      find.descendant(of: sheet, matching: find.text('Kind / Quiet / Patient')),
       findsOneWidget,
     );
+    expect(requests, isEmpty);
     expect(tester.takeException(), isNull);
   });
 

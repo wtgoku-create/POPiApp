@@ -6,6 +6,14 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      build_environment:
+        description: Build environment (dev uses the test server)
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - dev
       build_android:
         description: Build Android APK
         required: true
@@ -24,6 +32,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && 'development' || 'production' }}
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
@@ -61,13 +73,13 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: dart run tool/flutter_env.dart production test --coverage
+        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" test --coverage
 
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-coverage
+          name: flutter-coverage${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: coverage/lcov.info
           if-no-files-found: ignore
 
@@ -109,12 +121,12 @@ jobs:
           EOF
 
       - name: Build signed release APK
-        run: dart run tool/flutter_env.dart production build apk --release
+        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: popi-app-android-apk-signed
+          name: popi-app-android-apk-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
@@ -160,7 +172,7 @@ jobs:
           project = Path('ios/Runner.xcodeproj/project.pbxproj')
           content = project.read_text()
           bundle_id = os.environ['IOS_BUNDLE_ID']
-          content = content.replace('com.example.flutterStarter', bundle_id)
+          content = content.replace('com.popistudio.app', bundle_id)
           project.write_text(content)
           PY
 
@@ -258,10 +270,14 @@ jobs:
 
       - name: Build signed iOS IPA
         run: |
+          build_name=$(ruby -ryaml -e 'puts YAML.load_file("pubspec.yaml").fetch("version").split("+").first')
           build_number=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
-          echo "Building iOS IPA with build number $build_number"
-          dart run tool/flutter_env.dart production build ipa \
+          echo "IOS_BUILD_NAME=$build_name" >> "$GITHUB_ENV"
+          echo "IOS_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "Building iOS IPA $build_name ($build_number)"
+          dart run tool/flutter_env.dart "$FLUTTER_ENV" build ipa \
             --release \
+            --build-name="$build_name" \
             --build-number="$build_number" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
 
@@ -275,10 +291,17 @@ jobs:
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
           echo "Generated IPA: $ipa_path"
 
+      - name: Verify IPA metadata and framework deployment targets
+        run: |
+          python3 tool/verify_ios_ipa.py "$IOS_IPA_PATH" \
+            --version "$IOS_BUILD_NAME" \
+            --build-number "$IOS_BUILD_NUMBER" \
+            --bundle-id "$IOS_BUNDLE_ID"
+
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-starter-ios-signed
+          name: flutter-starter-ios-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
 
@@ -292,12 +315,13 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.build_ios && inputs.upload_testflight)
       )
     runs-on: macos-latest
+    timeout-minutes: 30
 
     steps:
       - name: Download signed IPA
         uses: actions/download-artifact@v4
         with:
-          name: flutter-starter-ios-signed
+          name: flutter-starter-ios-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/ios/ipa
 
       - name: Resolve downloaded IPA path
@@ -309,10 +333,19 @@ jobs:
           fi
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
 
-      - name: Upload build to TestFlight
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ env.IOS_IPA_PATH }}
-          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
-          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      - name: Upload build and wait for App Store processing
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          xcrun altool --upload-package "$IOS_IPA_PATH" \
+            --api-key "$APPSTORE_KEY_ID" \
+            --api-issuer "$APPSTORE_ISSUER_ID" \
+            --p8-file-path "$key_path" \
+            --wait

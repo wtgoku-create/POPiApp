@@ -67,6 +67,7 @@ void main() {
     String category = 'personal',
     Locale locale = const Locale('zh'),
     double textScale = 1,
+    double bottomInset = 0,
     bool dark = false,
     bool sheet = false,
     Future<LibraryRole> Function(String)? load,
@@ -76,8 +77,12 @@ void main() {
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding(bottom: bottomInset);
+    tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewPadding);
     var theme = dark ? AppTheme.dark : AppTheme.light;
     if (const bool.fromEnvironment('CAPTURE_ROLE_PROFILE')) {
       await tester.runAsync(() async {
@@ -727,6 +732,20 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+
+  for (final bottomInset in [0.0, 16.0, 34.0]) {
+    testWidgets('profile actions count bottom inset once: $bottomInset', (
+      tester,
+    ) async {
+      await pumpPage(tester, bottomInset: bottomInset);
+      final actions = find.byKey(const Key('role-profile-actions'));
+      expect(
+        tester.getBottomLeft(actions).dy,
+        closeTo(956 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    });
   }
 
   testWidgets('renders the archive and actions from real profile fields', (

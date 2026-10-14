@@ -477,8 +477,30 @@ void main() {
         ),
         isEmpty,
       );
+      final entries = fixture.requests
+          .where((request) => request.path.endsWith('/home/enter'))
+          .length;
+      fixture.cast = [2];
       await tapLive(tester, 'role-guide-produce', running: true);
       expect(fixture.task!['state'], 'queued');
+      final generation = fixture.requests.singleWhere(
+        (request) => request.path.endsWith('/generate'),
+      );
+      expect(
+        generation.path,
+        '/api_agent/v2/sessions/11111111-1111-4111-8111-111111111111/generate',
+      );
+      expect(
+        generation.data.keys,
+        unorderedEquals(['clientRequestId', 'config']),
+      );
+      expect(find.text('Character 2的项目'), findsOneWidget);
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/home/enter'),
+        ),
+        hasLength(entries),
+      );
       expect(find.textContaining('交互预览'), findsNothing);
       await tapLive(tester, 'role-guide-pause', running: true);
       expect(fixture.task!['state'], 'paused');
@@ -511,6 +533,48 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       await tester.pumpAndSettle();
       expect(find.text('生成成功！'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets(
+    'canceling releases the creation for another generation with the same config',
+    (tester) async {
+      final fixture = HomeCreationFixture()
+        ..selected = {
+          'id': 'saved',
+          'title': 'Saved story',
+          'summary': 'Saved body',
+        };
+      await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+      await tapLive(tester, 'role-guide-configure');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      await tapLive(tester, 'home-config-confirm');
+      await tapLive(tester, 'role-guide-produce', running: true);
+      await tapLive(tester, 'role-guide-generation-action', running: true);
+      await tapLive(tester, 'role-guide-confirm-stop', running: true);
+      expect(fixture.task!['state'], 'canceled');
+      final cancellation = fixture.requests.firstWhere(
+        (request) => request.path.endsWith('/control'),
+      );
+      expect(
+        cancellation.data.keys,
+        unorderedEquals(['clientRequestId', 'action']),
+      );
+      await tapLive(tester, 'role-guide-back');
+      await tapLive(tester, 'role-guide-produce', running: true);
+      final generations = fixture.requests
+          .where((request) => request.path.endsWith('/generate'))
+          .toList();
+      expect(generations, hasLength(2));
+      expect(generations.last.data['config'], generations.first.data['config']);
+      expect(
+        generations.last.data['clientRequestId'],
+        isNot(generations.first.data['clientRequestId']),
+      );
+      expect(fixture.task!['state'], 'queued');
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
     },

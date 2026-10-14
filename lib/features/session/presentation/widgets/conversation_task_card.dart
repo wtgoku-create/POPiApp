@@ -5,10 +5,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
+import '../conversation_error_text.dart';
 import 'conversation_card.dart';
+import 'conversation_card_content.dart';
+import 'conversation_home_task_card.dart';
+import 'conversation_generation_task_card.dart';
 import 'conversation_timeline.dart'
     show
         ConversationObjectView,
@@ -32,7 +37,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     with AutomaticKeepAliveClientMixin {
   CancelToken? _token;
   Map<String, Object?>? _capabilities;
-  Object? _error;
   final Set<String> _expandedSteps = {};
   @override
   bool get wantKeepAlive => true;
@@ -58,7 +62,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     final token = _token = CancelToken();
     setState(() {
       _capabilities = null;
-      _error = null;
     });
     try {
       final result = await widget.controller.repository.taskCapabilities(
@@ -67,7 +70,12 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
       );
       if (mounted && !token.isCancelled) setState(() => _capabilities = result);
     } catch (error) {
-      if (mounted && !token.isCancelled) setState(() => _error = error);
+      if (mounted && !token.isCancelled) {
+        AppToast.error(
+          context,
+          conversationErrorText(error, AppLocalizations.of(context)!),
+        );
+      }
     }
   }
 
@@ -103,15 +111,28 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
     final block = widget.block;
     final view = ConversationTaskView(block, widget.controller.snapshot);
     final l10n = AppLocalizations.of(context)!;
-    final generation = block.action == 'generation';
-    final actions = block.action == 'home'
-        ? block.allowedActions
-        : ((_capabilities?['allowedActions'] as List?) ?? [])
-              .whereType<String>()
-              .toList();
+    if (block.action == 'generation') {
+      return ConversationGenerationTaskCard(
+        block: block,
+        controller: widget.controller,
+      );
+    }
+    final actions = ((_capabilities?['allowedActions'] as List?) ?? [])
+        .whereType<String>()
+        .toList();
     final state = block.data['intent'] == 'cancel' && block.status != 'canceled'
         ? 'canceling'
         : block.status;
+    if (block.action == 'home') {
+      return ConversationHomeTaskCard(
+        block: block,
+        view: view,
+        controller: widget.controller,
+        state: state,
+        disabled: _disabled,
+        onControl: _control,
+      );
+    }
     return ConversationCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -120,15 +141,8 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
             children: [
               Expanded(
                 child: Text(
-                  view.title.isEmpty
-                      ? generation
-                            ? l10n.chatGenerationTask
-                            : l10n.roleViewPlan
-                      : view.title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  view.title.isEmpty ? l10n.roleViewPlan : view.title,
+                  style: ConversationCardTypography.title,
                 ),
               ),
               if (['queued', 'running', 'saving', 'resuming'].contains(state))
@@ -140,16 +154,18 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
           ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(conversationStatusLabel(state, l10n)),
+            child: Text(
+              conversationStatusLabel(state, l10n),
+              style: ConversationCardTypography.caption,
+            ),
           ),
           if (view.errorCode != null || view.error != null)
             Text(
-              [
-                    'INSUFFICIENT_POINTS',
-                    'INSUFFICIENT_COINS',
-                  ].contains(view.errorCode)
-                  ? l10n.chatInsufficientPoints
-                  : view.error ?? l10n.chatRunFailed,
+              conversationTaskErrorText(
+                l10n,
+                code: view.errorCode,
+                message: view.error,
+              ),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           for (final step in view.steps) ...[
@@ -166,7 +182,10 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 const SizedBox(width: 8),
                 Expanded(child: Text(_stepLabel(step.key, l10n))),
                 Flexible(
-                  child: Text(conversationStatusLabel(step.state, l10n)),
+                  child: Text(
+                    conversationStatusLabel(step.state, l10n),
+                    style: ConversationCardTypography.caption,
+                  ),
                 ),
                 if (step.content != null)
                   IconButton(
@@ -188,10 +207,13 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
             ),
             if (step.content != null &&
                 (_expandedSteps.contains(step.key) || step.key == 'video'))
-              ConversationObjectView(
-                block: step.content!,
-                controller: widget.controller,
-                framed: false,
+              ConversationCardContent(
+                storageId: 'task:${block.id}:${step.key}',
+                child: ConversationObjectView(
+                  block: step.content!,
+                  controller: widget.controller,
+                  framed: false,
+                ),
               ),
             for (final id in step.mediaIds.where(
               (id) =>
@@ -209,8 +231,17 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
               repository: widget.controller.repository,
             ),
           for (final proposal in view.proposals) ...[
-            for (final prompt in proposal.prompts)
-              MarkdownMessage(text: prompt, compact: true),
+            if (proposal.prompts.isNotEmpty)
+              ConversationCardContent(
+                storageId: 'task:${block.id}:proposal:${proposal.data['id']}',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final prompt in proposal.prompts)
+                      MarkdownMessage(text: prompt, compact: true),
+                  ],
+                ),
+              ),
             if (proposal.estimatedPoints != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -253,31 +284,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 ],
               ),
           ],
-          if (generation && block.planItems.isNotEmpty)
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: Text(l10n.roleViewPlan),
-              children: [
-                for (final prompt in block.planPrompts)
-                  MarkdownMessage(text: prompt, compact: true),
-                if (block.configuration.isNotEmpty) Text(block.configuration),
-                if (block.estimatedPoints != null)
-                  Text(
-                    l10n.chatEstimatedPoints(block.estimatedPoints.toString()),
-                  ),
-              ],
-            ),
-          if (block.action == 'home' &&
-              block.status == 'awaiting_confirmation' &&
-              block.data['confirmationPending'] == true &&
-              block.data['intent'] != 'cancel')
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: FilledButton(
-                onPressed: _disabled ? null : () => _control('confirm-video'),
-                child: Text(l10n.roleConfirmVideo),
-              ),
-            ),
           Wrap(
             alignment: WrapAlignment.end,
             children: [
@@ -303,17 +309,6 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                 ),
             ],
           ),
-          if (_error != null)
-            Row(
-              children: [
-                Expanded(child: Text(conversationErrorText(_error, l10n))),
-                IconButton(
-                  tooltip: l10n.retry,
-                  onPressed: _load,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            ),
         ],
       ),
     );

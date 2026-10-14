@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
@@ -214,7 +215,10 @@ void main() {
         matching: find.byType(Image),
       ),
     );
-    expect((image.image as NetworkImage).url, 'https://example.test/first.png');
+    expect(
+      (image.image as CachedNetworkImageProvider).url,
+      'https://example.test/first.png',
+    );
     final refreshing = tester
         .state<RefreshIndicatorState>(find.byType(RefreshIndicator))
         .show();

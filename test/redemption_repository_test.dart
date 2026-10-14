@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/redemption/data/redemption_repository.dart';
@@ -176,6 +177,9 @@ void main() {
     );
     expect(page.hasMore, isFalse);
     expect(redemptionImageUrl('javascript:alert(1)'), isNull);
-    expect(redemptionImageUrl('/relative.png'), isNull);
+    expect(
+      redemptionImageUrl('/relative.png'),
+      '${AppConfig.apiBaseUrl}/relative.png',
+    );
   });
 }

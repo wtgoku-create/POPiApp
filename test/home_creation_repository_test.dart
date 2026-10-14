@@ -279,6 +279,47 @@ void main() {
   );
 
   test(
+    'generation uses the session endpoint and applies the accepted snapshot',
+    () async {
+      final fixture = HomeCreationFixture();
+      final repository = fixture.repository;
+      var home = await repository.open('101');
+      home = await repository.recommend(home);
+      home = await repository.selectTopic(home, home.topics.single);
+      const config = HomeConfig(
+        modelId: '501',
+        params: {'duration': 15, 'ratio': '16:9'},
+      );
+      final updated = await repository.generate(home, config);
+      final request = fixture.requests.last;
+      expect(request.method, 'POST');
+      expect(request.path, '/api_agent/v2/sessions/${home.sessionId}/generate');
+      expect(request.baseUrl, 'http://agent.test');
+      expect(request.data.keys, unorderedEquals(['clientRequestId', 'config']));
+      expect(request.data['config'], config.toJson());
+      expect(
+        request.data['clientRequestId'],
+        matches(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ),
+      );
+      expect(updated.id, home.id);
+      expect(updated.version, home.version + 1);
+      expect(updated.editable, isFalse);
+      expect(updated.config!.toJson(), config.toJson());
+      expect(updated.selectedTopic!.id, home.selectedTopic!.id);
+      expect(updated.task!.state, 'queued');
+      expect(updated.task!.needsPolling, isTrue);
+      expect(
+        fixture.requests.where(
+          (request) => request.path.endsWith('/home/enter'),
+        ),
+        hasLength(1),
+      );
+    },
+  );
+
+  test(
     'lost entry and generation responses retain complete idempotent input',
     () async {
       final fixture = HomeCreationFixture()..failEntryOnce = true;
@@ -296,10 +337,14 @@ void main() {
         repository.generate(home, config),
         throwsA(isA<DioException>()),
       );
-      final task = await repository.generate(home, config);
-      expect(task.id, fixture.task!['id']);
+      fixture.task = fixture.taskValue('paused', version: 2);
+      final updated = await repository.generate(home, config);
+      expect(updated.task!.id, fixture.task!['id']);
+      expect(updated.task!.state, 'paused');
+      expect(updated.task!.revision, 2);
+      expect(updated.version, home.version + 1);
       final submissions = fixture.requests
-          .where((request) => request.path.endsWith('/home/generate'))
+          .where((request) => request.path.endsWith('/generate'))
           .toList();
       expect(submissions[0].data, submissions[1].data);
     },
@@ -346,12 +391,37 @@ void main() {
     final resumed = await fixture.repository.control(home.task!, 'resume');
     expect(resumed.state, 'running');
     expect(resumed.needsPolling, isTrue);
+    expect(
+      fixture.requests.last.data.keys,
+      unorderedEquals(['clientRequestId', 'action']),
+    );
     fixture.task = fixture.taskValue('awaiting_confirmation', version: 3);
     final waiting = await fixture.repository.task(resumed.id);
     expect(waiting.canConfirmVideo, isTrue);
     await fixture.repository.control(waiting, 'confirm-video');
     expect(fixture.requests.last.path.endsWith('/confirm-video'), isTrue);
-    expect(fixture.requests.last.data.containsKey('action'), isFalse);
+    expect(fixture.requests.last.data.keys, ['clientRequestId']);
+  });
+
+  test('retrying a failed task uses the returned new task identity', () async {
+    final fixture = HomeCreationFixture();
+    fixture.task = fixture.taskValue('failed', lock: 'released');
+    final repository = fixture.repository;
+    final home = await repository.open('101');
+    final failed = home.task!;
+    final retried = await repository.control(failed, 'retry');
+    expect(retried.id, isNot(failed.id));
+    expect(retried.state, 'running');
+    expect(retried.needsPolling, isTrue);
+    final request = fixture.requests.last;
+    expect(request.path, '/api_agent/v2/home-tasks/${failed.id}/control');
+    expect(request.data.keys, unorderedEquals(['clientRequestId', 'action']));
+    expect(request.data['action'], 'retry');
+    await repository.task(retried.id);
+    expect(
+      fixture.requests.last.path,
+      '/api_agent/v2/home-tasks/${retried.id}',
+    );
   });
 
   test(

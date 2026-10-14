@@ -35,7 +35,7 @@ abstract final class AppConfig {
   );
   static const wechatUniversalLink = String.fromEnvironment(
     'WECHAT_UNIVERSAL_LINK',
-    defaultValue: 'https://app.popi.art/WeChat/',
+    defaultValue: 'https://app.popi.art/WeChat',
   );
   static const douyinClientKey = String.fromEnvironment(
     'DOUYIN_CLIENT_KEY',
@@ -43,7 +43,7 @@ abstract final class AppConfig {
   );
   static const douyinUniversalLink = String.fromEnvironment(
     'DOUYIN_UNIVERSAL_LINK',
-    defaultValue: 'https://app.popi.art/WeChat/',
+    defaultValue: 'https://app.popi.art/Douyin',
   );
   static const userAgreementUrl = String.fromEnvironment(
     'USER_AGREEMENT_URL',

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../shared/widgets/app_network_image.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -276,7 +277,7 @@ class _TeachingDocumentPageState extends ConsumerState<TeachingDocumentPage> {
           unawaited(
             AppImagePreview.show(
               context: context,
-              image: NetworkImage(event.url!.toString()),
+              image: AppImageCache.provider(event.url!.toString()),
               heroTag: 'teaching-document-image',
               label: event.label,
             ),

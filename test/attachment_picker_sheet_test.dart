@@ -116,6 +116,7 @@ void main() {
     double textScale = 1,
     List<LibraryRole> selectedRoles = const [],
     List<LibraryWork> selectedAssets = const [],
+    bool additionalSourcesEnabled = true,
     void Function(AttachmentPickerResult?)? onResult,
   }) async {
     tester.view.physicalSize = size;
@@ -191,6 +192,7 @@ void main() {
                         repository: repository,
                         selectedRoles: selectedRoles,
                         selectedAssets: selectedAssets,
+                        additionalSourcesEnabled: additionalSourcesEnabled,
                       );
                       onResult?.call(result);
                     },
@@ -204,6 +206,51 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('open-attachment')));
     await tester.pumpAndSettle();
+  }
+
+  for (final locale in [const Locale('zh'), const Locale('en')]) {
+    testWidgets('pending attachment sources retain selected photos: $locale', (
+      tester,
+    ) async {
+      final repository = _Gallery();
+      AttachmentPickerResult? result;
+      await open(
+        tester,
+        repository,
+        locale: locale,
+        additionalSourcesEnabled: false,
+        onResult: (value) => result = value,
+      );
+      final l10n = lookupAppLocalizations(locale);
+      await tester.tap(find.byKey(const ValueKey('gallery:0')));
+      for (final source in ['files', 'roles', 'assets']) {
+        final tile = find.byKey(Key('attachment-source-$source'));
+        expect(
+          tester
+              .widget<Opacity>(
+                find.descendant(of: tile, matching: find.byType(Opacity)).first,
+              )
+              .opacity,
+          .4,
+        );
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.attachmentFeaturePending), findsOneWidget);
+        expect(find.byType(RoleSelectionSheet), findsNothing);
+        expect(find.byType(AssetSelectionSheet), findsNothing);
+        expect(find.byType(AttachmentPickerSheet), findsOneWidget);
+        expect(repository.fileLimits, isEmpty);
+        expect(result, isNull);
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(const Key('attachment-confirm')));
+      await tester.pumpAndSettle();
+      expect(result!.images.single.name, 'photo-0.png');
+      expect(result!.roles, isNull);
+      expect(result!.assets, isNull);
+      expect(tester.takeException(), isNull);
+    });
   }
 
   testWidgets(

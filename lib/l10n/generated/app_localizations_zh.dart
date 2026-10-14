@@ -295,6 +295,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleScriptContent => '脚本内容';
 
   @override
+  String get chatVideoProgress => '视频生成进度';
+
+  @override
+  String get chatStoryboardReview => '分镜脚本已完成，待确认生成视频';
+
+  @override
+  String get chatTaskPausing => '暂停中，等待当前阶段完成';
+
+  @override
+  String get chatStageGenerateVideo => '生成视频';
+
+  @override
+  String get chatStageInspectResult => '检测结果';
+
+  @override
   String get roleStoryboardContent => '分镜内容';
 
   @override
@@ -716,6 +731,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipAccountsTitle => 'IP账号管理';
 
   @override
+  String get deleteIpAccountTitle => '确认删除该IP账号？';
+
+  @override
+  String get deleteIpAccountDescription => '删除后，账号将被归档，不再显示在账号列表中。作品、会话和资料会保留。';
+
+  @override
   String get loadingIpAccounts => '正在加载账号';
 
   @override
@@ -907,7 +928,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newConversation => '新建对话';
 
   @override
-  String get newSessionTitle => '新会话';
+  String get newSessionTitle => '新项目';
 
   @override
   String get changeAvatar => '更换头像';
@@ -1610,6 +1631,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get attachmentTitle => '添加';
+
+  @override
+  String get attachmentFeaturePending => '功能待开发';
 
   @override
   String get attachmentCamera => '拍摄';
@@ -2332,6 +2356,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTopicSelected => '已选择的故事';
 
   @override
+  String get chatTopicConfirmed => '已确认选题';
+
+  @override
+  String get chatCollapseStory => '收起故事';
+
+  @override
+  String get chatExpandStory => '展开故事';
+
+  @override
   String get chatGenerationConfirmed => '已确认生成方案';
 
   @override
@@ -2342,6 +2375,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatImageStyle => '画风';
+
+  @override
+  String get chatStyleLibrary => '风格库';
+
+  @override
+  String get chatStyleUnrestricted => '不限制风格';
 
   @override
   String get chatUnrestrictedStyle => '不限画风';
@@ -2357,6 +2396,98 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatGenerationTask => '生成任务';
+
+  @override
+  String get chatExpandTask => '展开任务';
+
+  @override
+  String get chatCollapseTask => '收起任务';
+
+  @override
+  String get chatGenerationWorking => '任务正在生成...';
+
+  @override
+  String get chatGenerationWorkingHint => '作品努力生成中...';
+
+  @override
+  String get chatGenerationTaskCompleted => '任务已完成';
+
+  @override
+  String get chatImageGenerationFailed => '图片生成失败';
+
+  @override
+  String get chatVideoGenerationFailed => '视频生成失败';
+
+  @override
+  String get chatTextGenerationTimeout => '文本生成超时，请重试';
+
+  @override
+  String get chatTextGenerationFailed => '文本生成失败，请重试';
+
+  @override
+  String get chatScriptGenerationFailed => '剧本生成失败，请重试';
+
+  @override
+  String get chatTopicGenerationFailed => '选题生成失败，请重试';
+
+  @override
+  String get chatResultCheckFailed => '视频完整性检查未通过，已保留生成结果';
+
+  @override
+  String get chatOutputValidationFailed => '生成结果校验未通过，请重试';
+
+  @override
+  String get chatStoryboardMissing => '缺少已保存的分镜内容，请确认分镜后再生成';
+
+  @override
+  String get chatVideoMissing => '未找到生成的视频结果，请重试';
+
+  @override
+  String get chatTaskInputChanged => '创作内容已变更，请重新确认生成方案';
+
+  @override
+  String get chatTaskConfirmationMismatch => '分镜版本与确认内容不一致，请重新确认分镜';
+
+  @override
+  String get chatVideoPromptInvalid => '生成提示词无效，请修改内容后重新确认';
+
+  @override
+  String get chatTaskResultUnavailable => '生成结果暂时无法读取，请稍后重试';
+
+  @override
+  String get chatTaskSubmissionFailed => '生成任务提交失败，请稍后重试';
+
+  @override
+  String get chatTaskServiceUnavailable => '生成服务暂时不可用，请稍后重试';
+
+  @override
+  String get chatRoleReferenceUnavailable => '角色参考图不可用，请更新角色图片并重新选择出场角色后再生成';
+
+  @override
+  String get chatProductionPlan => '生产方案';
+
+  @override
+  String get chatPlanCast => '出场角色';
+
+  @override
+  String get chatPlanStory => '选题故事';
+
+  @override
+  String get chatPlanHighlight => '核心看点';
+
+  @override
+  String get chatPlanConfiguration => '模型配置';
+
+  @override
+  String get chatPlanModel => '模型';
+
+  @override
+  String get chatPlanPoints => '预计消耗积分';
+
+  @override
+  String chatPlanCredits(String points) {
+    return '$points 积分';
+  }
 
   @override
   String get chatReviseContent => '修改内容';
@@ -2436,7 +2567,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatPrepareRole => '正在整理角色方案';
 
   @override
-  String get redemptionCenter => '兑换中心';
+  String get redemptionCenter => '邀请好友';
 
   @override
   String get redemptionPageTitle => '邀请好友';
@@ -2513,7 +2644,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get redemptionLoadMore => '加载更多';
 
   @override
-  String get redemptionLoginRequired => '登录后即可使用兑换中心';
+  String get redemptionLoginRequired => '登录后即可邀请好友';
 
   @override
   String get redemptionBindRequired => '绑定微信公众号后可查看邀请码';

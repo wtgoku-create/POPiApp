@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../app/theme.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/ip_guide_draft.dart';
@@ -176,7 +177,7 @@ class IpGuideChoiceGrid<T> extends StatelessWidget {
         : AppSvgIcon.asset(asset, size: 44);
     final url = imageUrl?.call(value);
     if (url == null || url.isEmpty) return fallback;
-    return Image.network(
+    return AppNetworkImage(
       url,
       width: 44,
       height: 44,
@@ -311,7 +312,7 @@ class IpGuidePresentationChoices extends StatelessWidget {
         : Image.asset(asset, fit: BoxFit.cover, excludeFromSemantics: true);
     final url = option.imageUrl;
     if (url == null || url.isEmpty) return fallback;
-    return Image.network(
+    return AppNetworkImage(
       url,
       fit: BoxFit.cover,
       errorBuilder: (_, _, _) => fallback,

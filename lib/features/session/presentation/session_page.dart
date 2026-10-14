@@ -289,7 +289,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       controller: _conversation!,
                       onRevise: (content) =>
                           _selectPrompt(l10n.chatRevisePrompt(content.title)),
-                      onModelParametersRequested: _showModelParameters,
                     ),
                   )
                 else
@@ -453,6 +452,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         : ConversationController(
             ref.read(sessionRepositoryProvider),
             userId,
+            onError: (error) {
+              if (!mounted || ref.read(userProvider)?.id != userId) return;
+              AppToast.error(
+                context,
+                conversationErrorText(error, AppLocalizations.of(context)!),
+              );
+            },
             onSessionChanged: (session) {
               if (!mounted || ref.read(userProvider)?.id != userId) return;
               final changed = _activeSessionId != session.id;
@@ -517,8 +523,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           queryParameters: {'sessionId': conversation.sessionId!},
         ).toString(),
       );
-    } else if (conversation.error != null) {
-      AppToast.error(context, conversationErrorText(conversation.error, l10n));
     }
   }
 
@@ -534,10 +538,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         );
         if (!mounted || !identical(conversation, _conversation)) return;
         if (!success) {
-          AppToast.error(
-            context,
-            AppLocalizations.of(context)!.roleRequestFailed,
-          );
           return;
         }
       }

@@ -11,9 +11,9 @@ import 'package:dio/dio.dart';
 
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
-import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
@@ -108,6 +108,15 @@ void main() {
       await tester.tap(send);
       await tester.pumpAndSettle();
       expect(repository.sentMedia.single, ['media-42']);
+      expect(find.text('请求失败，请稍后重试'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ConversationTimeline),
+          matching: find.text('请求失败，请稍后重试'),
+        ),
+        findsNothing,
+      );
+      expect(find.byTooltip('重试'), findsNothing);
       expect(
         find.byKey(const Key('popi-image-upload-ready-0')),
         findsOneWidget,
@@ -202,130 +211,16 @@ void main() {
     expect(controller.textController.selection.extentOffset, 2);
   });
 
-  testWidgets(
-    'confirmed roles can be removed, survive failure and reach the session request',
-    (tester) async {
-      tester.view.physicalSize = const Size(440, 956);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final repository = _RoleSessionRepository();
-      final container = ProviderContainer(
-        overrides: [
-          sessionRepositoryProvider.overrideWithValue(repository),
-          dioProvider.overrideWithValue(
-            roleLibraryDio(
-              loadPage:
-                  ({
-                    required category,
-                    required page,
-                    required pageSize,
-                  }) async => LibraryRolePage(
-                    items: const [
-                      LibraryRole(
-                        id: '1',
-                        title: 'First',
-                        description: 'Description',
-                      ),
-                      LibraryRole(
-                        id: '2',
-                        title: 'Second',
-                        description: 'Description',
-                      ),
-                    ],
-                    page: 1,
-                    pageCount: 1,
-                  ),
-            ),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      await container
-          .read(userProvider.notifier)
-          .setUser(const User(id: '1', name: 'User', email: ''));
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: _LocalizedTestApp(
-            theme: AppTheme.light,
-            home: SessionPage(pickImages: () async => []),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('添加附件'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('attachment-source-roles')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('role-library-select-2')));
-      await tester.tap(find.byKey(const Key('role-library-select-1')));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('role-selection-confirm')));
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('popi-selected-role-2')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('popi-selected-role-1')),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const Key('popi-send-button')));
-      await tester.pumpAndSettle();
-      expect(repository.sentRoles, [
-        ['2', '1'],
-      ]);
-      expect(repository.sentText, '请参考所选角色进行创作。');
-      expect(
-        find.byKey(const ValueKey('popi-selected-role-2')),
-        findsOneWidget,
-      );
-      await tester.tap(
-        find.byKey(const ValueKey('popi-remove-selected-role-1')),
-      );
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('popi-selected-role-1')), findsNothing);
-      await tester.tap(find.byTooltip('添加附件'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('attachment-source-roles')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('role-library-select-1')));
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('popi-selected-role-1')), findsNothing);
-      expect(
-        find.byKey(const ValueKey('popi-selected-role-2')),
-        findsOneWidget,
-      );
-      repository.failSend = false;
-      await tester.tap(find.byKey(const Key('popi-send-button')));
-      await tester.pumpAndSettle();
-      expect(repository.sentRoles, [
-        ['2', '1'],
-        ['2'],
-      ]);
-      expect(find.byKey(const Key('popi-selected-roles')), findsNothing);
-      await tester.pump(const Duration(seconds: 4));
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'asset selection survives failed send and removal updates the retry',
-    (tester) async {
-      tester.view.physicalSize = const Size(440, 956);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  for (final source in ['files', 'roles', 'assets']) {
+    testWidgets('composer attachment source $source is pending', (
+      tester,
+    ) async {
       final repository = _RoleSessionRepository();
       final container = ProviderContainer(
         overrides: [
           sessionRepositoryProvider.overrideWithValue(repository),
           userProvider.overrideWith(LibraryTestUserController.new),
-          dioProvider.overrideWithValue(withWorkLibrary(roleLibraryDio())),
+          dioProvider.overrideWithValue(roleLibraryDio()),
         ],
       );
       addTearDown(container.dispose);
@@ -341,59 +236,22 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('添加附件'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('attachment-source-assets')));
+      await tester.tap(find.byKey(Key('attachment-source-$source')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('asset-library-select-1')));
-      await tester.tap(find.byKey(const ValueKey('asset-library-select-3')));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('asset-selection-confirm')));
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('popi-selected-asset-1')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('popi-selected-asset-3')),
-        findsOneWidget,
-      );
-      await tester.tap(find.byKey(const Key('popi-send-button')));
-      await tester.pumpAndSettle();
-      expect(repository.sentMedia, [
-        ['media-1', 'media-3'],
-      ]);
-      expect(
-        find.byKey(const ValueKey('popi-selected-asset-1')),
-        findsOneWidget,
-      );
-      await tester.tap(
-        find.byKey(const ValueKey('popi-remove-selected-asset-1')),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('添加附件'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('attachment-source-assets')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('asset-library-select-3')));
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('popi-selected-asset-3')),
-        findsOneWidget,
-      );
-      repository.failSend = false;
-      await tester.tap(find.byKey(const Key('popi-send-button')));
-      await tester.pumpAndSettle();
-      expect(repository.sentMedia, [
-        ['media-1', 'media-3'],
-        ['media-3'],
-      ]);
-      expect(find.byKey(const Key('popi-selected-assets')), findsNothing);
+      expect(find.text('功能待开发'), findsOneWidget);
+      expect(find.byKey(const Key('attachment-confirm')), findsOneWidget);
+      expect(find.byKey(const Key('role-selection-confirm')), findsNothing);
+      expect(find.byKey(const Key('asset-selection-confirm')), findsNothing);
+      expect(repository.sentRoles, isEmpty);
+      expect(repository.sentMedia, isEmpty);
       await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('添加附件'), findsOneWidget);
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
 
   testWidgets('renders the session creation layout and drawer', (tester) async {
     tester.view.physicalSize = const Size(440, 956);
@@ -627,7 +485,7 @@ void main() {
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();
 
-    expect(find.text('新会话'), findsOneWidget);
+    expect(find.text('新项目'), findsOneWidget);
     expect(find.text('搜索对话'), findsNothing);
     expect(find.text('POPi对话'), findsNothing);
     expect(find.text('当前用户'), findsOneWidget);

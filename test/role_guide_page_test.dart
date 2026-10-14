@@ -69,6 +69,7 @@ void main() {
     bool dark = false,
     double scale = 1,
     double systemTopInset = 0,
+    double safeAreaBottom = 34,
     RolePageLoader? loader,
     RoleGenerationRepository? generationRepository,
     ProjectRepository? projectRepository,
@@ -142,7 +143,7 @@ void main() {
         .setUser(const User(id: '1', name: '用户', email: '', allCoins: 200));
     container
         .read(safeAreaInsetsProvider.notifier)
-        .update(const EdgeInsets.only(top: 52, bottom: 34));
+        .update(EdgeInsets.only(top: 52, bottom: safeAreaBottom));
     final router = container.read(routerProvider(false));
     router.go('/role-guide');
     addTearDown(router.dispose);
@@ -363,6 +364,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final bottomInset in [0.0, 16.0, 34.0]) {
+    testWidgets('step action counts bottom inset once: $bottomInset', (
+      tester,
+    ) async {
+      await pumpGuide(tester, safeAreaBottom: bottomInset);
+      final action = find.byKey(const Key('role-guide-create-project'));
+      expect(
+        tester.getBottomLeft(action).dy,
+        closeTo(956 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'step actions stay at the bottom while planning content scrolls',
     (tester) async {
@@ -373,7 +388,7 @@ void main() {
         List<String> actions,
       ) async {
         final bottom = find.byKey(Key(bottomAction));
-        expect(tester.getBottomLeft(bottom).dy, closeTo(640 - 34 - 20, .01));
+        expect(tester.getBottomLeft(bottom).dy, closeTo(640 - 34, .01));
         final positions = {
           for (final key in actions)
             key: tester.getTopLeft(find.byKey(Key(key))),
@@ -645,6 +660,44 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final overlay in ['sheet', 'drawer']) {
+    testWidgets('$overlay preserves role images and loaded library', (
+      tester,
+    ) async {
+      var requests = 0;
+      await pumpGuide(
+        tester,
+        loader: ({required category, required page, required pageSize}) async {
+          requests++;
+          return LibraryRolePage(
+            items: rolesWithCount(8),
+            page: page,
+            pageCount: 1,
+          );
+        },
+      );
+      final image = find.descendant(
+        of: find.byKey(const Key('role-guide-select-preview-role-1')),
+        matching: find.byType(Image),
+      );
+      final imageState = tester.state(image);
+      expect(requests, 1);
+      await tap(
+        tester,
+        overlay == 'sheet'
+            ? 'role-guide-details-preview-role-1'
+            : 'role-guide-menu',
+      );
+      expect(tester.state(image), same(imageState));
+      expect(requests, 1);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.state(image), same(imageState));
+      expect(requests, 1);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('thumbnail arrow opens a read-only role profile sheet', (
     tester,

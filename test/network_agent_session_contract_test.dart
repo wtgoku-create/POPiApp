@@ -75,7 +75,7 @@ void main() {
   });
 
   test(
-    'lists all sessions or archived context sessions with numeric pages',
+    'lists all sessions or archived account sessions with numeric pages',
     () async {
       var calls = 0;
       dio.interceptors.add(
@@ -90,8 +90,7 @@ void main() {
                       'page': 2,
                       'pageSize': 50,
                       'archived': 'true',
-                      'contextKind': 'creation',
-                      'contextId': '401',
+                      'accountId': '401',
                     },
             );
             handler.resolve(
@@ -117,14 +116,13 @@ void main() {
         page: 2,
         pageSize: 50,
         archived: true,
-        contextKind: 'creation',
-        contextId: '401',
+        accountId: '401',
       );
     },
   );
 
   test(
-    'update retries preserve caller revision and idempotency input',
+    'update retries preserve idempotency input without a client revision',
     () async {
       final requests = <Map<String, Object?>>[];
       dio.interceptors.add(
@@ -154,7 +152,6 @@ void main() {
       Future<Map<String, dynamic>> update() => api.updateSession(
         sessionId,
         clientRequestId: requestId,
-        expectedRevision: 7,
         title: 'Renamed',
         pinned: false,
       );
@@ -164,7 +161,6 @@ void main() {
         requests,
         List.filled(2, {
           'clientRequestId': requestId,
-          'expectedRevision': 7,
           'title': 'Renamed',
           'pinned': false,
         }),
@@ -205,9 +201,6 @@ void main() {
                 'text': 'Continue',
                 'taskId': sessionId,
                 'mediaIds': ['801'],
-                'inputRefs': [
-                  {'kind': 'character', 'id': 201, 'versionId': '301'},
-                ],
               });
               handler.resolve(
                 Response(
@@ -232,9 +225,6 @@ void main() {
           text: 'Continue',
           taskId: sessionId,
           mediaIds: ['801'],
-          inputRefs: [
-            {'kind': 'character', 'id': 201, 'versionId': '301'},
-          ],
         ),
         {'messageId': 'message', 'taskId': null, 'runId': 'run'},
       );
@@ -402,7 +392,6 @@ void main() {
         api.updateSession(
           sessionId,
           clientRequestId: requestId,
-          expectedRevision: 7,
           archived: true,
         ),
         throwsA(

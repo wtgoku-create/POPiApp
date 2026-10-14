@@ -177,7 +177,7 @@ void main() {
       await menu(tester, 'drawer-project-p');
       await tester.tap(find.text('新建对话'));
       await tester.pumpAndSettle();
-      expect(find.text('新会话'), findsOneWidget);
+      expect(find.text('新项目'), findsOneWidget);
       expect(tester.getSize(branch).height, greaterThan(0));
       expect(repository.opened, 1);
       expect(repository.lastOpened?.projectId, 'p');

@@ -166,7 +166,7 @@ void main() {
       ProviderScope(child: redemptionTestApp(RedemptionPage(repository: repo))),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Sign in to use the Redemption Center'), findsOneWidget);
+    expect(find.text('Sign in to invite friends'), findsOneWidget);
     expect(repo.boundRequests, 0);
   });
 

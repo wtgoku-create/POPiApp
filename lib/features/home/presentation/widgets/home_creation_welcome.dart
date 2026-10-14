@@ -62,7 +62,9 @@ class HomeCreationWelcome extends StatelessWidget {
                   right: 8,
                   bottom: -81 * characterWidth / 184,
                   child: Image.asset(
-                    'assets/images/home_welcome_character.png',
+                    MediaQuery.disableAnimationsOf(context)
+                        ? 'assets/images/home_welcome_character.png'
+                        : 'assets/images/home_welcome_character.webp',
                     key: const Key('home-welcome-character'),
                     width: characterWidth,
                     height: characterWidth * 222 / 184,

@@ -86,10 +86,11 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
       canPop: !_saving,
       child: SafeArea(
         top: false,
+        minimum: const EdgeInsets.only(bottom: 20),
         child: SizedBox(
           height: MediaQuery.sizeOf(context).height * .7,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

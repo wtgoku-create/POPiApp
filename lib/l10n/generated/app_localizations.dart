@@ -638,6 +638,36 @@ abstract class AppLocalizations {
   /// **'Script'**
   String get roleScriptContent;
 
+  /// No description provided for @chatVideoProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Video generation progress'**
+  String get chatVideoProgress;
+
+  /// No description provided for @chatStoryboardReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard ready, awaiting video confirmation'**
+  String get chatStoryboardReview;
+
+  /// No description provided for @chatTaskPausing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pausing after the current stage'**
+  String get chatTaskPausing;
+
+  /// No description provided for @chatStageGenerateVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video'**
+  String get chatStageGenerateVideo;
+
+  /// No description provided for @chatStageInspectResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Inspect result'**
+  String get chatStageInspectResult;
+
   /// No description provided for @roleStoryboardContent.
   ///
   /// In en, this message translates to:
@@ -1398,6 +1428,18 @@ abstract class AppLocalizations {
   /// **'IP Account Management'**
   String get ipAccountsTitle;
 
+  /// No description provided for @deleteIpAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this IP account?'**
+  String get deleteIpAccountTitle;
+
+  /// No description provided for @deleteIpAccountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The account will be archived and removed from the account list. Works, conversations and account data will be preserved.'**
+  String get deleteIpAccountDescription;
+
   /// No description provided for @loadingIpAccounts.
   ///
   /// In en, this message translates to:
@@ -1779,7 +1821,7 @@ abstract class AppLocalizations {
   /// No description provided for @newSessionTitle.
   ///
   /// In en, this message translates to:
-  /// **'New conversation'**
+  /// **'New project'**
   String get newSessionTitle;
 
   /// No description provided for @changeAvatar.
@@ -3132,6 +3174,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add'**
   String get attachmentTitle;
+
+  /// No description provided for @attachmentFeaturePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Feature under development'**
+  String get attachmentFeaturePending;
 
   /// No description provided for @attachmentCamera.
   ///
@@ -4507,6 +4555,24 @@ abstract class AppLocalizations {
   /// **'Selected story'**
   String get chatTopicSelected;
 
+  /// No description provided for @chatTopicConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic confirmed'**
+  String get chatTopicConfirmed;
+
+  /// No description provided for @chatCollapseStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse story'**
+  String get chatCollapseStory;
+
+  /// No description provided for @chatExpandStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand story'**
+  String get chatExpandStory;
+
   /// No description provided for @chatGenerationConfirmed.
   ///
   /// In en, this message translates to:
@@ -4530,6 +4596,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Image style'**
   String get chatImageStyle;
+
+  /// No description provided for @chatStyleLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Style library'**
+  String get chatStyleLibrary;
+
+  /// No description provided for @chatStyleUnrestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrestricted style'**
+  String get chatStyleUnrestricted;
 
   /// No description provided for @chatUnrestrictedStyle.
   ///
@@ -4560,6 +4638,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generation task'**
   String get chatGenerationTask;
+
+  /// No description provided for @chatExpandTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand task'**
+  String get chatExpandTask;
+
+  /// No description provided for @chatCollapseTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse task'**
+  String get chatCollapseTask;
+
+  /// No description provided for @chatGenerationWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating...'**
+  String get chatGenerationWorking;
+
+  /// No description provided for @chatGenerationWorkingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your work...'**
+  String get chatGenerationWorkingHint;
+
+  /// No description provided for @chatGenerationTaskCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Task completed'**
+  String get chatGenerationTaskCompleted;
+
+  /// No description provided for @chatImageGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image generation failed'**
+  String get chatImageGenerationFailed;
+
+  /// No description provided for @chatVideoGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Video generation failed'**
+  String get chatVideoGenerationFailed;
+
+  /// No description provided for @chatTextGenerationTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Text generation timed out. Please try again'**
+  String get chatTextGenerationTimeout;
+
+  /// No description provided for @chatTextGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Text generation failed. Please try again'**
+  String get chatTextGenerationFailed;
+
+  /// No description provided for @chatScriptGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Script generation failed. Please try again'**
+  String get chatScriptGenerationFailed;
+
+  /// No description provided for @chatTopicGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic generation failed. Please try again'**
+  String get chatTopicGenerationFailed;
+
+  /// No description provided for @chatResultCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The video integrity check failed. The generated result has been kept'**
+  String get chatResultCheckFailed;
+
+  /// No description provided for @chatOutputValidationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated result failed validation. Please try again'**
+  String get chatOutputValidationFailed;
+
+  /// No description provided for @chatStoryboardMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved storyboard is missing. Confirm the storyboard before generating'**
+  String get chatStoryboardMissing;
+
+  /// No description provided for @chatVideoMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated video could not be found. Please try again'**
+  String get chatVideoMissing;
+
+  /// No description provided for @chatTaskInputChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The creation content has changed. Confirm the generation plan again'**
+  String get chatTaskInputChanged;
+
+  /// No description provided for @chatTaskConfirmationMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The storyboard version does not match the confirmation. Confirm the storyboard again'**
+  String get chatTaskConfirmationMismatch;
+
+  /// No description provided for @chatVideoPromptInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation prompt is invalid. Update the content and confirm again'**
+  String get chatVideoPromptInvalid;
+
+  /// No description provided for @chatTaskResultUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The generated result is temporarily unavailable. Please try again later'**
+  String get chatTaskResultUnavailable;
+
+  /// No description provided for @chatTaskSubmissionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation task could not be submitted. Please try again later'**
+  String get chatTaskSubmissionFailed;
+
+  /// No description provided for @chatTaskServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The generation service is temporarily unavailable. Please try again later'**
+  String get chatTaskServiceUnavailable;
+
+  /// No description provided for @chatRoleReferenceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The character reference image is unavailable. Update the image and select the cast again before generating'**
+  String get chatRoleReferenceUnavailable;
+
+  /// No description provided for @chatProductionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Production plan'**
+  String get chatProductionPlan;
+
+  /// No description provided for @chatPlanCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get chatPlanCast;
+
+  /// No description provided for @chatPlanStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected story'**
+  String get chatPlanStory;
+
+  /// No description provided for @chatPlanHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Core highlight'**
+  String get chatPlanHighlight;
+
+  /// No description provided for @chatPlanConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'Model configuration'**
+  String get chatPlanConfiguration;
+
+  /// No description provided for @chatPlanModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get chatPlanModel;
+
+  /// No description provided for @chatPlanPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated points'**
+  String get chatPlanPoints;
+
+  /// No description provided for @chatPlanCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'{points} points'**
+  String chatPlanCredits(String points);
 
   /// No description provided for @chatReviseContent.
   ///
@@ -4714,7 +4972,7 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionCenter.
   ///
   /// In en, this message translates to:
-  /// **'Redemption Center'**
+  /// **'Invite Friends'**
   String get redemptionCenter;
 
   /// No description provided for @redemptionPageTitle.
@@ -4864,7 +5122,7 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionLoginRequired.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to use the Redemption Center'**
+  /// **'Sign in to invite friends'**
   String get redemptionLoginRequired;
 
   /// No description provided for @redemptionBindRequired.
