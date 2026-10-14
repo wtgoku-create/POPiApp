@@ -9,10 +9,8 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/providers/project_provider.dart';
-import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_toast.dart';
-import 'widgets/account_preferences_sheet.dart';
 import '../domain/ip_account.dart';
 import 'ip_accounts_page.dart';
 
@@ -86,25 +84,6 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
     }
   }
 
-  Future<void> _create() async {
-    if (ref.read(userProvider) == null) {
-      await context.push('/login');
-      return;
-    }
-    final owner = ref.read(userProvider)?.id;
-    final id = await AppSheet.show<String>(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      builder: (_) => const AccountPreferencesSheet(),
-    );
-    if (!mounted || id == null || ref.read(userProvider)?.id != owner) return;
-    ref.invalidate(projectsProvider);
-    await context.push('/ip-accounts/${Uri.encodeComponent(id)}');
-    if (mounted) await _load();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -161,7 +140,6 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
         accounts: _accounts,
         isLoading: _loading,
         onRetry: _failed ? _load : null,
-        onCreate: _create,
         onDeleteAccount: _delete,
         isDeleting: _deleteToken != null,
         deletingAccountId: _deletingAccountId,

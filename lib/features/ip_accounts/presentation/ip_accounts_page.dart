@@ -21,7 +21,6 @@ class IpAccountsPage extends ConsumerWidget {
     this.isLoading = false,
     this.onOpenAccount,
     this.onRetry,
-    this.onCreate,
     this.onDeleteAccount,
     this.isDeleting = false,
     this.deletingAccountId,
@@ -32,7 +31,6 @@ class IpAccountsPage extends ConsumerWidget {
     this.isLoading = false,
     this.onOpenAccount,
     this.onRetry,
-    this.onCreate,
     this.onDeleteAccount,
     this.isDeleting = false,
     this.deletingAccountId,
@@ -43,7 +41,6 @@ class IpAccountsPage extends ConsumerWidget {
   final bool isLoading;
   final ValueChanged<IpAccount>? onOpenAccount;
   final VoidCallback? onRetry;
-  final VoidCallback? onCreate;
   final ValueChanged<IpAccount>? onDeleteAccount;
   final bool isDeleting;
   final String? deletingAccountId;
@@ -105,13 +102,6 @@ class IpAccountsPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                if (onCreate != null)
-                  IconButton(
-                    key: const Key('account-create'),
-                    tooltip: l10n.accountCreate,
-                    onPressed: isDeleting ? null : onCreate,
-                    icon: const Icon(Icons.add),
-                  ),
                 const SizedBox(width: 20),
               ],
             ),
