@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_chat_ui/flutter_chat_ui.dart' show Chat;
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
@@ -331,6 +332,25 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
+      expect(find.byType(AppSkeleton), findsOneWidget);
+      final historyVisibility = find.ancestor(
+        of: find.byType(Chat),
+        matching: find.byType(Opacity),
+      );
+      var positioningFrames = 0;
+      while (find.byType(AppSkeleton).evaluate().isNotEmpty) {
+        expect(tester.widget<Opacity>(historyVisibility).opacity, 0);
+        expect(find.text('Latest message').hitTestable(), findsNothing);
+        expect(positioningFrames++, lessThan(100));
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(tester.widget<Opacity>(historyVisibility).opacity, 1);
+      final latestTop = tester.getTopLeft(find.text('Latest message'));
+      for (var frame = 0; frame < 3; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(tester.getTopLeft(find.text('Latest message')), latestTop);
+      }
       await tester.pumpAndSettle();
       expect(find.byType(AppSkeleton), findsNothing);
       final list = find

@@ -161,8 +161,10 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       _initialScrollScheduled = false;
       if (!mounted || !_initialHistoryPending || !_scroll.hasClients) return;
       final position = _scroll.position;
-      if (_latestMessageBuilt && position.extentAfter <= 1) {
-        _initialHistoryPending = false;
+      if (_latestMessageBuilt &&
+          (position.pixels - position.maxScrollExtent).abs() <= 1 &&
+          !position.isScrollingNotifier.value) {
+        setState(() => _initialHistoryPending = false);
         return;
       }
       // Lazy items refine the estimated extent until the actual last message is laid out.
@@ -301,7 +303,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     builder: (context, _) {
       final l10n = AppLocalizations.of(context)!;
       final controller = widget.controller;
-      return Chat(
+      final positioning = controller.loading || _initialHistoryPending;
+      final timeline = Chat(
         currentUserId: controller.userId,
         resolveUser: (id) async =>
             chat.User(id: id, name: id == 'popi-agent' ? 'POPi' : null),
@@ -322,6 +325,8 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                   // Short conversations start at the top; long histories open at the end.
                   scrollController: _scroll,
                   initialScrollToEndMode: InitialScrollToEndMode.none,
+                  shouldScrollToEndWhenAtBottom: !positioning,
+                  shouldScrollToEndWhenSendingMessage: !positioning,
                   itemBuilder: itemBuilder,
                   handleSafeArea: false,
                   topPadding: 10,
@@ -344,10 +349,6 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                                 ConversationObjectView(
                                   block: block,
                                   controller: controller,
-                                ),
-                              if (controller.loading)
-                                _ConversationSkeleton(
-                                  label: l10n.loadingProjectSessions,
                                 ),
                               if (controller.running &&
                                   !(controller.snapshot?.messages.any(
@@ -487,6 +488,32 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                 );
               },
         ),
+      );
+      // Keep lazy history laid out, but reveal it only at its final scroll offset.
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          IgnorePointer(
+            ignoring: positioning,
+            child: ExcludeSemantics(
+              excluding: positioning,
+              child: Opacity(opacity: positioning ? 0 : 1, child: timeline),
+            ),
+          ),
+          if (positioning)
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: _ConversationSkeleton(
+                    label: l10n.loadingProjectSessions,
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     },
   );
