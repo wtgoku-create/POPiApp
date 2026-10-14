@@ -43,6 +43,7 @@ void main() {
   late FakePaymentSdk sdk;
   final requests = <RequestOptions>[];
   var paid = false;
+  var delivered = true;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
@@ -50,6 +51,7 @@ void main() {
     sdk = FakePaymentSdk();
     requests.clear();
     paid = false;
+    delivered = true;
     final dio = Dio()
       ..interceptors.add(
         InterceptorsWrapper(
@@ -64,9 +66,13 @@ void main() {
                   'data': {
                     'trade_no': 'PTSUSR7',
                     'amount_fen': 600,
+                    'pay_money': 3.50,
+                    'grant_points': 3900,
                     'order_string': 'signed',
                     'payment_status': paid ? 'paid' : 'pending_payment',
-                    'fulfillment_status': paid ? 'completed' : 'pending',
+                    'fulfillment_status': paid && delivered
+                        ? 'completed'
+                        : 'pending',
                     'refund_status': 'none',
                   },
                 },
@@ -286,5 +292,26 @@ void main() {
     expect(find.byType(AndroidPaymentPage), findsOneWidget);
     expect(requests.first.path, '/api_client/trade/subscription/previewApp');
     expect(requests.first.data, {'subscriptionId': 7});
+    expect(find.text('¥3.50'), findsOneWidget);
+    expect(find.text('本次到账 3900 积分'), findsOneWidget);
+  });
+
+  testWidgets('paid but undelivered orders only offer status checks', (
+    tester,
+  ) async {
+    paid = true;
+    delivered = false;
+    await service.storage.save(
+      const PendingPayment(
+        product: _product,
+        channel: PaymentChannel.alipay,
+        tradeNo: 'PTSUSR7',
+      ),
+    );
+    await pump(tester);
+    expect(find.text('再次查询'), findsOneWidget);
+    expect(find.text('重新购买'), findsNothing);
+    expect(requests.every((request) => request.method == 'GET'), isTrue);
+    expect(sdk.calls, 0);
   });
 }

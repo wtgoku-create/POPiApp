@@ -1,5 +1,31 @@
 import '../../../shared/type/payment_type.dart';
 
+/// Android previews report money in yuan, unlike order amounts in fen.
+class SubscriptionPaymentPreview {
+  const SubscriptionPaymentPreview({
+    required this.amountFen,
+    required this.grantPoints,
+    required this.currency,
+  });
+
+  final int amountFen;
+  final int grantPoints;
+  final String currency;
+
+  factory SubscriptionPaymentPreview.fromJson(Map<String, Object?> json) {
+    final money = num.tryParse(json['pay_money']?.toString() ?? '');
+    final points = paymentInteger(json['grant_points']);
+    if (money == null || !money.isFinite || money < 0 || points == null) {
+      throw const FormatException('Invalid subscription preview');
+    }
+    return SubscriptionPaymentPreview(
+      amountFen: (money * 100).round(),
+      grantPoints: points,
+      currency: json['currency']?.toString() ?? 'CNY',
+    );
+  }
+}
+
 /// Catalog information is for display only; the server determines the charge.
 class PaymentProduct {
   const PaymentProduct({

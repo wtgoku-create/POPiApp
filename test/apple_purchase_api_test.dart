@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/features/payments/data/apple_payment_repository.dart';
 
 void main() {
   test(
@@ -81,6 +82,68 @@ void main() {
       expect(
         () => api.restoreApplePurchases(List.filled(11, 'jws')),
         throwsArgumentError,
+      );
+      expect(
+        () => api.verifyApplePurchase(
+          purchaseId: 'purchase-1',
+          signedTransaction: 'x' * (256 * 1024 + 1),
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => api.restoreApplePurchases(List.filled(2, 'x' * (256 * 1024))),
+        throwsArgumentError,
+      );
+    },
+  );
+
+  test(
+    'restore splits by encoded body size and preserves per-item results',
+    () async {
+      final batches = <List<String>>[];
+      final dio = Dio()
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (request, handler) {
+              final batch = List<String>.from(
+                (request.data as Map)['signedTransactions'] as List,
+              );
+              batches.add(batch);
+              handler.resolve(
+                Response(
+                  requestOptions: request,
+                  data: {
+                    'status': '0000',
+                    'data': [
+                      for (var index = 0; index < batch.length; index++)
+                        {
+                          'index': index,
+                          'success': batch[index].startsWith('a'),
+                          'data': batch[index].startsWith('a')
+                              ? {'purchase_id': 'one'}
+                              : null,
+                        },
+                    ],
+                  },
+                ),
+              );
+            },
+          ),
+        );
+      final transactions = ['a' * (256 * 1024), 'b' * (256 * 1024), 'small'];
+      final result = await ApplePaymentRepository(
+        NetworkApi(dio),
+      ).restore(transactions);
+      expect(batches.map((batch) => batch.length), [1, 2]);
+      expect(batches.expand((batch) => batch), transactions);
+      expect(result.map((item) => item?.id), ['one', null, null]);
+      expect(
+        batches.every(
+          (batch) =>
+              NetworkApi.appleRestorePayloadBytes(batch) <=
+              NetworkApi.appleRestoreMaxBytes,
+        ),
+        isTrue,
       );
     },
   );

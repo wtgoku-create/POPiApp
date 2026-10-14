@@ -720,6 +720,14 @@
   "paymentAlipay": "Alipay",
   "paymentConfirm": "Confirm payment",
   "paymentAmount": "Payment amount",
+  "paymentPerYear": "/year",
+  "paymentPoints": "points",
+  "paymentGrantPoints": "Points granted: {points}",
+  "@paymentGrantPoints": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
   "paymentCatalogPrice": "Plan price. Your order determines the final charge",
   "paymentCheckAgain": "Check again",
   "paymentProcessing": "Payment is processing. Benefits will update once delivered",

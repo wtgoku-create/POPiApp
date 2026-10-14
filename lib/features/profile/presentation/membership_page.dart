@@ -17,7 +17,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../data/product_plan_repository.dart';
+import '../data/purchase_catalog_repository.dart';
 import '../domain/product_plan.dart';
 
 class MembershipPage extends ConsumerStatefulWidget {
@@ -56,7 +56,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final memberLevel = ref.watch(userProvider)?.memberLevel ?? 0;
     final topPadding = math
         .max(MediaQuery.paddingOf(context).top, 52)
         .toDouble();
@@ -66,14 +65,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final selectedLevel = plans != null && plans.isNotEmpty
         ? plans[_selectedPlan].variants[_selectedVariant].level
         : 1;
-    final membershipDisabled = memberLevel > 0 && selectedLevel <= memberLevel;
-    final memberName = switch (memberLevel) {
-      1 => 'Starter',
-      2 => 'Plus',
-      3 => 'Pro',
-      4 => 'Max',
-      _ => '$memberLevel',
-    };
     final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 20.0);
 
     return Scaffold(
@@ -113,12 +104,22 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
             else if (plans.isEmpty)
               Expanded(
                 child: Center(
-                  child: Text(
-                    _loadFailed
-                        ? l10n.membershipPlansLoadFailed
-                        : l10n.membershipPlansEmpty,
-                    key: const Key('membership-plans-empty'),
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _loadFailed
+                            ? l10n.membershipPlansLoadFailed
+                            : l10n.membershipPlansEmpty,
+                        key: const Key('membership-plans-empty'),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                      TextButton.icon(
+                        onPressed: _loadPlans,
+                        icon: const Icon(Icons.refresh),
+                        label: Text(l10n.retry),
+                      ),
+                    ],
                   ),
                 ),
               )
@@ -172,7 +173,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 horizontal: 20,
                               ),
                             ),
-                            onPressed: _isPurchasing || membershipDisabled
+                            onPressed: _isPurchasing
                                 ? null
                                 : () => _purchaseMembership(
                                     plans[_selectedPlan]
@@ -187,15 +188,14 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                     ),
                                   )
                                 : Text(
-                                    membershipDisabled
-                                        ? selectedLevel == memberLevel
-                                              ? l10n.membershipCurrentPlan
-                                              : l10n.membershipAlreadyMember(
-                                                  memberName,
-                                                )
-                                        : plans[_selectedPlan]
+                                    plans[_selectedPlan]
+                                            .variants[_selectedVariant]
+                                            .buttonText
+                                            .isNotEmpty
+                                        ? plans[_selectedPlan]
                                               .variants[_selectedVariant]
-                                              .buttonText,
+                                              .buttonText
+                                        : l10n.paymentConfirm,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
@@ -217,14 +217,25 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   }
 
   Future<void> _loadPlans() async {
+    if (!mounted) return;
+    setState(() => _productPlans = null);
     try {
       if (ref.read(userProvider) != null) {
-        await ref.read(userProvider.notifier).refreshUser();
+        try {
+          await ref.read(userProvider.notifier).refreshUser();
+        } catch (_) {
+          // Catalog eligibility comes from payment APIs, not the cached profile.
+        }
         if (!mounted) return;
       }
       final loader =
           widget.planLoader ??
-          ProductPlanRepository(NetworkApi(ref.read(dioProvider))).fetchAll;
+          PurchaseCatalogRepository(
+            NetworkApi(ref.read(dioProvider)),
+            appleStore: usesApplePayments
+                ? ref.read(applePurchaseServiceProvider).store
+                : null,
+          ).plans;
       final plans = await loader();
       if (!mounted) return;
       setState(() {
@@ -267,12 +278,16 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final outcome = await openApplePayment(
       context,
       ref,
-      productId: plan.id,
+      productVersionId: plan.appleProductVersionId,
       kind: PaymentProductKind.subscription,
     );
     if (!mounted) return;
     setState(() => _isPurchasing = false);
     await _showPurchaseOutcome(outcome);
+    if (outcome == StorePurchaseOutcome.purchased ||
+        outcome == StorePurchaseOutcome.failed) {
+      await _loadPlans();
+    }
   }
 
   Future<void> _restorePurchases() async {
@@ -283,6 +298,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final l10n = AppLocalizations.of(context)!;
     if (succeeded) {
       AppToast.success(context, l10n.restorePurchasesRequested);
+      await _loadPlans();
     } else {
       AppToast.error(context, l10n.appleRestoreIncomplete);
     }
@@ -307,7 +323,11 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         AppToast.error(context, l10n.storeProductUnavailable);
         return;
       case StorePurchaseOutcome.failed:
-        AppToast.error(context, l10n.purchaseFailed);
+        AppToast.error(
+          context,
+          ref.read(applePurchaseServiceProvider).lastFailureMessage ??
+              l10n.purchaseFailed,
+        );
         return;
     }
   }
@@ -551,25 +571,26 @@ class _MembershipPlanCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  key: const Key('membership-discount-badge'),
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(AppRadii.pill),
-                  ),
-                  child: Text(
-                    plan.discount,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 14,
+                if (plan.discount.isNotEmpty)
+                  Container(
+                    key: const Key('membership-discount-badge'),
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: .12),
+                      borderRadius: BorderRadius.circular(AppRadii.pill),
+                    ),
+                    child: Text(
+                      plan.discount,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -578,31 +599,40 @@ class _MembershipPlanCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    '¥',
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
+                if (plan.localizedPrice == null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      '¥',
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  plan.price,
-                  style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: AppTypeSizes.price,
-                    height: 44 / AppTypeSizes.price,
-                    fontWeight: FontWeight.w700,
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      plan.localizedPrice ?? plan.price,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: AppTypeSizes.price,
+                        height: 44 / AppTypeSizes.price,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 4),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
-                    l10n.perMonth,
+                    plan.planCategory == 'yearly'
+                        ? l10n.paymentPerYear
+                        : l10n.perMonth,
                     style: TextStyle(
                       color: colorScheme.onSurfaceVariant,
                       fontSize: 16,
@@ -610,17 +640,20 @@ class _MembershipPlanCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    '¥${plan.originalPrice}',
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant.withValues(alpha: .7),
-                      fontSize: 16,
-                      decoration: TextDecoration.lineThrough,
+                if (plan.originalPrice > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text(
+                      '¥${plan.originalPrice}',
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: .7,
+                        ),
+                        fontSize: 16,
+                        decoration: TextDecoration.lineThrough,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -763,7 +796,9 @@ class _PlanPointsSelector extends StatelessWidget {
             ],
             const SizedBox(width: 3),
             Text(
-              AppLocalizations.of(context)!.pointsPerMonth,
+              plans[selected].pointsGrantMode == 'once'
+                  ? AppLocalizations.of(context)!.paymentPoints
+                  : AppLocalizations.of(context)!.pointsPerMonth,
               style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
             ),
           ],
@@ -892,6 +927,10 @@ class _MembershipPlan {
     required this.description,
     required this.buttonText,
     required this.appleProductId,
+    required this.appleProductVersionId,
+    required this.localizedPrice,
+    required this.planCategory,
+    required this.pointsGrantMode,
   });
 
   final int id;
@@ -908,6 +947,10 @@ class _MembershipPlan {
   final String description;
   final String buttonText;
   final String appleProductId;
+  final int? appleProductVersionId;
+  final String? localizedPrice;
+  final String planCategory;
+  final String pointsGrantMode;
 }
 
 class _MembershipPlanGroup {
@@ -921,7 +964,7 @@ class _MembershipPlanGroup {
 
 List<_MembershipPlanGroup> _groupPlans(List<ProductPlan> products) {
   final groups = <_MembershipPlanGroup>[];
-  _MembershipPlanGroup? plusGroup;
+  final plusGroups = <String, _MembershipPlanGroup>{};
 
   for (final product in products.reversed) {
     // Hide the Core offering, not an ID that can belong to another plan.
@@ -933,9 +976,11 @@ List<_MembershipPlanGroup> _groupPlans(List<ProductPlan> products) {
     }
     final plan = _planFromProduct(product);
     if (_isPlusProduct(product)) {
+      final plusGroup = plusGroups[product.planCategory];
       if (plusGroup == null) {
-        plusGroup = _MembershipPlanGroup([plan]);
-        groups.add(plusGroup);
+        final group = _MembershipPlanGroup([plan]);
+        plusGroups[product.planCategory] = group;
+        groups.add(group);
       } else {
         plusGroup.variants.add(plan);
       }
@@ -967,6 +1012,10 @@ _MembershipPlan _planFromProduct(ProductPlan product) {
     description: product.description,
     buttonText: customInfo?.buttonText ?? '',
     appleProductId: product.appleProductId,
+    appleProductVersionId: product.appleProductVersionId,
+    localizedPrice: product.localizedPrice,
+    planCategory: product.planCategory,
+    pointsGrantMode: product.pointsGrantMode,
   );
 }
 

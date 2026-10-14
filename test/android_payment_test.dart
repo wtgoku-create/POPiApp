@@ -98,7 +98,7 @@ void main() {
                 statusCode: 200,
                 data: {
                   'status': '0000',
-                  'data': {'amount_fen': 600},
+                  'data': {'pay_money': 6, 'grant_points': 600},
                 },
               ),
             );
@@ -304,6 +304,7 @@ void main() {
         tradeNo: 'PTSUSR-old',
       );
       await storage.save(pending);
+      state['trade_no'] = 'PTSUSR-old';
       expect(
         PendingPaymentStorage(storage.preferences, 'user-2').readAll(),
         isEmpty,
@@ -321,6 +322,88 @@ void main() {
       );
       await storage.remove(pending);
       expect(storage.readAll().single.tradeNo, 'PTSUSR-new');
+    },
+  );
+
+  test('preview converts yuan to fen and keeps the quoted upgrade points', () {
+    final preview = SubscriptionPaymentPreview.fromJson({
+      'pay_money': 30.05,
+      'grant_points': 3900,
+      'currency': 'CNY',
+    });
+    expect(preview.amountFen, 3005);
+    expect(preview.grantPoints, 3900);
+    expect(
+      () => SubscriptionPaymentPreview.fromJson({'amount_fen': 3005}),
+      throwsFormatException,
+    );
+  });
+
+  test(
+    'declining an updated preview does not create an order or call the SDK',
+    () async {
+      final result = await service.purchase(
+        const PaymentProduct(
+          id: 102,
+          kind: PaymentProductKind.subscription,
+          title: 'Membership',
+          priceLabel: '68',
+        ),
+        PaymentChannel.alipay,
+        confirmPreview: (preview) async {
+          expect(preview.amountFen, 600);
+          return false;
+        },
+      );
+      expect(result.outcome, PaymentOutcome.canceled);
+      expect(requests.single.path, '/api_client/trade/subscription/previewApp');
+      expect(storage.readAll(), isEmpty);
+      expect(sdk.calls, 0);
+    },
+  );
+
+  test(
+    'launch recovery queries saved orders and keeps unknown attempts',
+    () async {
+      const pending = PendingPayment(
+        product: _product,
+        channel: PaymentChannel.alipay,
+        tradeNo: 'PTSUSR7',
+      );
+      await storage.save(pending);
+      queryUnavailable = true;
+      await service.recover();
+      expect(storage.read(_product)?.tradeNo, 'PTSUSR7');
+      queryUnavailable = false;
+      await service.recover();
+      expect(storage.readAll(), isEmpty);
+      expect(refreshed, 1);
+      await storage.save(
+        const PendingPayment(product: _product, channel: PaymentChannel.alipay),
+      );
+      final count = requests.length;
+      await service.recover();
+      expect(storage.readAll(), hasLength(1));
+      expect(requests, hasLength(count));
+      expect(requests.every((request) => request.method == 'GET'), isTrue);
+      expect(sdk.calls, 0);
+    },
+  );
+
+  test(
+    'paid orders awaiting fulfillment cannot be abandoned for another payment',
+    () async {
+      await storage.save(
+        const PendingPayment(
+          product: _product,
+          channel: PaymentChannel.alipay,
+          tradeNo: 'PTSUSR7',
+        ),
+      );
+      state['fulfillment_status'] = 'pending';
+      await expectLater(service.abandon(_product), throwsStateError);
+      expect(storage.read(_product), isNotNull);
+      expect(requests.single.method, 'GET');
     },
   );
 

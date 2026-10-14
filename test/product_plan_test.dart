@@ -5,7 +5,7 @@ import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/profile/data/product_plan_repository.dart';
 
 void main() {
-  test('requests type 1 plans and parses data.list', () async {
+  test('requests standard plans and parses data.list', () async {
     late RequestOptions request;
     final dio = Dio();
     dio.interceptors.add(
@@ -74,7 +74,7 @@ void main() {
     final plans = await ProductPlanRepository(NetworkApi(dio)).fetchAll();
 
     expect(request.path, '/api_client/products/plan/list');
-    expect(request.queryParameters, {'type': 1});
+    expect(request.queryParameters, isEmpty);
     expect(plans, hasLength(1));
 
     final plan = plans.single;
@@ -103,5 +103,9 @@ void main() {
     expect(plan.createTime, DateTime.utc(1));
     expect(plan.deleted, isFalse);
     expect(plan.deleteTime, isNull);
+    await ProductPlanRepository(
+      NetworkApi(dio),
+    ).fetchAll(planCategory: 'yearly');
+    expect(request.queryParameters, {'planCategory': 'yearly'});
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/network/payment_exception.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../shared/type/payment_type.dart';
 import '../domain/apple_payment.dart';
 import 'apple_payment_repository.dart';
@@ -41,6 +42,7 @@ class ApplePurchaseService {
   bool _busy = false;
   bool _disposed = false;
   final _finished = <String>{};
+  String? lastFailureMessage;
 
   bool get isSupported => supported && !_disposed && storage.userId.isNotEmpty;
 
@@ -56,63 +58,73 @@ class ApplePurchaseService {
   }
 
   Future<StorePurchaseOutcome> purchase({
-    required int businessProductId,
+    required int productVersionId,
     required PaymentProductKind kind,
-    required Future<bool> Function(AppleStoreProduct product) confirm,
+    required Future<bool> Function(AppleStoreProduct product, int? grantPoints)
+    confirm,
   }) async {
     if (!isSupported) return StorePurchaseOutcome.unavailable;
     if (_busy) return StorePurchaseOutcome.processing;
     _busy = true;
+    lastFailureMessage = null;
     PendingApplePurchase? pending;
     var confirmed = false;
     try {
       if (!await store.available()) return StorePurchaseOutcome.unavailable;
       if (_disposed) return StorePurchaseOutcome.unavailable;
       for (final item in storage.readAll()) {
-        if (item.businessId == businessProductId && item.kind == kind) {
+        final version =
+            item.productVersionId ?? item.purchase?.json['product_version_id'];
+        if (version == productVersionId && item.kind == kind) {
           pending = item;
           break;
         }
       }
       if (pending?.storeRequested == true) {
-        await _enqueue(_recoverTransactions);
-        final state = await repository.query(pending!.purchase!.id);
-        if (_disposed ||
-            state.id != pending.purchase!.id ||
-            state.json['user_id'] != pending.purchase!.json['user_id']) {
-          return StorePurchaseOutcome.processing;
-        }
-        if (!state.completed) return StorePurchaseOutcome.processing;
-        await _recordCompletion(pending.quoteId);
-        return StorePurchaseOutcome.purchased;
+        return await _checkPending(pending!);
       }
       AppleStoreProduct? product;
       if (pending == null) {
         final mappings = (await repository.products(environment))
-            .where(
-              (item) =>
-                  item.businessId == businessProductId && item.kind == kind,
-            )
+            .where((item) => item.id == productVersionId && item.kind == kind)
             .toList();
-        // Ambiguous upgrade/version mappings must be resolved by the backend.
+        // Select the exact mapping, not a plan shared by multiple upgrades.
         if (mappings.length != 1) return StorePurchaseOutcome.productNotFound;
         final mapping = mappings.single;
+        // Recover references written before mapping IDs were persisted.
+        pending = storage
+            .readAll()
+            .where(
+              (item) =>
+                  item.productVersionId == null &&
+                  item.businessId == mapping.businessId &&
+                  item.kind == kind,
+            )
+            .firstOrNull;
+        if (pending?.storeRequested == true) {
+          return await _checkPending(pending!);
+        }
         product = await store.product(mapping.productId);
         if (product == null) return StorePurchaseOutcome.productNotFound;
-        final quote = await repository.preview(mapping.id, environment);
-        if (quote['product_id'] != product.id) {
-          return StorePurchaseOutcome.failed;
+        if (pending == null) {
+          final quote = await repository.preview(mapping.id, environment);
+          if (quote['product_id'] != product.id) {
+            return StorePurchaseOutcome.failed;
+          }
+          final points = (quote['grant_points'] as num?)?.toInt();
+          if (_disposed || !await confirm(product, points)) {
+            return StorePurchaseOutcome.canceled;
+          }
+          confirmed = true;
+          pending = PendingApplePurchase(
+            businessId: mapping.businessId,
+            productVersionId: mapping.id,
+            grantPoints: points,
+            kind: kind,
+            quoteId: quote['quote_id'] as String,
+          );
+          await storage.save(pending);
         }
-        if (_disposed || !await confirm(product)) {
-          return StorePurchaseOutcome.canceled;
-        }
-        confirmed = true;
-        pending = PendingApplePurchase(
-          businessId: businessProductId,
-          kind: kind,
-          quoteId: quote['quote_id'] as String,
-        );
-        await storage.save(pending);
       }
       if (_disposed) return StorePurchaseOutcome.processing;
       // A lost response retries the persisted quote, never a fresh quotation.
@@ -135,7 +147,12 @@ class ApplePurchaseService {
         return StorePurchaseOutcome.failed;
       }
       if (_disposed) return StorePurchaseOutcome.processing;
-      if (!confirmed && !await confirm(product)) {
+      if (!confirmed &&
+          !await confirm(
+            product,
+            (intent.json['grant_points'] as num?)?.toInt() ??
+                pending.grantPoints,
+          )) {
         return StorePurchaseOutcome.canceled;
       }
       if (_disposed) return StorePurchaseOutcome.processing;
@@ -160,6 +177,7 @@ class ApplePurchaseService {
         onTimeout: () => StorePurchaseOutcome.processing,
       );
     } on PaymentException catch (error) {
+      lastFailureMessage = error.message;
       if (pending != null &&
           !pending.storeRequested &&
           error.data['purchase_id'] == null &&
@@ -168,6 +186,11 @@ class ApplePurchaseService {
         await storage.remove(pending.quoteId);
         return StorePurchaseOutcome.failed;
       }
+      return pending == null
+          ? StorePurchaseOutcome.failed
+          : StorePurchaseOutcome.processing;
+    } on ApiException catch (error) {
+      lastFailureMessage = error.message;
       return pending == null
           ? StorePurchaseOutcome.failed
           : StorePurchaseOutcome.processing;
@@ -186,6 +209,24 @@ class ApplePurchaseService {
   bool _validToken(String token) => RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   ).hasMatch(token);
+
+  Future<StorePurchaseOutcome> _checkPending(
+    PendingApplePurchase pending,
+  ) async {
+    await _enqueue(_recoverTransactions);
+    final purchase = pending.purchase!;
+    final state = await repository.query(purchase.id);
+    if (_disposed ||
+        state.id != purchase.id ||
+        state.productId != purchase.productId ||
+        state.accountToken != purchase.accountToken ||
+        state.json['user_id'] != purchase.json['user_id'] ||
+        !state.completed) {
+      return StorePurchaseOutcome.processing;
+    }
+    await _recordCompletion(pending.quoteId);
+    return StorePurchaseOutcome.purchased;
+  }
 
   Future<void> recover() => _enqueue(() async {
     if (isSupported && !_busy) await _recoverTransactions();

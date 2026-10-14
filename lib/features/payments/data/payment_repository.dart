@@ -8,8 +8,10 @@ class PaymentRepository {
 
   final NetworkApi api;
 
-  Future<Map<String, Object?>> preview(PaymentProduct product) =>
-      api.previewAppSubscription(product.id);
+  Future<SubscriptionPaymentPreview> preview(PaymentProduct product) async =>
+      SubscriptionPaymentPreview.fromJson(
+        await api.previewAppSubscription(product.id),
+      );
 
   Future<MobilePaymentOrder> create(
     PaymentProduct product,

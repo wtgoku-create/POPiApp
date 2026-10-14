@@ -5,8 +5,10 @@ import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
+import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/social_app_type.dart';
@@ -14,7 +16,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
-import '../data/point_package_repository.dart';
+import '../data/purchase_catalog_repository.dart';
 import '../data/social_app_binding_repository.dart';
 import 'points_details_page.dart';
 import 'widgets/profile_chrome.dart';
@@ -385,9 +387,12 @@ class MembershipCard extends ConsumerWidget {
                       onTap: () async {
                         final loader =
                             pointPackageLoader ??
-                            PointPackageRepository(
+                            PurchaseCatalogRepository(
                               NetworkApi(ref.read(dioProvider)),
-                            ).fetchAll;
+                              appleStore: usesApplePayments
+                                  ? ref.read(applePurchaseServiceProvider).store
+                                  : null,
+                            ).pointPackages;
                         await showRechargePointsSheet(
                           context: context,
                           totalPoints: totalPoints ?? 0,

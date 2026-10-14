@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/network/network_api.dart';
 import '../domain/apple_payment.dart';
 
@@ -7,15 +9,24 @@ class ApplePaymentRepository {
 
   final NetworkApi api;
 
-  Future<List<AppleProductMapping>> products(String environment) async =>
-      (await api.appleProducts(environment))
-          .whereType<Map>()
-          .where((item) => item['enabled'] == true)
-          .map(
-            (item) =>
-                AppleProductMapping.fromJson(Map<String, Object?>.from(item)),
-          )
-          .toList();
+  Future<List<AppleProductMapping>> products(String environment) async {
+    final items = await api.appleProducts(environment);
+    if (kDebugMode) {
+      debugPrint(
+        'Apple catalog response: environment=$environment, '
+        'received=${items.length}, '
+        'enabled=${items.whereType<Map>().where((item) => item['enabled'] == true).length}',
+      );
+    }
+    return items
+        .whereType<Map>()
+        .where((item) => item['enabled'] == true)
+        .map(
+          (item) =>
+              AppleProductMapping.fromJson(Map<String, Object?>.from(item)),
+        )
+        .toList();
+  }
 
   Future<Map<String, Object?>> preview(int versionId, String environment) =>
       api.previewApplePurchase(
@@ -35,6 +46,23 @@ class ApplePaymentRepository {
       ApplePurchase.fromJson(await api.applePurchase(id));
 
   Future<List<ApplePurchase?>> restore(List<String> transactions) async {
+    final purchases = <ApplePurchase?>[];
+    var batch = <String>[];
+    for (final transaction in transactions) {
+      if (batch.isNotEmpty &&
+          (batch.length == 10 ||
+              NetworkApi.appleRestorePayloadBytes([...batch, transaction]) >
+                  NetworkApi.appleRestoreMaxBytes)) {
+        purchases.addAll(await _restoreBatch(batch));
+        batch = [];
+      }
+      batch.add(transaction);
+    }
+    if (batch.isNotEmpty) purchases.addAll(await _restoreBatch(batch));
+    return purchases;
+  }
+
+  Future<List<ApplePurchase?>> _restoreBatch(List<String> transactions) async {
     final results = await api.restoreApplePurchases(transactions);
     final purchases = List<ApplePurchase?>.filled(transactions.length, null);
     final seen = <int>{};

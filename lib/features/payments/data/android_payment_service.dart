@@ -33,8 +33,9 @@ class AndroidPaymentService {
 
   Future<PaymentResult> purchase(
     PaymentProduct product,
-    PaymentChannel channel,
-  ) async {
+    PaymentChannel channel, {
+    Future<bool> Function(SubscriptionPaymentPreview)? confirmPreview,
+  }) async {
     if (!available || _busy || product.id <= 0) {
       return const PaymentResult(PaymentOutcome.failed);
     }
@@ -48,7 +49,10 @@ class AndroidPaymentService {
       }
       if (_disposed) return const PaymentResult(PaymentOutcome.failed);
       if (product.kind == PaymentProductKind.subscription) {
-        await repository.preview(product);
+        final preview = await repository.preview(product);
+        if (confirmPreview != null && !await confirmPreview(preview)) {
+          return const PaymentResult(PaymentOutcome.canceled);
+        }
       }
       if (_disposed) return const PaymentResult(PaymentOutcome.failed);
       // Mark the attempt first: a transport failure may have created an order.
@@ -92,7 +96,7 @@ class AndroidPaymentService {
       }
       // Only explicit validation/auth rejection without an order permits a new attempt.
       if (pending != null &&
-          const {'4000', '4001', '4003', '4302'}.contains(error.code)) {
+          const {'4000', '4001', '4003'}.contains(error.code)) {
         await storage.remove(pending);
         pending = null;
       }
@@ -112,6 +116,22 @@ class AndroidPaymentService {
   }
 
   Future<PaymentResult> check(PendingPayment pending) => _poll(pending);
+
+  /// Reconcile saved orders after launch/resume without creating new orders.
+  Future<void> recover() async {
+    if (!available || _busy) return;
+    _busy = true;
+    try {
+      for (final pending in storage.readAll()) {
+        if (_disposed) break;
+        if (pending.tradeNo != null) await check(pending);
+      }
+    } catch (_) {
+      // Keep references so a later resume or checkout can retry reconciliation.
+    } finally {
+      _busy = false;
+    }
+  }
 
   Future<PaymentResult> _poll(
     PendingPayment pending, {
@@ -162,7 +182,20 @@ class AndroidPaymentService {
 
   /// A new attempt is allowed only by a separate, explicit user command.
   Future<void> abandon(PaymentProduct product) async {
-    if (!_busy && available) await storage.archive(product);
+    if (_busy || !available) return;
+    _busy = true;
+    try {
+      final pending = storage.read(product);
+      if (pending?.tradeNo != null) {
+        final state = await repository.query(pending!.tradeNo!);
+        if (state.payment == 'paid' && !state.terminal) {
+          throw StateError('Paid order is awaiting fulfillment');
+        }
+      }
+      if (!_disposed) await storage.archive(product);
+    } finally {
+      _busy = false;
+    }
   }
 
   void dispose() {

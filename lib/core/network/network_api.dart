@@ -1,5 +1,7 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
 import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 
 import 'api_exception.dart';
 import 'agent_api_exception.dart';
@@ -14,6 +16,12 @@ class NetworkApi {
   const NetworkApi(this.dio);
 
   final Dio dio;
+
+  static const appleTransactionMaxBytes = 256 * 1024;
+  static const appleRestoreMaxBytes = 512 * 1024;
+
+  static int appleRestorePayloadBytes(List<String> transactions) =>
+      utf8.encode(jsonEncode({'signedTransactions': transactions})).length;
 
   String get mediaBaseUrl => dio.options.baseUrl;
 
@@ -885,10 +893,10 @@ class NetworkApi {
     return data;
   }
 
-  Future<List<dynamic>> productPlans({int type = 1}) async {
+  Future<List<dynamic>> productPlans({String? planCategory}) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/products/plan/list',
-      queryParameters: {'type': type},
+      queryParameters: {if (planCategory != null) 'planCategory': planCategory},
     );
     final data = _data(response);
     final list = data['list'];
@@ -1001,10 +1009,13 @@ class NetworkApi {
   Future<Map<String, Object?>> verifyApplePurchase({
     required String purchaseId,
     required String signedTransaction,
-  }) => _paymentRequest(
-    '/api_client/trade/payment/apple/transactions/verify',
-    data: {'purchaseId': purchaseId, 'signedTransaction': signedTransaction},
-  );
+  }) {
+    _validateAppleTransaction(signedTransaction);
+    return _paymentRequest(
+      '/api_client/trade/payment/apple/transactions/verify',
+      data: {'purchaseId': purchaseId, 'signedTransaction': signedTransaction},
+    );
+  }
 
   Future<Map<String, Object?>> applePurchase(
     String purchaseId,
@@ -1016,10 +1027,25 @@ class NetworkApi {
     if (transactions.isEmpty || transactions.length > 10) {
       throw ArgumentError.value(transactions.length, 'transactions');
     }
+    for (final transaction in transactions) {
+      _validateAppleTransaction(transaction);
+    }
+    if (appleRestorePayloadBytes(transactions) > appleRestoreMaxBytes) {
+      throw ArgumentError('Apple restore payload exceeds 512 KiB');
+    }
     return _appleListRequest(
       '/api_client/trade/payment/apple/restore',
       data: {'signedTransactions': transactions},
     );
+  }
+
+  void _validateAppleTransaction(String transaction) {
+    if (transaction.isEmpty ||
+        utf8.encode(transaction).length > appleTransactionMaxBytes) {
+      throw ArgumentError(
+        'Apple transaction must be between 1 byte and 256 KiB',
+      );
+    }
   }
 
   Future<List<Object?>> _appleListRequest(

@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "POPi: prepare production",
+      "type": "process",
+      "command": "dart",
+      "args": ["run", "tool/flutter_env.dart", "production", "prepare"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "POPi: prepare development",
+      "type": "process",
+      "command": "dart",
+      "args": ["run", "tool/flutter_env.dart", "development", "prepare"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    }
+  ]
+}

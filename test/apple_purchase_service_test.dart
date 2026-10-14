@@ -146,7 +146,11 @@ class _Harness {
       ];
     }
     if (request.path.endsWith('/preview')) {
-      return {'quote_id': 'quote-1', 'product_id': _product};
+      return {
+        'quote_id': 'quote-1',
+        'product_id': _product,
+        'grant_points': 2000,
+      };
     }
     if (request.path.endsWith('/purchases')) {
       return _purchase(payment: 'pending_payment', fulfillment: 'pending');
@@ -164,6 +168,7 @@ class _Harness {
   Future<void> persist({bool requested = true}) => storage.save(
     PendingApplePurchase(
       businessId: 1,
+      productVersionId: 101,
       kind: PaymentProductKind.subscription,
       quoteId: 'quote-1',
       purchase: ApplePurchase.fromJson(
@@ -212,11 +217,11 @@ void main() {
     await h.store.controller.close();
   });
   Future<StorePurchaseOutcome> buy({
-    Future<bool> Function(AppleStoreProduct)? confirm,
+    Future<bool> Function(AppleStoreProduct, int?)? confirm,
   }) => service.purchase(
-    businessProductId: 1,
+    productVersionId: 101,
     kind: PaymentProductKind.subscription,
-    confirm: confirm ?? (_) async => true,
+    confirm: confirm ?? (_, _) async => true,
   );
 
   test(
@@ -226,9 +231,10 @@ void main() {
       var confirmations = 0;
       expect(
         await buy(
-          confirm: (product) async {
+          confirm: (product, grantPoints) async {
             confirmations++;
             expect(product.price, 'HK\$38.00');
+            expect(grantPoints, 2000);
             expect(
               h.requests.any((item) => item.path.endsWith('/purchases')),
               isFalse,
@@ -256,7 +262,7 @@ void main() {
 
   test('canceling confirmation does not create or pay', () async {
     expect(
-      await buy(confirm: (_) async => false),
+      await buy(confirm: (_, _) async => false),
       StorePurchaseOutcome.canceled,
     );
     expect(h.store.purchases, isEmpty);
@@ -281,7 +287,7 @@ void main() {
   );
 
   test(
-    'ambiguous versions are not silently charged as the wrong product',
+    'selects the mapping ID even when multiple versions share a plan ID',
     () async {
       h.response = (request) => request.path.endsWith('/products')
           ? [
@@ -301,13 +307,17 @@ void main() {
               },
             ]
           : h._response(request);
-      expect(await buy(), StorePurchaseOutcome.productNotFound);
-      expect(h.store.purchases, isEmpty);
+      expect(await buy(), StorePurchaseOutcome.purchased);
+      expect(
+        (h.requests.singleWhere((item) => item.path.endsWith('/preview')).data
+            as Map)['productVersionId'],
+        101,
+      );
     },
   );
 
   test(
-    'points map by package ID and use consumable StoreKit purchases',
+    'points use the selected mapping ID and consumable StoreKit purchases',
     () async {
       h.response = (request) {
         if (request.path.endsWith('/products')) {
@@ -325,9 +335,9 @@ void main() {
       };
       expect(
         await service.purchase(
-          businessProductId: 9,
+          productVersionId: 201,
           kind: PaymentProductKind.points,
-          confirm: (_) async => true,
+          confirm: (_, _) async => true,
         ),
         StorePurchaseOutcome.purchased,
       );
@@ -347,7 +357,7 @@ void main() {
     () async {
       expect(
         await buy(
-          confirm: (_) async {
+          confirm: (_, _) async {
             await service.dispose();
             return true;
           },

@@ -6,8 +6,8 @@ class ProductPlanRepository {
 
   final NetworkApi networkApi;
 
-  Future<List<ProductPlan>> fetchAll({int type = 1}) async {
-    return (await networkApi.productPlans(type: type))
+  Future<List<ProductPlan>> fetchAll({String? planCategory}) async {
+    return (await networkApi.productPlans(planCategory: planCategory))
         .whereType<Map>()
         .map((item) => ProductPlan.fromJson(Map<String, dynamic>.from(item)))
         .toList(growable: false);
