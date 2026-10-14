@@ -291,32 +291,12 @@ jobs:
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
           echo "Generated IPA: $ipa_path"
 
-      - name: Verify IPA version and bundle identifier
+      - name: Verify IPA metadata and framework deployment targets
         run: |
-          python3 - <<'PY'
-          import os
-          import plistlib
-          from pathlib import PurePosixPath
-          from zipfile import ZipFile
-
-          with ZipFile(os.environ['IOS_IPA_PATH']) as ipa:
-              plists = [name for name in ipa.namelist()
-                        if len(PurePosixPath(name).parts) == 3
-                        and PurePosixPath(name).parts[0] == 'Payload'
-                        and PurePosixPath(name).parts[1].endswith('.app')
-                        and PurePosixPath(name).name == 'Info.plist']
-              if len(plists) != 1:
-                  raise SystemExit('IPA must contain exactly one main app Info.plist.')
-              info = plistlib.loads(ipa.read(plists[0]))
-          for key, expected in {
-              'CFBundleShortVersionString': os.environ['IOS_BUILD_NAME'],
-              'CFBundleVersion': os.environ['IOS_BUILD_NUMBER'],
-              'CFBundleIdentifier': os.environ['IOS_BUNDLE_ID'],
-          }.items():
-              if info.get(key) != expected:
-                  raise SystemExit(f'IPA {key} is missing or does not match the build settings.')
-          print(f"Verified IPA {info['CFBundleShortVersionString']} ({info['CFBundleVersion']})")
-          PY
+          python3 tool/verify_ios_ipa.py "$IOS_IPA_PATH" \
+            --version "$IOS_BUILD_NAME" \
+            --build-number "$IOS_BUILD_NUMBER" \
+            --bundle-id "$IOS_BUNDLE_ID"
 
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
@@ -335,6 +315,7 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.build_ios && inputs.upload_testflight)
       )
     runs-on: macos-latest
+    timeout-minutes: 30
 
     steps:
       - name: Download signed IPA
@@ -352,10 +333,19 @@ jobs:
           fi
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
 
-      - name: Upload build to TestFlight
-        uses: apple-actions/upload-testflight-build@v1
-        with:
-          app-path: ${{ env.IOS_IPA_PATH }}
-          issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPSTORE_KEY_ID }}
-          api-private-key: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+      - name: Upload build and wait for App Store processing
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          xcrun altool --upload-package "$IOS_IPA_PATH" \
+            --api-key "$APPSTORE_KEY_ID" \
+            --api-issuer "$APPSTORE_ISSUER_ID" \
+            --p8-file-path "$key_path" \
+            --wait

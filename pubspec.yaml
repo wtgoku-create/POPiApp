@@ -57,6 +57,9 @@ tobias:
     universal_link: https://app.popi.art/ZhiFuBao
 
 flutter:
+  # The WeChat SPM wrapper embeds a framework with inconsistent OS metadata.
+  config:
+    enable-swift-package-manager: false
   uses-material-design: true
   generate: true
   assets:
