@@ -7,14 +7,37 @@ class AppleProductMapping {
     required this.productId,
     required this.kind,
     required this.businessId,
+    this.title = '',
+    this.amountFen = 0,
+    this.grantPoints = 0,
+    this.pointsAmount = 0,
+    this.bonusPoints = 0,
+    this.memberLevel = 0,
+    this.planCategory = '',
+    this.durationUnit = '',
+    this.durationValue = 0,
+    this.pointsGrantMode = '',
+    this.validityPeriod = '',
   });
 
   final int id;
   final String productId;
   final PaymentProductKind kind;
   final int businessId;
+  final String title;
+  final int amountFen;
+  final int grantPoints;
+  final int pointsAmount;
+  final int bonusPoints;
+  final int memberLevel;
+  final String planCategory;
+  final String durationUnit;
+  final int durationValue;
+  final String pointsGrantMode;
+  final String validityPeriod;
 
   factory AppleProductMapping.fromJson(Map<String, Object?> json) {
+    int integer(String key) => int.tryParse('${json[key]}') ?? 0;
     final kind = json['kind'] == 'points'
         ? PaymentProductKind.points
         : PaymentProductKind.subscription;
@@ -29,6 +52,17 @@ class AppleProductMapping {
           (json[kind == PaymentProductKind.points ? 'package_id' : 'plan_id']
                   as num)
               .toInt(),
+      title: json['title']?.toString() ?? '',
+      amountFen: integer('amount_fen'),
+      grantPoints: integer('grant_points'),
+      pointsAmount: integer('points_amount'),
+      bonusPoints: integer('bonus_points'),
+      memberLevel: integer('member_level'),
+      planCategory: json['plan_category']?.toString() ?? '',
+      durationUnit: json['duration_unit']?.toString() ?? '',
+      durationValue: integer('duration_value'),
+      pointsGrantMode: json['points_grant_mode']?.toString() ?? '',
+      validityPeriod: json['validity_period']?.toString() ?? '',
     );
   }
 }
@@ -52,6 +86,8 @@ class PendingApplePurchase {
     required this.businessId,
     required this.kind,
     required this.quoteId,
+    this.productVersionId,
+    this.grantPoints,
     this.purchase,
     this.storeRequested = false,
   });
@@ -59,6 +95,8 @@ class PendingApplePurchase {
   final int businessId;
   final PaymentProductKind kind;
   final String quoteId;
+  final int? productVersionId;
+  final int? grantPoints;
   final ApplePurchase? purchase;
   final bool storeRequested;
 
@@ -67,6 +105,8 @@ class PendingApplePurchase {
         businessId: (json['businessId'] as num).toInt(),
         kind: PaymentProductKind.values.byName(json['kind'] as String),
         quoteId: json['quoteId'] as String,
+        productVersionId: (json['productVersionId'] as num?)?.toInt(),
+        grantPoints: (json['grantPoints'] as num?)?.toInt(),
         purchase: json['purchase'] is Map
             ? ApplePurchase.fromJson(
                 Map<String, Object?>.from(json['purchase'] as Map),
@@ -80,6 +120,8 @@ class PendingApplePurchase {
         businessId: businessId,
         kind: kind,
         quoteId: quoteId,
+        productVersionId: productVersionId,
+        grantPoints: grantPoints,
         purchase: value,
         storeRequested: requested ?? storeRequested,
       );
@@ -88,6 +130,8 @@ class PendingApplePurchase {
     'businessId': businessId,
     'kind': kind.name,
     'quoteId': quoteId,
+    'productVersionId': productVersionId,
+    'grantPoints': grantPoints,
     'purchase': purchase?.json,
     'storeRequested': storeRequested,
   };

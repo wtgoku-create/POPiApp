@@ -2202,6 +2202,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentAmount => 'Payment amount';
 
   @override
+  String get paymentPerYear => '/year';
+
+  @override
+  String get paymentPoints => 'points';
+
+  @override
+  String paymentGrantPoints(int points) {
+    return 'Points granted: $points';
+  }
+
+  @override
   String get paymentCatalogPrice =>
       'Plan price. Your order determines the final charge';
 

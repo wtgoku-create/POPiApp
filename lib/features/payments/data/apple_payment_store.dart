@@ -29,6 +29,15 @@ abstract class ApplePaymentStore {
   Stream<List<AppleStoreTransaction>> get updates;
   Future<bool> available();
   Future<AppleStoreProduct?> product(String id);
+  Future<List<AppleStoreProduct>> products(Set<String> ids) async {
+    final result = <AppleStoreProduct>[];
+    for (final id in ids) {
+      final item = await product(id);
+      if (item != null) result.add(item);
+    }
+    return result;
+  }
+
   Future<bool> buy(
     AppleStoreProduct product,
     String accountToken, {
@@ -39,7 +48,7 @@ abstract class ApplePaymentStore {
   Future<void> finish(AppleStoreTransaction transaction);
 }
 
-class NativeApplePaymentStore implements ApplePaymentStore {
+class NativeApplePaymentStore extends ApplePaymentStore {
   InAppPurchase get _store => InAppPurchase.instance;
   final _products = <String, ProductDetails>{};
 
@@ -64,11 +73,22 @@ class NativeApplePaymentStore implements ApplePaymentStore {
 
   @override
   Future<AppleStoreProduct?> product(String id) async {
-    final response = await _store.queryProductDetails({id});
-    if (response.error != null || response.productDetails.isEmpty) return null;
-    final product = response.productDetails.single;
-    _products[id] = product;
-    return AppleStoreProduct(product.id, product.title, product.price);
+    return (await products({id})).firstOrNull;
+  }
+
+  @override
+  Future<List<AppleStoreProduct>> products(Set<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final response = await _store.queryProductDetails(ids);
+    if (response.error != null) {
+      throw StateError('StoreKit product query failed');
+    }
+    for (final product in response.productDetails) {
+      _products[product.id] = product;
+    }
+    return response.productDetails
+        .map((item) => AppleStoreProduct(item.id, item.title, item.price))
+        .toList();
   }
 
   @override

@@ -712,6 +712,14 @@
   "paymentAlipay": "支付宝",
   "paymentConfirm": "确认支付",
   "paymentAmount": "支付金额",
+  "paymentPerYear": "每年",
+  "paymentPoints": "积分",
+  "paymentGrantPoints": "本次到账 {points} 积分",
+  "@paymentGrantPoints": {
+    "placeholders": {
+      "points": { "type": "int" }
+    }
+  },
   "paymentCatalogPrice": "套餐价格，实际支付金额以订单为准",
   "paymentCheckAgain": "再次查询",
   "paymentProcessing": "支付处理中，到账后将更新权益",

@@ -36,6 +36,7 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
   bool _working = false;
   String? _error;
   int? _previewAmount;
+  int? _previewPoints;
   List<PendingPayment> _history = const [];
 
   @override
@@ -79,7 +80,8 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
         _channel = pending.channel;
       } else if (widget.product.kind == PaymentProductKind.subscription) {
         final preview = await service.repository.preview(widget.product);
-        _previewAmount = paymentInteger(preview['amount_fen']);
+        _previewAmount = preview.amountFen;
+        _previewPoints = preview.grantPoints;
       }
       for (final channel in PaymentChannel.values) {
         try {
@@ -138,8 +140,34 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
     }
   }
 
-  Future<void> _pay() =>
-      _run(() => _service!.purchase(widget.product, _channel));
+  Future<void> _pay() => _run(
+    () => _service!.purchase(
+      widget.product,
+      _channel,
+      confirmPreview: (preview) async {
+        if (!mounted) return false;
+        if (_previewAmount == preview.amountFen &&
+            _previewPoints == preview.grantPoints) {
+          return true;
+        }
+        setState(() {
+          _previewAmount = preview.amountFen;
+          _previewPoints = preview.grantPoints;
+        });
+        final l10n = AppLocalizations.of(context)!;
+        return await AppDialog.confirm(
+              context: context,
+              title: l10n.paymentTitle,
+              description:
+                  '${formatPaymentAmount(preview.amountFen)}\n'
+                  '${l10n.paymentGrantPoints(preview.grantPoints)}',
+              cancelLabel: l10n.cancel,
+              confirmLabel: l10n.paymentConfirm,
+            ) ??
+            false;
+      },
+    ),
+  );
 
   Future<void> _check() async {
     final pending = _result?.pending;
@@ -287,6 +315,15 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                         ),
                       ),
                       const SizedBox(height: 32),
+                      if (_previewPoints != null && !hasPending && !completed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            l10n.paymentGrantPoints(_previewPoints!),
+                            key: const Key('payment-grant-points'),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       if (_loading)
                         const Center(child: CircularProgressIndicator())
                       else if (_error != null) ...[
@@ -446,7 +483,7 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                                 ),
                         ),
                       ),
-                      if (hasPending)
+                      if (hasPending && result?.state?.payment != 'paid')
                         TextButton(
                           onPressed: _working ? null : _newPurchase,
                           child: Text(l10n.paymentNewPurchase),
@@ -531,7 +568,10 @@ class _PaymentStatus extends StatelessWidget {
     final text = switch (result.outcome) {
       PaymentOutcome.completed => l10n.purchaseSuccess,
       PaymentOutcome.processing => l10n.paymentProcessing,
-      PaymentOutcome.canceled => l10n.paymentCanceledPending,
+      PaymentOutcome.canceled =>
+        result.pending == null
+            ? l10n.purchaseCanceled
+            : l10n.paymentCanceledPending,
       PaymentOutcome.unknown => l10n.paymentUnknown,
       PaymentOutcome.failed => result.message ?? l10n.paymentNotCompleted,
     };

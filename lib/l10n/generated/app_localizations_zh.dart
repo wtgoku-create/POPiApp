@@ -2109,6 +2109,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get paymentAmount => '支付金额';
 
   @override
+  String get paymentPerYear => '每年';
+
+  @override
+  String get paymentPoints => '积分';
+
+  @override
+  String paymentGrantPoints(int points) {
+    return '本次到账 $points 积分';
+  }
+
+  @override
   String get paymentCatalogPrice => '套餐价格，实际支付金额以订单为准';
 
   @override

@@ -77,6 +77,7 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | `AGENT_API_BASE_URL` | Agent 独立服务根地址，接口路径自身包含 `/api_agent` |
 | `AGENT_API_ORIGIN` | 可选 Origin，原生 App 留空；配置值必须在后台白名单中 |
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
+| `APPLE_PAYMENT_ENVIRONMENT` | Apple 网关环境：开发为 `Sandbox`，生产为 `Production` |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
 | `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，需使用 HTTPS 域名 |
 | `DOUYIN_CLIENT_KEY` | 抖音开放平台移动应用 Client Key |
@@ -139,6 +140,26 @@ Debug 默认使用本机调试签名，真机登录前需要在平台配置相�
 
 真实后端接入后，在 `lib/shared/providers/user_provider.dart` 调用
 `signIn`，再根据项目的登录页增加路由守卫。
+
+## 移动端支付
+
+支付契约来自[飞书接口文档](https://tcnshqo5yu6i.feishu.cn/wiki/JOJpwV9sGikaF4k6kFScE288nJf)
+的「移动端 Android / iOS 支付流程与接口」。请求统一定义在 `NetworkApi`，
+支付协调与恢复位于 `lib/features/payments/`。
+
+- Android 使用 standard 套餐和积分包。会员先调用 `previewApp`，显示 `pay_money`
+  对应的金额和 `grant_points`；微信、支付宝分别建单，仅发送 `subscriptionId` 或 `packageId`。
+- iOS 从 Apple 商品列表加载会员、升级和积分包，并用 `product_id` 查询 StoreKit 本地化价格。
+  选中后以映射 `id` 请求报价，再使用 `quote_id` 创建购买意图；StoreKit 使用返回的
+  `app_account_token`，验单提交完整交易 JWS。会员是固定期限商品，不代表已接入自动续订。
+- 只有 `payment_status=paid`、`fulfillment_status=completed`、`refund_status=none`
+  同时满足才刷新会员和积分。启动与恢复前台会处理未完成交易；网络异常保留原订单，
+  不自动重放 Android 建单，也不重新购买 Apple 交易。
+
+真机联调需要已登录的业务账号。Android 微信开放平台包名、签名和支付 App ID 必须匹配；
+iOS 的 Bundle ID、App Store Connect 商品及网关映射必须一致，Sandbox 用户需加入网关允许名单。
+使用环境脚本启动以加载对应的 API 基地址和 Apple 环境参数：开发为 `Sandbox`，生产为 `Production`。
+自动化测试使用接口和原生 SDK 替身，不会真实扣款。
 
 ## 协议 H5 页面
 

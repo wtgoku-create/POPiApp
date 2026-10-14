@@ -13,12 +13,13 @@ import '../../../features/payments/presentation/android_payment_entry.dart';
 import '../../../features/payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
-import '../data/point_package_repository.dart';
+import '../data/purchase_catalog_repository.dart';
 import '../data/user_points_log_repository.dart';
 import '../domain/point_package.dart';
 import '../domain/user_points_log.dart';
@@ -73,7 +74,6 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
   final _scrollController = ScrollController();
   final List<UserPointsLogEntry> _entries = [];
   late final UserPointsLogRepository? _pointsLogRepository;
-  late final PointPackageRepository? _pointPackageRepository;
   bool _sheetOpen = false;
   bool _isInitialLoading = false;
   bool _isLoadingMore = false;
@@ -87,9 +87,6 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final networkApi = NetworkApi(ref.read(dioProvider));
     _pointsLogRepository = widget.pointsLogPageLoader == null
         ? UserPointsLogRepository(networkApi)
-        : null;
-    _pointPackageRepository = widget.pointPackageLoader == null
-        ? PointPackageRepository(networkApi)
         : null;
     _scrollController.addListener(_handleScroll);
     if (widget.refreshOnOpen) unawaited(_refreshUser());
@@ -130,7 +127,12 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
   Future<List<PointPackage>> _fetchPointPackages() {
     final loader = widget.pointPackageLoader;
     if (loader != null) return loader();
-    return _pointPackageRepository!.fetchAll();
+    return PurchaseCatalogRepository(
+      NetworkApi(ref.read(dioProvider)),
+      appleStore: usesApplePayments
+          ? ref.read(applePurchaseServiceProvider).store
+          : null,
+    ).pointPackages();
   }
 
   Future<void> _loadPointsLog({bool firstPage = false}) async {
@@ -773,8 +775,9 @@ class _RechargePointsSheetState extends State<_RechargePointsSheet> {
       itemBuilder: (context, index) {
         final package = _packages[index];
         return _PointsPackageCard(
+          key: ValueKey(package.appleProductVersionId ?? package.id),
           package: package,
-          selected: _selectedPackage?.id == package.id,
+          selected: identical(_selectedPackage, package),
           onTap: () => setState(() => _selectedPackage = package),
         );
       },
@@ -803,7 +806,7 @@ Future<bool> purchasePointPackage(
   final outcome = await openApplePayment(
     context,
     ref,
-    productId: package.id,
+    productVersionId: package.appleProductVersionId,
     kind: PaymentProductKind.points,
   );
   if (!context.mounted) return false;
@@ -824,7 +827,11 @@ Future<bool> purchasePointPackage(
       AppToast.error(context, l10n.storeProductUnavailable);
       return false;
     case StorePurchaseOutcome.failed:
-      AppToast.error(context, l10n.purchaseFailed);
+      AppToast.error(
+        context,
+        ref.read(applePurchaseServiceProvider).lastFailureMessage ??
+            l10n.purchaseFailed,
+      );
       return false;
   }
 }
@@ -834,6 +841,7 @@ class _PointsPackageCard extends StatelessWidget {
     required this.package,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   final PointPackage package;
@@ -944,6 +952,7 @@ class _PointsPackageCard extends StatelessWidget {
 }
 
 String _formatPackagePrice(PointPackage package) {
+  if (package.localizedPrice case final price?) return price;
   final amount = package.priceAmount == package.priceAmount.truncateToDouble()
       ? package.priceAmount.toInt().toString()
       : package.priceAmount.toStringAsFixed(2);

@@ -28,6 +28,8 @@ class ProductPlan {
     required this.deleted,
     required this.deleteTime,
     this.appleProductId = '',
+    this.appleProductVersionId,
+    this.localizedPrice,
   });
 
   final int id;
@@ -58,6 +60,8 @@ class ProductPlan {
   final bool deleted;
   final DateTime? deleteTime;
   final String appleProductId;
+  final int? appleProductVersionId;
+  final String? localizedPrice;
 
   factory ProductPlan.fromJson(Map<String, dynamic> json) {
     final customInfo = json['custom_info'];

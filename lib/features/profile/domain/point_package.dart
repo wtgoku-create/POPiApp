@@ -11,6 +11,9 @@ class PointPackage {
     required this.createdAt,
     required this.updatedAt,
     this.appleProductId = '',
+    this.appleProductVersionId,
+    this.localizedPrice,
+    this.validityPeriod = '',
   });
 
   final int id;
@@ -24,6 +27,9 @@ class PointPackage {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String appleProductId;
+  final int? appleProductVersionId;
+  final String? localizedPrice;
+  final String validityPeriod;
 
   int get totalPoints => pointsAmount + bonusPoints;
 
@@ -47,6 +53,7 @@ class PointPackage {
       updatedAt: updatedAt > 0
           ? DateTime.fromMillisecondsSinceEpoch(updatedAt * 1000, isUtc: true)
           : null,
+      validityPeriod: json['validity_period']?.toString() ?? '',
       appleProductId: _firstString(json, const [
         'apple_product_id',
         'appleProductId',

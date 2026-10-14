@@ -327,7 +327,7 @@ void main() {
     expect(logoutMenu, findsOneWidget);
   });
 
-  testWidgets('disables current and lower membership purchase buttons', (
+  testWidgets('membership eligibility is checked by the server preview', (
     tester,
   ) async {
     await pumpPage(
@@ -346,14 +346,14 @@ void main() {
     FilledButton button() => tester.widget<FilledButton>(
       find.byKey(const Key('membership-open-button')),
     );
-    expect(find.text('你已是Pro'), findsOneWidget);
-    expect(button().onPressed, isNull);
+    expect(find.text('你已是Pro'), findsNothing);
+    expect(button().onPressed, isNotNull);
     await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
-    expect(find.text('当前计划'), findsOneWidget);
-    expect(button().onPressed, isNull);
+    expect(find.text('当前计划'), findsNothing);
+    expect(button().onPressed, isNotNull);
     await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-3')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('membership-plan-tab-3')));

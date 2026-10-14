@@ -4075,6 +4075,24 @@ abstract class AppLocalizations {
   /// **'Payment amount'**
   String get paymentAmount;
 
+  /// No description provided for @paymentPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'/year'**
+  String get paymentPerYear;
+
+  /// No description provided for @paymentPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'points'**
+  String get paymentPoints;
+
+  /// No description provided for @paymentGrantPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Points granted: {points}'**
+  String paymentGrantPoints(int points);
+
   /// No description provided for @paymentCatalogPrice.
   ///
   /// In en, this message translates to:
