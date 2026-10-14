@@ -6,6 +6,7 @@
 	<array>
 		<string>applinks:$(WECHAT_ASSOCIATED_DOMAIN)</string>
 		<string>applinks:$(DOUYIN_ASSOCIATED_DOMAIN)</string>
+		<string>applinks:app.popi.art</string>
 	</array>
 </dict>
 </plist>
