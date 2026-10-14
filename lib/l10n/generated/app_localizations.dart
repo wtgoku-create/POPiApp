@@ -4537,6 +4537,24 @@ abstract class AppLocalizations {
   /// **'Selected story'**
   String get chatTopicSelected;
 
+  /// No description provided for @chatTopicConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic confirmed'**
+  String get chatTopicConfirmed;
+
+  /// No description provided for @chatCollapseStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse story'**
+  String get chatCollapseStory;
+
+  /// No description provided for @chatExpandStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand story'**
+  String get chatExpandStory;
+
   /// No description provided for @chatGenerationConfirmed.
   ///
   /// In en, this message translates to:

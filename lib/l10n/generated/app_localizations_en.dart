@@ -2453,6 +2453,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatTopicSelected => 'Selected story';
 
   @override
+  String get chatTopicConfirmed => 'Topic confirmed';
+
+  @override
+  String get chatCollapseStory => 'Collapse story';
+
+  @override
+  String get chatExpandStory => 'Expand story';
+
+  @override
   String get chatGenerationConfirmed => 'Generation plan confirmed';
 
   @override

@@ -13,6 +13,8 @@ import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profil
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_selected_topic_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
@@ -167,6 +169,122 @@ void main() {
     ('desktop', const Size(1280, 900), const Locale('en'), false, 1.0),
     ('accessible-dark', const Size(320, 844), const Locale('en'), true, 1.5),
   ]) {
+    testWidgets('confirmed topic reads and collapses at $name', (tester) async {
+      final chinese = locale.languageCode == 'zh';
+      final title = chinese
+          ? '来财的专属晒太阳角落'
+          : 'A quiet afternoon in a sunny cardboard home';
+      final story = chinese
+          ? '午后的阳光落在窗边，来财抱着自己的小纸箱，认真寻找最暖和的位置。'
+                '当朋友悄悄靠近，它把纸箱挪出一点空间，邀请对方一起享受这段安静的时光。'
+          : 'Afternoon sunlight reaches the window. Carrying a small cardboard '
+                'box, the character searches for the warmest corner. When a friend '
+                'arrives, it quietly makes room to share a peaceful moment.';
+      final hook = chinese
+          ? '从独占阳光到主动分享，用一个小动作完成温暖的转变。'
+          : 'A small gesture turns a private sunny corner into a shared home.';
+      Map<String, Object?> topic({bool long = false}) {
+        final value = _topic('confirmed', action: 'selected', title: title);
+        final data = value['data'] as Map<String, Object?>;
+        data['summary'] = chinese
+            ? '### 故事梗概\n\n$story'
+            : '### Synopsis\n\n$story';
+        if (long) {
+          data['summary'] =
+              '${data['summary']}\n\n'
+              '${List.generate(15, (index) => '$index. $story').join('\n\n')}';
+        }
+        data['hook'] = hook;
+        return value;
+      }
+
+      final repository = await _pumpTopicPage(
+        tester,
+        [
+          {'type': 'text', 'text': chinese ? '确认这个选题' : 'Use this story'},
+          topic(),
+        ],
+        size: size,
+        locale: locale,
+        dark: dark,
+        scale: scale,
+        sentByUser: true,
+      );
+      final card = find.byType(ConversationSelectedTopicCard);
+      final content = find.byType(ConversationCardContent);
+      final toggle = find.byKey(
+        const Key('conversation-selected-topic-toggle'),
+      );
+      final l10n = lookupAppLocalizations(locale);
+      expect(card, findsOneWidget);
+      final cardRect = tester.getRect(card);
+      expect(cardRect.width, closeTo((size.width - 40).clamp(0, 640), .01));
+      expect(
+        tester
+            .getBottomLeft(find.text(chinese ? '确认这个选题' : 'Use this story'))
+            .dy,
+        lessThan(cardRect.top),
+      );
+      expect(find.text(l10n.chatTopicConfirmed), findsOneWidget);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(hook), findsOneWidget);
+      expect(find.byKey(const Key('conversation-topic-select')), findsNothing);
+      expect(find.byKey(const Key('conversation-topic-refresh')), findsNothing);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(tester.getSize(content).height, lessThanOrEqualTo(320));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await _capture(tester, '$name-confirmed-topic');
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(content, findsNothing);
+      expect(find.text(title), findsOneWidget);
+      expect(find.byTooltip(l10n.chatExpandStory), findsOneWidget);
+      await _capture(tester, '$name-confirmed-topic-collapsed');
+      repository.streams.single.add(
+        chatEvent(2, 'message.updated', {
+          'timelineUpdates': [
+            {
+              ...chatMessageJson(revision: 2),
+              'role': 'user',
+              'blocks': [topic(long: true)],
+            },
+          ],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(content, findsNothing);
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(content);
+      await tester.pumpAndSettle();
+      await tester.drag(content, const Offset(0, -150));
+      await tester.pumpAndSettle();
+      ScrollPosition position() => tester
+          .state<ScrollableState>(
+            find
+                .descendant(of: content, matching: find.byType(Scrollable))
+                .first,
+          )
+          .position;
+      final offset = position().pixels;
+      expect(offset, greaterThan(0));
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(position().pixels, closeTo(offset, .01));
+      expect(repository.sends, 0);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     testWidgets('topics share one card and retain the selected item at $name', (
       tester,
     ) async {

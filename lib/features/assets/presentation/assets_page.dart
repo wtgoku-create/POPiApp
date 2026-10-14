@@ -265,8 +265,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                 onToggleSelection: _toggleSelectionMode,
               ),
             ],
-            if (_section == AssetLibrarySection.roles)
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
             Expanded(child: _buildSection()),
           ],
         ),

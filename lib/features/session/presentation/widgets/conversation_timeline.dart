@@ -25,6 +25,7 @@ import '../../data/session_repository.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../conversation_controller.dart';
 import 'conversation_role_card.dart';
+import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_generation_card.dart';
@@ -38,8 +39,11 @@ const _userBubbleRadius = BorderRadius.only(
   bottomRight: Radius.circular(26),
 );
 
-bool _hasRoleObjects(ConversationMessage message) => message.blocks.any(
-  (block) => block.type == 'object' && block.kind == 'role',
+bool _hasFullWidthObjects(ConversationMessage message) => message.blocks.any(
+  (block) =>
+      block.type == 'object' &&
+      (block.kind == 'role' ||
+          block.kind == 'topic' && block.action == 'selected'),
 );
 
 // Progress uses the event suffix "started" while runs use the state "running".
@@ -225,7 +229,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       } else if (block.type == 'text' && block.text.isNotEmpty) {
         final text = MarkdownMessage(text: block.text, emphasized: isSentByMe);
         children.add(
-          isSentByMe && _hasRoleObjects(message)
+          isSentByMe && _hasFullWidthObjects(message)
               ? LayoutBuilder(
                   builder: (context, constraints) => Align(
                     alignment: Alignment.centerRight,
@@ -428,7 +432,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                     _lastSnapshot?.presentationMessages.lastOrNull?.id) {
                   _latestMessageBuilt = true;
                 }
-                final userBubble = isSentByMe && !_hasRoleObjects(item);
+                final userBubble = isSentByMe && !_hasFullWidthObjects(item);
                 return Padding(
                   padding: _conversationMessagePadding,
                   child: Center(
@@ -458,7 +462,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
                 final colors = Theme.of(context).colorScheme;
-                final userBubble = isSentByMe && !_hasRoleObjects(item);
+                final userBubble = isSentByMe && !_hasFullWidthObjects(item);
                 return DecoratedBox(
                   decoration: BoxDecoration(
                     color: userBubble ? colors.surface : Colors.transparent,
@@ -1077,6 +1081,13 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
     super.build(context);
     final block = widget.block;
     if (block.kind == 'role') return ConversationRoleCard(block: block);
+    if (block.kind == 'topic' && block.action == 'selected') {
+      return ConversationSelectedTopicCard(
+        key: ValueKey((block.referenceId, block.scopeId)),
+        block: block,
+        framed: widget.framed,
+      );
+    }
     final controller = widget.controller;
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;

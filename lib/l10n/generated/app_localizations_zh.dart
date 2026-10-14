@@ -2345,6 +2345,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatTopicSelected => '已选择的故事';
 
   @override
+  String get chatTopicConfirmed => '已确认选题';
+
+  @override
+  String get chatCollapseStory => '收起故事';
+
+  @override
+  String get chatExpandStory => '展开故事';
+
+  @override
   String get chatGenerationConfirmed => '已确认生成方案';
 
   @override
