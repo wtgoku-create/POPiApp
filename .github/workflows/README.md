@@ -9,15 +9,25 @@ brew install lefthook
 lefthook install
 ```
 
-之后每次提交前会自动执行：
+之后每次提交前会根据暂存区的改动生成增量检查计划：
 
-```text
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze
-flutter test
+- 格式检查只检查本次暂存且仍存在的 Dart 文件。
+- 静态分析检查改动文件，以及通过 `import`、`export`、`part` 或条件导入直接或间接引用它们的文件。
+- 测试只运行上述依赖关系影响到的测试，以及本次修改的测试；测试配置及其依赖变化时运行所有测试。
+- 依赖、分析配置、国际化、资源、环境配置、平台代码或检查脚本变化时回退全量检查；纯文档提交跳过检查。
+
+检查读取工作区内容，不自动格式化或修改暂存区。部分暂存时，请确保工作区内容与准备提交的代码一致。
+没有对应测试的 Dart 改动仍执行格式和静态检查，完整测试由 CI 兜底。
+
+```bash
+# 查看本次暂存改动会执行哪些检查，不实际运行
+dart run tool/pre_commit.dart --dry-run
+
+# 手动执行完整检查
+dart run tool/pre_commit.dart --full
 ```
 
-任一步骤失败，提交会被阻止。格式检查失败时先执行 `dart format lib test`，再重新提交。
+任一步骤失败立即停止并阻止提交。格式检查失败时格式化对应文件并重新暂存，再提交。
 
 `flutter-ci.yml` 和 `flutter.yml` 分别负责代码校验和打包发布：
 
