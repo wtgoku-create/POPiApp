@@ -1203,6 +1203,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               l10n,
               _draft.storyBatch,
             )[_draft.storyIndex].content,
+            isStoryboard: true,
           ),
         ],
       );
@@ -1481,14 +1482,19 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         _projectSummary(),
         for (final artifact in task.artifacts) ...[
           if (artifact.body.isNotEmpty)
-            _artifact(artifact.title, artifact.body),
+            _artifact(
+              artifact.title,
+              artifact.body,
+              isStoryboard: artifact.kind == 'storyboard',
+            ),
         ],
       ],
     );
   }
 
-  Widget _artifact(String title, String text) {
-    final storyboard = HomeStoryboard.tryParse(text);
+  Widget _artifact(String title, String text, {bool isStoryboard = false}) {
+    final showStoryboard =
+        isStoryboard || HomeStoryboard.tryParse(text) != null;
     return ListTileTheme.merge(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: ExpansionTile(
@@ -1498,12 +1504,17 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         shape: const Border(),
         collapsedShape: const Border(),
         initiallyExpanded: true,
-        title: Text(title, style: const TextStyle(fontSize: 16)),
+        title: Text(
+          showStoryboard
+              ? AppLocalizations.of(context)!.roleStoryboardContent
+              : title,
+          style: const TextStyle(fontSize: 16),
+        ),
         children: [
           Align(
             alignment: AlignmentDirectional.centerStart,
-            child: storyboard != null
-                ? RoleStoryboardBody(storyboard: storyboard)
+            child: showStoryboard
+                ? RoleStoryboardBody(body: text)
                 : RoleGuideMarkdown(
                     text: text,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

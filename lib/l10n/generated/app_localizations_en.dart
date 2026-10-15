@@ -323,7 +323,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatStageInspectResult => 'Inspect result';
 
   @override
-  String get roleStoryboardContent => 'Storyboard';
+  String get roleStoryboardContent => 'Storyboard video prompt';
 
   @override
   String roleStoryboardShot(int index, String duration) {
@@ -878,7 +878,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountArchiveScript => 'Script';
 
   @override
-  String get accountArchiveStoryboard => 'Storyboard';
+  String get accountArchiveStoryboard => 'Storyboard video prompt';
 
   @override
   String get accountArchiveCast => 'Cast snapshot';

@@ -59,7 +59,11 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final topPadding = math
         .max(MediaQuery.paddingOf(context).top, 52)
         .toDouble();
-    final plans = _productPlans == null ? null : _groupPlans(_productPlans!);
+    final plans = _productPlans == null
+        ? null
+        : _groupPlans(
+            usesAndroidPayments ? _productPlans!.reversed : _productPlans!,
+          );
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedLevel = plans != null && plans.isNotEmpty
@@ -960,11 +964,11 @@ class _MembershipPlanGroup {
   int get level => variants.first.level;
 }
 
-List<_MembershipPlanGroup> _groupPlans(List<ProductPlan> products) {
+List<_MembershipPlanGroup> _groupPlans(Iterable<ProductPlan> products) {
   final groups = <_MembershipPlanGroup>[];
   final plusGroups = <String, _MembershipPlanGroup>{};
 
-  for (final product in products.reversed) {
+  for (final product in products) {
     // Hide the Core offering, not an ID that can belong to another plan.
     if (RegExp(
       r'^core\b',

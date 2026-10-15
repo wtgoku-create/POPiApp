@@ -1,4 +1,5 @@
 import '../../../shared/type/payment_type.dart';
+import '../../profile/domain/product_plan.dart' show ProductPlanCustomInfo;
 
 /// Server product versions are distinct from StoreKit product identifiers.
 class AppleProductMapping {
@@ -10,6 +11,8 @@ class AppleProductMapping {
     this.title = '',
     this.description = '',
     this.amountFen = 0,
+    this.originalPriceAmount = 0,
+    this.customInfo,
     this.grantPoints = 0,
     this.pointsAmount = 0,
     this.bonusPoints = 0,
@@ -28,6 +31,8 @@ class AppleProductMapping {
   final String title;
   final String description;
   final int amountFen;
+  final int originalPriceAmount;
+  final ProductPlanCustomInfo? customInfo;
   final int grantPoints;
   final int pointsAmount;
   final int bonusPoints;
@@ -40,6 +45,7 @@ class AppleProductMapping {
 
   factory AppleProductMapping.fromJson(Map<String, Object?> json) {
     int integer(String key) => int.tryParse('${json[key]}') ?? 0;
+    final customInfo = json['custom_info'];
     final kind = json['kind'] == 'points'
         ? PaymentProductKind.points
         : PaymentProductKind.subscription;
@@ -56,7 +62,15 @@ class AppleProductMapping {
               .toInt(),
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
-      amountFen: integer('amount_fen'),
+      amountFen: json['regular_amount_fen'] == null
+          ? integer('amount_fen')
+          : integer('regular_amount_fen'),
+      originalPriceAmount: integer('original_price_amount'),
+      customInfo: customInfo is Map
+          ? ProductPlanCustomInfo.fromJson(
+              Map<String, Object?>.from(customInfo),
+            )
+          : null,
       grantPoints: integer('grant_points'),
       pointsAmount: integer('points_amount'),
       bonusPoints: integer('bonus_points'),

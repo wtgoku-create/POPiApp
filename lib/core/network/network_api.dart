@@ -377,12 +377,13 @@ class NetworkApi {
     String id, {
     required bool profiles,
     required int page,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     final resource = profiles ? 'profile-versions' : 'creations';
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/accounts/${Uri.encodeComponent(id)}/$resource',
-      queryParameters: {'page': page, 'pageSize': 100},
+      queryParameters: {'page': page, 'pageSize': pageSize},
       cancelToken: cancelToken,
     );
     return _projectData(response.data);
@@ -425,11 +426,12 @@ class NetworkApi {
 
   Future<Map<String, dynamic>> projectsPage(
     int page, {
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/agent/v2/accounts',
-      queryParameters: {'page': page, 'pageSize': 10},
+      queryParameters: {'page': page, 'pageSize': pageSize},
       cancelToken: cancelToken,
     );
     return _projectData(response.data);
@@ -517,11 +519,12 @@ class NetworkApi {
 
   Future<Map<String, Object?>> roleTemplatesPage(
     int page, {
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     final response = await dio.get<Object?>(
       '/api_client/agent/v2/role-templates',
-      queryParameters: {'page': page, 'pageSize': 50},
+      queryParameters: {'page': page, 'pageSize': pageSize},
       cancelToken: cancelToken,
     );
     final data = _workBody(response.data)['data'];
@@ -987,17 +990,14 @@ class NetworkApi {
     return data;
   }
 
-  Future<List<Object?>> appleProducts(String environment) => _appleListRequest(
-    '/api_client/trade/payment/apple/products',
-    query: {'environment': environment},
-  );
+  Future<List<Object?>> appleProducts() =>
+      _appleListRequest('/api_client/trade/payment/apple/products');
 
   Future<Map<String, Object?>> previewApplePurchase({
     required int productVersionId,
-    required String environment,
   }) => _paymentRequest(
     '/api_client/trade/payment/apple/preview',
-    data: {'productVersionId': productVersionId, 'environment': environment},
+    data: {'productVersionId': productVersionId},
   );
 
   Future<Map<String, Object?>> createApplePurchase(String quoteId) =>

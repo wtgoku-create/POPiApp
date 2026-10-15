@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/config/app_config.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../payments/data/apple_payment_repository.dart';
@@ -12,26 +11,20 @@ import 'product_plan_repository.dart';
 
 /// Apple catalogs render server mappings without requiring StoreKit access.
 class PurchaseCatalogRepository {
-  const PurchaseCatalogRepository(
-    this.api, {
-    this.useAppleCatalog = false,
-    this.environment = AppConfig.applePaymentEnvironment,
-  });
+  const PurchaseCatalogRepository(this.api, {this.useAppleCatalog = false});
 
   final NetworkApi api;
   final bool useAppleCatalog;
-  final String environment;
 
   Future<List<AppleProductMapping>> _appleProducts(
     PaymentProductKind kind,
   ) async {
     final mappings = (await ApplePaymentRepository(
       api,
-    ).products(environment)).where((item) => item.kind == kind).toList();
+    ).products()).where((item) => item.kind == kind).toList();
     if (kDebugMode) {
       debugPrint(
-        'Apple catalog: environment=$environment, kind=${kind.name}, '
-        'eligible=${mappings.length}',
+        'Apple catalog: kind=${kind.name}, products=${mappings.length}',
       );
     }
     return mappings;
@@ -61,8 +54,8 @@ class PurchaseCatalogRepository {
           power: 0,
           videoLength: 0,
           audioLength: 0,
-          originalPriceAmount: 0,
-          customInfo: null,
+          originalPriceAmount: mapping.originalPriceAmount,
+          customInfo: mapping.customInfo,
           planCategory: mapping.planCategory,
           pointsGrantMode: mapping.pointsGrantMode,
           bonusPointsAmount: mapping.bonusPoints,

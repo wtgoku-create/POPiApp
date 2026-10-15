@@ -182,7 +182,7 @@ void main() {
       expect(
         (await sessions.list(
           'config-user',
-        )).where((session) => session.id.startsWith('mock-new-')),
+        )).items.where((session) => session.id.startsWith('mock-new-')),
         hasLength(1),
       );
       await tester.pumpWidget(const SizedBox());

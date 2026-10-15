@@ -350,12 +350,15 @@ void main() {
   );
 
   test(
-    'all pages are fetched, deduplicated, and sorted before exposing history',
+    'history requests one page of twenty and preserves server pagination',
     () async {
+      final requests = <int>[];
       dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
             final page = options.queryParameters['page'];
+            requests.add(page as int);
+            expect(options.queryParameters['pageSize'], 20);
             handler.resolve(
               Response(
                 requestOptions: options,
@@ -371,7 +374,7 @@ void main() {
                   ],
                   'pageInfo': {
                     'page': page,
-                    'pageSize': 100,
+                    'pageSize': 20,
                     'pageCount': 2,
                     'total': 2,
                   },
@@ -381,10 +384,15 @@ void main() {
           },
         ),
       );
-      expect((await repository().list('a')).map((item) => item.id), [
-        'pinned',
-        'new',
-      ]);
+      final first = await repository().list('a');
+      expect(first.items.single.id, 'new');
+      expect(first.page, 1);
+      expect(first.hasMore, isTrue);
+      expect(requests, [1]);
+      final second = await repository().list('a', page: 2);
+      expect(second.items.single.id, 'pinned');
+      expect(second.hasMore, isFalse);
+      expect(requests, [1, 2]);
     },
   );
 

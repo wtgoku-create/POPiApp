@@ -743,7 +743,7 @@ void main() {
 
     final router = container.read(routerProvider(false));
     router.go(
-      'https://app.popi.art/WeChat/wxf99ad5d5c7b4fe37/oauth?code=callback-code&state=state',
+      'https://app.popi.art/WeChat/wx0d9c23195606fc80/oauth?code=callback-code&state=state',
     );
     await tester.pumpWidget(
       UncontrolledProviderScope(

@@ -271,20 +271,10 @@ class ConversationTaskStep {
               .firstOrNull;
       if (saved != null) raw = {...saved.data, ...raw};
     }
-    final payload = raw['payload'];
     return ConversationBlock.fromJson({
       'type': 'object',
       'kind': 'content',
-      'data': {
-        ...raw,
-        if (payload is Map)
-          'body':
-              payload['text'] ??
-              payload['body'] ??
-              payload['description'] ??
-              '',
-        'editable': false,
-      },
+      'data': {...raw, 'editable': false},
     });
   }
 }

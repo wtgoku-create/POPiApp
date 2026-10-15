@@ -1,9 +1,12 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/controllers/paged_list_controller.dart';
+import '../../../../shared/widgets/app_paged_scroll.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/providers/ip_account_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../assets/domain/library_role.dart';
@@ -28,12 +31,10 @@ class IpAccountRolesSheet extends ConsumerStatefulWidget {
 class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
   late final String? _ownerId;
   late final _selected = [...widget.selectedIds];
-  late Future<List<LibraryRole>> _roles;
+  late PagedListController<LibraryRole> _pages;
   String _category = 'user';
   bool _saving = false;
-  bool _failed = false;
   String _requestId = const Uuid().v4();
-  CancelToken? _rolesToken;
   final _names = <String, String>{};
 
   @override
@@ -41,28 +42,47 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
     super.initState();
     _ownerId = ref.read(userProvider)?.id;
     _names.addAll(widget.selectedNames);
-    _load();
+    _initPages();
+    _load(reset: true);
   }
 
   @override
   void dispose() {
-    _rolesToken?.cancel();
+    _pages.dispose();
     super.dispose();
   }
 
-  void _load() {
-    _rolesToken?.cancel();
-    _rolesToken = CancelToken();
-    _roles = ref
-        .read(ipAccountRepositoryProvider)
-        .availableRoles(_category, cancelToken: _rolesToken);
+  void _initPages() {
+    final category = _category;
+    _pages = PagedListController(
+      itemId: (role) => role.id,
+      fetch: (page, token) => ref
+          .read(ipAccountRepositoryProvider)
+          .availableRoles(category, page: page, cancelToken: token),
+    )..addListener(_changed);
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _load({bool reset = false}) async {
+    try {
+      await _pages.load(reset: reset);
+    } catch (_) {
+      if (!mounted || ref.read(userProvider)?.id != _ownerId) return;
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.networkRequestFailed,
+      );
+      if (!reset) rethrow;
+    }
   }
 
   Future<void> _save() async {
     if (_saving || ref.read(userProvider)?.id != _ownerId) return;
     setState(() {
       _saving = true;
-      _failed = false;
     });
     try {
       await widget.onSave(List.unmodifiable(_selected), _requestId);
@@ -70,7 +90,12 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
         Navigator.of(context).pop(true);
       }
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (mounted && ref.read(userProvider)?.id == _ownerId) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.networkRequestFailed,
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -115,7 +140,9 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
                       ? null
                       : (value) => setState(() {
                           _category = value.single;
-                          _load();
+                          _pages.dispose();
+                          _initPages();
+                          _load(reset: true);
                         }),
                 ),
                 const SizedBox(height: 10),
@@ -143,29 +170,38 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
                     ),
                   ),
                 Expanded(
-                  child: FutureBuilder<List<LibraryRole>>(
-                    future: _roles,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: TextButton(
-                            onPressed: () => setState(_load),
-                            child: Text(l10n.retry),
-                          ),
-                        );
-                      }
-                      if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final roles = snapshot.data ?? [];
-                      if (roles.isEmpty) {
-                        return Center(child: Text(l10n.ipAccountNoRoles));
-                      }
-                      return ListView.builder(
+                  child: AppPagedScroll(
+                    key: ValueKey(_category),
+                    onLoad: _load,
+                    child: RefreshIndicator(
+                      onRefresh: () => _load(reset: true),
+                      child: ListView.builder(
                         key: const Key('ip-account-roles-list'),
-                        itemCount: roles.length,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _pages.items.length + 1,
                         itemBuilder: (context, index) {
-                          final role = roles[index];
+                          if (index == _pages.items.length) {
+                            if (_pages.loading) {
+                              return AppSkeleton(
+                                label: l10n.loadingAssets,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: AppSkeletonBox(height: 24),
+                                ),
+                              );
+                            }
+                            if (_pages.items.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                  l10n.ipAccountNoRoles,
+                                  textAlign: TextAlign.center,
+                                ),
+                              );
+                            }
+                            return SizedBox(height: _pages.hasMore ? 48 : 0);
+                          }
+                          final role = _pages.items[index];
                           return CheckboxListTile(
                             key: Key('ip-account-select-role-${role.id}'),
                             title: Text(role.title),
@@ -191,18 +227,11 @@ class _IpAccountRolesSheetState extends ConsumerState<IpAccountRolesSheet> {
                                   }),
                           );
                         },
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
                 if (_selected.length >= 20) Text(l10n.ipAccountRoleLimit),
-                if (_failed)
-                  Text(
-                    l10n.networkRequestFailed,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
                 const SizedBox(height: 10),
                 FilledButton(
                   key: const Key('ip-account-roles-save'),

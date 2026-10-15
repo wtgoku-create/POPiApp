@@ -234,11 +234,21 @@ class HomeCreationFixture {
       return {
         'list': [
           if (page == 1)
-            {'id': '101', 'title': 'First project', 'status': 'active'}
+            for (var index = 0; index < 20; index++)
+              {
+                'id': '${101 + index}',
+                'title': index == 0 ? 'First project' : 'Project $index',
+                'status': 'active',
+              }
           else
             {'id': '202', 'title': 'Second project', 'status': 'active'},
         ],
-        'pageInfo': {'page': page, 'pageSize': 10, 'pageCount': 2, 'total': 2},
+        'pageInfo': {
+          'page': page,
+          'pageSize': request.queryParameters['pageSize'],
+          'pageCount': 2,
+          'total': 21,
+        },
       };
     }
     if (path.endsWith('/session-media-preferences')) {

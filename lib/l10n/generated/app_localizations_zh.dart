@@ -310,7 +310,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatStageInspectResult => '检测结果';
 
   @override
-  String get roleStoryboardContent => '分镜内容';
+  String get roleStoryboardContent => '分镜视频提示词';
 
   @override
   String roleStoryboardShot(int index, String duration) {
@@ -844,7 +844,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountArchiveScript => '脚本';
 
   @override
-  String get accountArchiveStoryboard => '分镜';
+  String get accountArchiveStoryboard => '分镜视频提示词';
 
   @override
   String get accountArchiveCast => '角色快照';

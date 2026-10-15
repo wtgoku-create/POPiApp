@@ -7,6 +7,8 @@ import 'package:popi_ai_app/features/ip_accounts/data/ip_account_repository.dart
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account_home.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/account_preferences.dart';
+import 'list_page_fixtures.dart';
+export 'list_page_fixtures.dart';
 
 class FixtureIpAccountRepository extends IpAccountRepository {
   FixtureIpAccountRepository() : super(NetworkApi(Dio()));
@@ -36,20 +38,26 @@ class FixtureIpAccountRepository extends IpAccountRepository {
   ];
 
   @override
-  Future<List<IpAccount>> list({
+  Future<ListPage<IpAccount>> list({
     String status = 'active',
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     statuses.add(status);
-    return [
-      if (status == 'all' || status == this.status)
-        IpAccount(
-          id: '42',
-          title: title,
-          description: '校园情感 x AI真人',
-          isPaused: this.status == 'archived',
-        ),
-    ];
+    return fixturePage(
+      [
+        if (status == 'all' || status == this.status)
+          IpAccount(
+            id: '42',
+            title: title,
+            description: '校园情感 x AI真人',
+            isPaused: this.status == 'archived',
+          ),
+      ],
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   @override
@@ -152,6 +160,8 @@ class FixtureIpAccountRepository extends IpAccountRepository {
   @override
   Future<IpAccountResources> resources(
     IpAccountHome account, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     if (failResources) throw StateError('Failed');
@@ -191,12 +201,23 @@ class FixtureIpAccountRepository extends IpAccountRepository {
   }
 
   @override
-  Future<List<LibraryRole>> availableRoles(
+  Future<ListPage<LibraryRole>> availableRoles(
     String category, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => const [
-    LibraryRole(id: '20', title: '角色20', description: '角色简介', canCreate: true),
-  ];
+  }) async => fixturePage(
+    const [
+      LibraryRole(
+        id: '20',
+        title: '角色20',
+        description: '角色简介',
+        canCreate: true,
+      ),
+    ],
+    page: page,
+    pageSize: pageSize,
+  );
 
   @override
   Future<void> saveRoles(

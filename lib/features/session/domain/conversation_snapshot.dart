@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import '../../../core/utils/app_url.dart';
 import 'conversation_session.dart';
-import '../../role_guide/domain/home_storyboard.dart';
 
 Map<String, Object?> conversationMap(Object? value) {
   if (value is! Map) throw const FormatException('Invalid conversation object');
@@ -50,13 +49,24 @@ class ConversationBlock {
   int get revision => data['revision'] as int? ?? 1;
   String get title => data['title'] as String? ?? '';
   String get status => (data['status'] ?? data['state']) as String? ?? '';
-  String get body =>
-      (data['body'] ??
-              data['summary'] ??
-              data['description'] ??
-              data['configuration'])
-          as String? ??
-      '';
+  String get body {
+    final text =
+        data['body'] ??
+        data['summary'] ??
+        data['description'] ??
+        data['configuration'];
+    if (text is String) return text;
+    final payload = data['payload'];
+    if (payload is String) return payload;
+    if (payload is Map) {
+      for (final key in ['text', 'body', 'description']) {
+        if (payload[key] is String) return payload[key] as String;
+      }
+      return jsonEncode(payload);
+    }
+    return '';
+  }
+
   String get objectKind => data['kind'] as String? ?? '';
   bool get isHomePlan => kind == 'plan' && data['homePlan'] is Map;
   Map<String, Object?>? get reference =>
@@ -152,8 +162,7 @@ class ConversationBlock {
       objectKind != 'profile' &&
       data['editable'] == true &&
       reference?['versionId'] != null;
-  HomeStoryboard? get storyboard =>
-      objectKind == 'storyboard' ? HomeStoryboard.tryParse(body) : null;
+  bool get isStoryboard => objectKind == 'storyboard';
   List<String> get mediaIds => {
     if (mediaId != null) mediaId!,
     if (data['mediaId'] != null) data['mediaId'].toString(),

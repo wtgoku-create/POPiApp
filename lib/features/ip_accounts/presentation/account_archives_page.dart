@@ -10,6 +10,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../domain/account_preferences.dart';
 import '../domain/ip_account_home.dart';
 
@@ -341,12 +342,15 @@ class _AccountArchiveDetailPageState
                     ),
                   ),
                   const SizedBox(height: 8),
-                  MarkdownBody(
-                    data: entry.value.isEmpty
-                        ? l10n.ipAccountFieldEmpty
-                        : entry.value,
-                    selectable: true,
-                  ),
+                  if (entry.key == 'storyboard' && entry.value.isNotEmpty)
+                    RoleStoryboardBody(body: entry.value)
+                  else
+                    MarkdownBody(
+                      data: entry.value.isEmpty
+                          ? l10n.ipAccountFieldEmpty
+                          : entry.value,
+                      selectable: true,
+                    ),
                   const Divider(height: 32),
                 ],
                 if (archive.sessionId?.isNotEmpty == true)

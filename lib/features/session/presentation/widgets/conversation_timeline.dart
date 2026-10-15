@@ -1282,6 +1282,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
             const SizedBox(height: 20),
           ],
           if (block.title.isNotEmpty ||
+              block.isStoryboard ||
               block.avatar != null ||
               widget.headerTrailing != null)
             Row(
@@ -1311,7 +1312,9 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 ],
                 Expanded(
                   child: Text(
-                    block.title,
+                    block.isStoryboard
+                        ? l10n.roleStoryboardContent
+                        : block.title,
                     style: ConversationCardTypography.title,
                   ),
                 ),
@@ -1336,14 +1339,10 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                     !details.any((detail) => detail.$2 == block.body))
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: block.storyboard != null
+                    child: block.isStoryboard
                         ? RoleStoryboardBody(
-                            storyboard: block.storyboard!,
-                            markdownBuilder: (text) => MarkdownMessage(
-                              text: text,
-                              compact: true,
-                              softLineBreak: true,
-                            ),
+                            body: block.body,
+                            style: ConversationCardTypography.body,
                           )
                         : MarkdownMessage(text: block.body, compact: true),
                   ),

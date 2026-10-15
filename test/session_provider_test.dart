@@ -39,6 +39,156 @@ void main() {
     );
   });
 
+  Future<_PagingRepository> preparePages() async {
+    final paging = _PagingRepository();
+    repository = paging;
+    for (var index = 0; index < 37; index++) {
+      await paging.create('a', 'History $index');
+    }
+    await signIn('a');
+    return paging;
+  }
+
+  test(
+    'initial load fetches twenty; further pages append only on demand',
+    () async {
+      final paging = await preparePages();
+      final controller = container.read(sessionsProvider.notifier);
+      expect(paging.requests, [(1, 20)]);
+      expect(container.read(sessionsProvider).requireValue, hasLength(20));
+      expect(controller.hasMore, isTrue);
+      final next = await paging.serverPage('a', 2);
+      paging.pending = Completer<ConversationSessionPage>();
+      final more = controller.loadMore();
+      expect(controller.loadingMore, isTrue);
+      expect(container.read(sessionsProvider).valueOrNull, hasLength(20));
+      await controller.loadMore();
+      expect(paging.requests, [(1, 20), (2, 20)]);
+      paging.pending!.complete(next);
+      await more;
+      expect(controller.loadingMore, isFalse);
+      expect(container.read(sessionsProvider).requireValue, hasLength(40));
+      paging.pending = null;
+      await controller.loadMore();
+      expect(container.read(sessionsProvider).requireValue, hasLength(45));
+      expect(controller.hasMore, isFalse);
+      await controller.loadMore();
+      expect(paging.requests, [(1, 20), (2, 20), (3, 20)]);
+    },
+  );
+
+  test('page failures keep visible history and retry the same page', () async {
+    final paging = await preparePages();
+    final controller = container.read(sessionsProvider.notifier);
+    final before = container.read(sessionsProvider).requireValue;
+    paging.failNext = true;
+    await expectLater(controller.loadMore(), throwsStateError);
+    expect(container.read(sessionsProvider).requireValue, same(before));
+    expect(controller.hasMore, isTrue);
+    expect(controller.loadingMore, isFalse);
+    await controller.loadMore();
+    expect(paging.requests, [(1, 20), (2, 20), (2, 20)]);
+    expect(container.read(sessionsProvider).requireValue, hasLength(40));
+    await controller.refresh();
+    expect(paging.requests.last, (1, 20));
+    expect(container.read(sessionsProvider).requireValue, hasLength(20));
+    await controller.loadMore();
+    expect(paging.requests.last, (2, 20));
+  });
+
+  test(
+    'overlapping pages do not duplicate or overwrite visible sessions',
+    () async {
+      final paging = await preparePages();
+      final controller = container.read(sessionsProvider.notifier);
+      final before = container.read(sessionsProvider).requireValue;
+      final next = await paging.serverPage('a', 2);
+      paging.pending = Completer<ConversationSessionPage>();
+      final more = controller.loadMore();
+      paging.pending!.complete(
+        ConversationSessionPage(
+          items: [before.first, ...next.items.skip(1)],
+          page: 2,
+          pageCount: 3,
+        ),
+      );
+      await more;
+      final items = container.read(sessionsProvider).requireValue;
+      expect(items, hasLength(39));
+      expect(items.map((item) => item.id).toSet(), hasLength(39));
+      expect(items.first, same(before.first));
+    },
+  );
+
+  test(
+    'account changes cancel pagination and discard the previous account page',
+    () async {
+      final paging = await preparePages();
+      final controller = container.read(sessionsProvider.notifier);
+      final next = await paging.serverPage('a', 2);
+      paging.pending = Completer<ConversationSessionPage>();
+      final pending = paging.pending!;
+      final more = controller.loadMore();
+      final token = paging.token!;
+      paging.pending = null;
+      await signIn('b');
+      expect(token.isCancelled, isTrue);
+      pending.complete(next);
+      await more;
+      expect(container.read(sessionsProvider).requireValue, hasLength(8));
+      expect(controller.hasMore, isFalse);
+      expect(controller.loadingMore, isFalse);
+    },
+  );
+
+  test(
+    'refresh cancels a pending page and restarts pagination from page one',
+    () async {
+      final paging = await preparePages();
+      final controller = container.read(sessionsProvider.notifier);
+      final next = await paging.serverPage('a', 2);
+      paging.pending = Completer<ConversationSessionPage>();
+      final pending = paging.pending!;
+      final more = controller.loadMore();
+      final token = paging.token!;
+      paging.pending = null;
+      await controller.refresh();
+      expect(token.isCancelled, isTrue);
+      pending.complete(next);
+      await more;
+      expect(container.read(sessionsProvider).requireValue, hasLength(20));
+      await controller.loadMore();
+      expect(paging.requests, [(1, 20), (2, 20), (1, 20), (2, 20)]);
+    },
+  );
+
+  test(
+    'a mutation cancels old pagination and reconciles shifted offsets',
+    () async {
+      final paging = await preparePages();
+      final controller = container.read(sessionsProvider.notifier);
+      final next = await paging.serverPage('a', 2);
+      paging.pending = Completer<ConversationSessionPage>();
+      final pending = paging.pending!;
+      final more = controller.loadMore();
+      final token = paging.token!;
+      await controller.delete('mock-1');
+      expect(token.isCancelled, isTrue);
+      pending.complete(next);
+      await more;
+      paging.pending = null;
+      await controller.loadMore();
+      expect(paging.requests.last, (1, 20));
+      await controller.loadMore();
+      expect(paging.requests.last, (2, 20));
+      expect(container.read(sessionsProvider).requireValue, hasLength(40));
+      expect(
+        container.read(sessionsProvider).requireValue.map((item) => item.id),
+        isNot(contains('mock-1')),
+      );
+    },
+  );
+
   test('refresh updates shared history with server changes', () async {
     await signIn('a');
     final session = await repository.create('a', 'Created elsewhere');
@@ -229,10 +379,44 @@ class _PendingRepository extends FixtureSessionRepository {
   }
 }
 
+class _PagingRepository extends FixtureSessionRepository {
+  final requests = <(int, int)>[];
+  Completer<ConversationSessionPage>? pending;
+  bool failNext = false;
+  CancelToken? token;
+
+  Future<ConversationSessionPage> serverPage(String userId, int page) =>
+      super.list(userId, page: page);
+
+  @override
+  Future<ConversationSessionPage> list(
+    String userId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    requests.add((page, pageSize));
+    token = cancelToken;
+    if (failNext) {
+      failNext = false;
+      throw StateError('offline');
+    }
+    return pending?.future ??
+        super.list(
+          userId,
+          page: page,
+          pageSize: pageSize,
+          cancelToken: cancelToken,
+        );
+  }
+}
+
 class _FailingRepository extends FixtureSessionRepository {
   @override
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async => throw StateError('offline');
 }
@@ -242,11 +426,25 @@ class _RefreshingRepository extends FixtureSessionRepository {
   CancelToken? token;
 
   @override
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) {
     token = cancelToken;
-    return pending?.future ?? super.list(userId, cancelToken: cancelToken);
+    return pending?.future.then(
+          (items) => ConversationSessionPage(
+            items: items,
+            page: page,
+            pageCount: page,
+          ),
+        ) ??
+        super.list(
+          userId,
+          page: page,
+          pageSize: pageSize,
+          cancelToken: cancelToken,
+        );
   }
 }

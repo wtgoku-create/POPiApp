@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/controllers/paged_list_controller.dart';
+import '../../../shared/widgets/app_paged_scroll.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/providers/project_provider.dart';
@@ -23,10 +25,9 @@ class IpAccountsLivePage extends ConsumerStatefulWidget {
 }
 
 class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
-  List<IpAccount> _accounts = const [];
-  bool _loading = true;
-  bool _failed = false;
-  CancelToken? _token;
+  late PagedListController<IpAccount> _pages;
+  List<IpAccount> get _accounts => _pages.items;
+  bool get _loading => _pages.loading;
   CancelToken? _deleteToken;
   String? _deletingAccountId;
 
@@ -61,12 +62,7 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
           ref.read(userProvider)?.id != owner) {
         return;
       }
-      setState(
-        () => _accounts = [
-          for (final item in _accounts)
-            if (item.id != account.id) item,
-        ],
-      );
+      _pages.remove(account.id);
       ref.invalidate(projectsProvider);
     } catch (_) {
       if (mounted &&
@@ -87,39 +83,43 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
   @override
   void initState() {
     super.initState();
+    _initPages();
     unawaited(_load());
+  }
+
+  void _initPages() {
+    _pages = PagedListController(
+      itemId: (item) => item.id,
+      fetch: (page, token) => ref
+          .read(ipAccountRepositoryProvider)
+          .list(status: 'active', page: page, cancelToken: token),
+    )..addListener(_changed);
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _token?.cancel();
+    _pages.dispose();
     _deleteToken?.cancel();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    _token?.cancel();
-    final token = _token = CancelToken();
-    setState(() {
-      _loading = true;
-      _failed = false;
-    });
-    if (ref.read(userProvider) == null) {
-      setState(() {
-        _accounts = [];
-        _loading = false;
-      });
-      return;
-    }
+  Future<void> _load({bool reset = true}) async {
+    if (ref.read(userProvider) == null || _deleteToken != null) return;
+    final owner = ref.read(userProvider)?.id;
     try {
-      final accounts = await ref
-          .read(ipAccountRepositoryProvider)
-          .list(status: 'active', cancelToken: token);
-      if (mounted && !token.isCancelled) setState(() => _accounts = accounts);
+      await _pages.load(reset: reset);
     } catch (_) {
-      if (mounted && !token.isCancelled) setState(() => _failed = true);
-    } finally {
-      if (mounted && !token.isCancelled) setState(() => _loading = false);
+      if (mounted && ref.read(userProvider)?.id == owner) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.ipAccountLoadFailed,
+        );
+      }
+      if (!reset) rethrow;
     }
   }
 
@@ -129,24 +129,31 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
       _deleteToken?.cancel();
       _deleteToken = null;
       _deletingAccountId = null;
-      _accounts = const [];
+      _pages.dispose();
+      _initPages();
       unawaited(_load());
     });
-    return RefreshIndicator(
-      onRefresh: () async {
-        if (_deleteToken == null) await _load();
-      },
-      child: IpAccountsPage(
-        accounts: _accounts,
-        isLoading: _loading,
-        onRetry: _failed ? _load : null,
-        onDeleteAccount: _delete,
-        isDeleting: _deleteToken != null,
-        deletingAccountId: _deletingAccountId,
-        onOpenAccount: (account) async {
-          await context.push('/ip-accounts/${Uri.encodeComponent(account.id)}');
-          if (mounted) await _load();
+    return AppPagedScroll(
+      onLoad: () => _load(reset: false),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          if (_deleteToken == null) await _load();
         },
+        child: IpAccountsPage(
+          accounts: _accounts,
+          isLoading: _loading && _accounts.isEmpty,
+          isLoadingMore: _loading && _accounts.isNotEmpty,
+          hasMore: ref.watch(userProvider) != null && _pages.hasMore,
+          onDeleteAccount: _loading ? null : _delete,
+          isDeleting: _deleteToken != null,
+          deletingAccountId: _deletingAccountId,
+          onOpenAccount: (account) async {
+            await context.push(
+              '/ip-accounts/${Uri.encodeComponent(account.id)}',
+            );
+            if (mounted) await _load();
+          },
+        ),
       ),
     );
   }

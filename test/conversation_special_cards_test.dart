@@ -32,15 +32,21 @@ class _CardRepository extends FixtureSessionRepository {
   ConversationGenerationSelection? submitted;
   final controls = <String>[];
   @override
-  Future<List<ConversationRoleTemplate>> roleTemplates({
+  Future<ListPage<ConversationRoleTemplate>> roleTemplates({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => [
-    ConversationRoleTemplate.fromJson({
-      'id': 'watercolor',
-      'title': 'Watercolor',
-      'mediaId': 'style-image',
-    }),
-  ];
+  }) async => fixturePage(
+    [
+      ConversationRoleTemplate.fromJson({
+        'id': 'watercolor',
+        'title': 'Watercolor',
+        'mediaId': 'style-image',
+      }),
+    ],
+    page: page,
+    pageSize: pageSize,
+  );
   @override
   Future<ConversationGenerationOptions> generationOptions(
     String userId,
@@ -674,6 +680,68 @@ void main() {
       toastification.dismissAll(delayForAnimation: false);
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'plain storyboard payload uses one prompt in content and task cards',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      const prompt = '全片15秒，无BGM。\n镜头01：**保留原文**\n角色在雨中等待。';
+      final output = <String, Object?>{
+        'kind': 'storyboard',
+        'title': 'Historical title',
+        'payload': prompt,
+      };
+      await _pump(
+        tester,
+        ConversationObjectView(
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'content',
+            'data': output,
+          }),
+          controller: controller,
+        ),
+        locale: const Locale('zh'),
+        textScale: 1.5,
+      );
+      expect(find.text('分镜视频提示词'), findsOneWidget);
+      expect(find.text(prompt), findsOneWidget);
+      expect(find.byType(SelectableText), findsOneWidget);
+      expect(find.text('Historical title'), findsNothing);
+      await _pump(
+        tester,
+        ConversationTaskCard(
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'task',
+            'action': 'home',
+            'data': {
+              ..._task(home: true).data,
+              'steps': [
+                {'key': 'storyboard', 'state': 'completed', 'output': output},
+              ],
+            },
+          }),
+          controller: controller,
+        ),
+        locale: const Locale('zh'),
+        textScale: 1.5,
+      );
+      await tester.tap(
+        find.byKey(const Key('conversation-task-section-storyboard')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('分镜视频提示词'), findsOneWidget);
+      expect(find.text(prompt), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 

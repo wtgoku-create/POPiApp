@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -471,55 +472,98 @@ void main() {
     expect(markdown.data, contains('Max 50000 专属权益'));
   });
 
-  testWidgets('reverses plans and groups both Plus point options', (
-    tester,
-  ) async {
-    await pumpPage(
-      tester,
-      MembershipPage(initialPlans: _membershipPlans, loadPlansOnOpen: false),
-    );
+  testWidgets(
+    'orders loaded plans by payment platform and groups Plus point options',
+    (tester) async {
+      final isApple = defaultTargetPlatform == TargetPlatform.iOS;
+      final firstPoints = isApple ? '14400' : '5500';
+      final secondPoints = isApple ? '5500' : '14400';
+      await pumpPage(
+        tester,
+        MembershipPage(planLoader: () async => _membershipPlans),
+        size: const Size(1000, 956),
+      );
 
-    expect(
-      find.descendant(
-        of: find.byKey(const Key('membership-plan-tab-0')),
-        matching: find.text('Starter 灵感初启'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Plus 创作进阶'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('membership-plan-tab-0')),
+          matching: find.text(isApple ? 'Max 作品研修' : 'Starter 灵感初启'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(isApple ? '50000' : '1750'), findsOneWidget);
+      final remainingTabs = isApple
+          ? [(1, 'Pro 旗舰能力'), (2, 'Plus 创作进阶'), (3, 'Starter 灵感初启')]
+          : [(1, 'Plus 创作进阶'), (2, 'Pro 旗舰能力'), (3, 'Max 作品研修')];
+      for (final tab in remainingTabs) {
+        expect(
+          find.descendant(
+            of: find.byKey(Key('membership-plan-tab-${tab.$1}')),
+            matching: find.text(tab.$2),
+          ),
+          findsOneWidget,
+        );
+      }
 
-    await tester.tap(find.byKey(const Key('membership-plan-tab-1')));
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(Key('membership-plan-tab-${isApple ? 2 : 1}')),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Plus 创作进阶'), findsNWidgets(2));
-    expect(find.byKey(const Key('membership-points-option-0')), findsOneWidget);
-    expect(find.byKey(const Key('membership-points-option-1')), findsOneWidget);
-    expect(find.text('5500'), findsOneWidget);
-    expect(find.text('14400'), findsOneWidget);
-    expect(find.text('包含：5500/套餐积分+0/赠送积分'), findsOneWidget);
-    expect(
-      tester
-          .widget<MarkdownBody>(
-            find.byKey(const Key('membership-description-markdown')),
-          )
-          .data,
-      contains('Plus 5500 专属权益'),
-    );
+      expect(find.text('Plus 创作进阶'), findsNWidgets(2));
+      expect(
+        find.byKey(const Key('membership-points-option-0')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('membership-points-option-1')),
+        findsOneWidget,
+      );
+      expect(find.text('5500'), findsOneWidget);
+      expect(find.text('14400'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('membership-points-option-0')),
+          matching: find.text(firstPoints),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('membership-points-option-1')),
+          matching: find.text(secondPoints),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('包含：$firstPoints/套餐积分+0/赠送积分'), findsOneWidget);
+      expect(
+        tester
+            .widget<MarkdownBody>(
+              find.byKey(const Key('membership-description-markdown')),
+            )
+            .data,
+        contains('Plus $firstPoints 专属权益'),
+      );
 
-    await tester.tap(find.byKey(const Key('membership-points-option-1')));
-    await tester.pumpAndSettle();
-    expect(find.text('包含：14400/套餐积分+0/赠送积分'), findsOneWidget);
-    expect(find.text('包含：5500/套餐积分+0/赠送积分'), findsNothing);
-    expect(
-      tester
-          .widget<MarkdownBody>(
-            find.byKey(const Key('membership-description-markdown')),
-          )
-          .data,
-      contains('Plus 14400 专属权益'),
-    );
-    expect(tester.takeException(), isNull);
-  });
+      await tester.tap(find.byKey(const Key('membership-points-option-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('包含：$secondPoints/套餐积分+0/赠送积分'), findsOneWidget);
+      expect(find.text('包含：$firstPoints/套餐积分+0/赠送积分'), findsNothing);
+      expect(
+        tester
+            .widget<MarkdownBody>(
+              find.byKey(const Key('membership-description-markdown')),
+            )
+            .data,
+        contains('Plus $secondPoints 专属权益'),
+      );
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+    }),
+  );
 
   for (final reverseOrder in [false, true]) {
     testWidgets(
@@ -562,6 +606,19 @@ void main() {
         );
         expect(find.text('5700'), findsOneWidget);
         expect(find.text('14700'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('membership-points-option-0')),
+            matching: find.text(reverseOrder ? '14700' : '5700'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            reverseOrder ? '包含：14400/套餐积分+300/赠送积分' : '包含：5500/套餐积分+200/赠送积分',
+          ),
+          findsOneWidget,
+        );
 
         for (final coins in [5700, 14700]) {
           await tester.tap(find.text('$coins'));

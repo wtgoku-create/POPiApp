@@ -1,3 +1,17 @@
+/// One server page; loading further history is driven by the drawer viewport.
+class ConversationSessionPage {
+  const ConversationSessionPage({
+    required this.items,
+    required this.page,
+    required this.pageCount,
+  });
+
+  final List<ConversationSession> items;
+  final int page;
+  final int pageCount;
+  bool get hasMore => page < pageCount;
+}
+
 /// A standalone conversation, independent of the legacy project hierarchy.
 class ConversationSession {
   const ConversationSession({

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,7 @@ class _ArchiveRepository extends FixtureIpAccountRepository {
   final historyPages = <int>[];
   final historyKeywords = <String>[];
   final detailRequests = <(String, String, String?)>[];
+  Map<String, String> sections = const {'script': 'Archived script'};
 
   @override
   Future<AccountArchivePage> archives(
@@ -63,7 +65,7 @@ class _ArchiveRepository extends FixtureIpAccountRepository {
     detailRequests.add((id, creationId, versionId));
     return AccountCreationArchive(
       title: 'Archive detail',
-      sections: const {'script': 'Archived script'},
+      sections: sections,
       versions: const {},
       versionId: versionId,
     );
@@ -114,6 +116,41 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('archive storyboard displays the historical model prompt once', (
+    tester,
+  ) async {
+    const prompt = '全片15秒，无BGM。\n镜头01：**保留原文**';
+    repository.sections = {
+      'storyboard': jsonEncode({
+        'modelPrompt': prompt,
+        'shots': [
+          {'duration': 3, 'description': 'Historical director description'},
+        ],
+      }),
+    };
+    await pump(tester, size: const Size(320, 844));
+    unawaited(
+      Navigator.of(tester.element(find.byType(Scaffold))).push<void>(
+        MaterialPageRoute(
+          builder: (_) => const AccountArchiveDetailPage(
+            accountId: '42',
+            creationId: 'creation',
+            versionId: 'saved-version',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('分镜视频提示词'), findsOneWidget);
+    expect(find.text(prompt), findsOneWidget);
+    expect(
+      find.textContaining('Historical director description'),
+      findsNothing,
+    );
+    expect(repository.detailRequests.single.$3, 'saved-version');
+    expect(tester.takeException(), isNull);
+  });
 
   for (final size in [const Size(390, 844), const Size(1280, 900)]) {
     testWidgets(

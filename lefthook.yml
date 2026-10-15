@@ -1,9 +1,10 @@
 pre-commit:
   parallel: false
   commands:
+    # GUI Git clients may not inherit the Flutter SDK path from the login shell.
     format:
-      run: dart format --output=none --set-exit-if-changed lib test
+      run: PATH="$HOME/SDK/flutter/bin:$PATH" dart format --output=none --set-exit-if-changed lib test
     analyze:
-      run: flutter analyze
+      run: PATH="$HOME/SDK/flutter/bin:$PATH" flutter analyze
     test:
-      run: flutter test
+      run: PATH="$HOME/SDK/flutter/bin:$PATH" flutter test

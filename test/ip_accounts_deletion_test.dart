@@ -31,14 +31,18 @@ class _Accounts extends FixtureIpAccountRepository {
   Completer<void>? pending;
   CancelToken? archiveToken;
   bool fail = false;
+  final pages = <(int, int)>[];
 
   @override
-  Future<List<IpAccount>> list({
+  Future<ListPage<IpAccount>> list({
     String status = 'active',
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     statuses.add(status);
-    return List.of(accounts);
+    pages.add((page, pageSize));
+    return fixturePage(accounts, page: page, pageSize: pageSize);
   }
 
   @override
@@ -56,9 +60,17 @@ class _Projects extends FixtureProjectRepository {
   int loads = 0;
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) async {
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
     loads++;
-    return super.listProjects(cancelToken: cancelToken);
+    return super.listProjects(
+      page: page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
+    );
   }
 }
 
@@ -145,6 +157,35 @@ void main() {
     await tester.tap(find.byKey(const Key('confirm-delete-ip-account')));
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'account history requests twenty rows and loads subsequent pages on scroll',
+    (tester) async {
+      accounts.accounts = [
+        for (var index = 0; index < 45; index++)
+          IpAccount(
+            id: '$index',
+            title: 'Account $index',
+            description: 'Account',
+          ),
+      ];
+      await pump(tester);
+      expect(accounts.pages, [(1, 20)]);
+      expect(find.byKey(const ValueKey('ip-account-44')), findsNothing);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('ip-account-44')),
+        600,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('ip-accounts-list')),
+          matching: find.byType(Scrollable),
+        ),
+        maxScrolls: 50,
+      );
+      await tester.pumpAndSettle();
+      expect(accounts.pages, [(1, 20), (2, 20), (3, 20)]);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'cancel preserves the row; confirmation archives and refreshes sidebar',

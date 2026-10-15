@@ -208,6 +208,13 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       builder: (context) => ConversationStyleLibrarySheet(
         repository: widget.controller.repository,
         selectedId: _templateId,
+        selectedTemplate: _templateId == null
+            ? null
+            : ConversationRoleTemplate(
+                id: _templateId!,
+                title: _templateTitle,
+                mediaId: _templateMediaId,
+              ),
       ),
     );
     if (!mounted || template == null) return;

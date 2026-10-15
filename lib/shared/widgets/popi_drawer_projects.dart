@@ -6,6 +6,8 @@ import '../../l10n/generated/app_localizations.dart';
 import '../providers/project_provider.dart';
 import '../providers/user_provider.dart';
 import 'app_menu.dart';
+import 'app_paged_scroll.dart';
+import 'app_toast.dart';
 import 'app_skeleton.dart';
 import 'app_svg_icon.dart';
 import '../../features/projects/domain/project.dart';
@@ -40,7 +42,9 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
         : AppColors.textTertiary;
     final userId = ref.watch(userProvider.select((user) => user?.id));
     final result = ref.watch(projectsProvider);
-    final projects = result.isReloading || result.hasError
+    final pager = ref.read(projectsProvider.notifier);
+    final projects =
+        (result.isReloading && !pager.loadingMore) || result.hasError
         ? const <Project>[]
         : result.valueOrNull ?? const <Project>[];
     if (_userId != userId) {
@@ -69,6 +73,10 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
       }
     }
 
+    // Keep loaded page state alive when virtualized project groups leave view.
+    for (final id in _loadedProjects) {
+      ref.watch(projectSessionsProvider(id));
+    }
     return Column(
       children: [
         SizedBox(
@@ -121,33 +129,66 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
           ),
         ),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              for (final id in _loadedProjects) {
-                ref.invalidate(projectSessionsProvider(id));
+          child: AppPagedScroll(
+            onLoad: () async {
+              try {
+                await ref.read(projectsProvider.notifier).loadMore();
+              } catch (_) {
+                if (context.mounted) {
+                  AppToast.error(context, l10n.projectsLoadFailed);
+                }
+                rethrow;
               }
-              await ref
-                  .refresh(projectsProvider.future)
-                  .then<void>((_) {}, onError: (Object _, StackTrace __) {});
             },
-            child: ListView(
-              key: const Key('drawer-project-list'),
-              padding: EdgeInsets.zero,
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                if (userId == null)
-                  _ProjectStatus(label: l10n.loginToViewProjects)
-                else if (result.isLoading && projects.isEmpty)
-                  const _ProjectSkeleton(key: Key('drawer-projects-skeleton'))
-                else if (result.hasError && projects.isEmpty)
-                  _ProjectStatus(
-                    label: l10n.projectsLoadFailed,
-                    onRetry: () => ref.invalidate(projectsProvider),
-                  )
-                else if (projects.isEmpty)
-                  const _ProjectEmptyState(),
-                for (final project in projects)
-                  Column(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                for (final id in _loadedProjects) {
+                  ref.invalidate(projectSessionsProvider(id));
+                }
+                await ref
+                    .refresh(projectsProvider.future)
+                    .then<void>((_) {}, onError: (Object _, StackTrace __) {});
+              },
+              child: ListView.builder(
+                key: const Key('drawer-project-list'),
+                padding: EdgeInsets.zero,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: projects.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == projects.length) {
+                    if (userId == null) {
+                      return _ProjectStatus(label: l10n.loginToViewProjects);
+                    }
+                    if (result.isLoading && projects.isEmpty) {
+                      return const _ProjectSkeleton(
+                        key: Key('drawer-projects-skeleton'),
+                      );
+                    }
+                    if (result.hasError && projects.isEmpty) {
+                      return _ProjectStatus(
+                        label: l10n.projectsLoadFailed,
+                        onRetry: () => ref.invalidate(projectsProvider),
+                      );
+                    }
+                    if (projects.isEmpty) return const _ProjectEmptyState();
+                    return SizedBox(
+                      height: pager.hasMore ? 42 : 0,
+                      child: pager.loadingMore
+                          ? AppSkeleton(
+                              label: l10n.loadingProjects,
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 15,
+                                ),
+                                child: AppSkeletonBox(height: 12),
+                              ),
+                            )
+                          : null,
+                    );
+                  }
+                  final project = projects[index];
+                  return Column(
                     key: ValueKey(project.id),
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -190,8 +231,9 @@ class _PopiDrawerProjectsState extends ConsumerState<PopiDrawerProjects> {
                             : const SizedBox.shrink(),
                       ),
                     ],
-                  ),
-              ],
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -255,7 +297,9 @@ class _ProjectSessions extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final result = ref.watch(projectSessionsProvider(projectId));
-    final sessions = result.isReloading || result.hasError
+    final pager = ref.read(projectSessionsProvider(projectId).notifier);
+    final sessions =
+        (result.isReloading && !pager.loadingMore) || result.hasError
         ? const <ProjectSession>[]
         : result.valueOrNull ?? const <ProjectSession>[];
     if (result.isLoading && sessions.isEmpty) {
@@ -270,24 +314,65 @@ class _ProjectSessions extends ConsumerWidget {
         onRetry: () => ref.invalidate(projectSessionsProvider(projectId)),
       );
     }
-    if (sessions.isEmpty) return _ProjectStatus(label: l10n.noHistory);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final session in sessions)
-          ProjectItemMenu(
-            projectId: projectId,
-            title: session.title,
-            session: session,
-            child: _ConversationRow(
-              key: Key('drawer-conversation-$projectId-${session.id}'),
-              label: session.title,
-              pinned: session.pinnedAt != null,
-              onTap: () =>
-                  onOpenConversation((projectId: projectId, session: session)),
-            ),
-          ),
-      ],
+    if (sessions.isEmpty && !pager.hasMore) {
+      return _ProjectStatus(label: l10n.noHistory);
+    }
+    return SizedBox(
+      height: ((sessions.length + (pager.hasMore ? 1 : 0)).clamp(1, 6) * 42)
+          .toDouble(),
+      child: AppPagedScroll(
+        onLoad: () async {
+          try {
+            await ref
+                .read(projectSessionsProvider(projectId).notifier)
+                .loadMore();
+          } catch (_) {
+            if (context.mounted) {
+              AppToast.error(context, l10n.projectSessionsLoadFailed);
+            }
+            rethrow;
+          }
+        },
+        child: ListView.builder(
+          key: Key('drawer-project-sessions-$projectId'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: sessions.length + (pager.hasMore ? 1 : 0),
+          itemExtent: 42,
+          padding: EdgeInsets.zero,
+          itemBuilder: (context, index) {
+            if (index == sessions.length) {
+              return pager.loadingMore
+                  ? AppSkeleton(
+                      label: l10n.loadingProjectSessions,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 35,
+                          vertical: 15,
+                        ),
+                        child: AppSkeletonBox(height: 12),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+            }
+            final session = sessions[index];
+            return ProjectItemMenu(
+              key: ValueKey(session.id),
+              projectId: projectId,
+              title: session.title,
+              session: session,
+              child: _ConversationRow(
+                key: Key('drawer-conversation-$projectId-${session.id}'),
+                label: session.title,
+                pinned: session.pinnedAt != null,
+                onTap: () => onOpenConversation((
+                  projectId: projectId,
+                  session: session,
+                )),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

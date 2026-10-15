@@ -13,63 +13,68 @@ import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'support/list_page_fixtures.dart';
 
 void main() {
-  test('uses Web endpoints, envelopes, token and all project pages', () async {
-    final requests = <RequestOptions>[];
-    final dio = Dio()..interceptors.add(AuthInterceptor(_Tokens()));
-    dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          requests.add(options);
-          final page = options.queryParameters['page'] as int;
-          handler.resolve(
-            Response(
-              requestOptions: options,
-              data: {
-                'status': '0000',
-                'data': _page(
-                  [
-                    {
-                      'id': 'project-$page',
-                      'title': 'Project $page',
-                      'status': 'active',
-                    },
-                    if (page == 2)
+  test(
+    'requests a single project page with the Web envelope and token',
+    () async {
+      final requests = <RequestOptions>[];
+      final dio = Dio()..interceptors.add(AuthInterceptor(_Tokens()));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requests.add(options);
+            final page = options.queryParameters['page'] as int;
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: {
+                  'status': '0000',
+                  'data': _page(
+                    [
                       {
-                        'id': 'archived',
-                        'title': 'Archived',
-                        'status': 'archived',
+                        'id': 'project-$page',
+                        'title': 'Project $page',
+                        'status': 'active',
                       },
-                  ],
-                  page: page,
-                  pageCount: 2,
-                ),
-              },
-            ),
-          );
-        },
-      ),
-    );
-    final projects = await ProjectRepository(
-      NetworkApi(dio),
-      NetworkAgentApi(dio),
-    ).listProjects();
-    expect(projects.map((item) => item.id), ['project-1', 'project-2']);
-    expect(requests.length, 2);
-    for (final request in requests) {
-      expect(request.method, 'GET');
-      expect(request.path, '/api_client/agent/v2/accounts');
-      expect(request.headers['Authorization'], 'Bearer project-token');
-      expect(request.queryParameters.containsKey('status'), isFalse);
-      expect(request.queryParameters['pageSize'], 10);
-      expect(request.queryParameters.containsKey('mainRoleStatus'), isFalse);
-    }
-    expect(requests.map((request) => request.queryParameters['page']), [1, 2]);
-  });
+                      if (page == 2)
+                        {
+                          'id': 'archived',
+                          'title': 'Archived',
+                          'status': 'archived',
+                        },
+                    ],
+                    page: page,
+                    pageCount: 2,
+                  ),
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final projects = await ProjectRepository(
+        NetworkApi(dio),
+        NetworkAgentApi(dio),
+      ).listProjects();
+      expect(projects.items.map((item) => item.id), ['project-1']);
+      expect(projects.hasMore, isTrue);
+      expect(requests.length, 1);
+      for (final request in requests) {
+        expect(request.method, 'GET');
+        expect(request.path, '/api_client/agent/v2/accounts');
+        expect(request.headers['Authorization'], 'Bearer project-token');
+        expect(request.queryParameters.containsKey('status'), isFalse);
+        expect(request.queryParameters['pageSize'], 20);
+        expect(request.queryParameters.containsKey('mainRoleStatus'), isFalse);
+      }
+      expect(requests.map((request) => request.queryParameters['page']), [1]);
+    },
+  );
 
   test(
-    'sessions use raw envelope, exclude archived and sort across pages',
+    'sessions request one page, exclude archived and retain pagination',
     () async {
       final dio = Dio();
       dio.interceptors.add(
@@ -79,7 +84,7 @@ void main() {
             expect(options.queryParameters['accountId'], 'project / 1');
             expect(options.queryParameters.containsKey('contextKind'), isFalse);
             expect(options.queryParameters.containsKey('contextId'), isFalse);
-            expect(options.queryParameters['pageSize'], 100);
+            expect(options.queryParameters['pageSize'], 20);
             final page = options.queryParameters['page'] as int;
             handler.resolve(
               Response(
@@ -103,7 +108,7 @@ void main() {
                         ],
                   page: page,
                   pageCount: 2,
-                  pageSize: 100,
+                  pageSize: 20,
                 ),
               ),
             );
@@ -114,12 +119,7 @@ void main() {
         NetworkApi(dio),
         NetworkAgentApi(dio),
       ).listSessions('project / 1');
-      expect(sessions.map((item) => item.id), [
-        'pinned-new',
-        'pinned-old',
-        'new',
-        'old',
-      ]);
+      expect(sessions.items.map((item) => item.id), ['pinned-old', 'old']);
     },
   );
 
@@ -154,7 +154,7 @@ void main() {
     }
   });
 
-  test('a failed later page does not publish a partial project list', () async {
+  test('a later page is requested only when the caller advances', () async {
     final dio = Dio();
     dio.interceptors.add(
       InterceptorsWrapper(
@@ -177,10 +177,15 @@ void main() {
         },
       ),
     );
+    final repository = ProjectRepository(NetworkApi(dio), NetworkAgentApi(dio));
+    final first = await repository.listProjects();
+    expect(first.items.single.id, '1');
+    expect(first.hasMore, isTrue);
     await expectLater(
-      ProjectRepository(NetworkApi(dio), NetworkAgentApi(dio)).listProjects(),
+      repository.listProjects(page: 2),
       throwsA(isA<DioException>()),
     );
+    expect(first.items.single.id, '1');
   });
 
   test(
@@ -232,6 +237,52 @@ void main() {
     },
   );
 
+  test(
+    'shared project history appends on demand and retains rows after a page failure',
+    () async {
+      final repository = _ControlledRepository();
+      final container = ProviderContainer(
+        overrides: [
+          projectRepositoryProvider.overrideWithValue(repository),
+          userProvider.overrideWith(_LocalUser.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(userProvider.notifier).setUser(_user('a'));
+      final subscription = container.listen(projectsProvider, (_, _) {});
+      addTearDown(subscription.close);
+      final all = [
+        for (var index = 0; index < 45; index++)
+          Project(id: '$index', title: 'Project $index'),
+      ];
+      final first = container.read(projectsProvider.future);
+      repository.projects.last.complete(all);
+      expect(await first, hasLength(20));
+      final pager = container.read(projectsProvider.notifier);
+      final second = pager.loadMore();
+      await pager.loadMore();
+      expect(repository.projectPages, [(1, 20), (2, 20)]);
+      expect(container.read(projectsProvider).valueOrNull, hasLength(20));
+      repository.projects.last.complete(all);
+      await second;
+      expect(container.read(projectsProvider).requireValue, hasLength(40));
+      final failed = expectLater(
+        pager.loadMore(),
+        throwsA(isA<ApiException>()),
+      );
+      repository.projects.last.completeError(const ApiException());
+      await failed;
+      expect(container.read(projectsProvider).requireValue, hasLength(40));
+      final retry = pager.loadMore();
+      repository.projects.last.complete(all);
+      await retry;
+      expect(container.read(projectsProvider).requireValue, hasLength(45));
+      expect(pager.hasMore, isFalse);
+      await pager.loadMore();
+      expect(repository.projectPages, [(1, 20), (2, 20), (3, 20), (3, 20)]);
+    },
+  );
+
   test('account changes cancel requests and ignore late results', () async {
     final repository = _ControlledRepository();
     final container = ProviderContainer(
@@ -274,7 +325,7 @@ Map<String, dynamic> _page(
   List<Map<String, dynamic>> list, {
   int page = 1,
   int pageCount = 1,
-  int pageSize = 10,
+  int pageSize = 20,
 }) => {
   'list': list,
   'pageInfo': {
@@ -311,25 +362,37 @@ class _ControlledRepository extends ProjectRepository {
   final projects = <Completer<List<Project>>>[];
   final sessions = <Completer<List<ProjectSession>>>[];
   final projectTokens = <CancelToken?>[];
+  final projectPages = <(int, int)>[];
   final sessionTokens = <CancelToken?>[];
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) {
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) {
     final completer = Completer<List<Project>>();
     projects.add(completer);
+    projectPages.add((page, pageSize));
     projectTokens.add(cancelToken);
-    return completer.future;
+    return completer.future.then(
+      (items) => fixturePage(items, page: page, pageSize: pageSize),
+    );
   }
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) {
     final completer = Completer<List<ProjectSession>>();
     sessions.add(completer);
     sessionTokens.add(cancelToken);
-    return completer.future;
+    return completer.future.then(
+      (items) => fixturePage(items, page: page, pageSize: pageSize),
+    );
   }
 }
 

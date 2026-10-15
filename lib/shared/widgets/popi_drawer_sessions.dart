@@ -13,16 +13,47 @@ import 'app_svg_icon.dart';
 import 'app_toast.dart';
 
 /// Flat conversation history shared with the active Agent conversation.
-class PopiDrawerSessions extends ConsumerWidget {
-  const PopiDrawerSessions({required this.onOpenConversation, super.key});
+class PopiDrawerSessions extends ConsumerStatefulWidget {
+  const PopiDrawerSessions({
+    required this.onOpenConversation,
+    required this.header,
+    super.key,
+  });
 
   final ValueChanged<ConversationSession> onOpenConversation;
+  final Widget header;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PopiDrawerSessions> createState() => _PopiDrawerSessionsState();
+}
+
+class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
+  bool _loadMoreFailed = false;
+
+  Future<void> _loadMore() async {
+    if (_loadMoreFailed) return;
+    final userId = ref.read(userProvider)?.id;
+    try {
+      await ref.read(sessionsProvider.notifier).loadMore();
+    } catch (_) {
+      if (!mounted || ref.read(userProvider)?.id != userId) return;
+      _loadMoreFailed = true;
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.chatHistoryLoadFailed,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final history = ref.watch(sessionsProvider);
+    final controller = ref.read(sessionsProvider.notifier);
+    ref.listen(userProvider.select((user) => user?.id), (_, _) {
+      _loadMoreFailed = false;
+    });
     // 切换账号时 AsyncValue 可能保留上一次的数据，加载期间不展示旧账号历史。
-    final sessions = history.isLoading || history.hasError
+    final sessions = controller.initialLoading || history.hasError
         ? const <ConversationSession>[]
         : history.valueOrNull ?? const <ConversationSession>[];
     final l10n = AppLocalizations.of(context)!;
@@ -31,72 +62,97 @@ class PopiDrawerSessions extends ConsumerWidget {
       for (var index = 0; index < sessions.length; index++)
         sessions[index].id: index,
     };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 40,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                l10n.drawerSessions,
-                style: TextStyle(fontSize: 14, color: colors.onSurfaceVariant),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.depth != 0) return false;
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
+          _loadMoreFailed = false;
+        }
+        final movingDown =
+            notification is ScrollUpdateNotification &&
+                (notification.scrollDelta ?? 0) > 0 ||
+            notification is OverscrollNotification &&
+                notification.overscroll > 0;
+        if (movingDown && notification.metrics.extentAfter < 200) _loadMore();
+        return false;
+      },
+      child: RefreshIndicator(
+        onRefresh: () async {
+          _loadMoreFailed = false;
+          final userId = ref.read(userProvider)?.id;
+          try {
+            await ref.read(sessionsProvider.notifier).refresh();
+          } catch (_) {
+            if (context.mounted && ref.read(userProvider)?.id == userId) {
+              AppToast.error(context, l10n.chatHistoryLoadFailed);
+            }
+          }
+        },
+        child: CustomScrollView(
+          key: const Key('drawer-session-list'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: widget.header),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 40,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.drawerSessions,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              final userId = ref.read(userProvider)?.id;
-              try {
-                await ref.read(sessionsProvider.notifier).refresh();
-              } catch (_) {
-                if (context.mounted && ref.read(userProvider)?.id == userId) {
-                  AppToast.error(context, l10n.chatHistoryLoadFailed);
-                }
-              }
-            },
-            child: ListView.builder(
-              key: const Key('drawer-session-list'),
-              padding: EdgeInsets.zero,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemExtent: sessions.isEmpty ? null : 40,
-              itemCount: sessions.isEmpty ? 1 : sessions.length,
-              findChildIndexCallback: (key) =>
-                  key is ValueKey<String> ? sessionIndices[key.value] : null,
-              itemBuilder: (context, index) {
-                if (sessions.isNotEmpty) {
-                  final session = sessions[index];
-                  return _SessionItem(
-                    key: ValueKey(session.id),
-                    session: session,
-                    onTap: () => onOpenConversation(session),
-                  );
-                }
-                if (history.isLoading) {
-                  return const _SessionSkeleton(
-                    key: Key('drawer-sessions-skeleton'),
-                  );
-                }
-                if (history.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(l10n.chatHistoryLoadFailed)),
-                        IconButton(
-                          tooltip: l10n.retry,
-                          onPressed: () => ref.invalidate(sessionsProvider),
-                          icon: const Icon(Icons.refresh),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return Padding(
+            if (sessions.isNotEmpty)
+              SliverFixedExtentList(
+                itemExtent: 40,
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final session = sessions[index];
+                    return _SessionItem(
+                      key: ValueKey(session.id),
+                      session: session,
+                      onTap: () => widget.onOpenConversation(session),
+                    );
+                  },
+                  childCount: sessions.length,
+                  findChildIndexCallback: (key) => key is ValueKey<String>
+                      ? sessionIndices[key.value]
+                      : null,
+                ),
+              )
+            else if (controller.initialLoading)
+              const SliverToBoxAdapter(
+                child: _SessionSkeleton(key: Key('drawer-sessions-skeleton')),
+              )
+            else if (history.hasError)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(l10n.chatHistoryLoadFailed)),
+                      IconButton(
+                        tooltip: l10n.retry,
+                        onPressed: () => ref.invalidate(sessionsProvider),
+                        icon: const Icon(Icons.refresh),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Text(
                     l10n.noHistory,
@@ -106,12 +162,30 @@ class PopiDrawerSessions extends ConsumerWidget {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                );
-              },
-            ),
-          ),
+                ),
+              ),
+            if (sessions.isNotEmpty && controller.hasMore)
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 40,
+                  child: controller.loadingMore
+                      ? AppSkeleton(
+                          key: const Key('drawer-sessions-more-skeleton'),
+                          label: l10n.loadingProjectSessions,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 13,
+                            ),
+                            child: AppSkeletonBox(height: 14),
+                          ),
+                        )
+                      : null,
+                ),
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

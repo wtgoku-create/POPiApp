@@ -16,6 +16,9 @@ import 'package:popi_ai_app/features/ip_guide/data/ip_guide_repository.dart';
 import 'package:popi_ai_app/features/ip_guide/domain/ip_guide_draft.dart';
 import 'package:dio/dio.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
+import 'package:popi_ai_app/features/projects/data/project_repository.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
+import 'package:popi_ai_app/shared/type/list_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/ip_account_provider.dart';
@@ -24,6 +27,38 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 
 /// Isolated visual preview; account and sidebar data remain local examples.
+ListPage<T> _previewPage<T>(List<T> items, int page, int size) => ListPage(
+  items: items.skip((page - 1) * size).take(size).toList(),
+  page: page,
+  pageCount: (items.length / size).ceil().clamp(1, 10000),
+);
+
+class _PreviewProjects extends ProjectRepository {
+  _PreviewProjects() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
+
+  @override
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async => _previewPage(
+    [
+      for (final account in ipAccountExamples)
+        Project(id: account.id, title: account.title),
+    ],
+    page,
+    pageSize,
+  );
+
+  @override
+  Future<ListPage<ProjectSession>> listSessions(
+    String projectId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async => _previewPage([], page, pageSize);
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final preferences = await SharedPreferences.getInstance();
@@ -40,13 +75,7 @@ Future<void> main() async {
         ref.onDispose(repository.dispose);
         return repository;
       }),
-      projectsProvider.overrideWith(
-        (_) async => [
-          for (final account in ipAccountExamples)
-            Project(id: account.id, title: account.title),
-        ],
-      ),
-      projectSessionsProvider.overrideWith((_, _) async => []),
+      projectRepositoryProvider.overrideWithValue(_PreviewProjects()),
     ],
   );
   await container
@@ -109,29 +138,35 @@ class _PreviewAccountRepository extends IpAccountRepository {
   final _created = <String, String>{};
 
   @override
-  Future<List<IpAccount>> list({
+  Future<ListPage<IpAccount>> list({
     String status = 'active',
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => [
-    for (final account in [
-      ...ipAccountExamples,
-      for (final id in _created.values)
-        IpAccount(id: id, title: _titles[id]!, description: ''),
-    ])
-      if (status == 'all' ||
-          status ==
-              (_statuses[account.id] ??
-                  (account.isPaused ? 'archived' : 'active')))
-        IpAccount(
-          id: account.id,
-          title: _titles[account.id] ?? account.title,
-          description: account.description,
-          isPaused:
-              (_statuses[account.id] ??
-                  (account.isPaused ? 'archived' : 'active')) ==
-              'archived',
-        ),
-  ];
+  }) async => _previewPage(
+    [
+      for (final account in [
+        ...ipAccountExamples,
+        for (final id in _created.values)
+          IpAccount(id: id, title: _titles[id]!, description: ''),
+      ])
+        if (status == 'all' ||
+            status ==
+                (_statuses[account.id] ??
+                    (account.isPaused ? 'archived' : 'active')))
+          IpAccount(
+            id: account.id,
+            title: _titles[account.id] ?? account.title,
+            description: account.description,
+            isPaused:
+                (_statuses[account.id] ??
+                    (account.isPaused ? 'archived' : 'active')) ==
+                'archived',
+          ),
+    ],
+    page,
+    pageSize,
+  );
 
   @override
   Future<IpAccountHome> detail(String id, {CancelToken? cancelToken}) async {
@@ -160,6 +195,8 @@ class _PreviewAccountRepository extends IpAccountRepository {
   @override
   Future<IpAccountResources> resources(
     IpAccountHome account, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async => const IpAccountResources();
 

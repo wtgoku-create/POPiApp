@@ -581,11 +581,24 @@ void main() {
   );
 
   testWidgets(
-    'switch project reads ten-item account pages and restores home without creating a session',
+    'switch project loads twenty-item account pages on scroll and restores home without creating a session',
     (tester) async {
       final fixture = HomeCreationFixture();
       final container = await pumpLive(tester, fixture);
       await tapLive(tester, 'role-guide-switch-project');
+      expect(
+        fixture.requests.where((request) => request.path.endsWith('/accounts')),
+        hasLength(1),
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('role-project-select-202')),
+        500,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('role-project-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
       await tapLive(tester, 'role-project-select-202');
       await tapLive(tester, 'role-project-confirm');
       expect(find.byType(RoleGuidePage), findsOneWidget);
@@ -594,8 +607,8 @@ void main() {
           .where((request) => request.path.endsWith('/accounts'))
           .toList();
       expect(accounts.map((request) => request.queryParameters), [
-        {'page': 1, 'pageSize': 10},
-        {'page': 2, 'pageSize': 10},
+        {'page': 1, 'pageSize': 20},
+        {'page': 2, 'pageSize': 20},
       ]);
       final entry = fixture.requests.firstWhere(
         (request) => request.path.endsWith('/home/enter'),
@@ -753,7 +766,7 @@ void main() {
     });
 
     testWidgets(
-      'structured storyboard expands with a rounded hit area at $size',
+      'unified storyboard prompt expands with a rounded hit area at $size',
       (tester) async {
         final fixture = HomeCreationFixture();
         fixture.task = fixture.taskValue('completed', lock: 'released');
@@ -784,9 +797,9 @@ void main() {
           locale: const Locale('en'),
           route: '/role-guide?accountId=101&sessionId=saved-session',
         );
-        expect(find.text('Shot 1 · 3 s'), findsOneWidget);
-        expect(find.text('Shot 2 · 1.5 s'), findsOneWidget);
-        expect(find.text('Video model prompt'), findsOneWidget);
+        expect(find.text('Storyboard video prompt'), findsOneWidget);
+        expect(find.textContaining('Wide shot'), findsNothing);
+        expect(find.text('Video model prompt'), findsNothing);
         expect(
           find.text('Keep the camera steady.', findRichText: true),
           findsWidgets,
@@ -810,10 +823,10 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(header);
         await tester.pumpAndSettle();
-        expect(find.text('Shot 1 · 3 s'), findsNothing);
+        expect(find.text('Keep the camera steady.'), findsNothing);
         await tester.tap(header);
         await tester.pumpAndSettle();
-        expect(find.text('Shot 1 · 3 s'), findsOneWidget);
+        expect(find.text('Keep the camera steady.'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

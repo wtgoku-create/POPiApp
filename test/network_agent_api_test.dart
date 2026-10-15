@@ -92,7 +92,7 @@ void main() {
                     'list': [],
                     'pageInfo': {
                       'page': 1,
-                      'pageSize': 10,
+                      'pageSize': 20,
                       'pageCount': 1,
                       'total': 0,
                     },
@@ -107,7 +107,7 @@ void main() {
         NetworkApi(business),
         NetworkAgentApi(agent),
       );
-      expect(await repository.listProjects(), isEmpty);
+      expect((await repository.listProjects()).items, isEmpty);
       final session = await repository.createSession(
         '10',
         'New',

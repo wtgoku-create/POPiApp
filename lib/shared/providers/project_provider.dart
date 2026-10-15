@@ -5,6 +5,7 @@ import '../../core/network/network_api.dart';
 import '../../core/network/network_agent_api.dart';
 import '../../features/projects/data/project_repository.dart';
 import '../../features/projects/domain/project.dart';
+import '../controllers/paged_list_controller.dart';
 import 'network_provider.dart';
 import 'user_provider.dart';
 
@@ -16,24 +17,94 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
 );
 
 /// Account-scoped, in-memory lists; disposal cancels obsolete HTTP requests.
-final projectsProvider = FutureProvider.autoDispose<List<Project>>((ref) {
-  final userId = ref.watch(userProvider.select((user) => user?.id));
-  if (userId == null) return const [];
-  final repository = ref.watch(projectRepositoryProvider);
-  final token = CancelToken();
-  ref.onDispose(token.cancel);
-  return repository.listProjects(cancelToken: token);
-});
+final projectsProvider =
+    AsyncNotifierProvider.autoDispose<ProjectsController, List<Project>>(
+      ProjectsController.new,
+    );
 
-final projectSessionsProvider = FutureProvider.autoDispose
-    .family<List<ProjectSession>, String>((ref, projectId) {
-      final userId = ref.watch(userProvider.select((user) => user?.id));
-      if (userId == null) return const [];
-      final repository = ref.watch(projectRepositoryProvider);
-      final token = CancelToken();
-      ref.onDispose(token.cancel);
-      return repository.listSessions(projectId, cancelToken: token);
+/// Shares only loaded project pages across the legacy drawer and its actions.
+class ProjectsController extends AutoDisposeAsyncNotifier<List<Project>> {
+  PagedListController<Project>? _pages;
+  bool _ready = false;
+  bool get hasMore => _pages?.hasMore ?? false;
+  bool get loadingMore => _ready && (_pages?.loading ?? false);
+  bool get initialLoading => state.isLoading && !loadingMore;
+
+  @override
+  Future<List<Project>> build() async {
+    final userId = ref.watch(userProvider.select((user) => user?.id));
+    final repository = ref.watch(projectRepositoryProvider);
+    _ready = false;
+    final pages = _pages = PagedListController<Project>(
+      itemId: (item) => item.id,
+      fetch: (page, token) =>
+          repository.listProjects(page: page, cancelToken: token),
+    );
+    ref.onDispose(pages.dispose);
+    if (userId == null) return const [];
+    await pages.load();
+    if (pages.disposed) return const [];
+    _ready = true;
+    pages.addListener(() {
+      state = pages.loading
+          ? const AsyncLoading<List<Project>>().copyWithPrevious(
+              state,
+              isRefresh: false,
+            )
+          : AsyncData(pages.items);
     });
+    return pages.items;
+  }
+
+  Future<void> loadMore() async {
+    if (_ready) await _pages!.load();
+  }
+}
+
+final projectSessionsProvider = AsyncNotifierProvider.autoDispose
+    .family<ProjectSessionsController, List<ProjectSession>, String>(
+      ProjectSessionsController.new,
+    );
+
+/// Keeps each project's loaded pages scoped to its signed-in account.
+class ProjectSessionsController
+    extends AutoDisposeFamilyAsyncNotifier<List<ProjectSession>, String> {
+  PagedListController<ProjectSession>? _pages;
+  bool _ready = false;
+  bool get hasMore => _pages?.hasMore ?? false;
+  bool get loadingMore => _ready && (_pages?.loading ?? false);
+  bool get initialLoading => state.isLoading && !loadingMore;
+
+  @override
+  Future<List<ProjectSession>> build(String projectId) async {
+    final userId = ref.watch(userProvider.select((user) => user?.id));
+    final repository = ref.watch(projectRepositoryProvider);
+    _ready = false;
+    final pages = _pages = PagedListController<ProjectSession>(
+      itemId: (item) => item.id,
+      fetch: (page, token) =>
+          repository.listSessions(projectId, page: page, cancelToken: token),
+    );
+    ref.onDispose(pages.dispose);
+    if (userId == null) return const [];
+    await pages.load();
+    if (pages.disposed) return const [];
+    _ready = true;
+    pages.addListener(() {
+      state = pages.loading
+          ? const AsyncLoading<List<ProjectSession>>().copyWithPrevious(
+              state,
+              isRefresh: false,
+            )
+          : AsyncData(pages.items);
+    });
+    return pages.items;
+  }
+
+  Future<void> loadMore() async {
+    if (_ready) await _pages!.load();
+  }
+}
 
 final projectActionsProvider =
     NotifierProvider.autoDispose<ProjectActionsController, bool>(

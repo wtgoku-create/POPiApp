@@ -30,11 +30,8 @@ void main() {
         ),
       );
       final api = NetworkApi(dio);
-      await api.appleProducts('Sandbox');
-      await api.previewApplePurchase(
-        productVersionId: 101,
-        environment: 'Sandbox',
-      );
+      await api.appleProducts();
+      await api.previewApplePurchase(productVersionId: 101);
       await api.createApplePurchase('quote-1');
       await api.verifyApplePurchase(
         purchaseId: 'purchase-1',
@@ -58,11 +55,8 @@ void main() {
         'GET',
         'POST',
       ]);
-      expect(requests[0].queryParameters, {'environment': 'Sandbox'});
-      expect(requests[1].data, {
-        'productVersionId': 101,
-        'environment': 'Sandbox',
-      });
+      expect(requests[0].queryParameters, isEmpty);
+      expect(requests[1].data, {'productVersionId': 101});
       expect(requests[2].data, {'quoteId': 'quote-1'});
       expect(requests[3].data, {
         'purchaseId': 'purchase-1',

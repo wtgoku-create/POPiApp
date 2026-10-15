@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/ip_account_examples.dart';
 import '../domain/ip_account.dart';
@@ -19,6 +20,8 @@ class IpAccountsPage extends ConsumerWidget {
   const IpAccountsPage({
     this.accounts = const [],
     this.isLoading = false,
+    this.isLoadingMore = false,
+    this.hasMore = false,
     this.onOpenAccount,
     this.onRetry,
     this.onDeleteAccount,
@@ -29,6 +32,8 @@ class IpAccountsPage extends ConsumerWidget {
 
   const IpAccountsPage.sample({
     this.isLoading = false,
+    this.isLoadingMore = false,
+    this.hasMore = false,
     this.onOpenAccount,
     this.onRetry,
     this.onDeleteAccount,
@@ -39,6 +44,8 @@ class IpAccountsPage extends ConsumerWidget {
 
   final List<IpAccount> accounts;
   final bool isLoading;
+  final bool isLoadingMore;
+  final bool hasMore;
   final ValueChanged<IpAccount>? onOpenAccount;
   final VoidCallback? onRetry;
   final ValueChanged<IpAccount>? onDeleteAccount;
@@ -127,11 +134,20 @@ class IpAccountsPage extends ConsumerWidget {
                             ],
                           ),
                         )
-                      : Center(
-                          child: Text(
-                            l10n.noIpAccounts,
-                            style: TextStyle(color: colors.onSurfaceVariant),
-                          ),
+                      : ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Text(
+                                l10n.noIpAccounts,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                 : LayoutBuilder(
                     builder: (context, constraints) => SlidableAutoCloseBehavior(
@@ -139,9 +155,25 @@ class IpAccountsPage extends ConsumerWidget {
                         key: const Key('ip-accounts-list'),
                         padding: listPadding,
                         physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: accounts.length,
+                        itemCount: accounts.length + (hasMore ? 1 : 0),
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
+                          if (index == accounts.length) {
+                            return SizedBox(
+                              height: 48,
+                              child: isLoadingMore
+                                  ? AppSkeleton(
+                                      label: l10n.loadingProjects,
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        child: AppSkeletonBox(height: 16),
+                                      ),
+                                    )
+                                  : null,
+                            );
+                          }
                           final account = accounts[index];
                           return Slidable(
                             key: ValueKey('ip-account-slide-${account.id}'),

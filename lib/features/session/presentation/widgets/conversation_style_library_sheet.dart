@@ -1,10 +1,11 @@
 import 'dart:math' as math;
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/controllers/paged_list_controller.dart';
+import '../../../../shared/widgets/app_paged_scroll.dart';
 import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_toast.dart';
@@ -17,11 +18,13 @@ class ConversationStyleLibrarySheet extends StatefulWidget {
   const ConversationStyleLibrarySheet({
     required this.repository,
     this.selectedId,
+    this.selectedTemplate,
     super.key,
   });
 
   final SessionRepository repository;
   final String? selectedId;
+  final ConversationRoleTemplate? selectedTemplate;
 
   static const shape = RoundedRectangleBorder(
     borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
@@ -35,38 +38,53 @@ class ConversationStyleLibrarySheet extends StatefulWidget {
 class _ConversationStyleLibrarySheetState
     extends State<ConversationStyleLibrarySheet> {
   static const _unrestricted = ConversationRoleTemplate(id: '', title: '');
-  final _token = CancelToken();
   final _scroll = ScrollController();
+  late final PagedListController<ConversationRoleTemplate> _pages;
   late String _selectedId = widget.selectedId ?? '';
-  List<ConversationRoleTemplate>? _templates;
+  late ConversationRoleTemplate? _selection = widget.selectedTemplate;
+  List<ConversationRoleTemplate>? get _templates =>
+      _pages.page == 0 && _pages.loading
+      ? null
+      : [..._pages.items, _unrestricted];
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _pages = PagedListController(
+      itemId: (item) => item.id,
+      fetch: (page, token) =>
+          widget.repository.roleTemplates(page: page, cancelToken: token),
+    )..addListener(_changed);
+    _load(reset: true);
   }
 
-  Future<void> _load() async {
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _load({bool reset = false}) async {
     try {
-      final templates = await widget.repository.roleTemplates(
-        cancelToken: _token,
-      );
-      if (mounted && !_token.isCancelled) {
-        setState(() => _templates = [...templates, _unrestricted]);
+      await _pages.load(reset: reset);
+      if (mounted) {
+        setState(() {
+          _selection ??= _pages.items
+              .where((item) => item.id == _selectedId)
+              .firstOrNull;
+        });
       }
     } catch (error) {
-      if (!mounted || _token.isCancelled) return;
+      if (!mounted) return;
       AppToast.error(
         context,
         conversationErrorText(error, AppLocalizations.of(context)!),
       );
-      setState(() => _templates = const [_unrestricted]);
+      if (!reset) rethrow;
     }
   }
 
   @override
   void dispose() {
-    _token.cancel();
+    _pages.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -76,9 +94,9 @@ class _ConversationStyleLibrarySheetState
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scaler = MediaQuery.textScalerOf(context);
-    final selection = _templates
-        ?.where((template) => template.id == _selectedId)
-        .firstOrNull;
+    final selection =
+        _selection ??
+        _templates?.where((template) => template.id == _selectedId).firstOrNull;
     return Padding(
       key: const Key('conversation-style-library'),
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -98,12 +116,16 @@ class _ConversationStyleLibrarySheetState
             final twoLines = width < 90 || scaler.scale(12) > 14.4;
             final labelHeight = scaler.scale(twoLines ? 30 : 15);
             final extent = width - 20 + 5 + labelHeight + 25;
-            final count = _templates?.length ?? 8;
+            final templates = _templates;
+            final count = templates == null
+                ? 8
+                : templates.length + (_pages.hasMore ? columns : 0);
             final rows = (count / columns).ceil();
             final gridHeight = rows * extent + math.max(0, rows - 1) * 10;
             Widget grid = GridView.builder(
               key: const Key('conversation-style-grid'),
               controller: _scroll,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.zero,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columns,
@@ -113,8 +135,13 @@ class _ConversationStyleLibrarySheetState
               ),
               itemCount: count,
               itemBuilder: (context, index) {
-                final template = _templates?[index];
+                final template = templates != null && index < templates.length
+                    ? templates[index]
+                    : null;
                 if (template == null) {
+                  if (templates != null && !_pages.loading) {
+                    return const SizedBox.shrink();
+                  }
                   return Padding(
                     padding: const EdgeInsets.fromLTRB(10, 10, 10, 15),
                     child: Column(
@@ -136,13 +163,23 @@ class _ConversationStyleLibrarySheetState
                   imageSize: width - 20,
                   labelHeight: labelHeight,
                   maxLines: twoLines ? 2 : 1,
-                  onPressed: () => setState(() => _selectedId = template.id),
+                  onPressed: () => setState(() {
+                    _selectedId = template.id;
+                    _selection = template;
+                  }),
                 );
               },
             );
             if (_templates == null) {
               grid = AppSkeleton(label: l10n.loadingAssets, child: grid);
             }
+            grid = AppPagedScroll(
+              onLoad: _load,
+              child: RefreshIndicator(
+                onRefresh: () => _load(reset: true),
+                child: grid,
+              ),
+            );
             return Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -18,6 +18,7 @@ import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/projects/data/project_repository.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/type/list_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,20 +98,40 @@ class _PreviewProjects extends ProjectRepository {
   _PreviewProjects() : super(NetworkApi(Dio()), NetworkAgentApi(Dio()));
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) async => [
-    for (final (index, title) in [
-      '后来才懂',
-      '拜托了爱丽丝',
-      '益达',
-      '叮叮睡醒了',
-      '水獭兜兜儿',
-    ].indexed)
-      Project(id: 'preview-project-$index', title: title),
-  ];
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async => ListPage(
+    items: [
+      for (final (index, title) in [
+        '后来才懂',
+        '拜托了爱丽丝',
+        '益达',
+        '叮叮睡醒了',
+        '水獭兜兜儿',
+      ].indexed)
+        Project(id: 'preview-project-$index', title: title),
+    ],
+    page: page,
+    pageCount: 1,
+  );
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => [ProjectSession(id: 'preview-session-$projectId', title: '创作会话')];
+  }) async => ListPage(
+    items: [ProjectSession(id: 'preview-session-$projectId', title: '创作会话')],
+    page: page,
+    pageCount: 1,
+  );
+
+  @override
+  Future<ProjectSession?> boundSession(
+    String accountId, {
+    CancelToken? cancelToken,
+  }) async => ProjectSession(id: 'preview-session-$accountId', title: '创作会话');
 }

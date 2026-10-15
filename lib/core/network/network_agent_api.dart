@@ -143,10 +143,11 @@ class NetworkAgentApi {
   Future<Map<String, dynamic>> projectSessionsPage(
     String projectId,
     int page, {
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) => sessionsPage(
     page: page,
-    pageSize: 100,
+    pageSize: pageSize,
     accountId: projectId,
     cancelToken: cancelToken,
   );

@@ -5,6 +5,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/network/agent_api_exception.dart';
 import '../../../core/network/network_api.dart';
 import '../../../core/network/network_agent_api.dart';
+import '../../../shared/type/list_page.dart';
 import '../domain/project.dart';
 
 class ProjectRepository {
@@ -131,33 +132,42 @@ class ProjectRepository {
     return title;
   }
 
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) async {
-    final items = await _pages(
-      (page) => _api.projectsPage(page, cancelToken: cancelToken),
-      pageSize: 10,
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
+    final result = await _api.projectsPage(
+      page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
     );
-    return List.unmodifiable(
-      {
-        for (final item in items)
-          if (item['status'] != 'archived')
-            (item['id'] as String): Project.fromJson(item),
-      }.values,
+    final items = _page(result, page: page, pageSize: pageSize);
+    return ListPage(
+      items: [
+        for (final item in items.items)
+          if (item['status'] != 'archived') Project.fromJson(item),
+      ],
+      page: items.page,
+      pageCount: items.pageCount,
     );
   }
 
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
-    final items = await _pages(
-      (page) => _agentApi.projectSessionsPage(
-        projectId,
-        page,
-        cancelToken: cancelToken,
-      ),
+    final result = await _agentApi.projectSessionsPage(
+      projectId,
+      page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
     );
+    final items = _page(result, page: page, pageSize: pageSize);
     final sessions = {
-      for (final item in items)
+      for (final item in items.items)
         (item['id'] as String): ProjectSession.fromJson(item),
     }.values.where((item) => !item.archived).toList();
     sessions.sort((a, b) {
@@ -172,41 +182,44 @@ class ProjectRepository {
           ? date.compareTo(otherDate)
           : b.id.compareTo(a.id);
     });
-    return List.unmodifiable(sessions);
+    return ListPage(
+      items: List.unmodifiable(sessions),
+      page: page,
+      pageCount: items.pageCount,
+    );
   }
 
-  // Fetch every page before publishing, so a later failure cannot look complete.
-  Future<List<Map<String, dynamic>>> _pages(
-    Future<Map<String, dynamic>> Function(int) load, {
-    int pageSize = 100,
-  }) async {
-    final items = <Map<String, dynamic>>[];
-    for (var page = 1; ; page++) {
-      final result = await load(page);
-      final list = result['list'];
-      final info = result['pageInfo'];
-      if (list is! List ||
-          info is! Map<String, dynamic> ||
-          info['page'] != page ||
-          info['pageSize'] != pageSize ||
-          info['pageCount'] is! int ||
-          (info['pageCount'] as int) < 1 ||
-          (info['pageCount'] as int) > 10000 ||
-          info['total'] is! int ||
-          (info['total'] as int) < 0 ||
-          list.length > pageSize) {
-        throw const ApiException(message: 'Invalid project pagination');
-      }
-      for (final item in list) {
-        if (item is! Map<String, dynamic> ||
-            item['id'] is! String ||
-            (item['id'] as String).isEmpty ||
-            item['title'] is! String) {
-          throw const ApiException(message: 'Invalid project response');
-        }
-        items.add(item);
-      }
-      if (page >= (info['pageCount'] as int)) return items;
+  ListPage<Map<String, dynamic>> _page(
+    Map<String, dynamic> result, {
+    required int page,
+    required int pageSize,
+  }) {
+    final list = result['list'];
+    final info = result['pageInfo'];
+    if (list is! List ||
+        info is! Map<String, dynamic> ||
+        info['page'] != page ||
+        info['pageSize'] != pageSize ||
+        info['pageCount'] is! int ||
+        (info['pageCount'] as int) < 1 ||
+        (info['pageCount'] as int) > 10000 ||
+        info['total'] is! int ||
+        (info['total'] as int) < 0 ||
+        list.length > pageSize) {
+      throw const ApiException(message: 'Invalid project pagination');
     }
+    for (final item in list) {
+      if (item is! Map<String, dynamic> ||
+          item['id'] is! String ||
+          (item['id'] as String).isEmpty ||
+          item['title'] is! String) {
+        throw const ApiException(message: 'Invalid project response');
+      }
+    }
+    return ListPage(
+      items: list.cast<Map<String, dynamic>>(),
+      page: page,
+      pageCount: info['pageCount'] as int,
+    );
   }
 }

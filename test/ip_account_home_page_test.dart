@@ -60,8 +60,10 @@ class _ProjectRepository extends FixtureProjectRepository {
   }
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     historyAccountIds.add(projectId);

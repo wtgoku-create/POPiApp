@@ -1089,10 +1089,12 @@ class _EmptyProjectRepository extends FixtureProjectRepository {
   final requestIds = <String>[];
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => [];
+  }) async => fixturePage([], page: page, pageSize: pageSize);
 
   @override
   Future<ProjectSession> createSession(

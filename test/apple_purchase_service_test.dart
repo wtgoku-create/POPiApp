@@ -22,24 +22,27 @@ Map<String, Object?> _purchase({
   String refund = 'none',
   String userId = '1',
   String token = _token,
+  String productId = _product,
+  String kind = 'subscription',
 }) => {
   'purchase_id': 'purchase-1',
   'user_id': userId,
-  'product_id': _product,
+  'product_id': productId,
   'app_account_token': token,
   'payment_status': payment,
   'fulfillment_status': fulfillment,
   'refund_status': refund,
-  'kind': 'subscription',
+  'kind': kind,
 };
 
 AppleStoreTransaction _transaction({
   String id = '10',
   String token = _token,
+  String productId = _product,
   PurchaseStatus status = PurchaseStatus.purchased,
 }) => AppleStoreTransaction(
   id: id,
-  productId: _product,
+  productId: productId,
   status: status,
   accountToken: token,
   jws: 'header.$id.signature',
@@ -50,6 +53,8 @@ class _Store extends ApplePaymentStore {
   List<AppleStoreTransaction> transactions = [];
   final finished = <String>[];
   final purchases = <String>[];
+  final productQueries = <String>[];
+  final purchasedProducts = <String>[];
   bool? consumable;
   AppleStoreTransaction? next = _transaction();
   bool isAvailable = true;
@@ -61,9 +66,13 @@ class _Store extends ApplePaymentStore {
   @override
   Future<bool> available() async => isAvailable;
   @override
-  Future<AppleStoreProduct?> product(String id) async => missingProduct
-      ? null
-      : AppleStoreProduct(id, 'POPi Monthly', 'HK\$38.00');
+  Future<AppleStoreProduct?> product(String id) async {
+    productQueries.add(id);
+    return missingProduct
+        ? null
+        : AppleStoreProduct(id, 'POPi Monthly', 'HK\$38.00');
+  }
+
   @override
   Future<bool> buy(
     AppleStoreProduct product,
@@ -71,6 +80,7 @@ class _Store extends ApplePaymentStore {
     required bool consumable,
   }) async {
     purchases.add(accountToken);
+    purchasedProducts.add(product.id);
     this.consumable = consumable;
     if (next != null) {
       transactions = next!.status == PurchaseStatus.purchased ? [next!] : [];
@@ -125,7 +135,6 @@ class _Harness {
         repository: ApplePaymentRepository(NetworkApi(dio)),
         storage: pendingStorage ?? storage,
         store: store,
-        environment: 'Sandbox',
         supported: true,
         retryInterval: const Duration(days: 1),
         verifyInterval: Duration.zero,
@@ -269,6 +278,102 @@ void main() {
     expect(h.storage.readAll(), isEmpty);
     expect(h.requests.any((item) => item.path.endsWith('/purchases')), isFalse);
   });
+
+  test(
+    'upgrade uses the quoted product for confirmation and payment',
+    () async {
+      const upgradeProduct = 'com.popi.vip.upgrade';
+      h.store.next = _transaction(productId: upgradeProduct);
+      h.response = (request) {
+        if (request.path.endsWith('/preview')) {
+          return {
+            'can_purchase': true,
+            'action': 'upgrade',
+            'product_version_id': 202,
+            'product_id': upgradeProduct,
+            'quote_id': 'quote-upgrade',
+            'grant_points': 1000,
+          };
+        }
+        if (request.path.endsWith('/purchases')) {
+          return _purchase(
+            payment: 'pending_payment',
+            fulfillment: 'pending',
+            productId: upgradeProduct,
+            kind: 'upgrade',
+          );
+        }
+        if (request.path.endsWith('/verify')) {
+          return _purchase(productId: upgradeProduct, kind: 'upgrade');
+        }
+        return h._response(request);
+      };
+      expect(
+        await buy(
+          confirm: (product, points) async {
+            expect(product.id, upgradeProduct);
+            expect(product.price, 'HK\$38.00');
+            expect(points, 1000);
+            expect(h.requests.last.path.endsWith('/preview'), isTrue);
+            return true;
+          },
+        ),
+        StorePurchaseOutcome.purchased,
+      );
+      expect(h.store.productQueries, [upgradeProduct]);
+      expect(h.store.purchasedProducts, [upgradeProduct]);
+      expect(h.store.consumable, isTrue);
+      expect(h.store.finished, ['10']);
+      expect(h.storage.readAll(), isEmpty);
+      expect(h.requests.singleWhere((r) => r.path.endsWith('/preview')).data, {
+        'productVersionId': 101,
+      });
+      expect(
+        h.requests.singleWhere((r) => r.path.endsWith('/purchases')).data,
+        {'quoteId': 'quote-upgrade'},
+      );
+    },
+  );
+
+  test(
+    'ineligible preview never queries StoreKit or creates an intent',
+    () async {
+      h.response = (request) => request.path.endsWith('/preview')
+          ? {'can_purchase': false}
+          : h._response(request);
+      var confirmed = false;
+      expect(
+        await buy(
+          confirm: (_, _) async {
+            confirmed = true;
+            return true;
+          },
+        ),
+        StorePurchaseOutcome.failed,
+      );
+      expect(confirmed, isFalse);
+      expect(h.store.productQueries, isEmpty);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll(), isEmpty);
+      expect(h.requests.any((r) => r.path.endsWith('/purchases')), isFalse);
+    },
+  );
+
+  test(
+    'a created product differing from the confirmed quote is not paid',
+    () async {
+      h.response = (request) => request.path.endsWith('/purchases')
+          ? _purchase(
+              payment: 'pending_payment',
+              fulfillment: 'pending',
+              productId: 'unexpected-product',
+            )
+          : h._response(request);
+      expect(await buy(), StorePurchaseOutcome.failed);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll(), hasLength(1));
+    },
+  );
 
   test(
     'unavailable or missing StoreKit products never create intents',
@@ -560,7 +665,6 @@ void main() {
         repository: ApplePaymentRepository(NetworkApi(h.dio)),
         storage: failing,
         store: h.store,
-        environment: 'Sandbox',
         supported: true,
         verifyInterval: Duration.zero,
         onCompleted: () async {

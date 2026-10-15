@@ -1,11 +1,30 @@
 import 'dart:convert';
 
-/// Structured storyboard output; other bodies retain their Markdown rendering.
+/// Converts current prompts and historical shot data into one display body.
 class HomeStoryboard {
   const HomeStoryboard({required this.shots, this.modelPrompt});
 
   final List<HomeStoryboardShot> shots;
   final String? modelPrompt;
+
+  static String displayText(String body) {
+    try {
+      final Object? value = jsonDecode(body);
+      if (value is String) return value;
+      if (value is Map && value['modelPrompt'] is String) {
+        return value['modelPrompt'] as String;
+      }
+    } on FormatException {
+      return body;
+    }
+    final storyboard = tryParse(body);
+    if (storyboard == null) return body;
+    return [
+      for (var index = 0; index < storyboard.shots.length; index++)
+        '${index + 1} · ${storyboard.shots[index].duration}s\n'
+            '${storyboard.shots[index].description}',
+    ].join('\n\n');
+  }
 
   static HomeStoryboard? tryParse(String body) {
     try {

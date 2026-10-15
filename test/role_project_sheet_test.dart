@@ -12,6 +12,8 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
+import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
+import 'package:toastification/toastification.dart';
 
 import 'support/project_fixtures.dart';
 
@@ -22,6 +24,7 @@ class _ProjectUserController extends UserController {
 
 class _ProjectRepository extends FixtureProjectRepository {
   int projectRequests = 0;
+  final pages = <(int, int)>[];
   bool failProjects = false;
   bool failSessions = false;
   Completer<List<Project>>? pendingProjects;
@@ -34,29 +37,50 @@ class _ProjectRepository extends FixtureProjectRepository {
   ];
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) async {
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async {
     projectRequests++;
+    pages.add((page, pageSize));
     if (failProjects) throw StateError('Project loading failed');
-    if (pendingProjects != null) return pendingProjects!.future;
-    return [
-      for (var index = 0; index < 180; index++)
-        Project(
-          id: '$index',
-          title: index.isEven
-              ? 'Project $index with a longer title that wraps on narrow screens'
-              : 'Project $index',
-        ),
-    ];
+    if (pendingProjects != null) {
+      return fixturePage(
+        await pendingProjects!.future,
+        page: page,
+        pageSize: pageSize,
+      );
+    }
+    return fixturePage(
+      [
+        for (var index = 0; index < 180; index++)
+          Project(
+            id: '$index',
+            title: index.isEven
+                ? 'Project $index with a longer title that wraps on narrow screens'
+                : 'Project $index',
+          ),
+      ],
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ProjectSession?> boundSession(
     String projectId, {
     CancelToken? cancelToken,
   }) async {
     sessionRequests.add(projectId);
     if (failSessions) throw StateError('Session loading failed');
-    return sessions;
+    final sorted = [...sessions]
+      ..sort(
+        (a, b) => (b.updatedAt?.millisecondsSinceEpoch ?? 0).compareTo(
+          a.updatedAt?.millisecondsSinceEpoch ?? 0,
+        ),
+      );
+    return sorted.firstOrNull;
   }
 
   @override
@@ -79,6 +103,7 @@ void main() {
     repository = _ProjectRepository();
     selection = null;
   });
+  tearDown(() => toastification.dismissAll(delayForAnimation: false));
 
   Future<void> pumpSheet(
     WidgetTester tester, {
@@ -144,6 +169,7 @@ void main() {
       tester,
     ) async {
       await pumpSheet(tester, size: size);
+      expect(repository.pages, [(1, 20)]);
       expect(project('0'), findsOneWidget);
       expect(project('179'), findsNothing);
       expect(find.byType(ListTile).evaluate().length, lessThan(30));
@@ -217,6 +243,7 @@ void main() {
       find.text(AppLocalizations.of(context)!.projectSessionsLoadFailed),
       findsOneWidget,
     );
+    toastification.dismissAll(delayForAnimation: false);
     repository.failSessions = false;
     await tester.tap(confirm());
     await tester.pumpAndSettle();
@@ -225,12 +252,17 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('projects loading failure can retry', (tester) async {
+  testWidgets('projects loading failure recovers when reopening', (
+    tester,
+  ) async {
     repository.failProjects = true;
     await pumpSheet(tester);
     expect(find.byType(ListTile), findsNothing);
     repository.failProjects = false;
-    await tester.tap(find.byKey(const Key('role-project-retry')));
+    toastification.dismissAll(delayForAnimation: false);
+    Navigator.of(tester.element(find.byType(RoleProjectSheet))).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open-project-sheet')));
     await tester.pumpAndSettle();
     expect(project('0'), findsOneWidget);
     expect(project('179'), findsNothing);
@@ -257,7 +289,7 @@ void main() {
   testWidgets('loading transitions to an empty project list', (tester) async {
     repository.pendingProjects = Completer<List<Project>>();
     await pumpSheet(tester, settle: false);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AppSkeleton), findsOneWidget);
     repository.pendingProjects!.complete([]);
     await tester.pumpAndSettle();
     final context = tester.element(find.byType(RoleProjectSheet));

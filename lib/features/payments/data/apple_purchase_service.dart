@@ -17,7 +17,6 @@ class ApplePurchaseService {
     required this.repository,
     required this.storage,
     required this.store,
-    required this.environment,
     required this.supported,
     this.onCompleted,
     this.retryInterval = const Duration(seconds: 15),
@@ -28,7 +27,6 @@ class ApplePurchaseService {
   final ApplePaymentRepository repository;
   final PendingApplePurchaseStorage storage;
   final ApplePaymentStore store;
-  final String environment;
   final bool supported;
   final Future<void> Function()? onCompleted;
   final Duration retryInterval;
@@ -85,7 +83,7 @@ class ApplePurchaseService {
       }
       AppleStoreProduct? product;
       if (pending == null) {
-        final mappings = (await repository.products(environment))
+        final mappings = (await repository.products())
             .where((item) => item.id == productVersionId && item.kind == kind)
             .toList();
         // Select the exact mapping, not a plan shared by multiple upgrades.
@@ -104,13 +102,21 @@ class ApplePurchaseService {
         if (pending?.storeRequested == true) {
           return await _checkPending(pending!);
         }
-        product = await store.product(mapping.productId);
-        if (product == null) return StorePurchaseOutcome.productNotFound;
         if (pending == null) {
-          final quote = await repository.preview(mapping.id, environment);
-          if (quote['product_id'] != product.id) {
+          final quote = await repository.preview(mapping.id);
+          final productId = quote['product_id'];
+          final quoteId = quote['quote_id'];
+          if (quote['can_purchase'] == false ||
+              productId is! String ||
+              productId.trim().isEmpty ||
+              quoteId is! String ||
+              quoteId.trim().isEmpty) {
             return StorePurchaseOutcome.failed;
           }
+          // 升级报价可能选择另一商品，确认价格与原生支付都使用实际支付商品。
+          product = await store.product(productId);
+          if (product == null) return StorePurchaseOutcome.productNotFound;
+          if (product.id != productId) return StorePurchaseOutcome.failed;
           final points = (quote['grant_points'] as num?)?.toInt();
           if (_disposed || !await confirm(product, points)) {
             return StorePurchaseOutcome.canceled;
@@ -121,7 +127,7 @@ class ApplePurchaseService {
             productVersionId: mapping.id,
             grantPoints: points,
             kind: kind,
-            quoteId: quote['quote_id'] as String,
+            quoteId: quoteId,
           );
           await storage.save(pending);
         }

@@ -73,15 +73,13 @@ void main() {
         count: 2,
       );
       final items = await repository.list(status: 'archived');
-      expect(items, hasLength(2));
-      expect(items.first.isPaused, isTrue);
-      expect(items.first.description, '校园');
-      expect(requests.map((r) => r.queryParameters['status']), [
-        'archived',
-        'archived',
-      ]);
+      expect(items.items, hasLength(1));
+      expect(items.hasMore, isTrue);
+      expect(items.items.first.isPaused, isTrue);
+      expect(items.items.first.description, '校园');
+      expect(requests.map((r) => r.queryParameters['status']), ['archived']);
       respond = (_) => page([], count: 0);
-      expect(await repository.list(), isEmpty);
+      expect((await repository.list()).items, isEmpty);
     },
   );
   test('patch can clear the user prompt independently', () async {

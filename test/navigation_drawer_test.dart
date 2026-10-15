@@ -125,6 +125,101 @@ void main() {
     });
   }
 
+  for (final size in [
+    const Size(320, 400),
+    const Size(390, 844),
+    const Size(1280, 900),
+  ]) {
+    testWidgets('drawer menu and history share scrolling at $size', (
+      tester,
+    ) async {
+      final repository = _RefreshingDrawerRepository(80);
+      await pumpDrawer(tester, size: size, repository: repository);
+      expect(repository.requestedPages, [(1, 20)]);
+      final drawer = find.byKey(const Key('popi-navigation-drawer'));
+      final scrollable = find.descendant(
+        of: drawer,
+        matching: find.byType(Scrollable),
+      );
+      expect(scrollable, findsOneWidget);
+      final menu = find.byKey(const Key('drawer-nav-home'));
+      final first = find.byKey(const Key('drawer-session-history-0'));
+      final menuTop = tester.getTopLeft(menu).dy;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      final initialOffset = position.pixels;
+      final newProject = find.byKey(const Key('drawer-new-session'));
+      final newProjectBounds = tester.getRect(newProject);
+      final footer = tester.getRect(
+        find.byKey(const Key('drawer-profile-button')),
+      );
+      await tester.drag(menu, const Offset(0, -180));
+      await tester.pumpAndSettle();
+      final menuShift = tester.getTopLeft(menu).dy - menuTop;
+      expect(menuShift, lessThan(-100));
+      expect(menuShift, closeTo(initialOffset - position.pixels, 1));
+      expect(first.hitTestable(), findsOneWidget);
+      expect(tester.getRect(newProject), newProjectBounds);
+      expect(newProject.hitTestable(), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(const Key('drawer-profile-button'))),
+        footer,
+      );
+      final last = find.byKey(const Key('drawer-session-history-79'));
+      await tester.scrollUntilVisible(last, 400, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(last.hitTestable(), findsOneWidget);
+      expect(repository.requestedPages, [(1, 20), (2, 20), (3, 20), (4, 20)]);
+      expect(first, findsNothing);
+      expect(tester.getRect(newProject), newProjectBounds);
+      expect(newProject.hitTestable(), findsOneWidget);
+      expect(
+        find
+            .byWidgetPredicate((widget) {
+              final key = widget.key;
+              return key is ValueKey<String> &&
+                  key.value.startsWith('drawer-session-history-');
+            })
+            .evaluate()
+            .length,
+        lessThan(40),
+      );
+      await tester.scrollUntilVisible(menu, -400, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(menu.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('loading another drawer page preserves visible history', (
+    tester,
+  ) async {
+    final repository = _RefreshingDrawerRepository(40);
+    final container = await pumpDrawer(tester, repository: repository);
+    repository.pending = Completer<List<ConversationSession>>();
+    await tester.drag(
+      find.byKey(const Key('drawer-session-list')),
+      const Offset(0, -1200),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(repository.requestedPages, [(1, 20), (2, 20)]);
+    expect(container.read(sessionsProvider).requireValue, hasLength(20));
+    expect(
+      find.byKey(const Key('drawer-sessions-more-skeleton')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('drawer-sessions-skeleton')), findsNothing);
+    expect(find.byKey(const Key('drawer-session-history-19')), findsOneWidget);
+    repository.pending!.complete(repository.items);
+    await tester.pumpAndSettle();
+    expect(container.read(sessionsProvider).requireValue, hasLength(40));
+    expect(
+      find.byKey(const Key('drawer-sessions-more-skeleton')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('failed drawer refresh keeps history and allows another pull', (
     tester,
   ) async {
@@ -370,7 +465,7 @@ void main() {
         return key is ValueKey<String> &&
             RegExp(r'^drawer-session-mock-(new-)?\d+$').hasMatch(key.value);
       });
-      expect(container.read(sessionsProvider).requireValue, hasLength(188));
+      expect(container.read(sessionsProvider).requireValue, hasLength(20));
       expect(first, findsOneWidget);
       expect(last, findsNothing);
       expect(rows.evaluate().length, lessThan(30));
@@ -679,7 +774,7 @@ class _RefreshingDrawerRepository extends FixtureSessionRepository {
         (index) => ConversationSession(
           id: 'history-$index',
           title: 'History $index',
-          updatedAt: DateTime(2026),
+          updatedAt: DateTime(2026).subtract(Duration(seconds: index)),
         ),
       );
 
@@ -687,17 +782,26 @@ class _RefreshingDrawerRepository extends FixtureSessionRepository {
   Completer<List<ConversationSession>>? pending;
   bool failNext = false;
   int requests = 0;
+  final requestedPages = <(int, int)>[];
 
   @override
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     requests++;
+    requestedPages.add((page, pageSize));
     if (failNext) {
       failNext = false;
       throw StateError('offline');
     }
-    return pending?.future ?? items;
+    final all = await (pending?.future ?? Future.value(items));
+    return ConversationSessionPage(
+      items: all.skip((page - 1) * pageSize).take(pageSize).toList(),
+      page: page,
+      pageCount: (all.length / pageSize).ceil().clamp(1, 10000),
+    );
   }
 }

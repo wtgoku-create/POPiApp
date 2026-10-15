@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'support/list_page_fixtures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -538,13 +539,22 @@ class _Repository extends ProjectRepository {
   }
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) async =>
-      List.of(projects);
-  @override
-  Future<List<ProjectSession>> listSessions(
-    String projectId, {
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => projectId == 'p' ? List.of(sessions) : [];
+  }) async => fixturePage(projects, page: page, pageSize: pageSize);
+  @override
+  Future<ListPage<ProjectSession>> listSessions(
+    String projectId, {
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) async => fixturePage(
+    projectId == 'p' ? sessions : [],
+    page: page,
+    pageSize: pageSize,
+  );
   @override
   Future<void> renameProject(
     String id,

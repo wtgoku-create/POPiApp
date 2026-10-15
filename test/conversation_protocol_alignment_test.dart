@@ -6,6 +6,7 @@ import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
+import 'package:popi_ai_app/features/role_guide/domain/home_storyboard.dart';
 import 'package:popi_ai_app/features/session/data/conversation_events.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
@@ -69,6 +70,39 @@ Map<String, Object?> _configuredRequest() => {
 };
 
 void main() {
+  test(
+    'content and task outputs accept plain-text and historical payloads',
+    () {
+      const prompt = '全片15秒，无BGM。\n镜头01：保持角色一致。';
+      for (final payload in [
+        prompt,
+        {'text': prompt},
+        {'body': prompt},
+        {'description': prompt},
+        {'modelPrompt': prompt, 'shots': []},
+      ]) {
+        final output = <String, Object?>{
+          'kind': 'storyboard',
+          'payload': payload,
+        };
+        final block = ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'content',
+          'data': output,
+        });
+        final step = ConversationTaskStep.fromJson({
+          'key': 'storyboard',
+          'state': 'completed',
+          'output': output,
+        });
+        expect(block.isStoryboard, isTrue);
+        expect(block.body, step.content!.body);
+        expect(HomeStoryboard.displayText(block.body), prompt);
+        expect(block.data['payload'], payload);
+      }
+    },
+  );
+
   late Dio dio;
   late PreferencesStorage storage;
   ApiSessionRepository repository() => ApiSessionRepository(

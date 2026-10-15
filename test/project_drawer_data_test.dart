@@ -15,6 +15,7 @@ import 'package:popi_ai_app/features/projects/domain/project.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'support/list_page_fixtures.dart';
 
 void main() {
   Future<ProviderContainer> pumpProjects(
@@ -260,17 +261,27 @@ class _Repository extends ProjectRepository {
   final sessionCalls = <String>[];
 
   @override
-  Future<List<Project>> listProjects({CancelToken? cancelToken}) {
+  Future<ListPage<Project>> listProjects({
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) {
     projectCalls++;
-    return loadProjects();
+    return loadProjects().then(
+      (items) => fixturePage(items, page: page, pageSize: pageSize),
+    );
   }
 
   @override
-  Future<List<ProjectSession>> listSessions(
+  Future<ListPage<ProjectSession>> listSessions(
     String projectId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) {
     sessionCalls.add(projectId);
-    return loadSessions(projectId);
+    return loadSessions(
+      projectId,
+    ).then((items) => fixturePage(items, page: page, pageSize: pageSize));
   }
 }

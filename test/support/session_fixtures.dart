@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'list_page_fixtures.dart';
+export 'list_page_fixtures.dart';
 import 'package:popi_ai_app/features/assets/domain/library_work.dart';
 import 'package:popi_ai_app/features/session/data/conversation_events.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
@@ -37,10 +39,19 @@ class FixtureSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => _list(userId);
+  }) async {
+    final items = _list(userId);
+    return ConversationSessionPage(
+      items: items.skip((page - 1) * pageSize).take(pageSize).toList(),
+      page: page,
+      pageCount: (items.length / pageSize).ceil().clamp(1, 10000),
+    );
+  }
 
   @override
   Future<ConversationSession> create(
@@ -267,9 +278,11 @@ class FixtureSessionRepository extends SessionRepository {
     CancelToken? cancelToken,
   }) async => 10;
   @override
-  Future<List<ConversationRoleTemplate>> roleTemplates({
+  Future<ListPage<ConversationRoleTemplate>> roleTemplates({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
-  }) async => [];
+  }) async => fixturePage([], page: page, pageSize: pageSize);
   @override
   Future<void> confirmGeneration(
     String userId,

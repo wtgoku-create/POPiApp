@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/app_config.dart';
 import '../../core/network/network_api.dart';
 import '../../features/payments/data/apple_payment_repository.dart';
 import '../../features/payments/data/apple_payment_store.dart';
@@ -21,7 +20,6 @@ final applePurchaseServiceProvider = Provider<ApplePurchaseService>((ref) {
       userId,
     ),
     store: NativeApplePaymentStore(),
-    environment: AppConfig.applePaymentEnvironment,
     supported: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS,
     onCompleted: () async {
       if (disposed || ref.read(userProvider)?.id != userId) return;

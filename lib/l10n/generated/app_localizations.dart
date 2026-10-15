@@ -671,7 +671,7 @@ abstract class AppLocalizations {
   /// No description provided for @roleStoryboardContent.
   ///
   /// In en, this message translates to:
-  /// **'Storyboard'**
+  /// **'Storyboard video prompt'**
   String get roleStoryboardContent;
 
   /// No description provided for @roleStoryboardShot.
@@ -1653,7 +1653,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountArchiveStoryboard.
   ///
   /// In en, this message translates to:
-  /// **'Storyboard'**
+  /// **'Storyboard video prompt'**
   String get accountArchiveStoryboard;
 
   /// No description provided for @accountArchiveCast.

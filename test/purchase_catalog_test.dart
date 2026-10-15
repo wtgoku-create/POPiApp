@@ -66,6 +66,31 @@ Map<String, Object?> _mapping({
   'validity_period': 'year',
 };
 
+Map<String, Object?> _maxMapping() => {
+  ..._mapping(id: 6),
+  'product_id': 'popistudio.max.36500.monthly',
+  'plan_id': 39,
+  'title': 'Max 作品研修',
+  'amount_fen': 129900,
+  'original_price_amount': 2069,
+  'original_amount_fen': 206900,
+  'custom_info': {
+    'point_amount': '每100积分≈￥3.56元',
+    'discount_info': '限时 6.3折',
+    'goal_title': '专属内容｜独家连麦诊断帐号内容',
+    'goal_description': '导师连麦诊断账号与作品',
+    'buttonText': '立即购买',
+    'feature_title': 'Max-IP诊断',
+  },
+  'member_level': '4',
+  'plan_category': 'monthly',
+  'duration_unit': 'month',
+  'duration_value': 1,
+  'grant_points': 25550,
+  'points_amount': 25550,
+  'bonus_points': 0,
+};
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late _Store store;
@@ -99,7 +124,6 @@ void main() {
     repository = PurchaseCatalogRepository(
       NetworkApi(dio),
       useAppleCatalog: true,
-      environment: 'Sandbox',
     );
   });
 
@@ -107,8 +131,8 @@ void main() {
     'Apple membership uses server mapping IDs and prices without StoreKit',
     () async {
       final plans = await repository.plans();
-      expect(plans.map((item) => item.id), [202, 202]);
-      expect(plans.map((item) => item.appleProductVersionId), [301, 303]);
+      expect(plans.map((item) => item.id), [202]);
+      expect(plans.map((item) => item.appleProductVersionId), [301]);
       expect(plans.first.localizedPrice, isNull);
       expect(plans.first.price, 3800);
       expect(plans.first.description, _mapping()['description']);
@@ -118,9 +142,60 @@ void main() {
       expect(plans.first.coins + plans.first.bonusPointsAmount, 2000);
       expect(store.queries, isEmpty);
       expect(requests.single.path, '/api_client/trade/payment/apple/products');
-      expect(requests.single.queryParameters, {'environment': 'Sandbox'});
+      expect(requests.single.queryParameters, isEmpty);
     },
   );
+
+  test(
+    'Apple membership preserves original price and display metadata',
+    () async {
+      mappings = [_maxMapping()];
+      final plan = (await repository.plans()).single;
+      expect(plan.originalPriceAmount, 2069);
+      expect(plan.customInfo?.pointAmount, '每100积分≈￥3.56元');
+      expect(plan.customInfo?.discountInfo, '限时 6.3折');
+      expect(plan.customInfo?.featureTitle, 'Max-IP诊断');
+      expect(plan.customInfo?.buttonText, '立即购买');
+      expect(plan.customInfo?.goalTitle, '专属内容｜独家连麦诊断帐号内容');
+      expect(plan.customInfo?.goalDescription, '导师连麦诊断账号与作品');
+      expect(plan.price, 129900);
+      expect(plan.coins, 25550);
+      expect(plan.bonusPointsAmount, 0);
+      expect(plan.planCategory, 'monthly');
+      expect(plan.months, 1);
+      expect(plan.appleProductId, 'popistudio.max.36500.monthly');
+      expect(plan.appleProductVersionId, 6);
+    },
+  );
+
+  test(
+    'Apple catalog displays regular prices and excludes upgrade mappings',
+    () async {
+      mappings = [
+        {..._mapping(), 'regular_amount_fen': 6800},
+        {..._mapping(id: 302, kind: 'points'), 'regular_amount_fen': 1800},
+        _mapping(id: 303, kind: 'upgrade'),
+      ];
+      final plan = (await repository.plans()).single;
+      final package = (await repository.pointPackages()).single;
+      expect(plan.appleProductVersionId, 301);
+      expect(plan.price, 6800);
+      expect(package.priceAmount, 18);
+      expect(requests.every((r) => r.queryParameters.isEmpty), isTrue);
+    },
+  );
+
+  test('Apple membership accepts absent or invalid display metadata', () async {
+    for (final customInfo in [null, 'unavailable', <Object?>[]]) {
+      mappings = [
+        {..._mapping(), 'custom_info': customInfo},
+      ];
+      final plan = (await repository.plans()).single;
+      expect(plan.originalPriceAmount, 0);
+      expect(plan.customInfo, isNull);
+      expect(plan.price, 3800);
+    }
+  });
 
   test(
     'Apple points preserve server mapping, price and package validity',
@@ -157,7 +232,7 @@ void main() {
 
   test('StoreKit unavailable does not block either Apple catalog', () async {
     store.isAvailable = false;
-    expect(await repository.plans(), hasLength(2));
+    expect(await repository.plans(), hasLength(1));
     expect(await repository.pointPackages(), hasLength(1));
     expect(store.queries, isEmpty);
     expect(requests, hasLength(2));
@@ -209,8 +284,12 @@ void main() {
     ]);
   });
 
-  Future<void> pumpApplePage(WidgetTester tester, Widget page) async {
-    tester.view.physicalSize = const Size(390, 844);
+  Future<void> pumpApplePage(
+    WidgetTester tester,
+    Widget page, {
+    double width = 390,
+  }) async {
+    tester.view.physicalSize = Size(width, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -223,7 +302,6 @@ void main() {
         'user',
       ),
       store: store,
-      environment: 'Sandbox',
       supported: false,
     );
     await tester.pumpWidget(
@@ -266,6 +344,34 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets(
+      'iOS membership renders Apple display metadata at ${width.toInt()}px',
+      (tester) async {
+        mappings = [_maxMapping()];
+        await pumpApplePage(tester, const MembershipPage(), width: width);
+        expect(find.text('1299'), findsOneWidget);
+        final originalPrice = find.text('¥2069');
+        expect(originalPrice, findsOneWidget);
+        expect(
+          tester.widget<Text>(originalPrice).style?.decoration,
+          TextDecoration.lineThrough,
+        );
+        expect(find.text('每100积分≈￥3.56元'), findsOneWidget);
+        expect(find.text('限时 6.3折'), findsOneWidget);
+        expect(find.text('Max-IP诊断'), findsOneWidget);
+        expect(find.text('立即购买'), findsOneWidget);
+        expect(find.text('确认支付'), findsNothing);
+        expect(find.text('25550'), findsOneWidget);
+        expect(find.text('每月'), findsOneWidget);
+        expect(find.text('每年'), findsNothing);
+        expect(store.queries, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
+  }
 
   testWidgets(
     'iOS points entry displays server prices even when StoreKit is unavailable',

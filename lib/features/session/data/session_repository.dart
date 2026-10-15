@@ -16,12 +16,15 @@ import '../../role_guide/domain/home_creation.dart';
 import '../../role_guide/domain/session_media_preferences.dart';
 import '../domain/conversation_generation.dart';
 import '../domain/conversation_session.dart';
+import '../../../shared/type/list_page.dart';
 import '../domain/conversation_snapshot.dart';
 import 'conversation_events.dart';
 
 abstract class SessionRepository {
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   });
   Future<ConversationSession> create(
@@ -99,7 +102,9 @@ abstract class SessionRepository {
     HomeConfig config, {
     CancelToken? cancelToken,
   });
-  Future<List<ConversationRoleTemplate>> roleTemplates({
+  Future<ListPage<ConversationRoleTemplate>> roleTemplates({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   });
   Future<void> confirmGeneration(
@@ -165,36 +170,44 @@ class ApiSessionRepository extends SessionRepository {
   final PreferencesStorage Function() storage;
 
   @override
-  Future<List<ConversationSession>> list(
+  Future<ConversationSessionPage> list(
     String userId, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
-    final sessions = <String, ConversationSession>{};
-    for (var page = 1; ; page++) {
-      final response = await agent.sessionsPage(
-        page: page,
-        pageSize: 100,
-        cancelToken: cancelToken,
-      );
-      final info = conversationMap(response['pageInfo']);
-      final items = conversationMaps(response['list']);
-      final pageCount = info['pageCount'];
-      if (info['page'] != page ||
-          info['pageSize'] != 100 ||
-          pageCount is! int ||
-          pageCount < 1 ||
-          pageCount > 10000 ||
-          info['total'] is! int ||
-          (info['total'] as int) < 0 ||
-          items.length > 100) {
-        throw const FormatException('Invalid session pagination');
-      }
-      for (final item in items) {
-        final session = ConversationSession.fromJson(item);
-        sessions[session.id] = session;
-      }
-      if (page >= pageCount) return SessionRepository.sorted(sessions.values);
+    if (page < 1 || pageSize < 1 || pageSize > 100) {
+      throw ArgumentError('Invalid session page');
     }
+    final response = await agent.sessionsPage(
+      page: page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
+    );
+    final info = conversationMap(response['pageInfo']);
+    final items = conversationMaps(response['list']);
+    final pageCount = info['pageCount'];
+    if (info['page'] != page ||
+        info['pageSize'] != pageSize ||
+        pageCount is! int ||
+        pageCount < 1 ||
+        pageCount > 10000 ||
+        info['total'] is! int ||
+        (info['total'] as int) < 0 ||
+        items.length > pageSize ||
+        (items.isEmpty && page < pageCount)) {
+      throw const FormatException('Invalid session pagination');
+    }
+    final sessions = <String, ConversationSession>{};
+    for (final item in items) {
+      final session = ConversationSession.fromJson(item);
+      sessions[session.id] = session;
+    }
+    return ConversationSessionPage(
+      items: SessionRepository.sorted(sessions.values),
+      page: page,
+      pageCount: pageCount,
+    );
   }
 
   String _title(String value) {
@@ -671,25 +684,22 @@ class ApiSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<List<ConversationRoleTemplate>> roleTemplates({
+  Future<ListPage<ConversationRoleTemplate>> roleTemplates({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
-    final templates = <ConversationRoleTemplate>[];
-    for (var page = 1; page <= 10000; page++) {
-      final result = await business.roleTemplatesPage(
-        page,
-        cancelToken: cancelToken,
-      );
-      templates.addAll(
-        conversationMaps(result['list']).map(ConversationRoleTemplate.fromJson),
-      );
-      final pageCount = conversationMap(result['pageInfo'])['pageCount'];
-      if (pageCount is! int || pageCount < 1) {
-        throw const FormatException('Invalid template pagination');
-      }
-      if (page >= pageCount) return templates;
-    }
-    throw const FormatException('Too many template pages');
+    final result = await business.roleTemplatesPage(
+      page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
+    );
+    return ListPage.fromJson(
+      result,
+      page: page,
+      pageSize: pageSize,
+      parse: ConversationRoleTemplate.fromJson,
+    );
   }
 
   /// 配置、业务授权、Agent 回执共用同一恢复输入，任何一次超时都可继续。

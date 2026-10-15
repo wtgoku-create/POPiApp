@@ -69,14 +69,22 @@ class _Styles extends FixtureSessionRepository {
   Completer<List<ConversationRoleTemplate>>? pending;
   bool fail = false;
   CancelToken? token;
+  final pages = <(int, int)>[];
 
   @override
-  Future<List<ConversationRoleTemplate>> roleTemplates({
+  Future<ListPage<ConversationRoleTemplate>> roleTemplates({
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) async {
     token = cancelToken;
+    pages.add((page, pageSize));
     if (fail) throw StateError('offline');
-    return pending?.future ?? items;
+    return fixturePage(
+      await (pending?.future ?? Future.value(items)),
+      page: page,
+      pageSize: pageSize,
+    );
   }
 }
 
@@ -87,6 +95,8 @@ Future<void> _pump(
   GlobalKey? capture,
   double scale = 1,
   bool dark = false,
+  String selectedId = 'style-0',
+  ConversationRoleTemplate? selectedTemplate,
 }) async {
   final theme = dark ? AppTheme.dark : AppTheme.light;
   await tester.pumpWidget(
@@ -116,7 +126,8 @@ Future<void> _pump(
                 shape: ConversationStyleLibrarySheet.shape,
                 builder: (_) => ConversationStyleLibrarySheet(
                   repository: repository,
-                  selectedId: 'style-0',
+                  selectedId: selectedId,
+                  selectedTemplate: selectedTemplate,
                 ),
               );
               results?.add(selection);
@@ -262,6 +273,7 @@ void main() {
     (tester) async {
       final repository = _Styles(count: 100);
       await _pump(tester, repository);
+      expect(repository.pages, [(1, 20)]);
       expect(
         find.byKey(const ValueKey('role-template:style-99')),
         findsNothing,
@@ -276,7 +288,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getTopLeft(find.text('风格库')), heading);
       expect(tester.getTopLeft(confirm), confirmPosition);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('role-template:style-99')),
+        400,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('conversation-style-grid')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.pages, [(1, 20), (2, 20), (3, 20), (4, 20), (5, 20)]);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'a selected style on a later page can be confirmed without prefetching',
+    (tester) async {
+      final repository = _Styles(count: 100);
+      final results = <ConversationRoleTemplate?>[];
+      final selected = repository.items.last;
+      await _pump(
+        tester,
+        repository,
+        results: results,
+        selectedId: selected.id,
+        selectedTemplate: selected,
+      );
+      await tester.tap(find.byKey(const Key('conversation-style-confirm')));
+      await tester.pumpAndSettle();
+      expect(repository.pages, [(1, 20)]);
+      expect(results.single, same(selected));
     },
   );
 

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../shared/type/list_page.dart';
 import '../../assets/domain/library_role.dart';
 import '../domain/ip_account.dart';
 import '../domain/ip_account_home.dart';
@@ -17,29 +18,34 @@ class IpAccountRepository {
       return await action();
     } on DioException catch (error) {
       throw ApiException.fromDioException(error);
+    } on FormatException {
+      throw const ApiException();
     }
   }
 
-  Future<List<IpAccount>> list({
+  Future<ListPage<IpAccount>> list({
     String status = 'active',
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) => _request(() async {
-    final items = await _pages(
-      (page) => _api.ipAccountsPage(
-        status: status,
-        page: page,
-        cancelToken: cancelToken,
+    final data = await _api.ipAccountsPage(
+      status: status,
+      page: page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
+    );
+    return ListPage.fromJson(
+      data,
+      page: page,
+      pageSize: pageSize,
+      parse: (item) => IpAccount(
+        id: _id(item['id']),
+        title: _title(item),
+        description: _account(item).description,
+        isPaused: item['status'] != 'active',
       ),
     );
-    return [
-      for (final item in items)
-        IpAccount(
-          id: _id(item['id']),
-          title: _title(item),
-          description: _account(item).description,
-          isPaused: item['status'] != 'active',
-        ),
-    ];
   });
 
   Future<IpAccountHome> detail(String id, {CancelToken? cancelToken}) =>
@@ -177,16 +183,17 @@ class IpAccountRepository {
 
   Future<IpAccountResources> resources(
     IpAccountHome account, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) => _request(() async {
-    final items = await _pages(
-      (page) => _api.ipAccountArchives(
-        account.id,
-        page: page,
-        pageSize: 100,
-        cancelToken: cancelToken,
-      ),
+    final data = await _api.ipAccountArchives(
+      account.id,
+      page: page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
     );
+    final items = _items(data, page);
     final roles = <LibraryRole>[];
     for (final ref in account.residentRoles) {
       roles.add(
@@ -199,6 +206,8 @@ class IpAccountRepository {
       );
     }
     return IpAccountResources(
+      page: page,
+      pageCount: (data['pageInfo'] as Map)['pageCount'] as int,
       creations: [
         for (final item in items)
           if (item['status'] != 'archived') _creation(item),
@@ -207,22 +216,24 @@ class IpAccountRepository {
     );
   });
 
-  Future<List<LibraryRole>> availableRoles(
+  Future<ListPage<LibraryRole>> availableRoles(
     String category, {
+    int page = 1,
+    int pageSize = 20,
     CancelToken? cancelToken,
   }) => _request(() async {
-    final items = await _pages(
-      (page) => _api.listLibraryRoles(
-        category: category,
-        page: page,
-        pageSize: 100,
-        cancelToken: cancelToken,
-      ),
+    final data = await _api.listLibraryRoles(
+      category: category,
+      page: page,
+      pageSize: pageSize,
+      cancelToken: cancelToken,
     );
-    return items
-        .map(LibraryRole.fromJson)
-        .where((role) => role.canCreate)
-        .toList();
+    return ListPage<LibraryRole>.fromJson(
+      data,
+      page: page,
+      pageSize: pageSize,
+      parse: LibraryRole.fromJson,
+    ).where((role) => role.canCreate);
   });
 
   Future<void> saveProfile(
@@ -273,17 +284,6 @@ class IpAccountRepository {
     ),
   );
 
-  Future<List<Map<String, dynamic>>> _pages(
-    Future<Map<String, dynamic>> Function(int) load,
-  ) async {
-    final items = <Map<String, dynamic>>[];
-    for (var page = 1; ; page++) {
-      final result = await load(page);
-      items.addAll(_items(result, page));
-      if (!_hasMore(result, page)) return items;
-    }
-  }
-
   List<Map<String, dynamic>> _items(Map<String, dynamic> result, int page) {
     final list = result['list'];
     final info = result['pageInfo'];
@@ -301,8 +301,6 @@ class IpAccountRepository {
     ];
   }
 
-  bool _hasMore(Map<String, dynamic> result, int page) =>
-      page < (result['pageInfo'] as Map)['pageCount'];
   String _id(Object? value) {
     if (value == null || value.toString().isEmpty) throw const ApiException();
     return value.toString();

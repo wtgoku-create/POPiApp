@@ -271,14 +271,10 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (content.storyboard != null)
+                if (step.key == 'storyboard' || content.isStoryboard)
                   RoleStoryboardBody(
-                    storyboard: content.storyboard!,
-                    markdownBuilder: (text) => MarkdownMessage(
-                      text: text,
-                      compact: true,
-                      softLineBreak: true,
-                    ),
+                    body: content.body,
+                    style: ConversationCardTypography.body,
                   )
                 else
                   MarkdownMessage(text: content.body, compact: true),

@@ -58,7 +58,15 @@ class IpAccountCreation {
 }
 
 class IpAccountResources {
-  const IpAccountResources({this.creations = const [], this.roles = const []});
+  const IpAccountResources({
+    this.creations = const [],
+    this.roles = const [],
+    this.page = 1,
+    this.pageCount = 1,
+  });
   final List<IpAccountCreation> creations;
   final List<LibraryRole> roles;
+  final int page;
+  final int pageCount;
+  bool get hasMore => page < pageCount;
 }

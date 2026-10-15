@@ -301,10 +301,12 @@ class HomeTask {
                       .length)
               .clamp(0, 4),
   );
-  List<({String title, String body, String? mediaId})> get artifacts => [
+  List<({String kind, String title, String body, String? mediaId})>
+  get artifacts => [
     for (final step in steps)
       if (step['output'] is Map)
         (
+          kind: step['key']?.toString() ?? '',
           title:
               homeObject(step['output'])['title']?.toString() ??
               step['key'].toString(),

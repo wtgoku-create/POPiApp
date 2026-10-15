@@ -9,18 +9,20 @@ class ApplePaymentRepository {
 
   final NetworkApi api;
 
-  Future<List<AppleProductMapping>> products(String environment) async {
-    final items = await api.appleProducts(environment);
+  Future<List<AppleProductMapping>> products() async {
+    final items = await api.appleProducts();
     if (kDebugMode) {
       debugPrint(
-        'Apple catalog response: environment=$environment, '
-        'received=${items.length}, '
+        'Apple catalog response: received=${items.length}, '
         'enabled=${items.whereType<Map>().where((item) => item['enabled'] == true).length}',
       );
     }
     return items
         .whereType<Map>()
         .where((item) => item['enabled'] == true)
+        .where(
+          (item) => const {'subscription', 'points'}.contains(item['kind']),
+        )
         .map(
           (item) =>
               AppleProductMapping.fromJson(Map<String, Object?>.from(item)),
@@ -28,11 +30,8 @@ class ApplePaymentRepository {
         .toList();
   }
 
-  Future<Map<String, Object?>> preview(int versionId, String environment) =>
-      api.previewApplePurchase(
-        productVersionId: versionId,
-        environment: environment,
-      );
+  Future<Map<String, Object?>> preview(int versionId) =>
+      api.previewApplePurchase(productVersionId: versionId);
 
   Future<ApplePurchase> create(String quoteId) async =>
       ApplePurchase.fromJson(await api.createApplePurchase(quoteId));
