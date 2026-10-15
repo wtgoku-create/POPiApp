@@ -3,6 +3,8 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart';
 
+import '../../../shared/type/payment_type.dart';
+
 class AppleStoreProduct {
   const AppleStoreProduct(this.id, this.title, this.price);
   final String id;
@@ -39,19 +41,25 @@ abstract class ApplePaymentStore {
     return result;
   }
 
-  Future<bool> buy(
+  bool get purchaseInFlight => false;
+  Future<AppleStorePurchaseResult> buy(
     AppleStoreProduct product,
     String accountToken, {
     required bool consumable,
   });
   Future<List<AppleStoreTransaction>> unfinished();
+  Future<List<AppleStoreTransaction>> history();
   Future<List<AppleStoreTransaction>> restore();
   Future<void> finish(AppleStoreTransaction transaction);
 }
 
 class NativeApplePaymentStore extends ApplePaymentStore {
   InAppPurchase get _store => InAppPurchase.instance;
-  final _products = <String, ProductDetails>{};
+  // Provider replacement must not launch another sheet while native code waits.
+  static bool _purchaseInFlight = false;
+
+  @override
+  bool get purchaseInFlight => _purchaseInFlight;
 
   @override
   Stream<List<AppleStoreTransaction>> get updates => _store.purchaseStream.map(
@@ -99,29 +107,42 @@ class NativeApplePaymentStore extends ApplePaymentStore {
       }
       throw error;
     }
-    for (final product in response.productDetails) {
-      _products[product.id] = product;
-    }
     return response.productDetails
         .map((item) => AppleStoreProduct(item.id, item.title, item.price))
         .toList();
   }
 
   @override
-  Future<bool> buy(
+  Future<AppleStorePurchaseResult> buy(
     AppleStoreProduct product,
     String accountToken, {
     required bool consumable,
-  }) {
-    // The StoreKit 2 plugin forwards this UUID as appAccountToken.
-    final params = PurchaseParam(
-      productDetails: _products[product.id]!,
-      applicationUserName: accountToken,
-    );
-    // iOS requires autoConsume; StoreKit 2 still waits for our explicit finish.
-    return consumable
-        ? _store.buyConsumable(purchaseParam: params)
-        : _store.buyNonConsumable(purchaseParam: params);
+  }) async {
+    if (_purchaseInFlight) {
+      throw StateError('An Apple purchase call is already active');
+    }
+    _purchaseInFlight = true;
+    try {
+      // The generic plugin API discards cancellation/pending results. StoreKit 2
+      // handles product types natively and still requires our explicit finish.
+      final result = await SK2Product.purchase(
+        product.id,
+        options: SK2ProductPurchaseOptions(
+          appAccountToken: accountToken,
+          quantity: 1,
+        ),
+      );
+      return switch (result) {
+        SK2ProductPurchaseResult.success => AppleStorePurchaseResult.purchased,
+        SK2ProductPurchaseResult.unverified =>
+          AppleStorePurchaseResult.unverified,
+        SK2ProductPurchaseResult.userCancelled =>
+          AppleStorePurchaseResult.canceled,
+        SK2ProductPurchaseResult.pending => AppleStorePurchaseResult.pending,
+      };
+    } finally {
+      _purchaseInFlight = false;
+    }
   }
 
   AppleStoreTransaction _transaction(SK2Transaction item) =>
@@ -138,6 +159,10 @@ class NativeApplePaymentStore extends ApplePaymentStore {
       (await SK2Transaction.unfinishedTransactions())
           .map(_transaction)
           .toList();
+
+  @override
+  Future<List<AppleStoreTransaction>> history() async =>
+      (await SK2Transaction.transactions()).map(_transaction).toList();
 
   @override
   Future<List<AppleStoreTransaction>> restore() async {

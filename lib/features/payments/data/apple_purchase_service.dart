@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../../core/network/payment_exception.dart';
@@ -22,6 +23,7 @@ class ApplePurchaseService {
     this.retryInterval = const Duration(seconds: 15),
     this.verifyAttempts = 3,
     this.verifyInterval = const Duration(seconds: 1),
+    this.requestTimeout = const Duration(minutes: 2),
   });
 
   final ApplePaymentRepository repository;
@@ -32,12 +34,14 @@ class ApplePurchaseService {
   final Duration retryInterval;
   final int verifyAttempts;
   final Duration verifyInterval;
+  final Duration requestTimeout;
   StreamSubscription<List<AppleStoreTransaction>>? _subscription;
   Timer? _timer;
   Future<void> _operations = Future.value();
   Completer<StorePurchaseOutcome>? _active;
   PendingApplePurchase? _activeIntent;
   bool _busy = false;
+  bool _launchInFlight = false;
   bool _disposed = false;
   final _finished = <String>{};
   String? lastFailureMessage;
@@ -62,7 +66,9 @@ class ApplePurchaseService {
     confirm,
   }) async {
     if (!isSupported) return StorePurchaseOutcome.unavailable;
-    if (_busy) return StorePurchaseOutcome.processing;
+    if (_busy || _launchInFlight || store.purchaseInFlight) {
+      return StorePurchaseOutcome.processing;
+    }
     _busy = true;
     lastFailureMessage = null;
     PendingApplePurchase? pending;
@@ -78,8 +84,10 @@ class ApplePurchaseService {
           break;
         }
       }
-      if (pending?.storeRequested == true) {
-        return await _checkPending(pending!);
+      if (pending?.purchase != null) {
+        final result = await _checkPending(pending!);
+        if (result != null) return result;
+        pending = _saved(pending.quoteId);
       }
       AppleStoreProduct? product;
       if (pending == null) {
@@ -99,8 +107,10 @@ class ApplePurchaseService {
                   item.kind == kind,
             )
             .firstOrNull;
-        if (pending?.storeRequested == true) {
-          return await _checkPending(pending!);
+        if (pending?.purchase != null) {
+          final result = await _checkPending(pending!);
+          if (result != null) return result;
+          pending = _saved(pending.quoteId);
         }
         if (pending == null) {
           final quote = await repository.preview(mapping.id);
@@ -162,39 +172,38 @@ class ApplePurchaseService {
         return StorePurchaseOutcome.canceled;
       }
       if (_disposed) return StorePurchaseOutcome.processing;
-      pending = pending.withPurchase(intent, requested: true);
+      if (!confirmed) {
+        // A late transaction can arrive while the confirmation is visible.
+        final result = await _checkPending(pending);
+        if (result != null) return result;
+        final saved = _saved(pending.quoteId);
+        if (saved == null) return StorePurchaseOutcome.failed;
+        pending = saved;
+      }
+      pending = pending.withPurchase(
+        intent,
+        phase: ApplePurchasePhase.launching,
+      );
       await storage.save(pending);
       if (_disposed) return StorePurchaseOutcome.processing;
       final completer = Completer<StorePurchaseOutcome>();
       _active = completer;
       _activeIntent = pending;
-      final Future<bool> launch;
-      try {
-        launch = store.buy(
-          product,
-          intent.accountToken,
-          consumable:
-              kind == PaymentProductKind.points ||
-              intent.json['kind'] == 'upgrade',
-        );
-      } on AssertionError {
-        // Plugin argument assertions happen before a native request is sent.
-        await storage.save(pending.withPurchase(intent, requested: false));
-        return StorePurchaseOutcome.failed;
-      }
-      final started = await launch.timeout(const Duration(minutes: 2));
-      if (!started) {
-        await storage.save(pending.withPurchase(intent, requested: false));
-        return StorePurchaseOutcome.failed;
-      }
-      return await completer.future.timeout(
-        const Duration(minutes: 2),
+      _launchInFlight = true;
+      // Timeout releases the UI, not the native call. Its eventual result still
+      // updates the saved order, including cancellation after leaving the page.
+      final launch = _launch(pending, product, completer).whenComplete(() {
+        _launchInFlight = false;
+      });
+      return await launch.timeout(
+        requestTimeout,
         onTimeout: () => StorePurchaseOutcome.processing,
       );
     } on PaymentException catch (error) {
       lastFailureMessage = error.message;
       if (pending != null &&
-          !pending.storeRequested &&
+          pending.purchase == null &&
+          pending.phase == ApplePurchasePhase.ready &&
           error.data['purchase_id'] == null &&
           error.data['trade_no'] == null &&
           const {'4000', '4001', '4003', '4302'}.contains(error.code)) {
@@ -225,22 +234,172 @@ class ApplePurchaseService {
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   ).hasMatch(token);
 
-  Future<StorePurchaseOutcome> _checkPending(
+  PendingApplePurchase? _saved(String quoteId) =>
+      storage.readAll().where((item) => item.quoteId == quoteId).firstOrNull;
+
+  void _log(PendingApplePurchase pending, String event) {
+    if (kDebugMode) {
+      debugPrint('Apple purchase ${pending.purchase?.id}: $event');
+    }
+  }
+
+  Future<StorePurchaseOutcome> _launch(
+    PendingApplePurchase pending,
+    AppleStoreProduct product,
+    Completer<StorePurchaseOutcome> completer,
+  ) async {
+    try {
+      _log(pending, 'launching');
+      final result = await store.buy(
+        product,
+        pending.purchase!.accountToken,
+        consumable:
+            pending.kind == PaymentProductKind.points ||
+            pending.purchase!.json['kind'] == 'upgrade',
+      );
+      _log(pending, 'native result=${result.name}');
+      await _enqueueResult(() async {
+        final saved = _saved(pending.quoteId);
+        if (saved == null) return;
+        final phase = switch (result) {
+          AppleStorePurchaseResult.canceled ||
+          AppleStorePurchaseResult.notStarted => ApplePurchasePhase.ready,
+          AppleStorePurchaseResult.pending => ApplePurchasePhase.deferred,
+          _ => ApplePurchasePhase.verifying,
+        };
+        // A transaction callback may already have advanced to verification.
+        if (saved.phase != ApplePurchasePhase.verifying) {
+          await storage.save(saved.withPurchase(saved.purchase!, phase: phase));
+        }
+      });
+      if (_disposed) return StorePurchaseOutcome.processing;
+      if (completer.isCompleted) return await completer.future;
+      switch (result) {
+        case AppleStorePurchaseResult.canceled:
+          return StorePurchaseOutcome.canceled;
+        case AppleStorePurchaseResult.notStarted:
+          return StorePurchaseOutcome.failed;
+        case AppleStorePurchaseResult.pending:
+          return StorePurchaseOutcome.processing;
+        case AppleStorePurchaseResult.purchased:
+        case AppleStorePurchaseResult.unverified:
+          await _enqueueResult(_recoverTransactions);
+          if (completer.isCompleted) return await completer.future;
+          if (_active != completer) return StorePurchaseOutcome.processing;
+          return await completer.future.timeout(
+            requestTimeout,
+            onTimeout: () => StorePurchaseOutcome.processing,
+          );
+      }
+    } catch (error) {
+      final notStarted =
+          error is AssertionError ||
+          (error is PlatformException &&
+              error.code == 'storekit2_failed_to_fetch_product');
+      _log(
+        pending,
+        'native error=${error is PlatformException ? error.code : error.runtimeType}',
+      );
+      try {
+        await _enqueueResult(() async {
+          final saved = _saved(pending.quoteId);
+          if (saved == null || saved.phase == ApplePurchasePhase.verifying) {
+            return;
+          }
+          await storage.save(
+            saved.withPurchase(
+              saved.purchase!,
+              phase: notStarted
+                  ? ApplePurchasePhase.ready
+                  : ApplePurchasePhase.unknown,
+            ),
+          );
+        });
+      } catch (_) {
+        // Keep the persisted launching state for reconciliation on next entry.
+      }
+      if (completer.isCompleted) return await completer.future;
+      return notStarted
+          ? StorePurchaseOutcome.failed
+          : StorePurchaseOutcome.processing;
+    }
+  }
+
+  // Null allows a user-confirmed retry of the same unpaid order, or a new quote
+  // after the server has definitively closed the old order.
+  Future<StorePurchaseOutcome?> _checkPending(
     PendingApplePurchase pending,
   ) async {
-    await _enqueue(_recoverTransactions);
     final purchase = pending.purchase!;
+    var hasTransaction = false;
+    await _enqueueResult(() async {
+      final unfinished = await store.unfinished();
+      hasTransaction = unfinished.any(
+        (item) => item.productId == purchase.productId,
+      );
+      await _handleUpdates(unfinished);
+      if (_saved(pending.quoteId) != null) {
+        // Finished transactions can be absent from Transaction.unfinished.
+        final history = (await store.history())
+            .where((item) => _matches(purchase, item))
+            .toList();
+        hasTransaction = hasTransaction || history.isNotEmpty;
+        await _handleUpdates(history);
+      }
+    });
+    if (_disposed) return StorePurchaseOutcome.processing;
+    if (_saved(pending.quoteId) == null) return StorePurchaseOutcome.purchased;
     final state = await repository.query(purchase.id);
     if (_disposed ||
         state.id != purchase.id ||
         state.productId != purchase.productId ||
-        state.accountToken != purchase.accountToken ||
-        state.json['user_id'] != purchase.json['user_id'] ||
-        !state.completed) {
+        state.accountToken.toLowerCase() !=
+            purchase.accountToken.toLowerCase() ||
+        state.json['user_id'] != purchase.json['user_id']) {
       return StorePurchaseOutcome.processing;
     }
-    await _recordCompletion(pending.quoteId);
-    return StorePurchaseOutcome.purchased;
+    _log(
+      pending,
+      'reconciled payment=${state.json['payment_status']}, phase=${pending.phase.name}, transaction=$hasTransaction',
+    );
+    if (state.completed) {
+      // Reconciliation may already have removed the reference and refreshed.
+      if (_saved(pending.quoteId) != null) {
+        await _recordCompletion(pending.quoteId);
+      }
+      return StorePurchaseOutcome.purchased;
+    }
+    final saved = _saved(pending.quoteId);
+    if (saved == null ||
+        hasTransaction ||
+        saved.phase == ApplePurchasePhase.deferred ||
+        saved.phase == ApplePurchasePhase.verifying) {
+      return StorePurchaseOutcome.processing;
+    }
+    if (const {
+      'expired',
+      'canceled',
+      'cancelled',
+      'closed',
+    }.contains(state.json['payment_status'])) {
+      await storage.remove(pending.quoteId);
+      return null;
+    }
+    if (state.json['payment_status'] != 'pending_payment' ||
+        state.json['fulfillment_status'] != 'pending' ||
+        state.json['refund_status'] != 'none') {
+      return StorePurchaseOutcome.processing;
+    }
+    final expires = (state.json['expires_at'] as num?)?.toInt();
+    if (expires != null &&
+        expires <= DateTime.now().millisecondsSinceEpoch ~/ 1000) {
+      // Local time alone cannot authorize replacing a potentially paid order.
+      return StorePurchaseOutcome.failed;
+    }
+    await storage.save(
+      saved.withPurchase(state, phase: ApplePurchasePhase.ready),
+    );
+    return null;
   }
 
   Future<void> recover() => _enqueue(() async {
@@ -250,6 +409,20 @@ class ApplePurchaseService {
   Future<void> _recoverTransactions() async {
     if (!isSupported) return;
     await _handleUpdates(await store.unfinished());
+    final references = storage
+        .readAll()
+        .where(
+          (item) =>
+              item.purchase != null && item.phase != ApplePurchasePhase.ready,
+        )
+        .toList();
+    if (references.isEmpty || _disposed) return;
+    final history = (await store.history())
+        .where(
+          (item) => references.any((entry) => _matches(entry.purchase!, item)),
+        )
+        .toList();
+    await _handleUpdates(history);
   }
 
   Future<void> _handleUpdates(List<AppleStoreTransaction> items) async {
@@ -258,18 +431,11 @@ class ApplePurchaseService {
       try {
         switch (item.status) {
           case PurchaseStatus.pending:
-            if (item.productId == _activeIntent?.purchase?.productId) {
-              _complete(StorePurchaseOutcome.processing);
-            }
           case PurchaseStatus.canceled:
-            if (item.productId == _activeIntent?.purchase?.productId) {
-              await storage.remove(_activeIntent!.quoteId);
-              _complete(StorePurchaseOutcome.canceled);
-            }
           case PurchaseStatus.error:
-            if (item.productId == _activeIntent?.purchase?.productId) {
-              _complete(StorePurchaseOutcome.processing);
-            }
+            // These callbacks have no attempt identity. Use the native call's
+            // typed result so a late cancellation cannot clear another order.
+            break;
           case PurchaseStatus.purchased:
           case PurchaseStatus.restored:
             if (_finished.contains(item.id)) continue;
@@ -316,6 +482,12 @@ class ApplePurchaseService {
     AppleStoreTransaction item,
     PendingApplePurchase pending,
   ) async {
+    await storage.save(
+      pending.withPurchase(
+        pending.purchase!,
+        phase: ApplePurchasePhase.verifying,
+      ),
+    );
     if (item.jws.isEmpty) return false;
     for (var attempt = 0; attempt < verifyAttempts && !_disposed; attempt++) {
       try {
@@ -436,7 +608,7 @@ class ApplePurchaseService {
     return _operations;
   }
 
-  Future<bool> _enqueueResult(Future<bool> Function() action) {
+  Future<T> _enqueueResult<T>(Future<T> Function() action) {
     final result = _operations.then((_) => action());
     _operations = result.then<void>((_) {}, onError: (Object _) {});
     return result;

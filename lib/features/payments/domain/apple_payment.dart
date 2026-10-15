@@ -106,7 +106,7 @@ class PendingApplePurchase {
     this.productVersionId,
     this.grantPoints,
     this.purchase,
-    this.storeRequested = false,
+    this.phase = ApplePurchasePhase.ready,
   });
 
   final int businessId;
@@ -115,7 +115,7 @@ class PendingApplePurchase {
   final int? productVersionId;
   final int? grantPoints;
   final ApplePurchase? purchase;
-  final bool storeRequested;
+  final ApplePurchasePhase phase;
 
   factory PendingApplePurchase.fromJson(Map<String, Object?> json) =>
       PendingApplePurchase(
@@ -129,19 +129,27 @@ class PendingApplePurchase {
                 Map<String, Object?>.from(json['purchase'] as Map),
               )
             : null,
-        storeRequested: json['storeRequested'] == true,
+        phase:
+            ApplePurchasePhase.values
+                .where((value) => value.name == json['phase'])
+                .firstOrNull ??
+            (json.containsKey('phase') || json['storeRequested'] == true
+                ? ApplePurchasePhase.unknown
+                : ApplePurchasePhase.ready),
       );
 
-  PendingApplePurchase withPurchase(ApplePurchase value, {bool? requested}) =>
-      PendingApplePurchase(
-        businessId: businessId,
-        kind: kind,
-        quoteId: quoteId,
-        productVersionId: productVersionId,
-        grantPoints: grantPoints,
-        purchase: value,
-        storeRequested: requested ?? storeRequested,
-      );
+  PendingApplePurchase withPurchase(
+    ApplePurchase value, {
+    ApplePurchasePhase? phase,
+  }) => PendingApplePurchase(
+    businessId: businessId,
+    kind: kind,
+    quoteId: quoteId,
+    productVersionId: productVersionId,
+    grantPoints: grantPoints,
+    purchase: value,
+    phase: phase ?? this.phase,
+  );
 
   Map<String, Object?> toJson() => {
     'businessId': businessId,
@@ -150,6 +158,6 @@ class PendingApplePurchase {
     'productVersionId': productVersionId,
     'grantPoints': grantPoints,
     'purchase': purchase?.json,
-    'storeRequested': storeRequested,
+    'phase': phase.name,
   };
 }

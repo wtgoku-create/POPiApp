@@ -157,7 +157,9 @@ Debug 默认使用本机调试签名，真机登录前需要在平台配置相�
   `app_account_token`，验单提交完整交易 JWS。会员是固定期限商品，不代表已接入自动续订。
 - 只有 `payment_status=paid`、`fulfillment_status=completed`、`refund_status=none`
   同时满足才刷新会员和积分。启动与恢复前台会处理未完成交易；网络异常保留原订单，
-  不自动重放 Android 建单，也不重新购买 Apple 交易。
+  不自动重放 Android 建单，也不自动发起 Apple 支付。Apple 调用中断后，再次点击会先核对
+  原订单、未完成交易和匹配的历史交易，再经用户确认继续原订单；明确待确认或待验单的交易
+  不会重新发起支付。原生调用超时后保留并发锁，并继续接收迟到的取消或成功结果。
 
 真机联调需要已登录的业务账号。Android 微信开放平台包名、签名和支付 App ID 必须匹配；
 iOS 的 Bundle ID、App Store Connect 商品及网关映射必须一致，Sandbox 用户需加入网关允许名单。

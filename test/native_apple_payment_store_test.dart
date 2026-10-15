@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,7 @@ import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:in_app_purchase_storekit/src/sk2_pigeon.g.dart' as pigeon;
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart';
 import 'package:popi_ai_app/features/payments/data/apple_payment_store.dart';
+import 'package:popi_ai_app/shared/type/payment_type.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -88,7 +91,7 @@ void main() {
         expect(product, isNotNull);
         expect(
           await store.buy(product!, accountToken, consumable: consumable),
-          isTrue,
+          AppleStorePurchaseResult.purchased,
         );
         expect(launches, 1);
         expect(finished, isEmpty);
@@ -103,4 +106,48 @@ void main() {
       },
     );
   }
+
+  for (final result in {
+    pigeon.SK2ProductPurchaseResultMessage.userCancelled:
+        AppleStorePurchaseResult.canceled,
+    pigeon.SK2ProductPurchaseResultMessage.pending:
+        AppleStorePurchaseResult.pending,
+    pigeon.SK2ProductPurchaseResultMessage.unverified:
+        AppleStorePurchaseResult.unverified,
+  }.entries) {
+    test(
+      'preserves native ${result.key.name} without a stream callback',
+      () async {
+        mock('purchase', (_) async => [result.key]);
+        expect(
+          await NativeApplePaymentStore().buy(
+            const AppleStoreProduct(productId, 'Points', 'HK\$38'),
+            accountToken,
+            consumable: true,
+          ),
+          result.value,
+        );
+      },
+    );
+  }
+
+  test(
+    'a new store instance cannot launch while the previous call waits',
+    () async {
+      final response = Completer<Object?>();
+      mock('purchase', (_) => response.future);
+      final first = NativeApplePaymentStore();
+      final second = NativeApplePaymentStore();
+      const product = AppleStoreProduct(productId, 'Points', 'HK\$38');
+      final pending = first.buy(product, accountToken, consumable: true);
+      expect(second.purchaseInFlight, isTrue);
+      await expectLater(
+        second.buy(product, accountToken, consumable: true),
+        throwsStateError,
+      );
+      response.complete([pigeon.SK2ProductPurchaseResultMessage.userCancelled]);
+      expect(await pending, AppleStorePurchaseResult.canceled);
+      expect(second.purchaseInFlight, isFalse);
+    },
+  );
 }

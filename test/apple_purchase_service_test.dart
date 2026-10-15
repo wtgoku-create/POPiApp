@@ -63,6 +63,9 @@ class _Store extends ApplePaymentStore {
   bool launchAccepted = true;
   bool rejectArguments = false;
   Object? launchFailure;
+  Completer<AppleStorePurchaseResult>? pendingLaunch;
+  List<AppleStoreTransaction> historyTransactions = [];
+  Object? historyFailure;
 
   @override
   Stream<List<AppleStoreTransaction>> get updates => controller.stream;
@@ -77,7 +80,7 @@ class _Store extends ApplePaymentStore {
   }
 
   @override
-  Future<bool> buy(
+  Future<AppleStorePurchaseResult> buy(
     AppleStoreProduct product,
     String accountToken, {
     required bool consumable,
@@ -87,16 +90,29 @@ class _Store extends ApplePaymentStore {
     purchasedProducts.add(product.id);
     this.consumable = consumable;
     if (launchFailure != null) return Future.error(launchFailure!);
-    if (!launchAccepted) return Future.value(false);
+    if (pendingLaunch != null) return pendingLaunch!.future;
+    if (!launchAccepted) {
+      return Future.value(AppleStorePurchaseResult.notStarted);
+    }
     if (next != null) {
       transactions = next!.status == PurchaseStatus.purchased ? [next!] : [];
       controller.add([next!]);
     }
-    return Future.value(true);
+    return Future.value(switch (next?.status) {
+      PurchaseStatus.canceled => AppleStorePurchaseResult.canceled,
+      PurchaseStatus.pending => AppleStorePurchaseResult.pending,
+      _ => AppleStorePurchaseResult.purchased,
+    });
   }
 
   @override
   Future<List<AppleStoreTransaction>> unfinished() async => [...transactions];
+  @override
+  Future<List<AppleStoreTransaction>> history() async {
+    if (historyFailure != null) throw historyFailure!;
+    return [...historyTransactions];
+  }
+
   @override
   Future<List<AppleStoreTransaction>> restore() async => [...transactions];
   @override
@@ -136,18 +152,21 @@ class _Harness {
   int refreshes = 0;
   PendingApplePurchaseStorage get storage =>
       PendingApplePurchaseStorage(PreferencesStorage(preferences), '1');
-  ApplePurchaseService service({PendingApplePurchaseStorage? pendingStorage}) =>
-      ApplePurchaseService(
-        repository: ApplePaymentRepository(NetworkApi(dio)),
-        storage: pendingStorage ?? storage,
-        store: store,
-        supported: true,
-        retryInterval: const Duration(days: 1),
-        verifyInterval: Duration.zero,
-        onCompleted: () async {
-          refreshes++;
-        },
-      );
+  ApplePurchaseService service({
+    PendingApplePurchaseStorage? pendingStorage,
+    Duration requestTimeout = const Duration(minutes: 2),
+  }) => ApplePurchaseService(
+    repository: ApplePaymentRepository(NetworkApi(dio)),
+    storage: pendingStorage ?? storage,
+    store: store,
+    supported: true,
+    retryInterval: const Duration(days: 1),
+    verifyInterval: Duration.zero,
+    requestTimeout: requestTimeout,
+    onCompleted: () async {
+      refreshes++;
+    },
+  );
   Object? _response(RequestOptions request) {
     if (request.path.endsWith('/products')) {
       return [
@@ -177,10 +196,15 @@ class _Harness {
           {'index': index, 'success': true, 'data': _purchase()},
       ];
     }
+    if (request.path.endsWith('/purchase-1')) {
+      return _purchase(payment: 'pending_payment', fulfillment: 'pending');
+    }
     return _purchase();
   }
 
-  Future<void> persist({bool requested = true}) => storage.save(
+  Future<void> persist({
+    ApplePurchasePhase phase = ApplePurchasePhase.unknown,
+  }) => storage.save(
     PendingApplePurchase(
       businessId: 1,
       productVersionId: 101,
@@ -189,7 +213,7 @@ class _Harness {
       purchase: ApplePurchase.fromJson(
         _purchase(payment: 'pending_payment', fulfillment: 'pending'),
       ),
-      storeRequested: requested,
+      phase: phase,
     ),
   );
 }
@@ -293,7 +317,7 @@ void main() {
         h.store.launchAccepted = rejection != 'not started';
         expect(await buy(), StorePurchaseOutcome.failed);
         final pending = h.storage.readAll().single;
-        expect(pending.storeRequested, isFalse);
+        expect(pending.phase, ApplePurchasePhase.ready);
         expect(pending.purchase?.id, 'purchase-1');
         expect(h.store.finished, isEmpty);
 
@@ -325,16 +349,313 @@ void main() {
   }
 
   test(
-    'an uncertain native failure stays pending without launching again',
+    'an interrupted native call reconciles and retries the same unpaid intent',
     () async {
       h.store.launchFailure = StateError('Native response lost');
       expect(await buy(), StorePurchaseOutcome.processing);
-      expect(h.storage.readAll().single.storeRequested, isTrue);
-      h.response = (_) =>
-          _purchase(payment: 'pending_payment', fulfillment: 'pending');
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.unknown);
+      h.store.launchFailure = null;
+      var confirmed = false;
+      expect(
+        await buy(
+          confirm: (_, _) async {
+            confirmed = true;
+            expect(h.requests.last.path.endsWith('/purchase-1'), isTrue);
+            return true;
+          },
+        ),
+        StorePurchaseOutcome.purchased,
+      );
+      expect(confirmed, isTrue);
+      expect(h.store.purchases, [_token, _token]);
+      expect(
+        h.requests.where((r) => r.path.endsWith('/purchases')),
+        hasLength(1),
+      );
+    },
+  );
+
+  for (final phase in [
+    ApplePurchasePhase.launching,
+    ApplePurchasePhase.unknown,
+  ]) {
+    test(
+      'restart reconciles $phase and reopens payment after confirmation',
+      () async {
+        await h.persist(phase: phase);
+        await service.dispose();
+        service = h.service()..start();
+        await service.recover();
+        expect(h.store.purchases, isEmpty);
+        expect(
+          await buy(confirm: (_, _) async => false),
+          StorePurchaseOutcome.canceled,
+        );
+        expect(h.store.purchases, isEmpty);
+        expect(await buy(), StorePurchaseOutcome.purchased);
+        expect(h.store.purchases, [_token]);
+        expect(
+          h.requests.any(
+            (r) => r.path.endsWith('/preview') || r.path.endsWith('/purchases'),
+          ),
+          isFalse,
+        );
+      },
+    );
+  }
+
+  test(
+    'legacy requested flag migrates to unknown and can resume the old order',
+    () async {
+      await h.persist();
+      final legacy = h.storage.readAll().single.toJson()
+        ..remove('phase')
+        ..['storeRequested'] = true;
+      final migrated = PendingApplePurchase.fromJson(legacy);
+      expect(migrated.phase, ApplePurchasePhase.unknown);
+      await h.storage.save(migrated);
+      expect(await buy(), StorePurchaseOutcome.purchased);
+      expect(h.store.purchases, [_token]);
+      expect(h.requests.any((r) => r.path.endsWith('/purchases')), isFalse);
+    },
+  );
+
+  test('all payment phases persist and ready is the initial state', () async {
+    final initial = PendingApplePurchase(
+      businessId: 1,
+      kind: PaymentProductKind.subscription,
+      quoteId: 'quote-1',
+    );
+    expect(initial.phase, ApplePurchasePhase.ready);
+    for (final phase in ApplePurchasePhase.values) {
+      await h.persist(phase: phase);
+      expect(h.storage.readAll().single.phase, phase);
+    }
+    await h.storage.remove('quote-1');
+    expect(h.storage.readAll(), isEmpty);
+  });
+
+  test('native timeout keeps the lock and records late cancellation', () async {
+    await service.dispose();
+    service = h.service(requestTimeout: const Duration(milliseconds: 10))
+      ..start();
+    final native = Completer<AppleStorePurchaseResult>();
+    h.store.pendingLaunch = native;
+    expect(await buy(), StorePurchaseOutcome.processing);
+    expect(h.storage.readAll().single.phase, ApplePurchasePhase.launching);
+    expect(await buy(), StorePurchaseOutcome.processing);
+    expect(h.store.purchases, hasLength(1));
+    native.complete(AppleStorePurchaseResult.canceled);
+    // Drain the serialized late result before making the next attempt.
+    await Future<void>.delayed(Duration.zero);
+    await service.recover();
+    expect(h.storage.readAll().single.phase, ApplePurchasePhase.ready);
+    h.store.pendingLaunch = null;
+    expect(await buy(), StorePurchaseOutcome.purchased);
+    expect(h.store.purchases, hasLength(2));
+    expect(
+      h.requests.where((r) => r.path.endsWith('/purchases')),
+      hasLength(1),
+    );
+  });
+
+  test(
+    'late cancellation after disposal still repairs the old account reference',
+    () async {
+      final native = Completer<AppleStorePurchaseResult>();
+      h.store.pendingLaunch = native;
+      final first = buy();
+      while (h.store.purchases.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      await service.dispose();
+      native.complete(AppleStorePurchaseResult.canceled);
+      expect(await first, StorePurchaseOutcome.processing);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.ready);
+      expect(h.refreshes, 0);
+    },
+  );
+
+  test(
+    'late success after timeout is verified and clears the saved attempt',
+    () async {
+      await service.dispose();
+      service = h.service(requestTimeout: const Duration(milliseconds: 10))
+        ..start();
+      final native = Completer<AppleStorePurchaseResult>();
+      h.store.pendingLaunch = native;
       expect(await buy(), StorePurchaseOutcome.processing);
+      h.store.transactions = [_transaction()];
+      native.complete(AppleStorePurchaseResult.purchased);
+      await Future<void>.delayed(Duration.zero);
+      await service.recover();
+      expect(h.store.finished, ['10']);
+      expect(h.storage.readAll(), isEmpty);
       expect(h.store.purchases, hasLength(1));
-      expect(h.store.finished, isEmpty);
+    },
+  );
+
+  test(
+    'unknown order checks finished transaction history before reopening payment',
+    () async {
+      await h.persist();
+      h.store.historyTransactions = [_transaction()];
+      h.response = (request) => request.path.endsWith('/purchase-1')
+          ? _purchase()
+          : h._response(request);
+      expect(await buy(), StorePurchaseOutcome.purchased);
+      expect(h.store.purchases, isEmpty);
+      expect(h.store.finished, ['10']);
+      expect(h.storage.readAll(), isEmpty);
+    },
+  );
+
+  test(
+    'a history transaction with failed verification cannot be purchased again',
+    () async {
+      await h.persist();
+      h.store.historyTransactions = [_transaction()];
+      h.response = (request) {
+        if (request.path.endsWith('/verify')) {
+          throw DioException(
+            requestOptions: request,
+            type: DioExceptionType.receiveTimeout,
+          );
+        }
+        return h._response(request);
+      };
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.verifying);
+      expect(h.store.purchases, isEmpty);
+      h.response = null;
+      await service.recover();
+      expect(h.storage.readAll(), isEmpty);
+      expect(h.store.finished, ['10']);
+      expect(h.store.purchases, isEmpty);
+    },
+  );
+
+  test(
+    'history failure preserves unknown state and prevents another native call',
+    () async {
+      await h.persist();
+      h.store.historyFailure = StateError('StoreKit unavailable');
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.unknown);
+    },
+  );
+
+  test(
+    'old order query failure preserves the reference without another charge',
+    () async {
+      await h.persist();
+      h.response = (request) {
+        if (request.path.endsWith('/purchase-1')) {
+          throw DioException(
+            requestOptions: request,
+            type: DioExceptionType.receiveTimeout,
+          );
+        }
+        return h._response(request);
+      };
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.unknown);
+    },
+  );
+
+  test(
+    'a finished transaction arriving during confirmation prevents relaunch',
+    () async {
+      await h.persist();
+      var delivered = false;
+      h.response = (request) =>
+          request.path.endsWith('/purchase-1') && delivered
+          ? _purchase()
+          : h._response(request);
+      expect(
+        await buy(
+          confirm: (_, _) async {
+            h.store.historyTransactions = [_transaction()];
+            delivered = true;
+            return true;
+          },
+        ),
+        StorePurchaseOutcome.purchased,
+      );
+      expect(h.store.purchases, isEmpty);
+      expect(h.store.finished, ['10']);
+    },
+  );
+
+  for (final state in [
+    _purchase(fulfillment: 'pending'),
+    _purchase(
+      payment: 'pending_payment',
+      fulfillment: 'pending',
+      refund: 'refunded',
+    ),
+    _purchase(
+      payment: 'pending_payment',
+      fulfillment: 'pending',
+      userId: 'other',
+    ),
+  ]) {
+    test('an ineligible old order is not relaunched: $state', () async {
+      await h.persist();
+      h.response = (request) =>
+          request.path.endsWith('/purchase-1') ? state : h._response(request);
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll(), hasLength(1));
+    });
+  }
+
+  for (final phase in [
+    ApplePurchasePhase.deferred,
+    ApplePurchasePhase.verifying,
+  ]) {
+    test('$phase survives restart without reopening Apple payment', () async {
+      await h.persist(phase: phase);
+      await service.dispose();
+      service = h.service()..start();
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll().single.phase, phase);
+    });
+  }
+
+  test(
+    'a definitively expired old order permits a new quote after reconciliation',
+    () async {
+      await h.persist();
+      h.response = (request) => request.path.endsWith('/purchase-1')
+          ? _purchase(payment: 'expired', fulfillment: 'pending')
+          : h._response(request);
+      expect(await buy(), StorePurchaseOutcome.purchased);
+      expect(
+        h.requests.where((r) => r.path.endsWith('/preview')),
+        hasLength(1),
+      );
+      expect(h.store.purchases, hasLength(1));
+    },
+  );
+
+  test(
+    'local expiry alone cannot replace an unresolved server order',
+    () async {
+      await h.persist();
+      h.response = (request) => request.path.endsWith('/purchase-1')
+          ? {
+              ..._purchase(payment: 'pending_payment', fulfillment: 'pending'),
+              'expires_at': 1,
+            }
+          : h._response(request);
+      expect(await buy(), StorePurchaseOutcome.failed);
+      expect(h.store.purchases, isEmpty);
+      expect(h.storage.readAll(), hasLength(1));
     },
   );
 
@@ -536,12 +857,21 @@ void main() {
     },
   );
 
-  test('StoreKit cancellation clears the local intent', () async {
-    h.store.next = _transaction(status: PurchaseStatus.canceled);
-    expect(await buy(), StorePurchaseOutcome.canceled);
-    expect(h.storage.readAll(), isEmpty);
-    expect(h.store.finished, isEmpty);
-  });
+  test(
+    'StoreKit cancellation keeps the order available for confirmed retry',
+    () async {
+      h.store.next = _transaction(status: PurchaseStatus.canceled);
+      expect(await buy(), StorePurchaseOutcome.canceled);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.ready);
+      expect(h.store.finished, isEmpty);
+      h.store.next = _transaction();
+      expect(await buy(), StorePurchaseOutcome.purchased);
+      expect(
+        h.requests.where((r) => r.path.endsWith('/purchases')),
+        hasLength(1),
+      );
+    },
+  );
 
   test(
     'verification timeout retries the exact purchase and JWS without charging twice',
@@ -649,7 +979,7 @@ void main() {
         h.requests.where((item) => item.path.endsWith('/purchases')),
         hasLength(1),
       );
-      expect(h.storage.readAll().single.storeRequested, isTrue);
+      expect(h.storage.readAll().single.phase, ApplePurchasePhase.deferred);
     },
   );
 
@@ -752,6 +1082,9 @@ void main() {
     'completed order queries clear references after StoreKit already finished',
     () async {
       await h.persist();
+      h.response = (request) => request.path.endsWith('/purchase-1')
+          ? _purchase()
+          : h._response(request);
       expect(await buy(), StorePurchaseOutcome.purchased);
       expect(h.storage.readAll(), isEmpty);
       expect(h.store.purchases, isEmpty);
