@@ -284,10 +284,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(
-      find.descendant(
-        of: find.byType(Dialog),
-        matching: find.text('确认支付'),
-      ).last,
+      find
+          .descendant(of: find.byType(Dialog), matching: find.text('确认支付'))
+          .last,
     );
     await tester.pumpAndSettle();
     expect(

@@ -114,12 +114,16 @@ class HomeCreationWelcome extends StatelessWidget {
                 child: Column(
                   children: [
                     for (var i = 0; i < entries.length; i++) ...[
-                      _CreationEntry(
-                        index: i,
-                        label: entries[i].$1,
-                        icon: entries[i].$2,
-                        iconBackground: entries[i].$3,
-                        onTap: () => onStart(entries[i].$1),
+                      Semantics(
+                        button: true,
+                        enabled: i < 2,
+                        child: _CreationEntry(
+                          index: i,
+                          label: entries[i].$1,
+                          icon: entries[i].$2,
+                          iconBackground: entries[i].$3,
+                          onTap: i < 2 ? () => onStart(entries[i].$1) : null,
+                        ),
                       ),
                       if (i < entries.length - 1) const SizedBox(height: 10),
                     ],
@@ -147,12 +151,16 @@ class _CreationEntry extends StatelessWidget {
   final String label;
   final String icon;
   final Color iconBackground;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final enabled = onTap != null;
+    final foreground = enabled
+        ? colors.onSurface
+        : colors.onSurface.withValues(alpha: .38);
     return Material(
       color: dark
           ? colors.surfaceContainerHigh
@@ -172,18 +180,24 @@ class _CreationEntry extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: iconBackground,
+                    color: enabled
+                        ? iconBackground
+                        : colors.onSurface.withValues(alpha: .08),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: AppSvgIcon.asset(icon, size: 20),
+                  child: AppSvgIcon.asset(
+                    icon,
+                    size: 20,
+                    color: enabled ? null : foreground,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: colors.onSurface,
+                      color: foreground,
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       height: 1.4,
@@ -197,7 +211,7 @@ class _CreationEntry extends StatelessWidget {
                     child: AppSvgIcon.asset(
                       'home_welcome_chevron',
                       size: 13,
-                      color: colors.onSurface,
+                      color: foreground,
                     ),
                   ),
                 ),

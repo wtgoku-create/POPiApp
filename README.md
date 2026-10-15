@@ -77,7 +77,6 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | `AGENT_API_BASE_URL` | Agent 独立服务根地址，接口路径自身包含 `/api_agent` |
 | `AGENT_API_ORIGIN` | 可选 Origin，原生 App 留空；配置值必须在后台白名单中 |
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
-| `APPLE_PAYMENT_ENVIRONMENT` | Apple 网关环境：开发为 `Sandbox`，生产为 `Production` |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
 | `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，默认 `https://app.popi.art/WeChat` |
 | `DOUYIN_CLIENT_KEY` | 抖音开放平台移动应用 Client Key |

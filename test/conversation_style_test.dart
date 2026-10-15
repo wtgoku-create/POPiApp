@@ -323,7 +323,7 @@ void main() {
         expect(action.bottom, lessThanOrEqualTo(card.bottom - 20));
       }
       expect(button.right, closeTo(card.right - 20, .01));
-      expect(button.top, closeTo(card.top + 24, .01));
+      expect(button.top, closeTo(card.top + 20, .01));
       expect(
         button.center.dx - tester.getCenter(previous).dx,
         closeTo(24, .01),

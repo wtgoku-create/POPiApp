@@ -168,16 +168,25 @@ class ApplePurchaseService {
       final completer = Completer<StorePurchaseOutcome>();
       _active = completer;
       _activeIntent = pending;
-      final started = await store
-          .buy(
-            product,
-            intent.accountToken,
-            consumable:
-                kind == PaymentProductKind.points ||
-                intent.json['kind'] == 'upgrade',
-          )
-          .timeout(const Duration(minutes: 2));
-      if (!started) _complete(StorePurchaseOutcome.processing);
+      final Future<bool> launch;
+      try {
+        launch = store.buy(
+          product,
+          intent.accountToken,
+          consumable:
+              kind == PaymentProductKind.points ||
+              intent.json['kind'] == 'upgrade',
+        );
+      } on AssertionError {
+        // Plugin argument assertions happen before a native request is sent.
+        await storage.save(pending.withPurchase(intent, requested: false));
+        return StorePurchaseOutcome.failed;
+      }
+      final started = await launch.timeout(const Duration(minutes: 2));
+      if (!started) {
+        await storage.save(pending.withPurchase(intent, requested: false));
+        return StorePurchaseOutcome.failed;
+      }
       return await completer.future.timeout(
         const Duration(minutes: 2),
         onTimeout: () => StorePurchaseOutcome.processing,

@@ -107,19 +107,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: Column(
           children: [
             SizedBox(height: topPadding),
-            _MembershipTopBar(
-              trailing: usesApplePayments
-                  ? TextButton(
-                      key: const Key('membership-restore-purchases'),
-                      onPressed: _isPurchasing ? null : _restorePurchases,
-                      child: Text(
-                        l10n.restorePurchases,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )
-                  : null,
-            ),
+            const _MembershipTopBar(),
             if (plans == null)
               const Expanded(
                 child: Center(
@@ -308,20 +296,6 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     }
   }
 
-  Future<void> _restorePurchases() async {
-    setState(() => _isPurchasing = true);
-    final succeeded = await ref.read(applePurchaseServiceProvider).restore();
-    if (!mounted) return;
-    setState(() => _isPurchasing = false);
-    final l10n = AppLocalizations.of(context)!;
-    if (succeeded) {
-      AppToast.success(context, l10n.restorePurchasesRequested);
-      await _loadPlans();
-    } else {
-      AppToast.error(context, l10n.appleRestoreIncomplete);
-    }
-  }
-
   Future<void> _showPurchaseOutcome(StorePurchaseOutcome outcome) async {
     final l10n = AppLocalizations.of(context)!;
     switch (outcome) {
@@ -352,9 +326,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
 }
 
 class _MembershipTopBar extends StatelessWidget {
-  const _MembershipTopBar({this.trailing});
-
-  final Widget? trailing;
+  const _MembershipTopBar();
 
   @override
   Widget build(BuildContext context) {
@@ -382,10 +354,6 @@ class _MembershipTopBar extends StatelessWidget {
                 ),
               ),
             ),
-            if (trailing != null)
-              Expanded(
-                child: Align(alignment: Alignment.centerRight, child: trailing),
-              ),
           ],
         ),
       ),

@@ -2109,12 +2109,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get membershipComingSoon => '会员开通功能即将上线';
 
   @override
-  String get restorePurchases => '恢复购买';
-
-  @override
-  String get appleRestoreIncomplete => '部分购买尚未恢复成功，请稍后重试';
-
-  @override
   String get paymentTitle => '确认支付';
 
   @override
@@ -2212,9 +2206,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appleProductIdMissing => '该商品尚未配置 Apple Product ID';
-
-  @override
-  String get restorePurchasesRequested => '已从账户同步购买记录和会员权益';
 
   @override
   String get membershipCurrentPlan => '当前计划';

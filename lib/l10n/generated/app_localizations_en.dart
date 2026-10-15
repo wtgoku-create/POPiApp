@@ -2203,13 +2203,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get membershipComingSoon => 'Membership purchases are coming soon';
 
   @override
-  String get restorePurchases => 'Restore purchases';
-
-  @override
-  String get appleRestoreIncomplete =>
-      'Some purchases could not be restored. Please try again later';
-
-  @override
   String get paymentTitle => 'Confirm payment';
 
   @override
@@ -2316,10 +2309,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get appleProductIdMissing =>
       'This item does not have an Apple Product ID';
-
-  @override
-  String get restorePurchasesRequested =>
-      'Purchases and membership benefits synced from your account';
 
   @override
   String get membershipCurrentPlan => 'Current plan';

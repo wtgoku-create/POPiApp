@@ -185,11 +185,16 @@ void main() {
   );
 
   testWidgets(
-    'creation entries open the IP guide or a session and return home',
+    'enabled creation entries require login and content entry stays disabled',
     (tester) async {
       final container = await pumpHome(tester);
       final router = container.read(routerProvider(false));
-      for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(LoginPage), findsNothing);
+      expect(find.byType(SessionPage), findsNothing);
+      for (var i = 0; i < 2; i++) {
         await tester.tap(find.byKey(Key('home-start-$i')));
         await tester.pumpAndSettle();
         expect(find.byType(LoginPage), findsOneWidget);
@@ -214,41 +219,30 @@ void main() {
   );
 
   testWidgets(
-    'creation entries open the IP guide, role guide or a session and return home',
+    'enabled entries open guides and content entry stays disabled after login',
     (tester) async {
       final container = await pumpHome(
         tester,
         user: const User(id: '1', name: '用户', email: ''),
       );
-      final prompts = ['做一个新IP账号', '从创建角色开始', '从选题/内容/脚本开始'];
-      for (var i = 0; i < prompts.length; i++) {
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(SessionPage), findsNothing);
+      for (var i = 0; i < 2; i++) {
         await tester.tap(find.byKey(Key('home-start-$i')));
         await tester.pumpAndSettle();
         if (i == 0) {
           expect(find.byType(IpGuidePage), findsOneWidget);
           expect(find.byType(SessionPage), findsNothing);
           expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
-        } else if (i == 1) {
+        } else {
           expect(find.byType(RoleGuidePage), findsOneWidget);
           expect(find.byType(SessionPage), findsNothing);
-        } else {
-          final page = tester.widget<SessionPage>(find.byType(SessionPage));
-          expect(page.initialPrompt, prompts[i]);
-          expect(
-            tester
-                .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
-                .controller
-                .markdown,
-            prompts[i],
-          );
         }
         final router = container.read(routerProvider(false));
         expect(router.canPop(), isTrue);
-        if (i < 2) {
-          router.replace('/');
-        } else {
-          router.pop();
-        }
+        router.replace('/');
         await tester.pumpAndSettle();
         expect(find.byType(HomePage), findsOneWidget);
         expect(tester.takeException(), isNull);

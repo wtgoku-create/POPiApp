@@ -41,15 +41,12 @@ class ConversationCastCard extends StatelessWidget {
     if (blocks.isEmpty) return const SizedBox.shrink();
     if (blocks.length == 1) return ConversationRoleCard(block: blocks.single);
     final roles = blocks.map(ConversationRoleProfile.fromBlock).toList();
-    return Padding(
+    return LayoutBuilder(
       key: const Key('conversation-cast-summary'),
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: LayoutBuilder(
-        builder: (context, constraints) => RoleCastSummary(
-          cast: roles.map((role) => role.snapshotRole).toList(),
-          avatarOffset: constraints.maxWidth < 320 ? 16 : 22,
-          onViewProfiles: () => _showRoleProfiles(context, roles),
-        ),
+      builder: (context, constraints) => RoleCastSummary(
+        cast: roles.map((role) => role.snapshotRole).toList(),
+        avatarOffset: constraints.maxWidth < 320 ? 16 : 22,
+        onViewProfiles: () => _showRoleProfiles(context, roles),
       ),
     );
   }
@@ -80,14 +77,13 @@ class ConversationRoleCard extends StatelessWidget {
               ? l10n.chatRoleUpdated
               : l10n.chatRoleCreated
         : null;
-    return Container(
+    return SizedBox(
       key: Key(
         role.showProfileCard
             ? 'conversation-role-card'
             : 'conversation-role-summary',
       ),
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 4),
       child: TextButton(
         key: const Key('conversation-role-view-profile'),
         onPressed: role.published

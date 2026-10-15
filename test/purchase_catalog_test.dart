@@ -322,26 +322,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('iOS membership displays server annual price without StoreKit', (
-    tester,
-  ) async {
-    await pumpApplePage(tester, const MembershipPage());
-    expect(requests.single.path, '/api_client/trade/payment/apple/products');
-    expect(find.text('38'), findsOneWidget);
-    expect(find.text('每年'), findsOneWidget);
-    expect(find.text('积分/月'), findsNothing);
-    expect(find.text('¥'), findsOneWidget);
-    expect(find.text('立即购买'), findsOneWidget);
-    expect(
-      find.textContaining('Included courses', findRichText: true),
-      findsWidgets,
-    );
-    expect(
-      find.textContaining('Seedance 2.0', findRichText: true),
-      findsWidgets,
-    );
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+  testWidgets(
+    'iOS membership displays server annual price without StoreKit',
+    (tester) async {
+      await pumpApplePage(tester, const MembershipPage());
+      expect(requests.single.path, '/api_client/trade/payment/apple/products');
+      expect(find.text('38'), findsOneWidget);
+      expect(find.text('每年'), findsOneWidget);
+      expect(find.text('积分/月'), findsNothing);
+      expect(find.text('¥'), findsOneWidget);
+      expect(find.text('立即购买'), findsOneWidget);
+      expect(
+        find.textContaining('Included courses', findRichText: true),
+        findsWidgets,
+      );
+      expect(
+        find.textContaining('Seedance 2.0', findRichText: true),
+        findsWidgets,
+      );
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
 
   for (final width in [320.0, 390.0]) {
     testWidgets(

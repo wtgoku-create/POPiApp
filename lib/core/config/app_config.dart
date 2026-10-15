@@ -20,10 +20,6 @@ abstract final class AppConfig {
     'TEACHING_READER_URL',
     defaultValue: '$teachingCenterUrl/reader',
   );
-  static const applePaymentEnvironment = String.fromEnvironment(
-    'APPLE_PAYMENT_ENVIRONMENT',
-    defaultValue: 'Production',
-  );
   static const alipayPaymentEnvironment = String.fromEnvironment(
     'ALIPAY_PAYMENT_ENVIRONMENT',
     defaultValue: 'Production',

@@ -118,8 +118,9 @@ class NativeApplePaymentStore extends ApplePaymentStore {
       productDetails: _products[product.id]!,
       applicationUserName: accountToken,
     );
+    // iOS requires autoConsume; StoreKit 2 still waits for our explicit finish.
     return consumable
-        ? _store.buyConsumable(purchaseParam: params, autoConsume: false)
+        ? _store.buyConsumable(purchaseParam: params)
         : _store.buyNonConsumable(purchaseParam: params);
   }
 

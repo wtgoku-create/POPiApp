@@ -60,6 +60,9 @@ class _Store extends ApplePaymentStore {
   bool isAvailable = true;
   bool missingProduct = false;
   String? finishFailure;
+  bool launchAccepted = true;
+  bool rejectArguments = false;
+  Object? launchFailure;
 
   @override
   Stream<List<AppleStoreTransaction>> get updates => controller.stream;
@@ -78,15 +81,18 @@ class _Store extends ApplePaymentStore {
     AppleStoreProduct product,
     String accountToken, {
     required bool consumable,
-  }) async {
+  }) {
+    if (rejectArguments) throw AssertionError('Invalid purchase arguments');
     purchases.add(accountToken);
     purchasedProducts.add(product.id);
     this.consumable = consumable;
+    if (launchFailure != null) return Future.error(launchFailure!);
+    if (!launchAccepted) return Future.value(false);
     if (next != null) {
       transactions = next!.status == PurchaseStatus.purchased ? [next!] : [];
       controller.add([next!]);
     }
-    return true;
+    return Future.value(true);
   }
 
   @override
@@ -278,6 +284,59 @@ void main() {
     expect(h.storage.readAll(), isEmpty);
     expect(h.requests.any((item) => item.path.endsWith('/purchases')), isFalse);
   });
+
+  for (final rejection in ['arguments', 'not started']) {
+    test(
+      '$rejection fails and retries the same intent after confirmation',
+      () async {
+        h.store.rejectArguments = rejection == 'arguments';
+        h.store.launchAccepted = rejection != 'not started';
+        expect(await buy(), StorePurchaseOutcome.failed);
+        final pending = h.storage.readAll().single;
+        expect(pending.storeRequested, isFalse);
+        expect(pending.purchase?.id, 'purchase-1');
+        expect(h.store.finished, isEmpty);
+
+        h.store.rejectArguments = false;
+        h.store.launchAccepted = true;
+        var confirmations = 0;
+        expect(
+          await buy(
+            confirm: (_, _) async {
+              confirmations++;
+              return true;
+            },
+          ),
+          StorePurchaseOutcome.purchased,
+        );
+        expect(confirmations, 1);
+        expect(
+          h.requests.where((r) => r.path.endsWith('/preview')),
+          hasLength(1),
+        );
+        expect(
+          h.requests.where((r) => r.path.endsWith('/purchases')),
+          hasLength(1),
+        );
+        expect(h.store.finished, ['10']);
+        expect(h.storage.readAll(), isEmpty);
+      },
+    );
+  }
+
+  test(
+    'an uncertain native failure stays pending without launching again',
+    () async {
+      h.store.launchFailure = StateError('Native response lost');
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.storage.readAll().single.storeRequested, isTrue);
+      h.response = (_) =>
+          _purchase(payment: 'pending_payment', fulfillment: 'pending');
+      expect(await buy(), StorePurchaseOutcome.processing);
+      expect(h.store.purchases, hasLength(1));
+      expect(h.store.finished, isEmpty);
+    },
+  );
 
   test(
     'upgrade uses the quoted product for confirmation and payment',

@@ -1,6 +1,5 @@
 {
   "APP_ENV": "development",
-  "APPLE_PAYMENT_ENVIRONMENT": "Sandbox",
   "ALIPAY_PAYMENT_ENVIRONMENT": "Sandbox",
   "API_BASE_URL": "https://wwwtest.popi.art",
   "TEACHING_CENTER_URL": "https://wwwtest.popi.art/teaching",

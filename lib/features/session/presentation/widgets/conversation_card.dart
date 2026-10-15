@@ -22,7 +22,6 @@ class ConversationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.symmetric(vertical: 4),
     padding: framed ? const EdgeInsets.all(20) : EdgeInsets.zero,
     width: double.infinity,
     decoration: framed

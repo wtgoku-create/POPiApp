@@ -4075,18 +4075,6 @@ abstract class AppLocalizations {
   /// **'Membership purchases are coming soon'**
   String get membershipComingSoon;
 
-  /// No description provided for @restorePurchases.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore purchases'**
-  String get restorePurchases;
-
-  /// No description provided for @appleRestoreIncomplete.
-  ///
-  /// In en, this message translates to:
-  /// **'Some purchases could not be restored. Please try again later'**
-  String get appleRestoreIncomplete;
-
   /// No description provided for @paymentTitle.
   ///
   /// In en, this message translates to:
@@ -4278,12 +4266,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This item does not have an Apple Product ID'**
   String get appleProductIdMissing;
-
-  /// No description provided for @restorePurchasesRequested.
-  ///
-  /// In en, this message translates to:
-  /// **'Purchases and membership benefits synced from your account'**
-  String get restorePurchasesRequested;
 
   /// No description provided for @membershipCurrentPlan.
   ///
