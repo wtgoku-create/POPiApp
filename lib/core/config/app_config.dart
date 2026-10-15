@@ -24,6 +24,10 @@ abstract final class AppConfig {
     'APPLE_PAYMENT_ENVIRONMENT',
     defaultValue: 'Production',
   );
+  static const alipayPaymentEnvironment = String.fromEnvironment(
+    'ALIPAY_PAYMENT_ENVIRONMENT',
+    defaultValue: 'Production',
+  );
   static const agentApiBaseUrl = String.fromEnvironment(
     'AGENT_API_BASE_URL',
     defaultValue: apiBaseUrl,

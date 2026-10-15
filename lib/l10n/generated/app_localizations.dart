@@ -4291,6 +4291,12 @@ abstract class AppLocalizations {
   /// **'Current plan'**
   String get membershipCurrentPlan;
 
+  /// No description provided for @membershipBuyNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy now'**
+  String get membershipBuyNow;
+
   /// No description provided for @membershipAlreadyMember.
   ///
   /// In en, this message translates to:

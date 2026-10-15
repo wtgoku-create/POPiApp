@@ -2220,6 +2220,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get membershipCurrentPlan => '当前计划';
 
   @override
+  String get membershipBuyNow => '立即购买';
+
+  @override
   String membershipAlreadyMember(String level) {
     return '你已是$level';
   }

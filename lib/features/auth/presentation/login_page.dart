@@ -571,7 +571,7 @@ class _LoginDesignViewport extends StatelessWidget {
 
         return SingleChildScrollView(
           key: const Key('login-design-scroll-view'),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
           physics: needsScrolling
               ? const ClampingScrollPhysics()
               : const NeverScrollableScrollPhysics(),
@@ -652,6 +652,7 @@ class _PhoneLoginForm extends StatelessWidget {
                 child: TextField(
                   key: const Key('login-phone-field'),
                   controller: phoneController,
+                  contextMenuBuilder: _textFieldContextMenu,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.telephoneNumber],
@@ -675,6 +676,7 @@ class _PhoneLoginForm extends StatelessWidget {
                     ? TextField(
                         key: const Key('login-password-field'),
                         controller: passwordController,
+                        contextMenuBuilder: _textFieldContextMenu,
                         obscureText: !passwordVisible,
                         enableSuggestions: false,
                         autocorrect: false,
@@ -688,6 +690,7 @@ class _PhoneLoginForm extends StatelessWidget {
                     : TextField(
                         key: const Key('login-code-field'),
                         controller: codeController,
+                        contextMenuBuilder: _textFieldContextMenu,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done,
                         autofillHints: const [AutofillHints.oneTimeCode],
@@ -786,6 +789,14 @@ class _PhoneLoginForm extends StatelessWidget {
     enabledBorder: InputBorder.none,
     focusedBorder: InputBorder.none,
     contentPadding: EdgeInsets.zero,
+  );
+
+  static Widget _textFieldContextMenu(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) => AdaptiveTextSelectionToolbar.buttonItems(
+    anchors: editableTextState.contextMenuAnchors,
+    buttonItems: editableTextState.contextMenuButtonItems,
   );
 }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart';
@@ -80,8 +81,23 @@ class NativeApplePaymentStore extends ApplePaymentStore {
   Future<List<AppleStoreProduct>> products(Set<String> ids) async {
     if (ids.isEmpty) return const [];
     final response = await _store.queryProductDetails(ids);
-    if (response.error != null) {
-      throw StateError('StoreKit product query failed');
+    if (kDebugMode) {
+      debugPrint(
+        'StoreKit product query: requested=$ids, '
+        'returned=${response.productDetails.map((item) => item.id).toList()}, '
+        'notFound=${response.notFoundIDs}',
+      );
+    }
+    final error = response.error;
+    if (error != null) {
+      if (kDebugMode) {
+        debugPrint(
+          'StoreKit product query error: source=${error.source}, '
+          'code=${error.code}, message=${error.message}, '
+          'details=${error.details}',
+        );
+      }
+      throw error;
     }
     for (final product in response.productDetails) {
       _products[product.id] = product;

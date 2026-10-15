@@ -1,6 +1,7 @@
 {
   "APP_ENV": "production",
   "APPLE_PAYMENT_ENVIRONMENT": "Production",
+  "ALIPAY_PAYMENT_ENVIRONMENT": "Production",
   "API_BASE_URL": "https://www.popi.art",
   "TEACHING_CENTER_URL": "https://www.popi.art/teaching",
   "TEACHING_READER_URL": "https://www.popi.art/teaching/reader",

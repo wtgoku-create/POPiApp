@@ -7,7 +7,7 @@ import 'android_payment_sdk.dart';
 import 'payment_repository.dart';
 import 'pending_payment_storage.dart';
 
-/// Creates once, persists before switching apps, and only retries order queries.
+/// Tracks each payment attempt separately and reconciles saved orders.
 class AndroidPaymentService {
   AndroidPaymentService({
     required this.repository,
@@ -27,6 +27,7 @@ class AndroidPaymentService {
   final int pollAttempts;
   final Duration pollInterval;
   bool _busy = false;
+  bool _recovering = false;
   bool _disposed = false;
 
   bool get available => supported && !_disposed && storage.userId.isNotEmpty;
@@ -42,8 +43,6 @@ class AndroidPaymentService {
     _busy = true;
     PendingPayment? pending;
     try {
-      final previous = storage.read(product);
-      if (previous != null) return await check(previous);
       if (!await sdk.available(channel)) {
         return const PaymentResult(PaymentOutcome.failed);
       }
@@ -119,8 +118,8 @@ class AndroidPaymentService {
 
   /// Reconcile saved orders after launch/resume without creating new orders.
   Future<void> recover() async {
-    if (!available || _busy) return;
-    _busy = true;
+    if (!available || _recovering) return;
+    _recovering = true;
     try {
       for (final pending in storage.readAll()) {
         if (_disposed) break;
@@ -129,7 +128,7 @@ class AndroidPaymentService {
     } catch (_) {
       // Keep references so a later resume or checkout can retry reconciliation.
     } finally {
-      _busy = false;
+      _recovering = false;
     }
   }
 

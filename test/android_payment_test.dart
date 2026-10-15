@@ -211,27 +211,30 @@ void main() {
     expect(storage.read(_product)?.tradeNo, 'PTSUSR7');
   });
 
-  test('transport timeout is not replayed, including after restart', () async {
-    loseCreationResponse = true;
-    expect(
-      (await service.purchase(_product, PaymentChannel.alipay)).outcome,
-      PaymentOutcome.unknown,
-    );
-    final restored = PendingPaymentStorage(storage.preferences, 'user-1');
-    expect(restored.read(_product), isNotNull);
-    final restarted = AndroidPaymentService(
-      repository: PaymentRepository(api),
-      storage: restored,
-      sdk: sdk,
-      supported: true,
-    );
-    expect(
-      (await restarted.purchase(_product, PaymentChannel.alipay)).outcome,
-      PaymentOutcome.unknown,
-    );
-    expect(requests, hasLength(1));
-    expect(sdk.calls, 0);
-  });
+  test(
+    'transport timeout does not block a new attempt after restart',
+    () async {
+      loseCreationResponse = true;
+      expect(
+        (await service.purchase(_product, PaymentChannel.alipay)).outcome,
+        PaymentOutcome.unknown,
+      );
+      final restored = PendingPaymentStorage(storage.preferences, 'user-1');
+      expect(restored.read(_product), isNotNull);
+      final restarted = AndroidPaymentService(
+        repository: PaymentRepository(api),
+        storage: restored,
+        sdk: sdk,
+        supported: true,
+      );
+      expect(
+        (await restarted.purchase(_product, PaymentChannel.alipay)).outcome,
+        PaymentOutcome.unknown,
+      );
+      expect(requests.where((r) => r.method == 'POST'), hasLength(2));
+      expect(sdk.calls, 0);
+    },
+  );
 
   test(
     'failure responses preserve the created order and trigger queries only',
@@ -278,20 +281,56 @@ void main() {
         title: 'Membership',
         priceLabel: '¥60',
       );
+      await storage.save(
+        const PendingPayment(
+          product: subscription,
+          channel: PaymentChannel.wechat,
+          tradeNo: 'SUBUSR-old',
+        ),
+      );
       await service.purchase(subscription, PaymentChannel.alipay);
       expect(requests.first.path, '/api_client/trade/subscription/previewApp');
       expect(requests.first.data, {'subscriptionId': 4});
+      expect(
+        requests.where((r) => r.path.endsWith('/payByGatewayAppAliPay')),
+        hasLength(1),
+      );
     },
   );
 
   test(
-    'a query failure retains the reference without retrying creation',
+    'a query failure retains the reference and permits a new order',
     () async {
       queryUnavailable = true;
       await service.purchase(_product, PaymentChannel.alipay);
       await service.purchase(_product, PaymentChannel.alipay);
-      expect(requests.where((r) => r.method == 'POST'), hasLength(1));
+      expect(requests.where((r) => r.method == 'POST'), hasLength(2));
       expect(storage.read(_product)?.tradeNo, 'PTSUSR7');
+    },
+  );
+
+  test(
+    'an older order never blocks a new order for the same product',
+    () async {
+      const old = PendingPayment(
+        product: _product,
+        channel: PaymentChannel.wechat,
+        tradeNo: 'PTSUSR-old',
+      );
+      await storage.save(old);
+      state['payment_status'] = 'pending_payment';
+      state['fulfillment_status'] = 'pending';
+      final result = await service.purchase(_product, PaymentChannel.alipay);
+      expect(result.pending?.tradeNo, 'PTSUSR7');
+      expect(requests.where((r) => r.method == 'POST'), hasLength(1));
+      expect(
+        requests.any((r) => r.path.endsWith('/orders/PTSUSR-old')),
+        isFalse,
+      );
+      expect(storage.readAll().map((item) => item.tradeNo), [
+        'PTSUSR-old',
+        'PTSUSR7',
+      ]);
     },
   );
 

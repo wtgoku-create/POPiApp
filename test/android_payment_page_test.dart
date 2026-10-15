@@ -36,6 +36,12 @@ const _product = PaymentProduct(
   title: '600 积分包',
   priceLabel: '¥6.00',
 );
+const _subscription = PaymentProduct(
+  id: 7,
+  kind: PaymentProductKind.subscription,
+  title: 'Plus membership',
+  priceLabel: '¥6.00',
+);
 
 void main() {
   late SharedPreferences preferences;
@@ -44,19 +50,39 @@ void main() {
   final requests = <RequestOptions>[];
   var paid = false;
   var delivered = true;
+  String? createError;
+  String? previewError;
 
   setUp(() async {
+    toastification.managers.clear();
     SharedPreferences.setMockInitialValues({});
     preferences = await SharedPreferences.getInstance();
     sdk = FakePaymentSdk();
     requests.clear();
     paid = false;
     delivered = true;
+    createError = null;
+    previewError = null;
     final dio = Dio()
       ..interceptors.add(
         InterceptorsWrapper(
           onRequest: (request, handler) {
             requests.add(request);
+            final error = request.path.contains('payByGatewayApp')
+                ? createError
+                : request.path.endsWith('/previewApp')
+                ? previewError
+                : null;
+            if (error != null) {
+              handler.resolve(
+                Response(
+                  requestOptions: request,
+                  statusCode: 200,
+                  data: {'status': '4000', 'message': error, 'data': {}},
+                ),
+              );
+              return;
+            }
             handler.resolve(
               Response(
                 requestOptions: request,
@@ -93,6 +119,7 @@ void main() {
 
   Future<GoRouter> pump(
     WidgetTester tester, {
+    PaymentProduct product = _product,
     Size size = const Size(390, 844),
     Locale locale = const Locale('zh'),
     ThemeData? theme,
@@ -108,7 +135,7 @@ void main() {
         GoRoute(path: '/', builder: (_, __) => entry ?? const Scaffold()),
         GoRoute(
           path: '/payment',
-          builder: (_, __) => const AndroidPaymentPage(product: _product),
+          builder: (_, __) => AndroidPaymentPage(product: product),
         ),
         GoRoute(
           path: '/payment/android',
@@ -149,7 +176,7 @@ void main() {
   }
 
   testWidgets(
-    'selects Alipay and queries the existing order instead of creating again',
+    'selects Alipay and creates a new order on each payment attempt',
     (tester) async {
       await pump(tester);
       expect(find.byKey(const Key('payment-method-wechat')), findsOneWidget);
@@ -161,13 +188,115 @@ void main() {
         '/api_client/users/pointPackage/payByGatewayAppAliPay',
       );
       expect(find.text('再次查询'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('payment-confirm')),
+          matching: find.text('确认支付'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('PTSUSR7'), findsOneWidget);
       await tester.tap(find.byKey(const Key('payment-confirm')));
       await tester.pumpAndSettle();
-      expect(requests.where((r) => r.method == 'POST'), hasLength(1));
+      expect(requests.where((r) => r.method == 'POST'), hasLength(2));
       expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 4));
     },
   );
+
+  for (final product in [_product, _subscription]) {
+    testWidgets('${product.kind.name} cancellation clears checkout details', (
+      tester,
+    ) async {
+      sdk.outcome = PaymentSdkOutcome.canceled;
+      await pump(tester, product: product);
+
+      await tester.tap(find.byKey(const Key('payment-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('已取消支付，订单状态待确认'), findsNothing);
+      expect(find.text('PTSUSR7'), findsNothing);
+      expect(find.text('再次查询'), findsNothing);
+      expect(find.byKey(const Key('payment-confirm')), findsOneWidget);
+      expect(
+        requests.where((request) => request.path.contains('payByGatewayApp')),
+        hasLength(1),
+      );
+
+      await tester.tap(find.byKey(const Key('payment-confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        requests.where((request) => request.path.contains('payByGatewayApp')),
+        hasLength(2),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('${product.kind.name} payment errors use the top toast', (
+      tester,
+    ) async {
+      createError = 'record not found';
+      await pump(tester, product: product);
+
+      await tester.tap(find.byKey(const Key('payment-confirm')));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
+      expect(find.byKey(const Key('payment-status')), findsNothing);
+      expect(
+        find.text('record not found', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        toastification.managers[Alignment.topCenter]?.notifications,
+        hasLength(1),
+      );
+      expect(find.byKey(const Key('payment-confirm')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 4));
+    });
+  }
+
+  testWidgets('subscription preview errors allow retry through confirm', (
+    tester,
+  ) async {
+    previewError = 'preview unavailable';
+    await pump(tester, product: _subscription);
+
+    expect(
+      find.text('preview unavailable', skipOffstage: false),
+      findsOneWidget,
+    );
+    expect(
+      toastification.managers[Alignment.topCenter]?.notifications,
+      hasLength(1),
+    );
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('payment-confirm')))
+          .onPressed,
+      isNotNull,
+    );
+    previewError = null;
+    await tester.tap(find.byKey(const Key('payment-confirm')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.text('确认支付'),
+      ).last,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      requests.where((request) => request.path.contains('payByGatewayApp')),
+      hasLength(1),
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 4));
+  });
 
   testWidgets('keeps confirm disabled while the SDK is running', (
     tester,
@@ -185,46 +314,55 @@ void main() {
     );
     native.complete(PaymentSdkOutcome.unknown);
     await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
   });
 
   testWidgets(
-    'restores an unfinished order on page open without another SDK call',
+    'opens checkout ready for a new order despite an unfinished old order',
     (tester) async {
       await service.storage.save(
         const PendingPayment(
           product: _product,
           channel: PaymentChannel.alipay,
-          tradeNo: 'PTSUSR7',
+          tradeNo: 'PTSUSR-old',
         ),
       );
       await pump(tester);
-      expect(find.text('PTSUSR7'), findsOneWidget);
-      expect(requests.every((request) => request.method == 'GET'), isTrue);
+      expect(find.text('PTSUSR-old'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('payment-confirm')),
+          matching: find.text('确认支付'),
+        ),
+        findsOneWidget,
+      );
+      expect(requests, isEmpty);
       expect(sdk.calls, 0);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets(
-    'new purchase requires an explicit dialog and retains the old order',
-    (tester) async {
-      await service.storage.save(
-        const PendingPayment(
-          product: _product,
-          channel: PaymentChannel.alipay,
-          tradeNo: 'PTSUSR7',
-        ),
-      );
-      await pump(tester);
-      await tester.tap(find.text('重新购买'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('可能导致重复付款'), findsOneWidget);
-      await tester.tap(find.text('取消'));
-      await tester.pumpAndSettle();
-      expect(service.storage.read(_product), isNotNull);
-      expect(requests.where((r) => r.method == 'POST'), isEmpty);
-    },
-  );
+  testWidgets('creates a fresh order directly and keeps the old reference', (
+    tester,
+  ) async {
+    await service.storage.save(
+      const PendingPayment(
+        product: _product,
+        channel: PaymentChannel.alipay,
+        tradeNo: 'PTSUSR-old',
+      ),
+    );
+    await pump(tester);
+    expect(find.text('重新购买'), findsNothing);
+    await tester.tap(find.byKey(const Key('payment-confirm')));
+    await tester.pumpAndSettle();
+    expect(requests.where((r) => r.method == 'POST'), hasLength(1));
+    expect(service.storage.readAll().map((item) => item.tradeNo), [
+      'PTSUSR-old',
+      'PTSUSR7',
+    ]);
+    await tester.pump(const Duration(seconds: 4));
+  });
 
   for (final variant in [
     ('compact', const Size(320, 568), const Locale('en'), AppTheme.light),
@@ -296,7 +434,7 @@ void main() {
     expect(find.text('本次到账 3900 积分'), findsOneWidget);
   });
 
-  testWidgets('paid but undelivered orders only offer status checks', (
+  testWidgets('a paid but undelivered old order does not block checkout', (
     tester,
   ) async {
     paid = true;
@@ -309,9 +447,15 @@ void main() {
       ),
     );
     await pump(tester);
-    expect(find.text('再次查询'), findsOneWidget);
-    expect(find.text('重新购买'), findsNothing);
-    expect(requests.every((request) => request.method == 'GET'), isTrue);
+    expect(find.text('再次查询'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('payment-confirm')),
+        matching: find.text('确认支付'),
+      ),
+      findsOneWidget,
+    );
+    expect(requests, isEmpty);
     expect(sdk.calls, 0);
   });
 }

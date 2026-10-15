@@ -753,6 +753,7 @@
   "appleProductIdMissing": "This item does not have an Apple Product ID",
   "restorePurchasesRequested": "Purchases and membership benefits synced from your account",
   "membershipCurrentPlan": "Current plan",
+  "membershipBuyNow": "Buy now",
   "membershipAlreadyMember": "You're already {level}",
   "@membershipAlreadyMember": {"placeholders": {"level": {"type": "String"}}},
   "membershipPlansEmpty": "No membership plans available",

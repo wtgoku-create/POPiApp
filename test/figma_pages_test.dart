@@ -328,7 +328,7 @@ void main() {
     expect(logoutMenu, findsOneWidget);
   });
 
-  testWidgets('membership eligibility is checked by the server preview', (
+  testWidgets('membership buttons reflect the current member level', (
     tester,
   ) async {
     await pumpPage(
@@ -347,18 +347,25 @@ void main() {
     FilledButton button() => tester.widget<FilledButton>(
       find.byKey(const Key('membership-open-button')),
     );
-    expect(find.text('你已是Pro'), findsNothing);
-    expect(button().onPressed, isNotNull);
+    expect(find.text('你已是Pro'), findsOneWidget);
+    expect(button().onPressed, isNull);
+    await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('membership-plan-tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('你已是Pro'), findsOneWidget);
+    expect(button().onPressed, isNull);
     await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('membership-plan-tab-2')));
     await tester.pumpAndSettle();
-    expect(find.text('当前计划'), findsNothing);
-    expect(button().onPressed, isNotNull);
+    expect(find.text('当前计划'), findsOneWidget);
+    expect(button().onPressed, isNull);
     await tester.ensureVisible(find.byKey(const Key('membership-plan-tab-3')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('membership-plan-tab-3')));
     await tester.pumpAndSettle();
+    expect(find.text('立即购买'), findsOneWidget);
     expect(button().onPressed, isNotNull);
     await container
         .read(userProvider.notifier)

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fluwx/fluwx.dart';
 import 'package:fluwx/src/method_channel/fluwx_platform_interface.dart';
+import 'package:tobias/tobias.dart';
 
 import 'package:popi_ai_app/core/config/app_config.dart';
 import 'package:popi_ai_app/features/payments/data/android_payment_sdk.dart';
@@ -119,6 +120,30 @@ void main() {
       );
     },
   );
+
+  test('uses Alipay sandbox when configured for sandbox payments', () async {
+    const signed = 'app_id=sandbox&sign=xyz';
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      expect(call.method, 'pay');
+      expect((call.arguments as Map)['order'], signed);
+      expect((call.arguments as Map)['payEnv'], 1);
+      return {'resultStatus': '6001'};
+    });
+    final sandboxSdk = NativeAndroidPaymentSdk(
+      wechat: Fluwx(),
+      alipayEnvironment: AliPayEvn.sandbox,
+    );
+    expect(
+      await sandboxSdk.pay(
+        const MobilePaymentOrder(
+          tradeNo: 'ALI-SANDBOX',
+          channel: PaymentChannel.alipay,
+          orderString: signed,
+        ),
+      ),
+      PaymentSdkOutcome.canceled,
+    );
+  });
 
   testWidgets(
     'resume without callback reconciles and releases WeChat listener',

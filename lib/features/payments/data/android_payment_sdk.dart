@@ -17,12 +17,21 @@ abstract interface class AndroidPaymentSdk {
 }
 
 class NativeAndroidPaymentSdk implements AndroidPaymentSdk {
-  NativeAndroidPaymentSdk({Fluwx? wechat, Tobias? alipay})
-    : _wechat = wechat ?? _sharedWechat,
-      _alipay = alipay ?? Tobias();
+  NativeAndroidPaymentSdk({
+    Fluwx? wechat,
+    Tobias? alipay,
+    AliPayEvn? alipayEnvironment,
+  }) : _wechat = wechat ?? _sharedWechat,
+       _alipay = alipay ?? Tobias(),
+       _alipayEnvironment =
+           alipayEnvironment ??
+           (AppConfig.alipayPaymentEnvironment == 'Sandbox'
+               ? AliPayEvn.sandbox
+               : AliPayEvn.online);
 
   final Fluwx _wechat;
   final Tobias _alipay;
+  final AliPayEvn _alipayEnvironment;
   static final _sharedWechat = Fluwx();
 
   @override
@@ -83,7 +92,7 @@ class NativeAndroidPaymentSdk implements AndroidPaymentSdk {
     }
     if (order.orderString.isEmpty) return PaymentSdkOutcome.failed;
     final result = await _alipay
-        .pay(order.orderString)
+        .pay(order.orderString, evn: _alipayEnvironment)
         .timeout(
           const Duration(minutes: 2),
           onTimeout: () => <String, Object?>{},

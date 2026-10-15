@@ -64,11 +64,34 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         : _groupPlans(
             usesAndroidPayments ? _productPlans!.reversed : _productPlans!,
           );
+    final user = ref.watch(userProvider);
+    final memberLevel = user?.memberLevel ?? 0;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedLevel = plans != null && plans.isNotEmpty
         ? plans[_selectedPlan].variants[_selectedVariant].level
         : 1;
+    final currentPlanName =
+        plans
+            ?.where((group) => group.level == memberLevel)
+            .firstOrNull
+            ?.title
+            .trim()
+            .split(RegExp(r'\s+'))
+            .first ??
+        switch (memberLevel) {
+          1 => 'Starter',
+          2 => 'Plus',
+          3 => 'Pro',
+          4 => 'Max',
+          _ => user?.memberName ?? '',
+        };
+    final purchaseDisabled = memberLevel > 0 && selectedLevel <= memberLevel;
+    final purchaseLabel = purchaseDisabled
+        ? selectedLevel == memberLevel
+              ? l10n.membershipCurrentPlan
+              : l10n.membershipAlreadyMember(currentPlanName)
+        : l10n.membershipBuyNow;
     final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 20.0);
 
     return Scaffold(
@@ -177,7 +200,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                 horizontal: 20,
                               ),
                             ),
-                            onPressed: _isPurchasing
+                            onPressed: _isPurchasing || purchaseDisabled
                                 ? null
                                 : () => _purchaseMembership(
                                     plans[_selectedPlan]
@@ -192,14 +215,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                                     ),
                                   )
                                 : Text(
-                                    plans[_selectedPlan]
-                                            .variants[_selectedVariant]
-                                            .buttonText
-                                            .isNotEmpty
-                                        ? plans[_selectedPlan]
-                                              .variants[_selectedVariant]
-                                              .buttonText
-                                        : l10n.paymentConfirm,
+                                    purchaseLabel,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,

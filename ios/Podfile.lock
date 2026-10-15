@@ -95,7 +95,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   DouyinOpenSDK: f7ef5783f185e612dd957d8e231cc4972f965190
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   fluwx: 21f30eca2f470e526e076434cb0b28c736aa8a78
   gal: baecd024ebfd13c441269ca7404792a7152fde89

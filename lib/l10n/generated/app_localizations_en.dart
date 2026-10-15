@@ -2325,6 +2325,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get membershipCurrentPlan => 'Current plan';
 
   @override
+  String get membershipBuyNow => 'Buy now';
+
+  @override
   String membershipAlreadyMember(String level) {
     return 'You\'re already $level';
   }

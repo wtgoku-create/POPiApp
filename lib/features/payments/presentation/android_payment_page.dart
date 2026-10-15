@@ -34,10 +34,8 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
   PaymentResult? _result;
   bool _loading = true;
   bool _working = false;
-  String? _error;
   int? _previewAmount;
   int? _previewPoints;
-  List<PendingPayment> _history = const [];
 
   @override
   void initState() {
@@ -59,30 +57,18 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
         !_loading &&
         _result?.pending?.tradeNo != null &&
         _result?.state?.terminal != true) {
-      unawaited(_check());
+      unawaited(_check(notify: false));
     }
   }
 
   Future<void> _load() async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
     final service = ref.read(androidPaymentServiceProvider);
     _service = service;
     try {
       if (!service.available) throw const ApiException();
-      final pending = service.storage.read(widget.product);
-      if (pending != null) {
-        _result = await service.check(pending);
-        _channel = pending.channel;
-      } else if (widget.product.kind == PaymentProductKind.subscription) {
-        final preview = await service.repository.preview(widget.product);
-        _previewAmount = preview.amountFen;
-        _previewPoints = preview.grantPoints;
-      }
       for (final channel in PaymentChannel.values) {
         try {
           _channels[channel] = await service.sdk.available(channel);
@@ -94,45 +80,69 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
           _channels[PaymentChannel.alipay] == true) {
         _channel = PaymentChannel.alipay;
       }
-      _refreshHistory();
+      if (widget.product.kind == PaymentProductKind.subscription) {
+        final preview = await service.repository.preview(widget.product);
+        _previewAmount = preview.amountFen;
+        _previewPoints = preview.grantPoints;
+      }
     } catch (error) {
-      _error = error is ApiException ? error.message : null;
-      _error ??= l10n.paymentUnavailable;
+      if (mounted) {
+        AppToast.error(
+          context,
+          error is ApiException && error.message?.isNotEmpty == true
+              ? error.message!
+              : l10n.paymentUnavailable,
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _refreshHistory() {
-    _history = _service!.storage
-        .readAll()
-        .where(
-          (item) =>
-              item.tradeNo != null && item.tradeNo != _result?.pending?.tradeNo,
-        )
-        .toList(growable: false);
-  }
-
-  Future<void> _run(Future<PaymentResult> Function() action) async {
+  Future<void> _run(
+    Future<PaymentResult> Function() action, {
+    bool notify = true,
+  }) async {
     if (_working) return;
     setState(() => _working = true);
     try {
       final result = await action();
       if (!mounted) return;
       setState(() {
-        _result = result;
-        _refreshHistory();
+        _result =
+            result.outcome == PaymentOutcome.canceled ||
+                result.state?.payment == 'canceled'
+            ? null
+            : result;
       });
-      if (result.outcome == PaymentOutcome.completed) {
-        AppToast.success(
-          context,
-          AppLocalizations.of(context)!.purchaseSuccess,
-        );
+      if (notify && result.state?.payment != 'canceled') {
+        final l10n = AppLocalizations.of(context)!;
+        switch (result.outcome) {
+          case PaymentOutcome.completed:
+            AppToast.success(context, l10n.purchaseSuccess);
+          case PaymentOutcome.processing:
+            AppToast.info(context, l10n.paymentProcessing);
+          case PaymentOutcome.unknown:
+            if (result.message case final String message
+                when message.isNotEmpty) {
+              AppToast.error(context, message);
+            } else {
+              AppToast.info(context, l10n.paymentUnknown);
+            }
+          case PaymentOutcome.failed:
+            AppToast.error(context, result.message ?? l10n.paymentNotCompleted);
+          case PaymentOutcome.canceled:
+            break;
+        }
       }
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error = AppLocalizations.of(context)!.paymentUnavailable,
+    } catch (error) {
+      if (mounted && notify) {
+        final l10n = AppLocalizations.of(context)!;
+        AppToast.error(
+          context,
+          error is ApiException && error.message?.isNotEmpty == true
+              ? error.message!
+              : l10n.paymentUnavailable,
         );
       }
     } finally {
@@ -169,63 +179,11 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
     ),
   );
 
-  Future<void> _check() async {
+  Future<void> _check({bool notify = true}) async {
     final pending = _result?.pending;
-    if (pending != null) await _run(() => _service!.check(pending));
-  }
-
-  Future<void> _checkHistory(PendingPayment pending) async {
-    if (_working) return;
-    setState(() => _working = true);
-    try {
-      final result = await _service!.check(pending);
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context)!;
-      if (result.outcome == PaymentOutcome.completed) {
-        AppToast.success(context, l10n.purchaseSuccess);
-      } else {
-        AppToast.info(
-          context,
-          result.outcome == PaymentOutcome.failed
-              ? l10n.paymentNotCompleted
-              : l10n.paymentProcessing,
-        );
-      }
-      setState(_refreshHistory);
-    } catch (_) {
-      if (mounted) {
-        AppToast.info(
-          context,
-          AppLocalizations.of(context)!.paymentUnavailable,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _working = false);
+    if (pending != null) {
+      await _run(() => _service!.check(pending), notify: notify);
     }
-  }
-
-  Future<void> _newPurchase() async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirmed = await AppDialog.confirm(
-      context: context,
-      title: l10n.paymentNewPurchase,
-      description: l10n.paymentNewPurchaseWarning,
-      cancelLabel: l10n.cancel,
-      confirmLabel: l10n.paymentNewPurchase,
-    );
-    if (!mounted || confirmed != true || _working) return;
-    try {
-      await _service!.abandon(widget.product);
-    } catch (_) {
-      if (mounted) AppToast.info(context, l10n.paymentUnavailable);
-      return;
-    }
-    if (!mounted) return;
-    setState(() {
-      _result = null;
-      _error = null;
-    });
-    await _load();
   }
 
   @override
@@ -326,21 +284,8 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                         ),
                       if (_loading)
                         const Center(child: CircularProgressIndicator())
-                      else if (_error != null) ...[
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: colors.error),
-                        ),
-                        Center(
-                          child: TextButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.refresh),
-                            label: Text(l10n.paymentRetry),
-                          ),
-                        ),
-                      ] else ...[
-                        if (!completed && !hasPending) ...[
+                      else ...[
+                        if (!completed) ...[
                           Text(
                             l10n.paymentChooseMethod,
                             style: const TextStyle(
@@ -372,8 +317,6 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                           ),
                         ],
                         if (result != null) ...[
-                          const SizedBox(height: 16),
-                          _PaymentStatus(result: result),
                           if (pending?.tradeNo case final String tradeNo) ...[
                             const SizedBox(height: 16),
                             Text(
@@ -413,30 +356,6 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                             ),
                           ],
                         ],
-                        if (_history.isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          const Divider(),
-                          Text(
-                            l10n.paymentPendingOrders,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          for (final order in _history)
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(order.product.title),
-                              subtitle: Text(order.tradeNo!, softWrap: true),
-                              trailing: IconButton(
-                                tooltip: l10n.paymentCheckAgain,
-                                onPressed: _working
-                                    ? null
-                                    : () => _checkHistory(order),
-                                icon: const Icon(Icons.refresh),
-                              ),
-                            ),
-                        ],
                       ],
                     ],
                   ),
@@ -451,12 +370,10 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                         height: 50,
                         child: FilledButton(
                           key: const Key('payment-confirm'),
-                          onPressed: _loading || _working || _error != null
+                          onPressed: _loading || _working
                               ? null
                               : completed
                               ? () => context.pop(true)
-                              : hasPending
-                              ? (pending.tradeNo == null ? null : _check)
                               : _channels[_channel] == true
                               ? _pay
                               : null,
@@ -476,17 +393,15 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                               : Text(
                                   completed
                                       ? l10n.paymentDone
-                                      : hasPending
-                                      ? l10n.paymentCheckAgain
                                       : l10n.paymentConfirm,
                                   textAlign: TextAlign.center,
                                 ),
                         ),
                       ),
-                      if (hasPending && result?.state?.payment != 'paid')
+                      if (hasPending && pending.tradeNo != null)
                         TextButton(
-                          onPressed: _working ? null : _newPurchase,
-                          child: Text(l10n.paymentNewPurchase),
+                          onPressed: _working ? null : _check,
+                          child: Text(l10n.paymentCheckAgain),
                         ),
                     ],
                   ),
@@ -552,37 +467,6 @@ class _PaymentMethodRow extends StatelessWidget {
                   style: const TextStyle(fontSize: 12),
                 ),
         ),
-      ),
-    );
-  }
-}
-
-class _PaymentStatus extends StatelessWidget {
-  const _PaymentStatus({required this.result});
-
-  final PaymentResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final text = switch (result.outcome) {
-      PaymentOutcome.completed => l10n.purchaseSuccess,
-      PaymentOutcome.processing => l10n.paymentProcessing,
-      PaymentOutcome.canceled =>
-        result.pending == null
-            ? l10n.purchaseCanceled
-            : l10n.paymentCanceledPending,
-      PaymentOutcome.unknown => l10n.paymentUnknown,
-      PaymentOutcome.failed => result.message ?? l10n.paymentNotCompleted,
-    };
-    return Text(
-      text,
-      key: const Key('payment-status'),
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 15,
-        height: 1.5,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }
