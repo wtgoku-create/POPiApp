@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 
-import 'app_media_preview.dart';
+import '../type/media_preview_type.dart';
+import 'app_media_gallery.dart';
 
-/// Opens an image in the shared media preview page.
+export '../type/media_preview_type.dart';
+
+/// Image-only entry points into the shared media gallery.
 abstract final class AppImagePreview {
   static Future<void> show({
     required BuildContext context,
     required ImageProvider image,
     required Object heroTag,
     String? label,
-  }) => AppMediaPreview.showImage(
+  }) => showGallery(
     context: context,
-    image: image,
-    heroTag: heroTag,
-    label: label,
+    images: [ImagePreviewItem(image: image, heroTag: heroTag, label: label)],
+  );
+
+  static Future<void> showGallery({
+    required BuildContext context,
+    required List<ImagePreviewItem> images,
+    int initialIndex = 0,
+  }) => AppMediaGallery.show(
+    context: context,
+    items: images,
+    initialIndex: initialIndex,
   );
 }

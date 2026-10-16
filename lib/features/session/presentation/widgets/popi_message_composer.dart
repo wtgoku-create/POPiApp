@@ -187,6 +187,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.sending = false,
     this.running = false,
     this.conversationMode = false,
+    this.sessionLayout = false,
     this.onStop,
     super.key,
   });
@@ -214,6 +215,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   /// Active conversations use a wider editor and larger text.
   final bool conversationMode;
+
+  /// Session screens use the compact Figma insets, including above the keyboard.
+  final bool sessionLayout;
   final VoidCallback? onStop;
 
   @override
@@ -417,9 +421,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomPadding = math
-        .max(safeArea.bottom - keyboardHeight, 20)
-        .toDouble();
+    final bottomPadding = widget.sessionLayout && keyboardHeight > 0
+        ? 10.0
+        : math.max(safeArea.bottom - keyboardHeight, 20).toDouble();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImages = widget.selectedImages.isNotEmpty;
@@ -434,9 +438,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
         child: Padding(
           key: _sizeKey,
           padding: EdgeInsets.fromLTRB(
-            math.max(safeArea.left, 20),
+            math.max(safeArea.left, widget.sessionLayout ? 10 : 20),
             8,
-            math.max(safeArea.right, 20),
+            math.max(safeArea.right, widget.sessionLayout ? 10 : 20),
             bottomPadding,
           ),
           child: Center(
@@ -593,7 +597,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                     : null,
                                 input: _buildInput(
                                   colorScheme,
-                                  placeholderFontSize: widget.conversationMode
+                                  placeholderFontSize:
+                                      widget.sessionLayout && !_isExpanded
+                                      ? 14
+                                      : widget.conversationMode
                                       ? 18
                                       : 14,
                                 ),
@@ -700,15 +707,17 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    l10n.aiDisclaimer,
-                    style: TextStyle(
-                      color: colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                      height: 1.2,
+                  if (!widget.sessionLayout || keyboardHeight == 0) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.aiDisclaimer,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: widget.sessionLayout ? 14 : 11,
+                        height: 1.2,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

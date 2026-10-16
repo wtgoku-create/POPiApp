@@ -237,6 +237,26 @@ void main() {
     await tester.tap(find.byKey(const Key('assets-work-0')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('asset-preview-image')), findsOneWidget);
+    expect(find.byKey(const Key('asset-preview-thumbnails')), findsOneWidget);
+    expect(
+      tester
+          .widget<PageView>(find.byKey(const Key('asset-preview-gallery')))
+          .childrenDelegate
+          .estimatedChildCount,
+      7,
+    );
+    await tester.drag(
+      find.byKey(const Key('asset-preview-gallery')),
+      const Offset(-390, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<PageView>(find.byKey(const Key('asset-preview-gallery')))
+          .controller!
+          .page,
+      1,
+    );
     expect(find.byKey(const Key('asset-preview-page')), findsNothing);
     expect(find.byType(Dialog), findsNothing);
     await tester.binding.handlePopRoute();
@@ -246,8 +266,7 @@ void main() {
     expect(find.byKey(const Key('asset-preview-page')), findsNothing);
     expect(find.text('视频封面预览'), findsNothing);
     expect(find.byType(Dialog), findsNothing);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('asset-preview-image')), findsNothing);
     await tester.tap(find.byKey(const Key('assets-toggle-selection')));
     await tester.pumpAndSettle();
     expect(find.text('已选择 0 项'), findsOneWidget);
@@ -767,28 +786,13 @@ void main() {
     expect(find.text('立即购买'), findsOneWidget);
   });
 
-  testWidgets('opens membership from the home app bar', (tester) async {
+  testWidgets('session welcome shows only the navigation action', (
+    tester,
+  ) async {
     await pumpPage(tester, const SessionPage());
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(SessionPage)),
-    );
-    await container
-        .read(userProvider.notifier)
-        .setUser(
-          const User(
-            id: '10561',
-            name: '当前用户',
-            email: 'user@popi.art',
-            allCoins: 200,
-          ),
-        );
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('home-membership-entry')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(MembershipPage), findsOneWidget);
-    expect(find.text('立即购买'), findsOneWidget);
+    expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
+    expect(find.byKey(const Key('home-membership-entry')), findsNothing);
+    expect(find.text('嗨，用户～'), findsOneWidget);
   });
 
   testWidgets('loads membership plan values from the repository', (

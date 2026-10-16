@@ -101,6 +101,32 @@ void main() {
     expect(await File(savedPath!).parent.exists(), isFalse);
   });
 
+  for (final fail in [false, true]) {
+    test(
+      'downloaded video remains available for sharing and is cleaned up, failure=$fail',
+      () async {
+        String? downloadedPath;
+        final result = HttpOverrides.runWithHttpOverrides(
+          () => GalleryVideoStorage.withDownloadedVideo(url, (path) async {
+            downloadedPath = path;
+            expect(await File(path).readAsBytes(), bytes);
+            if (fail) throw StateError('share failed');
+            return 'shared';
+          }),
+          _LoopbackHttpOverrides(),
+        );
+        if (fail) {
+          await expectLater(result, throwsStateError);
+        } else {
+          expect(await result, 'shared');
+        }
+        expect(calls, isEmpty);
+        expect(downloadedPath, isNotNull);
+        expect(await File(downloadedPath!).parent.exists(), isFalse);
+      },
+    );
+  }
+
   test('cancelled download never fetches or saves the video', () async {
     final token = CancelToken()..cancel();
     await expectLater(

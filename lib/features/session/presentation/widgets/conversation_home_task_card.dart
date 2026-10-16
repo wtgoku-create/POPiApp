@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/generation_credit_notice.dart';
 import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
@@ -160,6 +161,7 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
                   style: TextStyle(color: colors.error),
                 ),
               ),
+            if (confirm) const GenerationCreditNotice(),
             if (confirm || block.allowedActions.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),

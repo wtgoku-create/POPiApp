@@ -8,12 +8,14 @@ class LibraryWork {
     required this.isVideo,
     required this.createdAt,
     this.videoUrl = '',
+    this.imageUrls = const [],
   });
 
   final String id;
   final String previewUrl;
   final bool isVideo;
   final String videoUrl;
+  final List<String> imageUrls;
   final DateTime? createdAt;
 }
 
@@ -43,10 +45,14 @@ class LibraryWorkPage {
         if (result is! Map) continue;
         final id = _text(result['id'] ?? result['assetId']);
         final video = _text(result['video']);
-        final images = result['images'];
-        final image = images is List && images.isNotEmpty
-            ? _text(images.first)
-            : '';
+        final rawImages = result['images'];
+        final images = <String>[
+          if (rawImages is List)
+            for (final value in rawImages)
+              if (_text(value).isNotEmpty)
+                AppUrl.resolve(_text(value), baseUrl: mediaBaseUrl),
+        ];
+        final image = images.isNotEmpty ? images.first : '';
         if (id.isEmpty || (video.isEmpty && image.isEmpty)) continue;
         final cover = _text(result['cover'] ?? result['coverThumb']);
         items.add(
@@ -58,6 +64,7 @@ class LibraryWorkPage {
             ),
             isVideo: video.isNotEmpty,
             videoUrl: AppUrl.resolve(video, baseUrl: mediaBaseUrl),
+            imageUrls: List.unmodifiable(images),
             createdAt: _date(task['createTime']),
           ),
         );

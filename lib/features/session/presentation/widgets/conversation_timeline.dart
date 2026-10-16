@@ -18,6 +18,7 @@ import '../../../../shared/widgets/app_image_preview.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/generation_credit_notice.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
 import '../../../../shared/widgets/app_video_player.dart';
 import '../../../role_guide/presentation/widgets/role_storyboard_body.dart';
@@ -37,6 +38,11 @@ const _conversationCardSpacing = 10.0;
 
 bool _isCardBlock(ConversationBlock block) =>
     block.type == 'object' || block.type == 'media';
+
+bool _isCandidateBlock(ConversationBlock block) =>
+    block.type == 'object' &&
+    (block.kind == 'topic' && block.action != 'selected' ||
+        block.kind == 'text_draft');
 
 double _messageSpacing(
   ConversationMessage previous,
@@ -227,16 +233,15 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
             blocks: cast,
           ),
         );
-      } else if (block.type == 'object' &&
-          block.kind == 'topic' &&
-          block.action != 'selected' &&
-          !isSentByMe) {
+      } else if (_isCandidateBlock(block) && !isSentByMe) {
         final topics = [block];
         // Keep separate batches and intervening text/media in their original order.
         while (index + 1 < message.blocks.length) {
           final next = message.blocks[index + 1];
-          if (next.type != 'object' ||
-              next.kind != 'topic' ||
+          if (!_isCandidateBlock(next) ||
+              next.kind != block.kind ||
+              block.kind == 'text_draft' &&
+                  next.objectKind != block.objectKind ||
               next.action != block.action ||
               next.scopeId != block.scopeId ||
               next.scopeKind != block.scopeKind) {
@@ -995,16 +1000,18 @@ class _ConversationTopicsState extends State<_ConversationTopics>
     final topic = widget.topics[_index];
     final controller = widget.controller;
     final locked =
+        topic.kind != 'topic' ||
         _selected ||
         _refreshed ||
         controller.snapshot?.topicLocked(widget.message, topic) != false;
     final disabled =
         controller.pending || controller.running || controller.loading;
     final selected =
-        _selected ||
-        controller.snapshot?.selectedTopicId(widget.message, topic) ==
-                topic.referenceId &&
-            topic.referenceId.isNotEmpty;
+        topic.kind == 'topic' &&
+        (_selected ||
+            controller.snapshot?.selectedTopicId(widget.message, topic) ==
+                    topic.referenceId &&
+                topic.referenceId.isNotEmpty);
     return ConversationObjectView(
       key: ValueKey((topic.referenceId, _index)),
       block: topic,
@@ -1464,6 +1471,11 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 style: const TextStyle(fontSize: 14),
               ),
             ),
+          if (block.kind == 'plan' &&
+              block.confirmationAvailable &&
+              block.allowedActions.contains('confirm') &&
+              block.estimatedPoints != null)
+            const GenerationCreditNotice(),
           if (block.kind == 'plan' && block.confirmationAvailable)
             Padding(
               padding: const EdgeInsets.only(top: 20),
@@ -1499,9 +1511,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                                 title: block.title,
                                 description: block.estimatedPoints == null
                                     ? block.body
-                                    : l10n.chatEstimatedPoints(
-                                        block.estimatedPoints!.toString(),
-                                      ),
+                                    : '${l10n.chatEstimatedPoints(block.estimatedPoints!.toString())}\n\n${l10n.generationCreditNotice}',
                                 cancelLabel: l10n.cancel,
                                 confirmLabel: l10n.confirm,
                               );

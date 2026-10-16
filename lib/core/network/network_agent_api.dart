@@ -115,6 +115,18 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
+  /// Creates a new account and its bound main session from the content entry.
+  Future<Map<String, dynamic>> createContentSession({
+    required String clientRequestId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions/content-entry',
+    method: 'POST',
+    data: {'clientRequestId': clientRequestId},
+    expectedStatusCode: 201,
+    cancelToken: cancelToken,
+  );
+
   Future<Map<String, dynamic>> sessionByAccount(
     String accountId, {
     CancelToken? cancelToken,
@@ -429,6 +441,7 @@ class NetworkAgentApi {
     Map<String, Object?>? data,
     Map<String, Object?>? queryParameters,
     Duration? receiveTimeout,
+    int? expectedStatusCode,
     CancelToken? cancelToken,
   }) async {
     try {
@@ -440,7 +453,9 @@ class NetworkAgentApi {
         cancelToken: cancelToken,
       );
       final body = response.data;
-      if (body is! Map<String, dynamic>) {
+      if (body is! Map<String, dynamic> ||
+          (expectedStatusCode != null &&
+              response.statusCode != expectedStatusCode)) {
         throw AgentApiException(
           code: 'INVALID_RESPONSE',
           message: 'Invalid Agent response',

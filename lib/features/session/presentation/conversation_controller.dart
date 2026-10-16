@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/network/agent_api_exception.dart';
 import '../../assets/domain/library_work.dart';
+import '../../role_guide/data/media_preferences_repository.dart';
+import '../../role_guide/domain/home_creation.dart';
 import '../data/conversation_events.dart';
 import '../data/session_repository.dart';
 import '../domain/conversation_session.dart';
@@ -21,10 +23,14 @@ class ConversationController extends ChangeNotifier {
     this.userId, {
     this.onSessionChanged,
     this.onError,
+    this.accountId,
+    this.mediaPreferencesRepository,
     this.reconnectDelay = const Duration(seconds: 1),
   });
   final SessionRepository repository;
   final String userId;
+  final String? accountId;
+  final MediaPreferencesRepository? mediaPreferencesRepository;
   final void Function(ConversationSession)? onSessionChanged;
   final void Function(Object)? onError;
   final Duration reconnectDelay;
@@ -165,20 +171,6 @@ class ConversationController extends ChangeNotifier {
     }
   }
 
-  Future<bool> ensureSession(String title) => sessionId != null
-      ? Future.value(true)
-      : act((token) async {
-          final session = await repository.create(
-            userId,
-            title,
-            cancelToken: token,
-          );
-          if (token.isCancelled || _disposed) return;
-          sessionId = session.id;
-          onSessionChanged?.call(session);
-          notifyListeners();
-        });
-
   Future<bool> send(
     String text,
     List<({String name, Uint8List bytes})> images,
@@ -187,19 +179,25 @@ class ConversationController extends ChangeNotifier {
     List<String> roleIds = const [],
     List<LibraryWork> assets = const [],
     List<String> uploadedMediaIds = const [],
+    Map<String, HomeConfig> mediaPreferences = const {},
   }) => running || loading
       ? Future.value(false)
       : act((token) async {
           if (sessionId == null) {
-            final session = await repository.create(
-              userId,
-              newTitle,
-              cancelToken: token,
-            );
+            final session = await _resolveSession(newTitle, token);
             if (token.isCancelled || _disposed) return;
             sessionId = session.id;
             onSessionChanged?.call(session);
             notifyListeners();
+          }
+          for (final entry in mediaPreferences.entries) {
+            await mediaPreferencesRepository!.saveMediaPreference(
+              sessionId!,
+              entry.key,
+              entry.value,
+              cancelToken: token,
+            );
+            if (token.isCancelled || _disposed) return;
           }
           final mediaIds = List<String>.of(uploadedMediaIds);
           for (final image in images) {
@@ -232,6 +230,18 @@ class ConversationController extends ChangeNotifier {
           );
           if (!token.isCancelled) _awaitingRun = true;
         }, refreshAfter: true);
+
+  Future<ConversationSession> _resolveSession(
+    String title,
+    CancelToken token,
+  ) => accountId == null
+      ? repository.create(userId, title, cancelToken: token)
+      : repository.resolveAccountSession(
+          userId,
+          accountId!,
+          title,
+          cancelToken: token,
+        );
 
   Future<bool> stop() => act(
     (token) => repository.stop(userId, sessionId!, cancelToken: token),

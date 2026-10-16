@@ -74,6 +74,11 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
         repository.create(userId, title, cancelToken: token),
   );
 
+  Future<ConversationSession?> createFromContent() => _mutate(
+    (repository, userId, token) =>
+        repository.createFromContent(userId, cancelToken: token),
+  );
+
   Future<void> rename(String id, String title) async {
     await _mutate(
       (repository, userId, token) =>

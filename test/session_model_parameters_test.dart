@@ -144,7 +144,7 @@ void main() {
   });
 
   testWidgets(
-    'signed-in composer saves conversation preferences before its first message',
+    'draft parameters stay local until first send creates a conversation',
     (tester) async {
       final fixture = configFixture();
       final sessions = StreamingSessionRepository();
@@ -156,10 +156,16 @@ void main() {
       expect(find.byType(RoleGenerationSheet), findsNothing);
       await configTap(tester, 'home-config-ratio-9:16');
       await configTap(tester, 'home-config-confirm');
-      final write = fixture.requests.singleWhere(
-        (request) => request.method == 'PUT',
+      expect(
+        fixture.requests.where((request) => request.method == 'PUT'),
+        isEmpty,
       );
-      expect(write.data['sessionId'], 'mock-new-1');
+      expect(
+        (await sessions.list(
+          'config-user',
+        )).items.where((session) => session.id.startsWith('mock-new-')),
+        isEmpty,
+      );
       expect(
         tester
             .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
@@ -170,15 +176,29 @@ void main() {
       await tester.tap(find.byKey(const Key('popi-message-input')));
       await tester.pumpAndSettle();
       await openParameters(tester);
+      expect(
+        tester
+            .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+            .modelParametersDescription,
+        contains('9:16'),
+      );
       await configTap(tester, 'home-config-confirm');
       expect(
         fixture.requests.where((request) => request.method == 'PUT'),
-        hasLength(1),
+        isEmpty,
       );
       await tester.tap(find.byKey(const Key('popi-send-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(sessions.sends, 1);
+      final writes = fixture.requests.where(
+        (request) => request.method == 'PUT',
+      );
+      expect(writes, hasLength(2));
+      expect(
+        writes.every((request) => request.data['sessionId'] == 'mock-new-1'),
+        isTrue,
+      );
       expect(
         (await sessions.list(
           'config-user',
@@ -186,6 +206,52 @@ void main() {
         hasLength(1),
       );
       await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets(
+    'failed draft preference save retains the session and prompt for retry',
+    (tester) async {
+      final fixture = configFixture();
+      final sessions = StreamingSessionRepository();
+      addTearDown(sessions.close);
+      await mount(tester, liveFixture: fixture, sessions: sessions);
+      await openParameters(tester);
+      await configTap(tester, 'home-config-confirm');
+      fixture.failPreferenceSaveOnce = true;
+      final send = find.byKey(const Key('popi-send-button'));
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(sessions.sends, 0);
+      expect(
+        tester
+            .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+            .controller
+            .markdown,
+        'Keep this prompt',
+      );
+      expect(
+        (await sessions.list(
+          'config-user',
+        )).items.where((session) => session.id.startsWith('mock-new-')),
+        hasLength(1),
+      );
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(sessions.sends, 1);
+      final writes = fixture.requests.where(
+        (request) => request.method == 'PUT',
+      );
+      expect(writes, hasLength(3));
+      expect(
+        writes.every((request) => request.data['sessionId'] == 'mock-new-1'),
+        isTrue,
+      );
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
     },
   );
 

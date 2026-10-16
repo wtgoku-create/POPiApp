@@ -23,16 +23,17 @@ import '../../attachments/presentation/attachment_picker_sheet.dart';
 import '../../assets/domain/library_role.dart';
 import '../../assets/domain/library_work.dart';
 import '../../role_guide/domain/role_guide_draft.dart';
+import '../../role_guide/domain/home_creation.dart';
 import '../../role_guide/data/media_preferences_repository.dart';
 import '../../role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
+import '../domain/conversation_session.dart';
 import 'widgets/popi_message_composer.dart';
 import 'conversation_controller.dart';
 import 'composer_image_upload_controller.dart';
 import 'widgets/conversation_timeline.dart';
+import 'widgets/session_welcome.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
-import '../../../shared/widgets/popi_membership_entry.dart';
-import '../../../shared/widgets/popi_app_bar_actions.dart';
 
 /// Creation session with a prompt composer and attachment selection.
 class SessionPage extends ConsumerStatefulWidget {
@@ -40,12 +41,14 @@ class SessionPage extends ConsumerStatefulWidget {
     this.pickImages,
     this.initialPrompt,
     this.sessionId,
+    this.accountId,
     super.key,
   });
 
   final Future<List<XFile>> Function()? pickImages;
   final String? initialPrompt;
   final String? sessionId;
+  final String? accountId;
 
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
@@ -54,11 +57,8 @@ class SessionPage extends ConsumerStatefulWidget {
 class _SessionPageState extends ConsumerState<SessionPage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _messageController = PopiMessageComposerController();
-  final _bodyScrollController = ScrollController();
   bool _drawerOpen = false;
   double _composerHeight = 0;
-  double _keyboardHeight = 0;
-  double _bodyOffsetBeforeKeyboard = 0;
   final _imageUploads = ComposerImageUploadController();
   List<PopiComposerImage> get _selectedImages => _imageUploads.images;
   final List<LibraryRole> _selectedRoles = [];
@@ -69,6 +69,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   bool _generationSheetOpen = false;
   String? _mediaPreferenceDescription;
   String? _activeSessionId;
+  String? _accountId;
+  Map<String, HomeConfig> _draftMediaPreferences = const {};
   ConversationController? _conversation;
 
   static const _maxImageCount = 5;
@@ -79,6 +81,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     super.initState();
     _imageUploads.addListener(_onImageUploadsChanged);
     _activeSessionId = widget.sessionId;
+    _accountId = widget.accountId;
     _bindConversation();
     if (widget.initialPrompt != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -90,12 +93,17 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   void didUpdateWidget(SessionPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.sessionId != widget.sessionId) {
+    if (oldWidget.sessionId != widget.sessionId ||
+        oldWidget.accountId != widget.accountId) {
       // 新建会话写回路由时沿用正在发送的控制器，避免取消首条消息。
-      if (widget.sessionId == _activeSessionId) return;
+      if (widget.sessionId != null && widget.sessionId == _activeSessionId) {
+        return;
+      }
       _activeSessionId = widget.sessionId;
+      _accountId = widget.accountId;
+      _draftMediaPreferences = const {};
       _mediaPreferenceDescription = null;
-      _conversation?.open(_activeSessionId);
+      _bindConversation();
       _resetComposer();
     }
   }
@@ -117,7 +125,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       ..dispose();
     _conversation?.dispose();
     _messageController.dispose();
-    _bodyScrollController.dispose();
     super.dispose();
   }
 
@@ -126,32 +133,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    if (_keyboardHeight == 0 && keyboardHeight > 0) {
-      if (_bodyScrollController.hasClients) {
-        _bodyOffsetBeforeKeyboard = _bodyScrollController.offset;
-      }
-    } else if (_keyboardHeight > 0 && keyboardHeight == 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !_bodyScrollController.hasClients) return;
-        final position = _bodyScrollController.position;
-        final target = _bodyOffsetBeforeKeyboard
-            .clamp(position.minScrollExtent, position.maxScrollExtent)
-            .toDouble();
-        _bodyScrollController.jumpTo(target);
-      });
-    }
-    _keyboardHeight = keyboardHeight;
-  }
-
-  @override
   Widget build(BuildContext context) {
     ref.listen(userProvider.select((user) => user?.id), (previous, next) {
       if (previous == next) return;
       setState(() {
         _activeSessionId = null;
+        _accountId = null;
+        _draftMediaPreferences = const {};
         _mediaPreferenceDescription = null;
         _resetComposer();
         _bindConversation();
@@ -168,23 +156,18 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         ? _composerHeight
         : fallbackComposerHeight;
     final composerInset = composerHeight + keyboardHeight;
-    final contentBottomPadding = composerInset + 20;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final user = ref.watch(userProvider);
-    final isLoggedIn = user != null;
-    final pointsBalance = user?.allCoins ?? 0;
+    final isLoggedIn = ref.watch(userProvider) != null;
+    final showWelcome =
+        _activeSessionId == null ||
+        (_conversation?.snapshot?.messages.isEmpty == true &&
+            !(_conversation?.running ?? false) &&
+            !(_conversation?.pending ?? false));
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: isDark
-            ? null
-            : const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFEDE9FD), Colors.white],
-              ),
-        color: isDark ? colorScheme.surface : null,
+        color: isDark ? colorScheme.surface : const Color(0xFFF5F4FA),
       ),
       child: GestureDetector(
         key: const Key('popi-home-dismiss-keyboard'),
@@ -195,22 +178,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
           drawer: PopiNavigationDrawer(
-            onOpenConversation: (session) {
-              setState(() {
-                _activeSessionId = session.id;
-                _conversation?.open(session.id);
-                _resetComposer();
-              });
-              final router = GoRouter.maybeOf(context);
-              if (router == null) return;
-              AppNavigation.replaceRoot(
-                router,
-                Uri(
-                  path: '/session',
-                  queryParameters: {'sessionId': session.id},
-                ).toString(),
-              );
-            },
+            onOpenConversation: _selectConversation,
+            onNewConversation: _startNewConversation,
           ),
           drawerScrimColor: const Color(0x33333333),
           onDrawerChanged: (isOpened) {
@@ -256,16 +225,23 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                       ),
                     ),
                     actions: [
-                      PopiAppBarActions(
-                        rightPadding: 20,
-                        membershipEntry: PopiMembershipEntry(
-                          points: pointsBalance,
-                          showPoints: isLoggedIn,
-                          label: isLoggedIn
-                              ? l10n.upgradeMembership
-                              : l10n.goToLogin,
-                          onTap: () => context.push(
-                            isLoggedIn ? '/profile/membership' : '/login',
+                      Padding(
+                        padding: const EdgeInsets.only(right: 15),
+                        child: SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('session-new-conversation'),
+                            tooltip: l10n.newConversation,
+                            padding: const EdgeInsets.all(4),
+                            onPressed: _startNewConversation,
+                            icon: SizedBox(
+                              width: 30,
+                              height: 32,
+                              child: AppSvgIcon.asset(
+                                'session_new_conversation',
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -279,7 +255,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
             Stack(
               fit: StackFit.expand,
               children: [
-                if (_activeSessionId != null && _conversation != null)
+                if (!showWelcome && _conversation != null)
                   Positioned.fill(
                     bottom: composerInset,
                     child: ConversationTimeline(
@@ -292,47 +268,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     ),
                   )
                 else
-                  SingleChildScrollView(
-                    key: const Key('popi-home-scroll'),
-                    controller: _bodyScrollController,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: EdgeInsets.fromLTRB(
-                      20,
-                      50,
-                      20,
-                      contentBottomPadding,
-                    ),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Column(
-                          children: [
-                            _WelcomeCards(
-                              prompts: [
-                                (
-                                  l10n.homePromptCreateIp,
-                                  const Color(0xFFEDE7FD),
-                                ),
-                                (
-                                  l10n.homePromptImproveAccount,
-                                  const Color(0xFFFEF4E8),
-                                ),
-                                (
-                                  l10n.homePromptHasReference,
-                                  const Color(0xFFFEEEF6),
-                                ),
-                                (
-                                  l10n.homePromptUnsure,
-                                  const Color(0xFFE5FBFA),
-                                ),
-                              ],
-                              onPromptSelected: _selectPrompt,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  Positioned.fill(
+                    bottom: composerInset,
+                    child: SessionWelcome(keyboardVisible: keyboardHeight > 0),
                   ),
                 Positioned(
                   left: 0,
@@ -391,7 +329,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         child: Center(
                           heightFactor: 1,
                           child: PopiMessageComposer(
-                            conversationMode: _activeSessionId != null,
+                            conversationMode: true,
+                            sessionLayout: true,
                             controller: _messageController,
                             selectedImages: _selectedImages,
                             selectedRoles: _selectedRoles,
@@ -444,6 +383,43 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     );
   }
 
+  void _selectConversation(ConversationSession session) {
+    setState(() {
+      _activeSessionId = session.id;
+      _accountId = null;
+      _draftMediaPreferences = const {};
+      _mediaPreferenceDescription = null;
+      _bindConversation();
+      _resetComposer();
+    });
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return;
+    AppNavigation.replaceRoot(
+      router,
+      Uri(
+        path: '/session',
+        queryParameters: {'sessionId': session.id},
+      ).toString(),
+    );
+  }
+
+  void _startNewConversation() {
+    if (ref.read(userProvider) == null) {
+      GoRouter.maybeOf(context)?.push('/login');
+      return;
+    }
+    setState(() {
+      _activeSessionId = null;
+      _accountId = null;
+      _draftMediaPreferences = const {};
+      _mediaPreferenceDescription = null;
+      _resetComposer();
+      _bindConversation();
+    });
+    final router = GoRouter.maybeOf(context);
+    if (router != null) AppNavigation.replaceRoot(router, '/session');
+  }
+
   void _bindConversation() {
     _conversation?.dispose();
     final userId = ref.read(userProvider)?.id;
@@ -452,6 +428,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
         : ConversationController(
             ref.read(sessionRepositoryProvider),
             userId,
+            accountId: _accountId,
+            mediaPreferencesRepository: MediaPreferencesRepository(
+              NetworkApi(ref.read(dioProvider)),
+            ),
             onError: (error) {
               if (!mounted || ref.read(userProvider)?.id != userId) return;
               AppToast.error(
@@ -513,9 +493,15 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       roleIds: _selectedRoles.map((role) => role.id).toList(),
       assets: List.of(_selectedAssets),
       uploadedMediaIds: [for (final image in _selectedImages) image.mediaId!],
+      mediaPreferences: _draftMediaPreferences,
     );
-    if (!mounted || !identical(conversation, _conversation)) return;
+    if (!mounted ||
+        !identical(conversation, _conversation) ||
+        conversation.sessionId != _activeSessionId) {
+      return;
+    }
     if (success) {
+      _draftMediaPreferences = const {};
       setState(_resetComposer);
       GoRouter.maybeOf(context)?.replace(
         Uri(
@@ -532,17 +518,8 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     _messageController.dismissKeyboard();
     try {
       final conversation = _conversation;
-      if (conversation != null && _activeSessionId == null) {
-        final success = await conversation.ensureSession(
-          AppLocalizations.of(context)!.newSessionTitle,
-        );
-        if (!mounted || !identical(conversation, _conversation)) return;
-        if (!success) {
-          return;
-        }
-      }
-      if (_activeSessionId != null && _conversation != null) {
-        final sessionId = _activeSessionId!;
+      if (conversation != null) {
+        final sessionId = _activeSessionId;
         final result = await AppSheet.show<HomeGenerationConfiguration>(
           context: context,
           isScrollControlled: true,
@@ -553,12 +530,21 @@ class _SessionPageState extends ConsumerState<SessionPage> {
               NetworkApi(ref.read(dioProvider)),
             ),
             sessionId: sessionId,
+            savedPreferences: _draftMediaPreferences,
             forGeneration: false,
           ),
         );
-        if (mounted && result != null && _activeSessionId == sessionId) {
-          setState(() => _mediaPreferenceDescription = result.description);
-          _conversation?.mediaPreferencesChanged();
+        if (mounted &&
+            result != null &&
+            identical(conversation, _conversation) &&
+            _activeSessionId == sessionId) {
+          setState(() {
+            _mediaPreferenceDescription = result.description;
+            _draftMediaPreferences = sessionId == null
+                ? result.preferences
+                : const {};
+          });
+          if (sessionId != null) conversation.mediaPreferencesChanged();
         }
         return;
       }
@@ -771,207 +757,5 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       );
     }
     await _messageController.insertImage(image.bytes);
-  }
-}
-
-class _WelcomeCards extends StatelessWidget {
-  const _WelcomeCards({required this.prompts, required this.onPromptSelected});
-
-  final List<(String, Color)> prompts;
-  final ValueChanged<String> onPromptSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final colors = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return AspectRatio(
-      aspectRatio: 400 / 509,
-      child: FittedBox(
-        fit: BoxFit.contain,
-        child: SizedBox(
-          width: 400,
-          height: 509,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 15,
-                top: 0,
-                width: 370,
-                child: Text(
-                  l10n.homeGreetingTitle.trim(),
-                  key: const Key('popi-wordmark'),
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 40,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 15,
-                top: 66,
-                width: 200,
-                height: 120,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.topLeft,
-                  child: SizedBox(
-                    width: 200,
-                    child: Text(
-                      '${l10n.homeGreetingBody}\n${l10n.homePromptIntro}\n${l10n.homePromptQuestion}',
-                      style: TextStyle(
-                        color: colors.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 208,
-                top: 58,
-                width: 184,
-                height: 222,
-                child: Image.asset(
-                  'assets/images/home_welcome_character.png',
-                  key: const Key('popi-welcome-mascot'),
-                  fit: BoxFit.fill,
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 199,
-                height: 310,
-                child: Container(
-                  key: const Key('home-welcome-panel'),
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: dark ? colors.surfaceContainerLow : Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (!dark)
-                        Image.asset(
-                          'assets/images/home_prompt_background.png',
-                          fit: BoxFit.fill,
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < prompts.length; i++) ...[
-                              _PromptTile(
-                                index: i,
-                                label: prompts[i].$1,
-                                iconColor: prompts[i].$2,
-                                onTap: () => onPromptSelected(prompts[i].$1),
-                              ),
-                              if (i < prompts.length - 1)
-                                const SizedBox(height: 10),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PromptTile extends StatelessWidget {
-  const _PromptTile({
-    required this.index,
-    required this.label,
-    required this.iconColor,
-    required this.onTap,
-  });
-
-  final int index;
-  final String label;
-  final Color iconColor;
-  final VoidCallback onTap;
-
-  static const _icons = [
-    'new_ip',
-    'improve_account',
-    'reference_account',
-    'explore_direction',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: dark
-          ? colors.surfaceContainerHigh
-          : Colors.white.withValues(alpha: .5),
-      borderRadius: BorderRadius.circular(AppRadii.pill),
-      child: InkWell(
-        key: Key('home-prompt-$index'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: SizedBox(
-          height: 60,
-          child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: iconColor,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: AppSvgIcon.asset(
-                    'home_prompt_${_icons[index]}',
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 40,
-                  height: 40,
-                  child: Center(
-                    child: AppSvgIcon.asset(
-                      'home_welcome_chevron',
-                      color: colors.onSurface,
-                      semanticsLabel: AppLocalizations.of(
-                        context,
-                      )!.selectAction,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,12 +36,24 @@ import 'support/ip_account_fixtures.dart';
 import 'support/role_library_fixtures.dart';
 
 void main() {
+  setUpAll(() async {
+    const path = String.fromEnvironment('DRAWER_CAPTURE_FONT');
+    if (path.isEmpty) return;
+    await (FontLoader(
+      'DrawerCapture',
+    )..addFont(File(path).readAsBytes().then(ByteData.sublistView))).load();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+  });
+
   Future<ProviderContainer> pumpDrawer(
     WidgetTester tester, {
     Size size = const Size(440, 956),
     ThemeData? theme,
     Locale locale = const Locale('zh'),
     bool signedIn = true,
+    bool expandNavigation = true,
     FixtureSessionRepository? repository,
   }) async {
     tester.view.physicalSize = size;
@@ -70,22 +86,107 @@ void main() {
     final router = container.read(routerProvider(false));
     addTearDown(router.dispose);
     router.go('/session?prompt=旧草稿');
+    final drawerTheme = theme ?? AppTheme.light;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
-          theme: theme ?? AppTheme.light,
+          theme: const String.fromEnvironment('DRAWER_CAPTURE_FONT').isEmpty
+              ? drawerTheme
+              : drawerTheme.copyWith(
+                  textTheme: drawerTheme.textTheme.apply(
+                    fontFamily: 'DrawerCapture',
+                  ),
+                ),
+          debugShowCheckedModeBanner: false,
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           routerConfig: router,
+          builder: (_, child) =>
+              RepaintBoundary(key: const Key('drawer-capture'), child: child!),
         ),
       ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
+    if (expandNavigation) {
+      await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+      await tester.pumpAndSettle();
+    }
     return container;
+  }
+
+  for (final dark in [false, true]) {
+    for (final size in [const Size(390, 844), const Size(320, 568)]) {
+      testWidgets('new sidebar layout at $size dark=$dark', (tester) async {
+        final theme = dark ? AppTheme.dark : AppTheme.light;
+        await pumpDrawer(
+          tester,
+          size: size,
+          theme: theme,
+          expandNavigation: false,
+        );
+        expect(find.text('新建项目对话'), findsOneWidget);
+        expect(find.text('查看全部'), findsOneWidget);
+        expect(find.text('对话'), findsOneWidget);
+        expect(find.byKey(const Key('drawer-sessions-menu')), findsNothing);
+        expect(find.byKey(const Key('drawer-nav-role')), findsNothing);
+        expect(find.byKey(const Key('drawer-nav-ip-accounts')), findsNothing);
+        await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('popi-open-navigation')));
+        await tester.pumpAndSettle();
+        final selected = find.byKey(const Key('drawer-session-mock-2'));
+        final material = tester.widget<Material>(
+          find.ancestor(of: selected, matching: find.byType(Material)).first,
+        );
+        expect(
+          material.color,
+          theme.colorScheme.primary.withValues(alpha: .05),
+        );
+        final label = tester.widget<Text>(
+          find.descendant(of: selected, matching: find.byType(Text)).first,
+        );
+        expect(label.style?.color, theme.colorScheme.primary);
+        expect(tester.takeException(), isNull);
+        if (const bool.fromEnvironment('CAPTURE_DRAWER')) {
+          await tester.runAsync(() async {
+            for (final path in [
+              'assets/icons/common_user_avatar.png',
+              'assets/icons/common_user_badge.png',
+            ]) {
+              await precacheImage(
+                AssetImage(path),
+                tester.element(find.byKey(const Key('drawer-user-summary'))),
+              );
+            }
+          });
+          await tester.pump();
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const Key('drawer-capture')),
+          );
+          await tester.runAsync(() async {
+            final pixels = await boundary.toImage();
+            final bytes = await pixels.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '/tmp/sidebar-new-${size.width.toInt()}-${dark ? 'dark' : 'light'}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            pixels.dispose();
+          });
+        }
+        await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+        await tester.pumpAndSettle();
+        expect(find.text('收起全部'), findsNothing);
+        expect(find.byKey(const Key('drawer-nav-view-all')), findsNothing);
+        expect(find.byKey(const Key('drawer-nav-role')), findsOneWidget);
+        expect(find.byKey(const Key('drawer-nav-ip-accounts')), findsOneWidget);
+        expect(find.byKey(const Key('drawer-nav-assets')), findsOneWidget);
+      });
+    }
   }
 
   Future<void> openMenu(WidgetTester tester, String id) async {
@@ -274,6 +375,10 @@ void main() {
     ]) {
       await tester.tap(find.byKey(const Key('popi-open-navigation')));
       await tester.pumpAndSettle();
+      if (find.byKey(Key(entry)).evaluate().isEmpty) {
+        await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.byKey(Key(entry)));
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), location);
@@ -425,7 +530,7 @@ void main() {
     tester,
   ) async {
     final container = await pumpDrawer(tester);
-    expect(find.text('会话'), findsOneWidget);
+    expect(find.text('对话'), findsOneWidget);
     expect(find.text('校园野餐vlog'), findsOneWidget);
     expect(find.text('项目(5)'), findsNothing);
     expect(find.byKey(const Key('drawer-projects-menu')), findsNothing);
@@ -508,95 +613,121 @@ void main() {
     });
   }
 
-  testWidgets('opens a conversation and creates a clean new one', (
-    tester,
-  ) async {
-    final container = await pumpDrawer(tester);
-    await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
-    await tester.pumpAndSettle();
-    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
-    expect(
-      container
-          .read(routerProvider(false))
-          .routeInformationProvider
-          .value
-          .uri
-          .queryParameters['sessionId'],
-      'mock-2',
-    );
-    await tester.tap(find.byKey(const Key('popi-open-navigation')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('drawer-new-session')));
-    await tester.pumpAndSettle();
-    expect(container.read(sessionsProvider).requireValue.length, 9);
-    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
-    expect(
-      container
-          .read(sessionsProvider)
-          .requireValue
-          .any((session) => session.title == '新项目'),
-      isTrue,
-    );
-    expect(
-      tester
-          .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
-          .controller
-          .markdown,
-      isEmpty,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets(
-    'folder icons render in conversation rows and long-press previews',
+    'opens a conversation and starts a clean draft without creating',
     (tester) async {
-      await pumpDrawer(tester);
-      final avatar = find.byKey(const Key('drawer-session-avatar-mock-1'));
-      expect(tester.getSize(avatar), const Size(30, 30));
-      final icon = tester.widget<AppSvgIcon>(avatar);
-      expect(icon.assetName, 'home_drawer_project');
-      expect(icon.color, AppTheme.light.colorScheme.onSurface);
+      final container = await pumpDrawer(tester);
+      await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
       expect(
-        tester.getSize(find.byKey(const Key('drawer-session-mock-1'))).height,
-        40,
+        container
+            .read(routerProvider(false))
+            .routeInformationProvider
+            .value
+            .uri
+            .queryParameters['sessionId'],
+        'mock-2',
       );
-      for (final id in ['mock-2', 'mock-3', 'mock-4']) {
-        expect(
-          tester
-              .widget<AppSvgIcon>(find.byKey(Key('drawer-session-avatar-$id')))
-              .assetName,
-          'home_drawer_project',
-        );
-      }
-      await openMenu(tester, 'mock-1');
-      final preview = find.byKey(const Key('app-context-menu-preview'));
-      expect(find.descendant(of: preview, matching: avatar), findsOneWidget);
-      await tester.binding.handlePopRoute();
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('drawer-new-session')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('popi-open-navigation')));
-      await tester.pumpAndSettle();
-      final fallback = find.byKey(
-        const Key('drawer-session-avatar-mock-new-1'),
-      );
-      expect(tester.getSize(fallback), const Size(30, 30));
+      expect(container.read(sessionsProvider).requireValue.length, 8);
+      expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
       expect(
-        tester.widget<AppSvgIcon>(fallback).assetName,
-        'home_drawer_project',
+        container
+            .read(sessionsProvider)
+            .requireValue
+            .any((session) => session.title == '新项目'),
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+            .controller
+            .markdown,
+        isEmpty,
       );
       expect(tester.takeException(), isNull);
     },
   );
 
+  testWidgets('conversation icons render in rows and long-press previews', (
+    tester,
+  ) async {
+    await pumpDrawer(tester);
+    final avatar = find.byKey(const Key('drawer-session-avatar-mock-1'));
+    expect(tester.getSize(avatar), const Size(30, 30));
+    final icon = tester.widget<AppSvgIcon>(avatar);
+    const bubbleIcons = {
+      'drawer_conversation_pink',
+      'drawer_conversation_blue',
+      'drawer_conversation_purple',
+    };
+    expect(bubbleIcons, contains(icon.assetName));
+    expect(icon.color, isNull);
+    final title = find
+        .descendant(
+          of: find.byKey(const Key('drawer-session-mock-1')),
+          matching: find.byType(Text),
+        )
+        .first;
+    expect(tester.getTopLeft(title).dx - tester.getRect(avatar).right, 10);
+    expect(
+      tester.getSize(find.byKey(const Key('drawer-session-mock-1'))).height,
+      40,
+    );
+    expect({
+      for (final id in ['mock-1', 'mock-2', 'mock-3'])
+        tester
+            .widget<AppSvgIcon>(find.byKey(Key('drawer-session-avatar-$id')))
+            .assetName,
+    }, bubbleIcons);
+    await openMenu(tester, 'mock-1');
+    final preview = find.byKey(const Key('app-context-menu-preview'));
+    expect(find.descendant(of: preview, matching: avatar), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('drawer-new-session')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-message-input')));
+    tester.testTextInput.enterText('Create a new project');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-send-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    final fallback = find.byKey(const Key('drawer-session-avatar-mock-new-1'));
+    expect(tester.getSize(fallback), const Size(30, 30));
+    expect(
+      bubbleIcons,
+      contains(tester.widget<AppSvgIcon>(fallback).assetName),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pin, rename and delete stay updated after reopening', (
     tester,
   ) async {
     final container = await pumpDrawer(tester);
+    final iconBeforePin = tester
+        .widget<AppSvgIcon>(
+          find.byKey(const Key('drawer-session-avatar-mock-2')),
+        )
+        .assetName;
     await openMenu(tester, 'mock-2');
     await tester.tap(find.text('置顶会话'));
     await tester.pumpAndSettle();
     expect(container.read(sessionsProvider).requireValue.first.id, 'mock-2');
+    expect(
+      tester
+          .widget<AppSvgIcon>(
+            find.byKey(const Key('drawer-session-avatar-mock-2')),
+          )
+          .assetName,
+      iconBeforePin,
+    );
     await openMenu(tester, 'mock-2');
     await tester.tap(find.text('重命名'));
     await tester.pumpAndSettle();
@@ -719,7 +850,7 @@ void main() {
               final item = find.byKey(Key(key));
               final bounds = tester.getRect(item);
               expect(bounds.top, greaterThanOrEqualTo(previousBottom));
-              expect(bounds.height, 50);
+              expect(bounds.height, 40);
               expect(
                 find.descendant(of: item, matching: find.text(label)),
                 findsOneWidget,

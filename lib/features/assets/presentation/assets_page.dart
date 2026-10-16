@@ -19,8 +19,7 @@ import '../../../shared/providers/network_provider.dart';
 import '../data/work_library_repository.dart';
 import '../domain/library_work.dart';
 import 'role_library_list.dart';
-import '../../../shared/widgets/app_image_preview.dart';
-import '../../../shared/widgets/app_video_preview.dart';
+import '../../../shared/widgets/app_media_preview.dart';
 
 enum AssetLibrarySection { works, roles }
 
@@ -216,6 +215,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
               isNetwork: true,
               isVideo: work.isVideo,
               videoUrl: work.videoUrl,
+              imageUrls: work.imageUrls,
               selectionAsset: work.previewUrl,
             ),
           );
@@ -431,16 +431,49 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
   }
 
   void _previewWork(int index) {
-    final item = _workGroups.expand((group) => group.items).elementAt(index);
-    if (item.isVideo && item.videoUrl.isNotEmpty) {
-      AppVideoPreview.show(context: context, url: Uri.parse(item.videoUrl));
+    final works = _workGroups.expand((group) => group.items).toList();
+    final selected = works[index];
+    if (selected.isVideo ? selected.videoUrl.isEmpty : selected.asset.isEmpty) {
       return;
     }
-    if (item.asset.isEmpty) return;
-    AppImagePreview.show(
+    final items = <MediaPreviewItem>[];
+    var initialIndex = 0;
+    for (var workIndex = 0; workIndex < works.length; workIndex++) {
+      final work = works[workIndex];
+      if (work.isVideo ? work.videoUrl.isEmpty : work.asset.isEmpty) continue;
+      if (workIndex == index) initialIndex = items.length;
+      if (work.isVideo) {
+        items.add(
+          VideoPreviewItem(
+            url: Uri.parse(work.videoUrl),
+            heroTag: 'work-preview-$workIndex',
+            thumbnail: work.asset.isEmpty
+                ? null
+                : work.isNetwork
+                ? AppImageCache.provider(work.asset)
+                : AssetImage(work.asset),
+          ),
+        );
+        continue;
+      }
+      final urls = work.imageUrls.isEmpty ? [work.asset] : work.imageUrls;
+      for (var imageIndex = 0; imageIndex < urls.length; imageIndex++) {
+        items.add(
+          ImagePreviewItem(
+            image: work.isNetwork
+                ? AppImageCache.provider(urls[imageIndex])
+                : AssetImage(urls[imageIndex]),
+            heroTag: imageIndex == 0
+                ? 'work-preview-$workIndex'
+                : 'work-preview-$workIndex-$imageIndex',
+          ),
+        );
+      }
+    }
+    AppMediaPreview.showGallery(
       context: context,
-      image: item.image,
-      heroTag: 'work-preview-$index',
+      items: items,
+      initialIndex: initialIndex,
     );
   }
 }
@@ -1111,6 +1144,7 @@ class _WorkItem {
     this.id,
     this.isNetwork = false,
     this.videoUrl = '',
+    this.imageUrls = const [],
   });
 
   final String asset;
@@ -1119,6 +1153,7 @@ class _WorkItem {
   final String? id;
   final bool isNetwork;
   final String videoUrl;
+  final List<String> imageUrls;
   ImageProvider get image =>
       isNetwork ? AppImageCache.provider(asset) : AssetImage(asset);
 }

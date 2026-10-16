@@ -104,6 +104,10 @@ void main() {
     for (final entryKey in protectedDrawerEntries) {
       await tester.tap(find.byKey(const Key('popi-open-navigation')));
       await tester.pumpAndSettle();
+      if (find.byKey(Key(entryKey)).evaluate().isEmpty) {
+        await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.byKey(Key(entryKey)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));

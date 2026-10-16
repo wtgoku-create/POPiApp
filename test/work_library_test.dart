@@ -72,6 +72,30 @@ LibraryWorkPage workPage(String id, {bool hasMore = false}) => LibraryWorkPage(
 );
 
 void main() {
+  test('preserves all result images in order and ignores empty URLs', () {
+    final source = task('multiple');
+    (source['resultList']! as List).first['images'] = [
+      '',
+      '/media/front.png',
+      null,
+      'https://cdn.example.test/back.png',
+    ];
+    final result = LibraryWorkPage.fromJson(
+      {
+        'list': [source],
+      },
+      page: 1,
+      pageSize: 20,
+      mediaBaseUrl: 'https://example.test',
+    ).items.single;
+    expect(result.previewUrl, 'https://example.test/media/front.png');
+    expect(result.imageUrls, [
+      'https://example.test/media/front.png',
+      'https://cdn.example.test/back.png',
+    ]);
+    expect(() => result.imageUrls.clear(), throwsUnsupportedError);
+  });
+
   for (final type in [0, 1, 2]) {
     test('uses completed app task contract for filter $type', () async {
       late RequestOptions request;
@@ -346,6 +370,84 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     expect(platform.disposed, [1]);
   });
+
+  testWidgets(
+    'asset gallery preserves image results and videos in display order',
+    (tester) async {
+      final original = VideoPlayerPlatform.instance;
+      final platform = FakeVideoPlayer();
+      VideoPlayerPlatform.instance = platform;
+      addTearDown(() => VideoPlayerPlatform.instance = original);
+      final repository = TestWorkRepository(
+        (_, __) async => const LibraryWorkPage(
+          items: [
+            LibraryWork(
+              id: 'images',
+              previewUrl: 'https://example.test/front.png',
+              imageUrls: [
+                'https://example.test/front.png',
+                'https://example.test/back.png',
+              ],
+              isVideo: false,
+              createdAt: null,
+            ),
+            LibraryWork(
+              id: 'video',
+              previewUrl: '',
+              videoUrl: 'https://example.test/actual.mp4',
+              isVideo: true,
+              createdAt: null,
+            ),
+            LibraryWork(
+              id: 'last',
+              previewUrl: 'https://example.test/last.png',
+              isVideo: false,
+              createdAt: null,
+            ),
+          ],
+          hasMore: false,
+        ),
+      );
+      await pumpLibrary(tester, repository);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('assets-work-1')));
+      await tester.pumpAndSettle();
+      final gallery = find.byKey(const Key('asset-preview-gallery'));
+      PageView pages() => tester.widget<PageView>(gallery);
+      expect(pages().childrenDelegate.estimatedChildCount, 4);
+      expect(pages().controller!.page, 2);
+      expect(platform.sources.single.uri, 'https://example.test/actual.mp4');
+      await tester.drag(
+        find.byKey(const Key('asset-preview-video')),
+        const Offset(-600, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(pages().controller!.page, 3);
+      expect(find.byType(VideoPlayer), findsNothing);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      expect(platform.disposed, [1]);
+      for (final index in [0, 1, 3]) {
+        await tester.tap(find.byKey(Key('asset-preview-thumbnail-$index')));
+        await tester.pumpAndSettle();
+        final image = tester.widget<Image>(
+          find.descendant(
+            of: find.byKey(const Key('asset-preview-image')),
+            matching: find.byType(Image),
+          ),
+        );
+        expect(
+          (image.image as CachedNetworkImageProvider).url,
+          [
+            'https://example.test/front.png',
+            'https://example.test/back.png',
+            '',
+            'https://example.test/last.png',
+          ][index],
+        );
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('filter changes and logout discard old responses', (
     tester,

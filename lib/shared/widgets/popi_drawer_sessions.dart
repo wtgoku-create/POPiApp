@@ -17,11 +17,13 @@ class PopiDrawerSessions extends ConsumerStatefulWidget {
   const PopiDrawerSessions({
     required this.onOpenConversation,
     required this.header,
+    this.activeSessionId,
     super.key,
   });
 
   final ValueChanged<ConversationSession> onOpenConversation;
   final Widget header;
+  final String? activeSessionId;
 
   @override
   ConsumerState<PopiDrawerSessions> createState() => _PopiDrawerSessionsState();
@@ -29,6 +31,21 @@ class PopiDrawerSessions extends ConsumerStatefulWidget {
 
 class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
   bool _loadMoreFailed = false;
+
+  Future<void> _refresh() async {
+    _loadMoreFailed = false;
+    final userId = ref.read(userProvider)?.id;
+    try {
+      await ref.read(sessionsProvider.notifier).refresh();
+    } catch (_) {
+      if (mounted && ref.read(userProvider)?.id == userId) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.chatHistoryLoadFailed,
+        );
+      }
+    }
+  }
 
   Future<void> _loadMore() async {
     if (_loadMoreFailed) return;
@@ -58,6 +75,9 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
         : history.valueOrNull ?? const <ConversationSession>[];
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
+    final mutedColor = Theme.of(context).brightness == Brightness.dark
+        ? colors.onSurfaceVariant
+        : AppColors.textTertiary;
     final sessionIndices = {
       for (var index = 0; index < sessions.length; index++)
         sessions[index].id: index,
@@ -78,17 +98,7 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
         return false;
       },
       child: RefreshIndicator(
-        onRefresh: () async {
-          _loadMoreFailed = false;
-          final userId = ref.read(userProvider)?.id;
-          try {
-            await ref.read(sessionsProvider.notifier).refresh();
-          } catch (_) {
-            if (context.mounted && ref.read(userProvider)?.id == userId) {
-              AppToast.error(context, l10n.chatHistoryLoadFailed);
-            }
-          }
-        },
+        onRefresh: _refresh,
         child: CustomScrollView(
           key: const Key('drawer-session-list'),
           physics: const AlwaysScrollableScrollPhysics(),
@@ -98,15 +108,12 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
               child: SizedBox(
                 height: 40,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.only(left: 10),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       l10n.drawerSessions,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colors.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 14, color: mutedColor),
                     ),
                   ),
                 ),
@@ -121,6 +128,7 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
                     return _SessionItem(
                       key: ValueKey(session.id),
                       session: session,
+                      selected: session.id == widget.activeSessionId,
                       onTap: () => widget.onOpenConversation(session),
                     );
                   },
@@ -227,10 +235,16 @@ class _SessionSkeleton extends StatelessWidget {
 }
 
 class _SessionItem extends ConsumerWidget {
-  const _SessionItem({required this.session, required this.onTap, super.key});
+  const _SessionItem({
+    required this.session,
+    required this.onTap,
+    required this.selected,
+    super.key,
+  });
 
   final ConversationSession session;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -238,15 +252,23 @@ class _SessionItem extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final userId = ref.watch(userProvider.select((user) => user?.id));
     final pinned = session.pinnedAt != null;
+    const bubbleIcons = [
+      'drawer_conversation_pink',
+      'drawer_conversation_blue',
+      'drawer_conversation_purple',
+    ];
+    // Keep the color stable when conversations are renamed or reordered.
+    final bubbleIndex =
+        session.id.codeUnits.fold<int>(0, (total, unit) => total + unit) %
+        bubbleIcons.length;
     Widget menuIcon(String name, double size) =>
         AppSvgIcon.asset(name, size: size, color: colors.onSurface);
     Widget label() => Row(
       children: [
         AppSvgIcon.asset(
-          'home_drawer_project',
+          bubbleIcons[bubbleIndex],
           key: Key('drawer-session-avatar-${session.id}'),
           size: 30,
-          color: colors.onSurface,
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -257,7 +279,7 @@ class _SessionItem extends ConsumerWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w400,
-              color: colors.onSurface,
+              color: selected ? colors.primary : colors.onSurface,
             ),
           ),
         ),
@@ -346,23 +368,31 @@ class _SessionItem extends ConsumerWidget {
           },
         ),
       ],
-      child: Material(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.pill),
-        child: InkWell(
-          key: Key('drawer-session-${session.id}'),
+      child: Semantics(
+        selected: selected,
+        child: Material(
+          color: selected
+              ? colors.primary.withValues(alpha: .05)
+              : colors.surface,
           borderRadius: BorderRadius.circular(AppRadii.pill),
-          overlayColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.pressed)
-                ? colors.primary.withValues(alpha: .12)
-                : null,
-          ),
-          onTap: onTap,
-          child: SizedBox(
-            height: 40,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              child: label(),
+          child: InkWell(
+            key: Key('drawer-session-${session.id}'),
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            overlayColor: WidgetStateProperty.resolveWith(
+              (states) => states.contains(WidgetState.pressed)
+                  ? colors.primary.withValues(alpha: .12)
+                  : null,
+            ),
+            onTap: onTap,
+            child: SizedBox(
+              height: 40,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                child: label(),
+              ),
             ),
           ),
         ),

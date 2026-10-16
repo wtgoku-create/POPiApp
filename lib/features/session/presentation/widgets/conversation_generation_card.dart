@@ -8,6 +8,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/generation_credit_notice.dart';
 import '../../domain/conversation_generation.dart';
 import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -259,6 +260,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   );
 
   Future<void> _confirm() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_busy || _loading || _estimating || !_editable) return;
     if (_attempted == null) {
       if (_options == null) {
@@ -285,9 +287,8 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
     final confirmed = await AppDialog.confirm(
       context: context,
       title: widget.block.title,
-      description: AppLocalizations.of(
-        context,
-      )!.chatEstimatedPoints(selected.estimatedPoints.toString()),
+      description:
+          '${l10n.chatEstimatedPoints(selected.estimatedPoints.toString())}\n\n${l10n.generationCreditNotice}',
       cancelLabel: AppLocalizations.of(context)!.cancel,
       confirmLabel: AppLocalizations.of(context)!.chatConfirmGeneration,
     );
@@ -497,7 +498,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                   style: TextStyle(fontSize: 13, color: colors.error),
                 ),
               ),
-            if (_editable) _actions(l10n),
+            if (_editable) ...[const GenerationCreditNotice(), _actions(l10n)],
           ],
         ],
       ),

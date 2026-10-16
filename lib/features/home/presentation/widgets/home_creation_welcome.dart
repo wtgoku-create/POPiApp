@@ -11,11 +11,13 @@ class HomeCreationWelcome extends StatelessWidget {
   const HomeCreationWelcome({
     required this.name,
     required this.onStart,
+    this.startingContent = false,
     super.key,
   });
 
   final String name;
   final ValueChanged<String> onStart;
+  final bool startingContent;
 
   @override
   Widget build(BuildContext context) {
@@ -116,13 +118,16 @@ class HomeCreationWelcome extends StatelessWidget {
                     for (var i = 0; i < entries.length; i++) ...[
                       Semantics(
                         button: true,
-                        enabled: i < 2,
+                        enabled: !startingContent,
                         child: _CreationEntry(
                           index: i,
                           label: entries[i].$1,
                           icon: entries[i].$2,
                           iconBackground: entries[i].$3,
-                          onTap: i < 2 ? () => onStart(entries[i].$1) : null,
+                          loading: i == 2 && startingContent,
+                          onTap: startingContent
+                              ? null
+                              : () => onStart(entries[i].$1),
                         ),
                       ),
                       if (i < entries.length - 1) const SizedBox(height: 10),
@@ -145,6 +150,7 @@ class _CreationEntry extends StatelessWidget {
     required this.icon,
     required this.iconBackground,
     required this.onTap,
+    required this.loading,
   });
 
   final int index;
@@ -152,6 +158,7 @@ class _CreationEntry extends StatelessWidget {
   final String icon;
   final Color iconBackground;
   final VoidCallback? onTap;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -208,11 +215,17 @@ class _CreationEntry extends StatelessWidget {
                 SizedBox.square(
                   dimension: 40,
                   child: Center(
-                    child: AppSvgIcon.asset(
-                      'home_welcome_chevron',
-                      size: 13,
-                      color: foreground,
-                    ),
+                    child: loading
+                        ? const SizedBox.square(
+                            key: Key('home-content-loading'),
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : AppSvgIcon.asset(
+                            'home_welcome_chevron',
+                            size: 13,
+                            color: foreground,
+                          ),
                   ),
                 ),
               ],

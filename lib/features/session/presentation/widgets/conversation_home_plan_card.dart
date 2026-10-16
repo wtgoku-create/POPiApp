@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/generation_credit_notice.dart';
 import '../../../role_guide/domain/home_creation.dart';
 import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -133,7 +134,7 @@ class ConversationHomePlanCard extends StatelessWidget {
                   style: body.copyWith(color: colors.error),
                 ),
               ),
-            if (editable) actions,
+            if (editable) ...[const GenerationCreditNotice(), actions],
           ],
         ],
       ),

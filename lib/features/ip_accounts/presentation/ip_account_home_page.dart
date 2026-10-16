@@ -12,7 +12,6 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/project_provider.dart';
 import '../../../shared/providers/safe_area_provider.dart';
-import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
@@ -21,6 +20,7 @@ import '../../../shared/type/account_input_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../projects/data/project_repository.dart';
+import '../../projects/domain/project.dart';
 import '../domain/ip_account_home.dart';
 import 'account_archives_page.dart';
 import 'widgets/account_preferences_sheet.dart';
@@ -47,7 +47,9 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   bool _loading = true;
   bool _failed = false;
   bool _creating = false;
-  String? _creationRequestId;
+  ProjectSession? _boundSession;
+  bool _bindingLoading = false;
+  bool _bindingFailed = false;
   List<IpAccountCreation> _history = const [];
   bool _historyLoading = false;
   bool _historyFailed = false;
@@ -65,8 +67,10 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _dismissRenameConfirmation();
       });
-      _creationRequestId = null;
       _creating = false;
+      _boundSession = null;
+      _bindingLoading = false;
+      _bindingFailed = false;
       unawaited(_load());
     }
   }
@@ -91,6 +95,9 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       _failed = false;
       _account = null;
       _creating = false;
+      _boundSession = null;
+      _bindingLoading = false;
+      _bindingFailed = false;
       _renaming = false;
       _history = const [];
       _historyLoading = false;
@@ -111,12 +118,39 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         _loading = false;
       });
       unawaited(_loadHistory(account, token));
+      if (account.editable) unawaited(_loadBinding(account, token));
     } catch (_) {
       if (mounted && !token.isCancelled) {
         setState(() {
           _failed = true;
           _loading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadBinding(IpAccountHome account, CancelToken token) async {
+    setState(() {
+      _bindingLoading = true;
+      _bindingFailed = false;
+    });
+    try {
+      final bound = await ref
+          .read(projectRepositoryProvider)
+          .boundSession(account.id, cancelToken: token);
+      if (!mounted || token.isCancelled) return;
+      setState(() => _boundSession = bound);
+    } catch (_) {
+      if (mounted && !token.isCancelled) {
+        setState(() => _bindingFailed = true);
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.networkRequestFailed,
+        );
+      }
+    } finally {
+      if (mounted && !token.isCancelled) {
+        setState(() => _bindingLoading = false);
       }
     }
   }
@@ -293,48 +327,29 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
 
   Future<void> _startContent() async {
     final account = _account;
-    if (account == null || !account.editable || _creating) return;
+    if (account == null || !account.editable || _creating || _bindingLoading) {
+      return;
+    }
     final token = _token!;
     final owner = ref.read(userProvider)?.id;
-    final l10n = AppLocalizations.of(context)!;
     setState(() => _creating = true);
     try {
-      final repository = ref.read(projectRepositoryProvider);
-      final bound = await repository.boundSession(
-        account.id,
-        cancelToken: token,
-      );
+      if (_bindingFailed) await _loadBinding(account, token);
       if (!mounted ||
           token.isCancelled ||
-          ref.read(userProvider)?.id != owner) {
+          ref.read(userProvider)?.id != owner ||
+          _bindingFailed) {
         return;
       }
-      if (bound == null) {
-        _creationRequestId ??= ProjectRepository.createClientRequestId();
-      }
-      final session =
-          bound ??
-          await repository.createSession(
-            account.id,
-            l10n.newSessionTitle,
-            clientRequestId: _creationRequestId!,
-            cancelToken: token,
-          );
-      if (!mounted ||
-          token.isCancelled ||
-          ref.read(userProvider)?.id != owner) {
-        return;
-      }
-      _creationRequestId = null;
-      ref.invalidate(projectSessionsProvider(account.id));
-      ref.invalidate(sessionsProvider);
-      setState(() => _creating = false);
+      final bound = _boundSession;
       await context.push(
         Uri(
           path: '/session',
           queryParameters: {
-            'sessionId': session.id,
-            if (bound == null) 'prompt': l10n.ipAccountStartPrompt,
+            if (bound != null)
+              'sessionId': bound.id
+            else
+              'accountId': account.id,
           },
         ).toString(),
       );
@@ -343,7 +358,10 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       if (mounted &&
           !token.isCancelled &&
           ref.read(userProvider)?.id == owner) {
-        AppToast.error(context, l10n.networkRequestFailed);
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.networkRequestFailed,
+        );
       }
     } finally {
       if (mounted && identical(_token, token)) {
@@ -356,7 +374,6 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   Widget build(BuildContext context) {
     ref.listen(userProvider.select((user) => user?.id), (_, _) {
       _dismissRenameConfirmation();
-      _creationRequestId = null;
       _creating = false;
       unawaited(_load());
     });
@@ -573,7 +590,8 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                       const SizedBox(height: 10),
                       FilledButton(
                         key: const Key('ip-account-start-content'),
-                        onPressed: account.editable && !_creating
+                        onPressed:
+                            account.editable && !_creating && !_bindingLoading
                             ? _startContent
                             : null,
                         style: FilledButton.styleFrom(
@@ -584,7 +602,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        child: _creating
+                        child: _creating || _bindingLoading
                             ? const SizedBox.square(
                                 dimension: 20,
                                 child: CircularProgressIndicator(
@@ -592,7 +610,9 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                                 ),
                               )
                             : Text(
-                                l10n.ipAccountStartContent,
+                                _boundSession == null
+                                    ? l10n.ipAccountStartContent
+                                    : l10n.ipAccountContinueConversation,
                                 textAlign: TextAlign.center,
                               ),
                       ),

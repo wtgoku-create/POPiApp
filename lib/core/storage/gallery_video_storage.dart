@@ -11,6 +11,15 @@ abstract final class GalleryVideoStorage {
     if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
       throw GalleryAccessDenied();
     }
+    await withDownloadedVideo(url, Gal.putVideo, cancelToken: cancelToken);
+  }
+
+  /// Keeps a downloaded file alive for an action, then removes the temporary copy.
+  static Future<T> withDownloadedVideo<T>(
+    Uri url,
+    Future<T> Function(String path) action, {
+    CancelToken? cancelToken,
+  }) async {
     if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
     final directory = await Directory.systemTemp.createTemp('popi_video_');
     final dio = Dio(
@@ -27,7 +36,7 @@ abstract final class GalleryVideoStorage {
           : 'mp4';
       final path = '${directory.path}/POPi_video.$suffix';
       await dio.download(url.toString(), path, cancelToken: cancelToken);
-      await Gal.putVideo(path);
+      return await action(path);
     } finally {
       dio.close(force: true);
       await directory.delete(recursive: true);

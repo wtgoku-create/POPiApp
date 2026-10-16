@@ -20,6 +20,65 @@ void main() {
   tearDown(() => dio.close(force: true));
 
   test(
+    'content entry sends only its request ID to the dedicated endpoint',
+    () async {
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.path, '/api_agent/v2/sessions/content-entry');
+            expect(options.method, 'POST');
+            expect(options.data, {'clientRequestId': requestId});
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 201,
+                data: {
+                  'id': sessionId,
+                  'title': '新会话',
+                  'bindingStatus': 'ready',
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final session = await api.createContentSession(
+        clientRequestId: requestId,
+      );
+      expect(session['id'], sessionId);
+      expect(session['title'], '新会话');
+    },
+  );
+
+  for (final status in [200, 202]) {
+    test('content entry rejects incomplete HTTP $status responses', () async {
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: status,
+                data: {'id': sessionId},
+              ),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        api.createContentSession(clientRequestId: requestId),
+        throwsA(
+          isA<AgentApiException>().having(
+            (error) => error.retryable,
+            'retryable',
+            isTrue,
+          ),
+        ),
+      );
+    });
+  }
+
+  test(
     'standalone creation omits optional fields and returns a ready binding',
     () async {
       dio.interceptors.add(

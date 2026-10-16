@@ -1794,6 +1794,12 @@ abstract class AppLocalizations {
   /// **'Start New Content'**
   String get ipAccountStartContent;
 
+  /// No description provided for @ipAccountContinueConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Conversation'**
+  String get ipAccountContinueConversation;
+
   /// No description provided for @ipAccountStartPrompt.
   ///
   /// In en, this message translates to:
@@ -1889,6 +1895,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share'**
   String get shareAction;
+
+  /// No description provided for @imageShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share image. Please try again'**
+  String get imageShareFailed;
+
+  /// No description provided for @mediaShareFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share media. Please try again'**
+  String get mediaShareFailed;
+
+  /// No description provided for @mediaPreviewPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Item {index} of {count}'**
+  String mediaPreviewPosition(int index, int count);
+
+  /// No description provided for @imagePreviewPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'Image {index} of {count}'**
+  String imagePreviewPosition(int index, int count);
 
   /// No description provided for @item.
   ///
@@ -3145,6 +3175,18 @@ abstract class AppLocalizations {
   /// **'Say something to POPi...'**
   String get composerPlaceholder;
 
+  /// No description provided for @sessionWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi there!'**
+  String get sessionWelcomeTitle;
+
+  /// No description provided for @sessionWelcomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell me, what would you like to create?'**
+  String get sessionWelcomeBody;
+
   /// No description provided for @composerExpandInput.
   ///
   /// In en, this message translates to:
@@ -3264,6 +3306,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Conversations'**
   String get drawerSessions;
+
+  /// No description provided for @drawerNewConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'New project chat'**
+  String get drawerNewConversation;
+
+  /// No description provided for @drawerViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get drawerViewAll;
 
   /// No description provided for @sessionItemOptions.
   ///
@@ -5328,6 +5382,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generate'**
   String get chatConfirmGeneration;
+
+  /// No description provided for @generationCreditNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Please note: Clicking \"Generate\" will deduct the corresponding points. Points already consumed are non-refundable. Please carefully review your materials, prompts, and generation settings before submitting.'**
+  String get generationCreditNotice;
 
   /// No description provided for @chatRoleName.
   ///

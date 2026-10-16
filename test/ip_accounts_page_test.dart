@@ -117,6 +117,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(DrawerButton));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('drawer-nav-ip-accounts')));
       await tester.pumpAndSettle();
       expect(

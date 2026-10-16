@@ -253,290 +253,100 @@ void main() {
     });
   }
 
-  testWidgets('renders the session creation layout and drawer', (tester) async {
-    tester.view.physicalSize = const Size(440, 956);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetViewInsets);
-
-    final container = ProviderContainer(
-      overrides: [
-        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
-        projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
-      ],
-    );
-    addTearDown(container.dispose);
-    container
-        .read(safeAreaInsetsProvider.notifier)
-        .update(const EdgeInsets.fromLTRB(24, 24, 28, 34));
-    await container
-        .read(userProvider.notifier)
-        .setUser(
-          const User(
-            id: '10561',
-            code: 'u10561',
-            name: '当前用户',
-            email: 'user@popi.art',
-            allCoins: 200,
+  for (final size in [
+    const Size(440, 956),
+    const Size(320, 568),
+    const Size(1280, 900),
+  ]) {
+    testWidgets('session welcome adapts to the keyboard at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(
+            FixtureSessionRepository(),
           ),
-        );
-
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: _LocalizedTestApp(
-          theme: AppTheme.light,
-          home: const SessionPage(),
+          projectRepositoryProvider.overrideWithValue(
+            FixtureProjectRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(safeAreaInsetsProvider.notifier)
+          .update(const EdgeInsets.only(top: 52, bottom: 20));
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '1', name: 'User', email: ''));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: _LocalizedTestApp(
+            theme: AppTheme.light,
+            home: const SessionPage(),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('你现在最想做什么？'), findsOneWidget);
-    expect(find.text('做一个新IP'), findsOneWidget);
-    expect(find.text('跟POPi说点什么...'), findsOneWidget);
-    expect(find.byKey(const Key('popi-message-input')), findsOneWidget);
-    expect(find.byType(ExtendedTextField), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
-      24,
-    );
-    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
-    final collapsedComposerHeight = tester
-        .getSize(find.byType(PopiMessageComposer))
-        .height;
-    final collapsedScrollView = tester.widget<SingleChildScrollView>(
-      find.byKey(const Key('popi-home-scroll')),
-    );
-    expect(
-      (collapsedScrollView.padding! as EdgeInsets).bottom,
-      closeTo(collapsedComposerHeight + 20, .5),
-    );
-    expect(scaffold.resizeToAvoidBottomInset, isFalse);
-    expect(scaffold.bottomNavigationBar, isNull);
-    expect(scaffold.body, isA<Stack>());
-    expect(
-      tester.getSize(find.byKey(const Key('popi-home-app-bar'))).height,
-      56,
-    );
-    expect(find.text('升级会员'), findsOneWidget);
-    expect(find.text('200'), findsOneWidget);
-    expect(find.byKey(const Key('home-login-entry-icon')), findsNothing);
-    expect(find.byKey(const Key('home-login-entry-chevron')), findsNothing);
-    expect(
-      tester.getSize(find.byKey(const Key('home-membership-entry'))).height,
-      36,
-    );
-    expect(
-      tester.getSize(find.byKey(const Key('home-membership-entry'))).width,
-      lessThan(160),
-    );
-    final membershipSurface = tester.widget<Ink>(
-      find.byKey(const Key('home-membership-surface')),
-    );
-    final membershipDecoration = membershipSurface.decoration! as BoxDecoration;
-    expect(membershipDecoration.border!.top.width, 1);
-    expect(membershipDecoration.boxShadow, isNull);
-    expect(
-      tester.getCenter(find.byKey(const Key('home-membership-points'))).dy,
-      closeTo(
-        tester.getCenter(find.byKey(const Key('home-membership-label'))).dy,
-        .5,
-      ),
-    );
-    expect(
-      tester.getTopLeft(find.byKey(const Key('popi-home-app-bar'))).dy,
-      24,
-    );
-    expect(tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy, 956 - 34);
-    final wordmarkTop = tester
-        .getTopLeft(find.byKey(const Key('popi-wordmark')))
-        .dy;
-
-    await tester.tap(find.byKey(const Key('popi-message-input')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 110));
-    final animatingComposerHeight = tester
-        .getSize(find.byKey(const Key('popi-message-composer')))
-        .height;
-    expect(animatingComposerHeight, greaterThan(60));
-    expect(animatingComposerHeight, lessThan(112));
-    await tester.pump(const Duration(milliseconds: 120));
-    await tester.pump();
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      112,
-    );
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
-      42,
-    );
-    tester.testTextInput.enterText('第一行\n第二行\n第三行\n第四行\n第五行');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 90));
-    final growingHeight = tester
-        .getSize(find.byKey(const Key('popi-message-composer')))
-        .height;
-    expect(growingHeight, greaterThan(112));
-    expect(growingHeight, lessThan(133));
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      133,
-    );
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-input'))).height,
-      63,
-    );
-    tester.testTextInput.enterText('');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 90));
-    final shrinkingHeight = tester
-        .getSize(find.byKey(const Key('popi-message-composer')))
-        .height;
-    expect(shrinkingHeight, greaterThan(112));
-    expect(shrinkingHeight, lessThan(133));
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      112,
-    );
-    final expandedComposerHeight = tester
-        .getSize(find.byType(PopiMessageComposer))
-        .height;
-    final expandedScrollView = tester.widget<SingleChildScrollView>(
-      find.byKey(const Key('popi-home-scroll')),
-    );
-    expect(expandedComposerHeight, greaterThan(collapsedComposerHeight));
-    expect(
-      (expandedScrollView.padding! as EdgeInsets).bottom,
-      closeTo(expandedComposerHeight + 20, .5),
-    );
-    final expandedComposerRect = tester.getRect(
-      find.byKey(const Key('popi-message-composer')),
-    );
-    await tester.tapAt(
-      Offset(expandedComposerRect.center.dx, expandedComposerRect.top + 70),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 220));
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      112,
-    );
-    expect(find.text('SDXL1.0'), findsNothing);
-    expect(find.byTooltip('语音输入'), findsNothing);
-    expect(find.text('AI生成结果可能有误，仅供参考'), findsOneWidget);
-    await tester.tapAt(const Offset(10, 800));
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 220));
-    await tester.pump();
-    expect(
-      tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      60,
-    );
-    expect(find.text('跟POPi说点什么...'), findsOneWidget);
-
-    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-    await tester.pumpAndSettle();
-    final blurRegion = find.byKey(const Key('popi-composer-region-blur'));
-    expect(tester.getBottomRight(blurRegion).dy, 956 - 300);
-    final blurHeight = tester.getSize(blurRegion).height;
-    tester.view.viewInsets = const FakeViewPadding(bottom: 350);
-    await tester.pumpAndSettle();
-    expect(tester.getSize(blurRegion).height, blurHeight);
-    expect(tester.getBottomRight(blurRegion).dy, 956 - 350);
-    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-    await tester.pumpAndSettle();
-    expect(
-      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
-      956 - 300 - 20,
-    );
-    await tester.dragFrom(const Offset(220, 300), const Offset(0, -30));
-    await tester.pump();
-    expect(
-      tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy,
-      lessThan(wordmarkTop),
-    );
-
-    tester.view.viewInsets = const FakeViewPadding(bottom: 1);
-    await tester.pumpAndSettle();
-    final composerBottomNearKeyboardClose = tester
-        .getBottomRight(find.text('AI生成结果可能有误，仅供参考'))
-        .dy;
-    tester.view.resetViewInsets();
-    await tester.pumpAndSettle();
-    expect(
-      tester.getBottomRight(find.text('AI生成结果可能有误，仅供参考')).dy,
-      composerBottomNearKeyboardClose,
-    );
-    expect(
-      tester.getTopLeft(find.byKey(const Key('popi-wordmark'))).dy,
-      wordmarkTop,
-    );
-
-    await tester.tap(find.text('做一个新IP'));
-    await tester.pumpAndSettle();
-    expect(find.text('做一个新IP'), findsWidgets);
-    expect(find.byKey(const Key('popi-message-placeholder')), findsNothing);
-
-    await tester.tap(find.byTooltip('打开导航'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('新项目'), findsOneWidget);
-    expect(find.text('搜索对话'), findsNothing);
-    expect(find.text('POPi对话'), findsNothing);
-    expect(find.text('当前用户'), findsOneWidget);
-    expect(find.text('u10561'), findsOneWidget);
-    expect(
-      tester.getSize(find.byKey(const Key('drawer-user-summary'))).width,
-      greaterThan(81),
-    );
-    expect(find.text('项目(5)'), findsNothing);
-    expect(find.text('会话'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.byKey(const Key('drawer-new-session'))).dy,
-      53,
-    );
-    expect(
-      tester.getSize(find.byKey(const Key('drawer-new-session'))),
-      const Size(320, 50),
-    );
-    expect(find.text('教学中心'), findsOneWidget);
-    expect(find.text('IP项目'), findsOneWidget);
-    expect(find.text('灵感库'), findsNothing);
-    expect(find.text('Skill'), findsNothing);
-
-    final navigationInkWell = tester.widget<InkWell>(
-      find.ancestor(of: find.text('角色'), matching: find.byType(InkWell)),
-    );
-    final sessionInkWell = tester.widget<InkWell>(
-      find.byKey(const Key('drawer-session-mock-1')),
-    );
-    final pressedStates = {WidgetState.pressed};
-    expect(
-      navigationInkWell.overlayColor?.resolve(pressedStates),
-      AppColors.brand.withValues(alpha: .12),
-    );
-    expect(
-      sessionInkWell.overlayColor?.resolve(pressedStates),
-      AppColors.brand.withValues(alpha: .12),
-    );
-    final drawer = tester.widget<Container>(
-      find.byKey(const Key('popi-navigation-drawer')),
-    );
-    expect(
-      (drawer.decoration as BoxDecoration).borderRadius,
-      const BorderRadius.horizontal(right: Radius.circular(30)),
-    );
-    expect(drawer.clipBehavior, Clip.antiAlias);
-    await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
-    await tester.pumpAndSettle();
-    expect(find.text('校园野餐vlog'), findsNothing);
-    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      final mascot = find.byKey(const Key('popi-welcome-mascot'));
+      final composer = find.byKey(const Key('popi-message-composer'));
+      final input = find.byKey(const Key('popi-message-input'));
+      expect(find.text('嗨，用户～'), findsOneWidget);
+      expect(find.text('告诉我，你现在最想做什么？'), findsOneWidget);
+      expect(find.byKey(const Key('home-membership-entry')), findsNothing);
+      expect(tester.getSize(mascot), const Size(150, 150));
+      expect(tester.getSize(composer).height, 60);
+      expect(
+        tester.getRect(mascot).bottom,
+        lessThan(tester.getRect(composer).top),
+      );
+      expect(tester.getSize(composer).width, lessThanOrEqualTo(640));
+      final initialMascotTop = tester.getTopLeft(mascot).dy;
+      await tester.tap(input);
+      tester.testTextInput.enterText('我想制作一个可爱的角色');
+      tester.view.viewInsets = FakeViewPadding(
+        bottom: size.height < 600 ? 240 : 345,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('嗨，用户～'), findsNothing);
+      expect(find.text('告诉我，你现在最想做什么？'), findsNothing);
+      expect(find.text('AI生成结果可能有误，仅供参考'), findsNothing);
+      expect(tester.getSize(composer).height, 105);
+      expect(find.byKey(const Key('popi-model-parameters')), findsOneWidget);
+      expect(find.byKey(const Key('popi-send-button')), findsOneWidget);
+      expect(
+        tester.getRect(mascot).bottom,
+        lessThan(tester.getRect(composer).top),
+      );
+      expect(
+        tester.getBottomRight(composer).dy,
+        closeTo(size.height - tester.view.viewInsets.bottom - 10, 1),
+      );
+      tester.view.resetViewInsets();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<ExtendedTextField>(input).controller!.text,
+        '我想制作一个可爱的角色',
+      );
+      expect(find.text('嗨，用户～'), findsOneWidget);
+      // Clearing the unfocused controller also collapses the composer.
+      tester.widget<ExtendedTextField>(input).controller!.clear();
+      await tester.pumpAndSettle();
+      expect(tester.getTopLeft(mascot).dy, closeTo(initialMascotTop, 1));
+      await tester.tap(find.byTooltip('打开导航'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
+      expect(find.byKey(const Key('drawer-new-session')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 
   testWidgets('renders home content in English', (tester) async {
     await tester.pumpWidget(
@@ -551,10 +361,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining('What do you want to do most right now?'),
+      find.text('Tell me, what would you like to create?'),
       findsOneWidget,
     );
-    expect(find.text('Create a new IP'), findsOneWidget);
+    expect(find.text('Hi there!'), findsOneWidget);
     expect(find.text('Say something to POPi...'), findsOneWidget);
     expect(find.byTooltip('Open navigation'), findsOneWidget);
   });
@@ -651,7 +461,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('popi-message-composer'))).height,
-      178,
+      163,
     );
     final expandedImageRect = tester.getRect(firstImage);
     final expandedRemoveButtonRect = tester.getRect(firstRemoveButton);
@@ -786,13 +596,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final welcomePanel = tester.widget<Container>(
-      find.byKey(const Key('home-welcome-panel')),
-    );
-    expect(
-      (welcomePanel.decoration! as BoxDecoration).color,
-      AppTheme.dark.colorScheme.surfaceContainerLow,
-    );
+    final welcomeTitle = tester.widget<Text>(find.text('嗨，用户～'));
+    expect(welcomeTitle.style!.color, AppTheme.dark.colorScheme.onSurface);
 
     final composer = tester.widget<Container>(
       find.byKey(const Key('popi-message-composer')),
@@ -817,9 +622,11 @@ void main() {
     final mascot = tester.widget<Image>(
       find.byKey(const Key('popi-welcome-mascot')),
     );
+    final image = mascot.image;
     expect(
-      (mascot.image as AssetImage).assetName,
-      'assets/images/home_welcome_character.png',
+      ((image is ResizeImage ? image.imageProvider : image) as AssetImage)
+          .assetName,
+      'assets/images/session_welcome_character.png',
     );
 
     await tester.tap(find.byTooltip('打开导航'));
@@ -831,6 +638,8 @@ void main() {
     expect(newSessionIcon.color, AppTheme.dark.colorScheme.onSurface);
     final sessionLabel = tester.widget<Text>(find.text('校园野餐vlog'));
     expect(sessionLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
+    await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+    await tester.pumpAndSettle();
     final navigationLabel = tester.widget<Text>(find.text('角色'));
     expect(navigationLabel.style?.color, AppTheme.dark.colorScheme.onSurface);
     expect(tester.takeException(), isNull);

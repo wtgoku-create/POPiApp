@@ -32,6 +32,16 @@ abstract class SessionRepository {
     String title, {
     CancelToken? cancelToken,
   });
+  Future<ConversationSession> resolveAccountSession(
+    String userId,
+    String accountId,
+    String title, {
+    CancelToken? cancelToken,
+  });
+  Future<ConversationSession> createFromContent(
+    String userId, {
+    CancelToken? cancelToken,
+  });
   Future<ConversationSession> update(
     String userId,
     String id, {
@@ -235,6 +245,70 @@ class ApiSessionRepository extends SessionRepository {
       ),
     ),
   );
+
+  @override
+  Future<ConversationSession> resolveAccountSession(
+    String userId,
+    String accountId,
+    String title, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return ConversationSession.fromJson(
+        await agent.sessionByAccount(accountId, cancelToken: cancelToken),
+      );
+    } on AgentApiException catch (error) {
+      if (error.statusCode != 404 ||
+          error.code != 'ACCOUNT_SESSION_NOT_FOUND') {
+        rethrow;
+      }
+    }
+    if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
+    // Retain the account-scoped command across timeouts and application restarts.
+    return _command(
+      userId,
+      'create-account:$accountId',
+      {'accountId': accountId, 'title': _title(title)},
+      (input) async {
+        try {
+          return ConversationSession.fromJson(
+            await agent.createSession(
+              clientRequestId: input['clientRequestId'] as String,
+              accountId: input['accountId'] as String,
+              title: input['title'] as String,
+              cancelToken: cancelToken,
+            ),
+          );
+        } on AgentApiException catch (error) {
+          if (error.statusCode != 409 ||
+              error.code != 'ACCOUNT_SESSION_EXISTS') {
+            rethrow;
+          }
+          // Another client may have bound the account after our lookup.
+          return ConversationSession.fromJson(
+            await agent.sessionByAccount(accountId, cancelToken: cancelToken),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  Future<ConversationSession> createFromContent(
+    String userId, {
+    CancelToken? cancelToken,
+  }) => _command(userId, 'content-entry', const {}, (input) async {
+    final session = ConversationSession.fromJson(
+      await agent.createContentSession(
+        clientRequestId: input['clientRequestId'] as String,
+        cancelToken: cancelToken,
+      ),
+    );
+    if (session.bindingStatus != 'ready') {
+      throw const FormatException('Content session binding is not ready');
+    }
+    return session;
+  });
 
   @override
   Future<ConversationSession> update(

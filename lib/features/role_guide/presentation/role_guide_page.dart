@@ -18,6 +18,7 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/generation_credit_notice.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
@@ -1390,6 +1391,8 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               style: const TextStyle(fontSize: 12, color: AppColors.brand),
             ),
           ],
+          if (_live || !widget.generationRepository!.isPreview)
+            const GenerationCreditNotice(),
         ],
       ],
     );
@@ -1429,6 +1432,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (task.canConfirmVideo) const GenerationCreditNotice(),
         RoleGenerationPanel(
           progress: _progress!,
           preview: false,

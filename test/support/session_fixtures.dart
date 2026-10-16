@@ -54,6 +54,30 @@ class FixtureSessionRepository extends SessionRepository {
   }
 
   @override
+  Future<ConversationSession> resolveAccountSession(
+    String userId,
+    String accountId,
+    String title, {
+    CancelToken? cancelToken,
+  }) => create(userId, title, cancelToken: cancelToken);
+
+  @override
+  Future<ConversationSession> createFromContent(
+    String userId, {
+    CancelToken? cancelToken,
+  }) async {
+    final session = ConversationSession(
+      id: 'mock-new-${++_nextId}',
+      title: '新会话',
+      updatedAt: DateTime.now(),
+      bindingStatus: 'ready',
+    );
+    _list(userId);
+    _accounts[userId]!.add(session);
+    return session;
+  }
+
+  @override
   Future<ConversationSession> create(
     String userId,
     String title, {

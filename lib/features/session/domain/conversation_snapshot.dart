@@ -54,7 +54,8 @@ class ConversationBlock {
         data['body'] ??
         data['summary'] ??
         data['description'] ??
-        data['configuration'];
+        data['configuration'] ??
+        (kind == 'text_draft' ? data['content'] : null);
     if (text is String) return text;
     final payload = data['payload'];
     if (payload is String) return payload;
@@ -442,7 +443,7 @@ class ConversationSnapshot {
   late final List<ConversationRun> runs;
   bool get running => runs.any((run) => run.running);
 
-  /// Generation outputs stay in the protocol, but render inside their task card.
+  /// Embedded objects stay in the protocol and render at their referenced location.
   late final List<ConversationMessage> presentationMessages =
       _presentMessages();
 
@@ -454,7 +455,7 @@ class ConversationSnapshot {
             ...conversationMaps(block.data['outputs']),
     ];
     return [
-      for (final message in messages)
+      for (final message in _embedTextDrafts())
         if (message.role == 'user')
           message
         else if (message.blocks
@@ -464,6 +465,80 @@ class ConversationSnapshot {
           blocks.length == message.blocks.length
               ? message
               : message.withBlocks(blocks, message.revision),
+    ];
+  }
+
+  static final _textDraftReference = RegExp(
+    r'\[\[text_draft:([^\]\r\n]+)\]\]|\[\[text_draft:[^\]\r\n]*\]?$',
+  );
+
+  List<ConversationMessage> _embedTextDrafts() {
+    final drafts =
+        <(String?, String), List<(ConversationMessage, ConversationBlock)>>{};
+    for (final message in messages.where((item) => item.role != 'user')) {
+      for (final block in message.blocks) {
+        if (block.type == 'object' &&
+            block.kind == 'text_draft' &&
+            block.id.isNotEmpty) {
+          drafts.putIfAbsent((message.runId, block.id), () => []).add((
+            message,
+            block,
+          ));
+        }
+      }
+    }
+
+    final embedded = <ConversationBlock>{};
+    final expansions = <ConversationBlock, List<ConversationBlock>>{};
+    for (final message in messages.where((item) => item.role != 'user')) {
+      for (final block in message.blocks.where((item) => item.type == 'text')) {
+        final matches = _textDraftReference.allMatches(block.text).toList();
+        if (matches.isEmpty) continue;
+        final blocks = <ConversationBlock>[];
+        var cursor = 0;
+        void addText(String value) {
+          if (value.trim().isNotEmpty) {
+            blocks.add(ConversationBlock.text(value.trim()));
+          }
+        }
+
+        for (final match in matches) {
+          addText(block.text.substring(cursor, match.start));
+          final candidates = drafts[(message.runId, match.group(1))]?.where(
+            (entry) =>
+                message.attempt == null ||
+                entry.$1.attempt == null ||
+                entry.$1.attempt == message.attempt,
+          );
+          // Reused IDs belong to their run; retain the version at this reply.
+          final draft =
+              candidates
+                  ?.where((entry) => entry.$1.seq <= message.seq)
+                  .lastOrNull ??
+              candidates?.firstOrNull;
+          if (draft != null) {
+            blocks.add(draft.$2);
+            embedded.add(draft.$2);
+          }
+          cursor = match.end;
+        }
+        // Unresolved and incomplete references remain hidden until SSE fills them.
+        addText(block.text.substring(cursor));
+        expansions[block] = blocks;
+      }
+    }
+    if (expansions.isEmpty) return messages;
+
+    return [
+      for (final message in messages)
+        if (message.role == 'user')
+          message
+        else if ([
+              for (final block in message.blocks)
+                if (!embedded.contains(block)) ...expansions[block] ?? [block],
+            ]
+            case final blocks when blocks.isNotEmpty)
+          message.withBlocks(blocks, message.revision),
     ];
   }
 

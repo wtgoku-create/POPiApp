@@ -745,24 +745,16 @@ void main() {
   }
 
   testWidgets(
-    'new content creates an account-bound session and preserves retry ID',
+    'new content opens an account draft without creating or prefilling',
     (tester) async {
       await pump(tester);
-      projects.failCreate = true;
+      expect(find.text('开始一条新内容'), findsOneWidget);
       await tap(tester, 'ip-account-start-content');
-      projects.failCreate = false;
-      await tap(tester, 'ip-account-start-content');
-      expect(projects.accountIds, ['42', '42']);
-      expect(projects.bindingAccountIds, ['42', '42']);
-      expect(projects.contentRequests, [
-        'lookup',
-        'create',
-        'lookup',
-        'create',
-      ]);
-      expect(projects.requestIds.toSet(), hasLength(1));
-      expect(find.text('session:created-session'), findsOneWidget);
-      expect(find.text('请根据这个账号的定位，帮我制作一条新内容。'), findsOneWidget);
+      expect(projects.accountIds, isEmpty);
+      expect(projects.bindingAccountIds, ['42']);
+      expect(projects.contentRequests, ['lookup']);
+      expect(router.state.uri.queryParameters, {'accountId': '42'});
+      expect(find.text('请根据这个账号的定位，帮我制作一条新内容。'), findsNothing);
     },
   );
 
@@ -774,7 +766,9 @@ void main() {
       title: 'Bound',
     );
     await pump(tester);
-    expect(projects.bindingAccountIds, isEmpty);
+    expect(projects.bindingAccountIds, ['42']);
+    expect(find.text('继续对话'), findsOneWidget);
+    expect(find.text('开始一条新内容'), findsNothing);
     await tap(tester, 'ip-account-start-content');
     expect(projects.bindingAccountIds, ['42']);
     expect(projects.accountIds, isEmpty);
@@ -801,7 +795,7 @@ void main() {
       title: 'Bound',
     );
     await tap(tester, 'ip-account-start-content');
-    expect(projects.bindingAccountIds, ['42', '42']);
+    expect(projects.bindingAccountIds, ['42', '42', '42']);
     expect(projects.accountIds, isEmpty);
     expect(find.text('session:bound-session'), findsOneWidget);
   });
@@ -810,10 +804,11 @@ void main() {
     tester,
   ) async {
     projects.pendingBinding = Completer<ProjectSession?>();
-    await pump(tester);
+    await pump(tester, settle: false);
+    await tester.pump(const Duration(milliseconds: 400));
     final button = find.byKey(const Key('ip-account-start-content'));
     await tester.ensureVisible(button);
-    await tester.pumpAndSettle();
+    await tester.pump();
     await tester.tap(button);
     await tester.pump();
     await tester.tap(button);
@@ -830,18 +825,20 @@ void main() {
   });
 
   testWidgets(
-    'retry finds a binding created by an uncertain previous request',
+    'returning from a draft reloads the binding and changes the action',
     (tester) async {
       await pump(tester);
-      projects.failCreate = true;
       await tap(tester, 'ip-account-start-content');
       projects.binding = const ProjectSession(
         id: 'bound-session',
         title: 'Bound',
       );
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('继续对话'), findsOneWidget);
       await tap(tester, 'ip-account-start-content');
-      expect(projects.accountIds, ['42']);
-      expect(projects.contentRequests, ['lookup', 'create', 'lookup']);
+      expect(projects.accountIds, isEmpty);
+      expect(projects.contentRequests, ['lookup', 'lookup']);
       expect(find.text('session:bound-session'), findsOneWidget);
     },
   );

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/generation_credit_notice.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
@@ -249,6 +250,7 @@ class _ConversationTaskCardState extends State<ConversationTaskCard>
                   l10n.chatEstimatedPoints(proposal.estimatedPoints.toString()),
                 ),
               ),
+            if (proposal.status == 'ready') const GenerationCreditNotice(),
             if (proposal.status == 'ready')
               Wrap(
                 alignment: WrapAlignment.end,

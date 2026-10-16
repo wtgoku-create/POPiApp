@@ -955,6 +955,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipAccountStartContent => 'Start New Content';
 
   @override
+  String get ipAccountContinueConversation => 'Continue Conversation';
+
+  @override
   String get ipAccountStartPrompt =>
       'Help me create new content based on this account\'s positioning.';
 
@@ -1003,6 +1006,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareAction => 'Share';
+
+  @override
+  String get imageShareFailed => 'Could not share image. Please try again';
+
+  @override
+  String get mediaShareFailed => 'Could not share media. Please try again';
+
+  @override
+  String mediaPreviewPosition(int index, int count) {
+    return 'Item $index of $count';
+  }
+
+  @override
+  String imagePreviewPosition(int index, int count) {
+    return 'Image $index of $count';
+  }
 
   @override
   String get item => 'Item';
@@ -1690,6 +1709,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composerPlaceholder => 'Say something to POPi...';
 
   @override
+  String get sessionWelcomeTitle => 'Hi there!';
+
+  @override
+  String get sessionWelcomeBody => 'Tell me, what would you like to create?';
+
+  @override
   String get composerExpandInput => 'Expand input';
 
   @override
@@ -1751,6 +1776,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get drawerSessions => 'Conversations';
+
+  @override
+  String get drawerNewConversation => 'New project chat';
+
+  @override
+  String get drawerViewAll => 'View all';
 
   @override
   String sessionItemOptions(String name) {
@@ -2884,6 +2915,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatConfirmGeneration => 'Generate';
+
+  @override
+  String get generationCreditNotice =>
+      'Please note: Clicking \"Generate\" will deduct the corresponding points. Points already consumed are non-refundable. Please carefully review your materials, prompts, and generation settings before submitting.';
 
   @override
   String get chatRoleName => 'Name';

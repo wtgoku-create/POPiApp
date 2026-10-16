@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
+import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
@@ -25,8 +27,10 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _drawerOpen = false;
+  bool _startingContent = false;
 
   void _startSession(String prompt) {
+    if (_startingContent) return;
     if (ref.read(userProvider) == null) {
       context.push('/login');
       return;
@@ -39,9 +43,40 @@ class _HomePageState extends ConsumerState<HomePage> {
       context.replace('/role-guide');
       return;
     }
-    context.push(
-      Uri(path: '/session', queryParameters: {'prompt': prompt}).toString(),
-    );
+    _startFromContent();
+  }
+
+  Future<void> _startFromContent() async {
+    final userId = ref.read(userProvider)?.id;
+    setState(() => _startingContent = true);
+    try {
+      final session = await ref
+          .read(sessionsProvider.notifier)
+          .createFromContent();
+      if (!mounted ||
+          session == null ||
+          ref.read(userProvider)?.id != userId ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      context.push(
+        Uri(
+          path: '/session',
+          queryParameters: {'sessionId': session.id},
+        ).toString(),
+      );
+    } catch (_) {
+      if (mounted &&
+          ref.read(userProvider)?.id == userId &&
+          ModalRoute.of(context)?.isCurrent == true) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.chatRequestFailed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _startingContent = false);
+    }
   }
 
   Widget _blurBehindDrawer(Widget child) => _drawerOpen
@@ -146,6 +181,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: HomeCreationWelcome(
                         name: user?.name.trim() ?? '',
                         onStart: _startSession,
+                        startingContent: _startingContent,
                       ),
                     ),
                   ],

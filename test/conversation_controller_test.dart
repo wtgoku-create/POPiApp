@@ -189,28 +189,19 @@ void main() {
     },
   );
 
-  test(
-    'opening preferences creates one conversation without sending and the first message reuses it',
-    () async {
-      expect(await controller.ensureSession('Settings'), isTrue);
-      final id = controller.sessionId;
-      expect(id, isNotNull);
-      expect(repository.sends, 0);
-      expect(await controller.ensureSession('Settings'), isTrue);
-      expect(controller.sessionId, id);
-      expect(
-        await controller.send(
-          'Create a video',
-          [],
-          'New conversation',
-          'Media',
-        ),
-        isTrue,
-      );
-      expect(controller.sessionId, id);
-      expect(repository.sends, 1);
-    },
-  );
+  test('an empty draft creates its conversation only when sending', () async {
+    controller.open(null);
+    expect(controller.sessionId, isNull);
+    expect(repository.sends, 0);
+    final previous = (await repository.list('a')).items.length;
+    expect(
+      await controller.send('Create a video', [], 'New conversation', 'Media'),
+      isTrue,
+    );
+    expect(controller.sessionId, isNotNull);
+    expect((await repository.list('a')).items, hasLength(previous + 1));
+    expect(repository.sends, 1);
+  });
 
   test('disconnect reconnects from last processed sequence', () async {
     controller.open(chatId);

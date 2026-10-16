@@ -916,6 +916,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipAccountStartContent => '开始一条新内容';
 
   @override
+  String get ipAccountContinueConversation => '继续对话';
+
+  @override
   String get ipAccountStartPrompt => '请根据这个账号的定位，帮我制作一条新内容。';
 
   @override
@@ -962,6 +965,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareAction => '分享';
+
+  @override
+  String get imageShareFailed => '图片分享失败，请稍后重试';
+
+  @override
+  String get mediaShareFailed => '媒体分享失败，请稍后重试';
+
+  @override
+  String mediaPreviewPosition(int index, int count) {
+    return '第 $index 项，共 $count 项';
+  }
+
+  @override
+  String imagePreviewPosition(int index, int count) {
+    return '第 $index 张，共 $count 张';
+  }
 
   @override
   String get item => '项目';
@@ -1616,6 +1635,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get composerPlaceholder => '跟POPi说点什么...';
 
   @override
+  String get sessionWelcomeTitle => '嗨，用户～';
+
+  @override
+  String get sessionWelcomeBody => '告诉我，你现在最想做什么？';
+
+  @override
   String get composerExpandInput => '展开输入框';
 
   @override
@@ -1675,7 +1700,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newIpProject => '新建IP项目';
 
   @override
-  String get drawerSessions => '会话';
+  String get drawerSessions => '对话';
+
+  @override
+  String get drawerNewConversation => '新建项目对话';
+
+  @override
+  String get drawerViewAll => '查看全部';
 
   @override
   String sessionItemOptions(String name) {
@@ -2751,6 +2782,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatConfirmGeneration => '确认生成';
+
+  @override
+  String get generationCreditNotice =>
+      '温馨提示：点击「确认生成」后将扣除相应积分，已消耗积分不予退还。请在提交前仔细核对素材、提示词及生成参数';
 
   @override
   String get chatRoleName => '名称';

@@ -105,6 +105,7 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
             builder: (context, state) => SessionPage(
               initialPrompt: state.uri.queryParameters['prompt'],
               sessionId: state.uri.queryParameters['sessionId'],
+              accountId: state.uri.queryParameters['accountId'],
             ),
           ),
           GoRoute(

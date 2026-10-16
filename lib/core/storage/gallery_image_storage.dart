@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
@@ -15,6 +16,17 @@ abstract final class GalleryImageStorage {
     if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
       throw GalleryAccessDenied();
     }
+    await Gal.putImageBytes(
+      await readPng(provider, configuration),
+      name: 'POPi_${DateTime.now().millisecondsSinceEpoch}',
+    );
+  }
+
+  /// Reads the original decoded image for saving or sharing, without a screenshot.
+  static Future<Uint8List> readPng(
+    ImageProvider provider,
+    ImageConfiguration configuration,
+  ) async {
     final stream = provider.resolve(configuration);
     final completer = Completer<ImageInfo>();
     late final ImageStreamListener listener;
@@ -36,10 +48,7 @@ abstract final class GalleryImageStorage {
       info = await completer.future;
       final bytes = await info.image.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) throw StateError('Cannot encode image');
-      await Gal.putImageBytes(
-        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-        name: 'POPi_${DateTime.now().millisecondsSinceEpoch}',
-      );
+      return bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes);
     } finally {
       stream.removeListener(listener);
       info?.dispose();

@@ -355,6 +355,12 @@ void main() {
         expect(find.text('saved-model'), findsNothing);
         expect(find.byTooltip('模型/参数'), findsNothing);
         expect(find.byType(FilledButton), findsNothing);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('zh')).generationCreditNotice,
+          ),
+          findsNothing,
+        );
         expect(repository.estimates, 0);
         expect(tester.takeException(), isNull);
         if (!dark && const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
@@ -628,6 +634,7 @@ void main() {
         await tester.ensureVisible(
           find.byKey(const Key('conversation-task-toggle-task')),
         );
+        await tester.pumpAndSettle();
         await tester.tap(
           find.byKey(const Key('conversation-task-toggle-task')),
         );
@@ -668,6 +675,8 @@ void main() {
         findsNothing,
       );
       expect(find.byTooltip('Retry'), findsNothing);
+      await tester.ensureVisible(find.text('Generate'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Generate'));
       await tester.pumpAndSettle();
       expect(repository.estimates, 2);
@@ -939,6 +948,7 @@ void main() {
           findsNothing,
         );
         await tester.ensureVisible(action);
+        await tester.pumpAndSettle();
         expect(action.hitTestable(), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
@@ -1017,6 +1027,14 @@ void main() {
             const Key('conversation-plan-configuration'),
           );
           final confirm = find.byType(FilledButton);
+          final notice = find.text(
+            lookupAppLocalizations(const Locale('zh')).generationCreditNotice,
+          );
+          expect(notice, findsOneWidget);
+          expect(
+            tester.getBottomLeft(notice).dy,
+            lessThanOrEqualTo(tester.getTopLeft(confirm).dy),
+          );
           expect(find.byTooltip('模型/参数'), findsNothing);
           expect(
             find.descendant(of: content, matching: parameters),
@@ -1184,6 +1202,8 @@ void main() {
       expect(find.text('Watercolor'), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'Keep the silhouette');
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
+      await tester.ensureVisible(find.text('Generate'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Generate'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Generate').last);
@@ -1262,6 +1282,10 @@ void main() {
         ),
       );
       expect(repository.estimates, 1);
+      final notice = lookupAppLocalizations(
+        const Locale('en'),
+      ).generationCreditNotice;
+      expect(find.text(notice), findsOneWidget);
       final field = find.byType(TextField);
       await tester.enterText(field, 'First requirement');
       await tester.pump(const Duration(milliseconds: 100));
@@ -1276,9 +1300,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(repository.estimates, 2);
       await tester.ensureVisible(find.text('Generate'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Generate'));
       await tester.pumpAndSettle();
       expect(repository.submitted, isNull);
+      expect(find.textContaining(notice), findsNWidgets(2));
       await tester.tap(find.text('Generate').last);
       await tester.pumpAndSettle();
       expect(repository.submitted!.requirements, 'Final requirement');
@@ -1353,6 +1379,12 @@ void main() {
     );
     expect(find.text('Before description'), findsOneWidget);
     expect(find.text('After description'), findsOneWidget);
+    expect(
+      find.text(
+        lookupAppLocalizations(const Locale('en')).generationCreditNotice,
+      ),
+      findsOneWidget,
+    );
     final confirm = find.widgetWithText(
       FilledButton,
       'Confirm video generation',

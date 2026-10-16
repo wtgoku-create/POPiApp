@@ -18,6 +18,7 @@ typedef HomeGenerationConfiguration = ({
   HomeConfig? config,
   num? points,
   String description,
+  Map<String, HomeConfig> preferences,
 });
 
 /// Edits a generation plan or saves server-owned conversation preferences.
@@ -26,13 +27,15 @@ class HomeGenerationConfigSheet extends StatefulWidget {
     required this.repository,
     required this.sessionId,
     this.saved,
+    this.savedPreferences = const {},
     this.forGeneration = true,
     super.key,
   });
   final MediaPreferencesRepository repository;
   final bool forGeneration;
-  final String sessionId;
+  final String? sessionId;
   final HomeConfig? saved;
+  final Map<String, HomeConfig> savedPreferences;
 
   @override
   State<HomeGenerationConfigSheet> createState() =>
@@ -100,14 +103,14 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       final results = await Future.wait<Object>([
         for (final mediaType in mediaTypes)
           widget.repository.models(mediaType: mediaType, cancelToken: _token),
-        if (!widget.forGeneration)
+        if (!widget.forGeneration && widget.sessionId != null)
           widget.repository.mediaPreferences(
-            widget.sessionId,
+            widget.sessionId!,
             cancelToken: _token,
           ),
       ]);
       if (!mounted) return;
-      final preferences = widget.forGeneration
+      final preferences = widget.forGeneration || widget.sessionId == null
           ? null
           : results[2] as SessionMediaPreferences;
       setState(() {
@@ -120,6 +123,7 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
           final models = _catalogs[mediaType]!;
           final saved =
               _original[mediaType] ??
+              widget.savedPreferences[mediaType] ??
               (mediaType == 'video' ? widget.saved : null);
           _configs[mediaType] =
               saved != null && models.any((model) => model.accepts(saved))
@@ -210,14 +214,14 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
       _saving = true;
     });
     try {
-      if (!widget.forGeneration) {
+      if (!widget.forGeneration && widget.sessionId != null) {
         for (final mediaType in ['video', 'image']) {
           final config = _configs[mediaType];
           if (config == null || config.matches(_original[mediaType])) {
             continue;
           }
           await widget.repository.saveMediaPreference(
-            widget.sessionId,
+            widget.sessionId!,
             mediaType,
             config,
             cancelToken: _token,
@@ -229,6 +233,10 @@ class _HomeGenerationConfigSheetState extends State<HomeGenerationConfigSheet> {
         Navigator.of(context).pop<HomeGenerationConfiguration>((
           config: _configs['video'],
           points: _points,
+          preferences: {
+            for (final entry in _configs.entries)
+              if (entry.value != null) entry.key: entry.value!,
+          },
           description: [
             for (final type in ['video', 'image'])
               if (_configs[type] != null)

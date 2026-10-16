@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -28,6 +29,225 @@ void main() {
     storage = PreferencesStorage(await SharedPreferences.getInstance());
   });
   tearDown(() => dio.close(force: true));
+
+  for (final scenario in [
+    'bound',
+    'missing',
+    'lookup-failed',
+    'raced',
+    'timeout',
+  ]) {
+    test('account first send resolves binding: $scenario', () async {
+      final requests = <RequestOptions>[];
+      var lookups = 0;
+      var creates = 0;
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requests.add(options);
+            void reject(int status, String code) => handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response(
+                  requestOptions: options,
+                  statusCode: status,
+                  data: {'code': code},
+                ),
+                type: DioExceptionType.badResponse,
+              ),
+            );
+            if (options.method == 'GET') {
+              expect(options.path, '/api_agent/v2/sessions/by-account/42');
+              lookups++;
+              if (scenario == 'lookup-failed') {
+                reject(503, 'DEPENDENCY_UNAVAILABLE');
+                return;
+              }
+              if (scenario != 'bound' &&
+                  !(scenario == 'raced' && lookups > 1)) {
+                reject(404, 'ACCOUNT_SESSION_NOT_FOUND');
+                return;
+              }
+            } else {
+              expect(options.path, '/api_agent/v2/sessions');
+              expect(options.data['accountId'], '42');
+              creates++;
+              if (scenario == 'raced') {
+                reject(409, 'ACCOUNT_SESSION_EXISTS');
+                return;
+              }
+              if (scenario == 'timeout' && creates == 1) {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.receiveTimeout,
+                  ),
+                );
+                return;
+              }
+            }
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {
+                  'id': chatId,
+                  'title': 'Account session',
+                  'revision': 1,
+                  'updatedAt': chatDate,
+                  'bindingStatus': 'ready',
+                },
+              ),
+            );
+          },
+        ),
+      );
+      if (scenario == 'lookup-failed') {
+        await expectLater(
+          repository().resolveAccountSession('a', '42', 'New'),
+          throwsA(anything),
+        );
+        expect(creates, 0);
+        return;
+      }
+      if (scenario == 'timeout') {
+        await expectLater(
+          repository().resolveAccountSession('a', '42', 'New'),
+          throwsA(anything),
+        );
+      }
+      final result = await repository().resolveAccountSession('a', '42', 'New');
+      expect(result.id, chatId);
+      expect(
+        creates,
+        scenario == 'bound'
+            ? 0
+            : scenario == 'timeout'
+            ? 2
+            : 1,
+      );
+      expect(lookups, scenario == 'raced' || scenario == 'timeout' ? 2 : 1);
+      if (scenario == 'timeout') {
+        final commands = requests
+            .where((request) => request.method == 'POST')
+            .toList();
+        expect(commands.first.data, commands.last.data);
+      }
+      expect(storage.preferences.getKeys(), isEmpty);
+    });
+  }
+
+  for (final failure in ['timeout', 'server', 'pending', 'binding']) {
+    test(
+      'content entry recovers from $failure with the same request ID',
+      () async {
+        final commands = <Map<String, Object?>>[];
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              expect(options.path, '/api_agent/v2/sessions/content-entry');
+              final command = Map<String, Object?>.from(options.data as Map);
+              expect(command.keys, ['clientRequestId']);
+              commands.add(command);
+              if (commands.length == 1 && failure != 'binding') {
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: failure == 'timeout'
+                        ? DioExceptionType.receiveTimeout
+                        : DioExceptionType.badResponse,
+                    response: failure == 'timeout'
+                        ? null
+                        : Response(
+                            requestOptions: options,
+                            statusCode: failure == 'server' ? 503 : 409,
+                            data: {
+                              'code': failure == 'server'
+                                  ? 'INTERNAL_ERROR'
+                                  : 'COMMAND_PENDING',
+                            },
+                          ),
+                  ),
+                );
+                return;
+              }
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 201,
+                  data: {
+                    'id': chatId,
+                    'title': '新会话',
+                    'revision': 1,
+                    'bindingStatus': commands.length == 1 ? 'pending' : 'ready',
+                    'updatedAt': chatDate,
+                  },
+                ),
+              );
+            },
+          ),
+        );
+        await expectLater(
+          repository().createFromContent('a'),
+          throwsA(anything),
+        );
+        expect(storage.preferences.getKeys(), isNotEmpty);
+        final session = await repository().createFromContent('a');
+        expect(session.title, '新会话');
+        expect(session.bindingStatus, 'ready');
+        expect(commands[1], commands[0]);
+        expect(storage.preferences.getKeys(), isEmpty);
+        await repository().createFromContent('a');
+        expect(
+          commands[2]['clientRequestId'],
+          isNot(commands[0]['clientRequestId']),
+        );
+      },
+    );
+  }
+
+  test(
+    'concurrent content entry calls share a request ID and users are isolated',
+    () async {
+      final requests = <(RequestOptions, RequestInterceptorHandler)>[];
+      final bothStarted = Completer<void>();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requests.add((options, handler));
+            if (requests.length == 2) bothStarted.complete();
+          },
+        ),
+      );
+      final first = repository().createFromContent('a');
+      final second = repository().createFromContent('a');
+      await bothStarted.future;
+      expect(requests[0].$1.data, requests[1].$1.data);
+      for (final request in requests) {
+        request.$2.reject(DioException(requestOptions: request.$1));
+      }
+      await Future.wait([
+        expectLater(first, throwsA(isA<DioException>())),
+        expectLater(second, throwsA(isA<DioException>())),
+      ]);
+      final thirdStarted = Completer<void>();
+      dio.interceptors.clear();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.data, isNot(requests[0].$1.data));
+            handler.reject(DioException(requestOptions: options));
+            thirdStarted.complete();
+          },
+        ),
+      );
+      await expectLater(
+        repository().createFromContent('b'),
+        throwsA(isA<DioException>()),
+      );
+      await thirdStarted.future;
+    },
+  );
 
   test(
     'creation retries reuse the request ID across repository recreation',

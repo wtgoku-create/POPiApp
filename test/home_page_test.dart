@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,7 @@ import 'package:popi_ai_app/features/ip_guide/presentation/ip_guide_page.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_session.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
@@ -40,6 +43,7 @@ void main() {
     double systemTopInset = 0,
     EdgeInsets? safeArea,
     Dio? dio,
+    FixtureSessionRepository? sessions,
   }) async {
     safeArea ??= const EdgeInsets.only(top: 52, bottom: 34);
     tester.view.physicalSize = size;
@@ -61,7 +65,9 @@ void main() {
             userId: user?.id,
           ),
         ),
-        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
+        sessionRepositoryProvider.overrideWithValue(
+          sessions ?? FixtureSessionRepository(),
+        ),
         projectRepositoryProvider.overrideWithValue(FixtureProjectRepository()),
         dioProvider.overrideWithValue(dio ?? roleLibraryDio()),
       ],
@@ -184,69 +190,157 @@ void main() {
     },
   );
 
-  testWidgets(
-    'enabled creation entries require login and content entry stays disabled',
-    (tester) async {
-      final container = await pumpHome(tester);
-      final router = container.read(routerProvider(false));
-      await tester.tap(find.byKey(const Key('home-start-2')));
+  testWidgets('all creation entries require login', (tester) async {
+    final container = await pumpHome(tester);
+    final router = container.read(routerProvider(false));
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(Key('home-start-$i')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
+      expect(find.byType(IpGuidePage), findsNothing);
+      expect(find.byType(SessionPage), findsNothing);
+      router.pop();
       await tester.pumpAndSettle();
       expect(find.byType(HomePage), findsOneWidget);
-      expect(find.byType(LoginPage), findsNothing);
-      expect(find.byType(SessionPage), findsNothing);
-      for (var i = 0; i < 2; i++) {
-        await tester.tap(find.byKey(Key('home-start-$i')));
-        await tester.pumpAndSettle();
-        expect(find.byType(LoginPage), findsOneWidget);
-        expect(find.byType(IpGuidePage), findsNothing);
-        expect(find.byType(SessionPage), findsNothing);
-        router.pop();
-        await tester.pumpAndSettle();
-        expect(find.byType(HomePage), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
+      expect(tester.takeException(), isNull);
+    }
 
-      await container
-          .read(userProvider.notifier)
-          .setUser(const User(id: '1', name: '用户', email: ''));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('home-start-0')));
+    await container
+        .read(userProvider.notifier)
+        .setUser(const User(id: '1', name: '用户', email: ''));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('home-start-0')));
+    await tester.pumpAndSettle();
+    expect(find.byType(IpGuidePage), findsOneWidget);
+    expect(find.byType(LoginPage), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('IP and role entries open their guides after login', (
+    tester,
+  ) async {
+    final container = await pumpHome(
+      tester,
+      user: const User(id: '1', name: '用户', email: ''),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.byKey(Key('home-start-$i')));
       await tester.pumpAndSettle();
-      expect(find.byType(IpGuidePage), findsOneWidget);
-      expect(find.byType(LoginPage), findsNothing);
+      if (i == 0) {
+        expect(find.byType(IpGuidePage), findsOneWidget);
+        expect(find.byType(SessionPage), findsNothing);
+        expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
+      } else {
+        expect(find.byType(RoleGuidePage), findsOneWidget);
+        expect(find.byType(SessionPage), findsNothing);
+      }
+      final router = container.read(routerProvider(false));
+      expect(router.canPop(), isTrue);
+      router.replace('/');
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'content entry waits once then opens the created session and updates history',
+    (tester) async {
+      final sessions = _ContentEntryRepository();
+      sessions.pending = Completer<void>();
+      final container = await pumpHome(
+        tester,
+        user: const User(id: '1', name: '用户', email: ''),
+        sessions: sessions,
+      );
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pump();
+      expect(find.byKey(const Key('home-content-loading')), findsOneWidget);
+      expect(find.byType(SessionPage), findsNothing);
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      expect(sessions.calls, 1);
+      sessions.pending!.complete();
+      await tester.pumpAndSettle();
+      final page = tester.widget<SessionPage>(find.byType(SessionPage));
+      expect(page.sessionId, isNotEmpty);
+      expect(page.initialPrompt, isNull);
+      expect(
+        container
+            .read(sessionsProvider)
+            .requireValue
+            .any(
+              (session) =>
+                  session.id == page.sessionId && session.title == '新会话',
+            ),
+        isTrue,
+      );
+      final router = container.read(routerProvider(false));
+      router.pop();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pumpAndSettle();
+      expect(sessions.calls, 2);
+      expect(
+        tester.widget<SessionPage>(find.byType(SessionPage)).sessionId,
+        isNot(page.sessionId),
+      );
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'enabled entries open guides and content entry stays disabled after login',
+    'failed content entry preserves home and the original action can submit again',
     (tester) async {
-      final container = await pumpHome(
+      final sessions = _ContentEntryRepository()..failNext = true;
+      await pumpHome(
         tester,
         user: const User(id: '1', name: '用户', email: ''),
+        sessions: sessions,
       );
       await tester.tap(find.byKey(const Key('home-start-2')));
       await tester.pumpAndSettle();
       expect(find.byType(HomePage), findsOneWidget);
       expect(find.byType(SessionPage), findsNothing);
-      for (var i = 0; i < 2; i++) {
-        await tester.tap(find.byKey(Key('home-start-$i')));
-        await tester.pumpAndSettle();
-        if (i == 0) {
-          expect(find.byType(IpGuidePage), findsOneWidget);
-          expect(find.byType(SessionPage), findsNothing);
-          expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
-        } else {
-          expect(find.byType(RoleGuidePage), findsOneWidget);
-          expect(find.byType(SessionPage), findsNothing);
-        }
-        final router = container.read(routerProvider(false));
-        expect(router.canPop(), isTrue);
-        router.replace('/');
-        await tester.pumpAndSettle();
-        expect(find.byType(HomePage), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
+      expect(find.byKey(const Key('home-content-loading')), findsNothing);
+      expect(sessions.calls, 1);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionPage), findsOneWidget);
+      expect(sessions.calls, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'changing account during content creation does not open the old session',
+    (tester) async {
+      final sessions = _ContentEntryRepository()..pending = Completer<void>();
+      final container = await pumpHome(
+        tester,
+        user: const User(id: '1', name: '用户', email: ''),
+        sessions: sessions,
+      );
+      await tester.tap(find.byKey(const Key('home-start-2')));
+      await tester.pump();
+      await container
+          .read(userProvider.notifier)
+          .setUser(const User(id: '2', name: '另一个用户', email: ''));
+      await tester.pump();
+      sessions.pending!.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(find.byType(SessionPage), findsNothing);
+      expect(sessions.token!.isCancelled, isTrue);
+      expect(
+        container
+            .read(sessionsProvider)
+            .requireValue
+            .any((session) => session.title == '新会话'),
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -306,30 +400,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('home drawer starts a new mock conversation', (tester) async {
-    final container = await pumpHome(
-      tester,
-      user: const User(id: '1', name: '用户', email: ''),
-    );
-    await tester.tap(find.byKey(const Key('popi-open-navigation')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('drawer-new-session')));
-    await tester.pumpAndSettle();
-    expect(find.byType(SessionPage), findsOneWidget);
-    expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
-    final sessionId = tester
-        .widget<SessionPage>(find.byType(SessionPage))
-        .sessionId;
-    expect(sessionId, isNotEmpty);
-    expect(
-      container
-          .read(sessionsProvider)
-          .requireValue
-          .any((session) => session.id == sessionId),
-      isTrue,
-    );
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'home drawer starts an empty draft without creating a conversation',
+    (tester) async {
+      final container = await pumpHome(
+        tester,
+        user: const User(id: '1', name: '用户', email: ''),
+      );
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('drawer-new-session')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionPage), findsOneWidget);
+      expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
+      final sessionId = tester
+          .widget<SessionPage>(find.byType(SessionPage))
+          .sessionId;
+      expect(sessionId, isNull);
+      expect(
+        container
+            .read(sessionsProvider)
+            .requireValue
+            .any((session) => session.id == sessionId),
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final size in [
     const Size(320, 640),
@@ -384,5 +481,27 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  }
+}
+
+class _ContentEntryRepository extends FixtureSessionRepository {
+  int calls = 0;
+  bool failNext = false;
+  Completer<void>? pending;
+  CancelToken? token;
+
+  @override
+  Future<ConversationSession> createFromContent(
+    String userId, {
+    CancelToken? cancelToken,
+  }) async {
+    calls++;
+    token = cancelToken;
+    await pending?.future;
+    if (failNext) {
+      failNext = false;
+      throw StateError('offline');
+    }
+    return super.createFromContent(userId, cancelToken: cancelToken);
   }
 }
