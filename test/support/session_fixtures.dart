@@ -28,14 +28,7 @@ class FixtureSessionRepository extends SessionRepository {
 
   List<ConversationSession> _list(String userId) {
     final sessions = [..._accounts.putIfAbsent(userId, _samples)];
-    sessions.sort((a, b) {
-      final aPin = a.pinnedAt;
-      final bPin = b.pinnedAt;
-      if (aPin != null && bPin == null) return -1;
-      if (aPin == null && bPin != null) return 1;
-      return (bPin ?? b.updatedAt).compareTo(aPin ?? a.updatedAt);
-    });
-    return List.unmodifiable(sessions);
+    return SessionRepository.sorted(sessions);
   }
 
   @override
@@ -70,6 +63,7 @@ class FixtureSessionRepository extends SessionRepository {
       id: 'mock-new-${++_nextId}',
       title: '新会话',
       updatedAt: DateTime.now(),
+      createdAt: DateTime.now(),
       bindingStatus: 'ready',
     );
     _list(userId);
@@ -87,6 +81,7 @@ class FixtureSessionRepository extends SessionRepository {
       id: 'mock-new-${++_nextId}',
       title: _validateTitle(title),
       updatedAt: DateTime.now(),
+      createdAt: DateTime.now(),
     );
     _list(userId);
     _accounts[userId]!.add(session);
@@ -102,6 +97,9 @@ class FixtureSessionRepository extends SessionRepository {
         id: session.id,
         title: name,
         updatedAt: DateTime.now(),
+        createdAt: session.createdAt,
+        lastMessageAt: session.lastMessageAt,
+        revision: session.revision + 1,
         pinnedAt: session.pinnedAt,
         avatarIcon: session.avatarIcon,
       ),
@@ -115,6 +113,9 @@ class FixtureSessionRepository extends SessionRepository {
       id: session.id,
       title: session.title,
       updatedAt: session.updatedAt,
+      createdAt: session.createdAt,
+      lastMessageAt: session.lastMessageAt,
+      revision: session.revision + 1,
       pinnedAt: pinned ? DateTime.now() : null,
       avatarIcon: session.avatarIcon,
     ),
@@ -166,6 +167,9 @@ class FixtureSessionRepository extends SessionRepository {
         id: id,
         title: previous.title,
         updatedAt: previous.updatedAt,
+        createdAt: previous.createdAt,
+        lastMessageAt: previous.lastMessageAt,
+        revision: previous.revision + 1,
         archived: true,
       );
     }
@@ -176,23 +180,27 @@ class FixtureSessionRepository extends SessionRepository {
   Future<ConversationSnapshot> snapshot(
     String id, {
     CancelToken? cancelToken,
-  }) async => ConversationSnapshot.fromJson({
-    'session': {
-      'id': id,
-      'title':
-          _accounts.values
-              .expand((items) => items)
-              .where((item) => item.id == id)
-              .firstOrNull
-              ?.title ??
-          'New session',
-      'revision': 1,
-      'updatedAt': DateTime.now().toIso8601String(),
-    },
-    'lastSeq': 0,
-    'messages': [],
-    'runs': [],
-  });
+  }) async {
+    final known = _accounts.values
+        .expand((items) => items)
+        .where((item) => item.id == id)
+        .firstOrNull;
+    return ConversationSnapshot.fromJson({
+      'session': {
+        'id': id,
+        'title': known?.title ?? 'New session',
+        'revision': known?.revision ?? 1,
+        'updatedAt': (known?.updatedAt ?? DateTime.now()).toIso8601String(),
+        'createdAt': known?.createdAt?.toIso8601String(),
+        'lastMessageAt': known?.lastMessageAt?.toIso8601String(),
+        'pinnedAt': known?.pinnedAt?.toIso8601String(),
+        'bindingStatus': known?.bindingStatus ?? 'pending',
+      },
+      'lastSeq': 0,
+      'messages': [],
+      'runs': [],
+    });
+  }
 
   @override
   Stream<ConversationEvent> events(
@@ -363,6 +371,8 @@ class FixtureSessionRepository extends SessionRepository {
             _ => 'home_drawer_session_neutral',
           },
           updatedAt: now.subtract(Duration(hours: index + 1)),
+          createdAt: now.subtract(Duration(hours: index + 1)),
+          lastMessageAt: now.subtract(Duration(hours: index + 1)),
           pinnedAt: index == 0 ? now : null,
         ),
     ];

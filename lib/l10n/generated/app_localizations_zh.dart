@@ -33,6 +33,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleNoStories => '暂无推荐故事';
 
   @override
+  String get roleAccountFallbackTitle => 'IP账号';
+
+  @override
   String get roleNoVideoModels => '暂无可用视频模型';
 
   @override
@@ -1360,6 +1363,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipOpenProject => '前往账号项目';
+
+  @override
+  String get ipFirstRolePrompt => '请根据这个账号的定位，帮我创建第一个角色。';
 
   @override
   String get ipFirstContentPrompt => '请根据这个账号的定位，帮我制作第一条内容。';

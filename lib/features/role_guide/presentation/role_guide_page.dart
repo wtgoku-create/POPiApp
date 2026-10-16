@@ -23,6 +23,8 @@ import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../../assets/domain/library_role.dart';
+import '../../ip_accounts/data/ip_account_repository.dart';
+import '../../ip_accounts/domain/ip_account_home.dart';
 import '../../projects/domain/project.dart';
 import '../data/role_guide_examples.dart';
 import '../data/role_generation_repository.dart';
@@ -74,6 +76,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   StreamSubscription<RoleGenerationProgress>? _generation;
   int _generationId = 0;
   late HomeCreationRepository _repository;
+  late IpAccountRepository _accountRepository;
+  IpAccountHome? _account;
+  CancelToken? _accountToken;
+  bool _accountLoading = false;
   HomeCreation? _home;
   HomeTask? _task;
   HomeConfig? _config;
@@ -84,6 +90,15 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   bool _failed = false;
   VoidCallback? _retry;
   bool get _live => widget.generationRepository == null;
+  bool get _canEditPlan => !_busy && (!_live || _home?.editable == true);
+  bool get _canRefreshStories =>
+      _canEditPlan && (!_live || _home!.topics.isNotEmpty);
+  bool get _canGoBack =>
+      !_busy &&
+      (_live
+          ? (_home?.editable ?? _draft.step == RoleGuideStep.roles)
+          : !(_draft.step == RoleGuideStep.generation &&
+                _progress?.running == true));
   List<RoleGuideStory> _stories(AppLocalizations l10n) => _live
       ? (_home?.topics ?? const [])
             .map(
@@ -100,6 +115,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   @override
   void initState() {
     super.initState();
+    _accountRepository = IpAccountRepository(NetworkApi(ref.read(dioProvider)));
     _repository =
         widget.homeRepository ??
         HomeCreationRepository(
@@ -110,6 +126,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       _requestToken.cancel();
       _requestToken = CancelToken();
       _poll?.cancel();
+      _clearAccount();
       if (mounted) {
         setState(() {
           _home = null;
@@ -145,6 +162,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       _requestToken.cancel();
       _requestToken = CancelToken();
       _poll?.cancel();
+      _clearAccount();
       _busy = false;
       _home = null;
       _task = null;
@@ -163,12 +181,16 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   }
 
   void _apply(HomeCreation home, {RoleGuideStep? step}) {
+    if (_home?.accountId != home.accountId) _clearAccount();
     if (_home?.accountId != home.accountId || _home?.id != home.id) {
       _config = null;
       _estimate = null;
       _draft.clear();
     }
     _home = home;
+    if (_account?.id != home.accountId && _accountToken == null) {
+      unawaited(_loadAccount(home.accountId));
+    }
     _draft.replaceRoles(home.cast, allowEmpty: true);
     _config = home.config ?? _config;
     _task = home.task;
@@ -177,16 +199,44 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       (topic) => topic.id == home.selectedTopic?.id,
     );
     _draft.storyIndex = selected < 0 ? 0 : selected;
-    _draft.step =
-        step ??
-        (_task != null
-            ? RoleGuideStep.generation
-            : home.selectedTopic != null
-            ? RoleGuideStep.production
-            : home.cast.isNotEmpty
-            ? RoleGuideStep.story
-            : RoleGuideStep.roles);
+    _draft.step = _task != null
+        ? RoleGuideStep.generation
+        : home.selectedTopic != null
+        ? RoleGuideStep.production
+        : step ?? RoleGuideStep.story;
     _schedulePoll();
+  }
+
+  void _clearAccount() {
+    _accountToken?.cancel();
+    _accountToken = null;
+    _account = null;
+    _accountLoading = false;
+  }
+
+  Future<void> _loadAccount(String id) async {
+    _clearAccount();
+    final token = CancelToken();
+    _accountToken = token;
+    _accountLoading = true;
+    try {
+      final account = await _accountRepository.detail(id, cancelToken: token);
+      if (!mounted || token.isCancelled || _home?.accountId != id) return;
+      setState(() => _account = account);
+    } catch (_) {
+      if (!mounted || token.isCancelled || _home?.accountId != id) return;
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.ipAccountLoadFailed,
+      );
+    } finally {
+      if (mounted && !token.isCancelled && _accountToken == token) {
+        setState(() {
+          _accountToken = null;
+          _accountLoading = false;
+        });
+      }
+    }
   }
 
   Future<bool> _update(
@@ -223,7 +273,15 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       return true;
     } catch (error) {
       await _recoverConflict(error, token);
-      if (mounted && !token.isCancelled) setState(() => _failed = true);
+      if (mounted && !token.isCancelled) {
+        setState(() => _failed = true);
+        if (_draft.step == RoleGuideStep.story) {
+          AppToast.error(
+            context,
+            AppLocalizations.of(context)!.roleStoryRequestFailed,
+          );
+        }
+      }
       return false;
     } finally {
       if (mounted && !token.isCancelled) setState(() => _busy = false);
@@ -233,11 +291,23 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
 
   Future<void> _recommend() async {
     final home = _home;
-    if (home == null || !home.editable) return;
+    if (home == null || !home.editable || home.cast.isEmpty) return;
     await _update(
       () => _repository.recommend(home, cancelToken: _requestToken),
       step: RoleGuideStep.story,
     );
+  }
+
+  void _refreshStories() {
+    if (!_canRefreshStories) return;
+    if (_draft.cast.isEmpty) {
+      _library(editing: true);
+    } else if (_live) {
+      _recommend();
+    } else {
+      _draft.refreshStories();
+      _step(RoleGuideStep.story);
+    }
   }
 
   Future<void> _recoverConflict(Object error, CancelToken token) async {
@@ -261,6 +331,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   }
 
   Future<void> _chooseStory() async {
+    if (_busy || _draft.cast.isEmpty) return;
     if (!_live) {
       _step(RoleGuideStep.production);
       return;
@@ -341,6 +412,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
 
   @override
   void dispose() {
+    _accountToken?.cancel();
     _generationId++;
     _generation?.cancel();
     _poll?.cancel();
@@ -356,10 +428,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   }
 
   void _back() {
-    if (_busy) return;
-    if (_draft.step == RoleGuideStep.generation && _progress?.running == true) {
-      return;
-    }
+    if (!_canGoBack) return;
     if (_draft.step != RoleGuideStep.roles) {
       _step(RoleGuideStep.values[_draft.step.index - 1]);
     } else if (context.canPop()) {
@@ -390,6 +459,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_busy) return false;
     if (_live) {
       final roles = _draft.roles;
+      final replacingCast = _home != null;
       final ok = await _update(
         () => _home == null
             ? _repository.create(roles, cancelToken: _requestToken)
@@ -400,9 +470,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               ),
       );
       if (ok &&
-          _home!.topics.isEmpty &&
-          _home!.selectedTopic == null &&
-          _home!.task == null) {
+          (replacingCast ||
+              (_home!.topics.isEmpty &&
+                  _home!.selectedTopic == null &&
+                  _home!.task == null))) {
         await _recommend();
       }
       return ok;
@@ -431,7 +502,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   );
 
   Future<void> _library({bool editing = false}) async {
-    if (_sheetOpen) return;
+    if (_sheetOpen || (editing && !_canEditPlan)) return;
     final selection = [..._draft.roles];
     setState(() => _sheetOpen = true);
     try {
@@ -485,7 +556,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
               footer: RoleGuideAction(
                 key: const Key('role-library-create-project'),
                 label: editing
-                    ? l10n.roleEditProjectRoles
+                    ? l10n.roleConfirmSelection
                     : l10n.roleCreateProject,
                 count: editing ? selection.length : _draft.roles.length,
                 onPressed:
@@ -502,9 +573,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                                 selection,
                                 cancelToken: _requestToken,
                               ),
-                              step: selection.isEmpty
-                                  ? RoleGuideStep.roles
-                                  : RoleGuideStep.story,
+                              step: RoleGuideStep.story,
                             );
                             if (ok && sheetContext.mounted) {
                               Navigator.of(sheetContext).pop();
@@ -748,12 +817,23 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     return updated.castForEditing;
   }
 
-  Widget _projectSummary() => RoleProjectSummary(
-    roles: _draft.roles,
-    onViewProfile: _busy
-        ? null
-        : () => _profiles(initialRoleId: _draft.roles.first.id),
-  );
+  bool get _hasProjectSummary =>
+      _live ? _home != null : _draft.roles.isNotEmpty;
+
+  Widget _projectSummary() {
+    if (!_hasProjectSummary) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    return RoleProjectSummary(
+      title: _live
+          ? _account?.title ?? l10n.roleAccountFallbackTitle
+          : l10n.roleProjectName(_draft.roles.first.title),
+      avatar: _live ? _account?.avatar ?? '' : _draft.roles.first.avatar,
+      loading: _live && _accountLoading,
+      onViewProfile: _busy || _accountLoading || _draft.roles.isEmpty
+          ? null
+          : () => _profiles(initialRoleId: _draft.roles.first.id),
+    );
+  }
 
   Future<void> _storyDetails(RoleGuideStory story) => _showSheet<void>(
     (_) => RoleGuideSheet(
@@ -793,6 +873,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   );
 
   Future<void> _projects() async {
+    if (_busy) return;
     if (ref.read(userProvider) == null) {
       context.push('/login');
       return;
@@ -802,15 +883,23 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         (_) => const RoleProjectSheet(forHomeCreation: true),
       );
       if (!mounted || accountId == null) return;
-      final ok = await _update(
-        () => _repository.open(accountId, cancelToken: _requestToken),
+      _requestToken.cancel();
+      _requestToken = CancelToken();
+      _poll?.cancel();
+      _clearAccount();
+      setState(() {
+        _home = null;
+        _task = null;
+        _progress = null;
+        _config = null;
+        _estimate = null;
+        _draft.clear();
+        _draft.step = RoleGuideStep.story;
+      });
+      if (_scroll.hasClients) _scroll.jumpTo(0);
+      await _update(
+        () => _repository.resumeAccount(accountId, cancelToken: _requestToken),
       );
-      if (ok &&
-          _home!.topics.isEmpty &&
-          _home!.selectedTopic == null &&
-          _home!.task == null) {
-        await _recommend();
-      }
       return;
     }
     final selection = await _showSheet<ProjectSessionSelection>(
@@ -840,9 +929,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     final user = ref.watch(userProvider);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final hasFooter = _draft.step != RoleGuideStep.generation;
-    final showBack = _draft.step.index >= RoleGuideStep.production.index;
-    final generating =
-        _draft.step == RoleGuideStep.generation && _progress?.running == true;
+    final showBack =
+        _draft.step.index >= RoleGuideStep.production.index ||
+        (_live && _draft.step == RoleGuideStep.story);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom > 0
         ? 0.0
         : safeArea.bottom;
@@ -871,7 +960,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     };
 
     return PopScope(
-      canPop: _draft.step == RoleGuideStep.roles,
+      canPop: _draft.step == RoleGuideStep.roles && _canGoBack,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
@@ -932,7 +1021,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                             child: IconButton(
                               key: const Key('role-guide-back'),
                               tooltip: l10n.backToPreviousPage,
-                              onPressed: generating ? null : _back,
+                              onPressed: _canGoBack ? _back : null,
                               icon: const Icon(Icons.chevron_left),
                             ),
                           ),
@@ -1009,7 +1098,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                                           CrossAxisAlignment.stretch,
                                       children: [
                                         _content(l10n),
-                                        if (_failed) ...[
+                                        if (_failed &&
+                                            _draft.step !=
+                                                RoleGuideStep.story) ...[
                                           const SizedBox(height: 20),
                                           Text(
                                             _draft.step == RoleGuideStep.story
@@ -1092,7 +1183,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   Widget _castSummary() => RoleCastSummary(
     cast: _draft.cast,
     onViewProfiles: _profiles,
-    onEdit: _busy ? null : () => _library(editing: true),
+    onEdit: _canEditPlan ? () => _library(editing: true) : null,
   );
 
   // Step actions remain visible independently of the scrollable planning content.
@@ -1117,6 +1208,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           label: production ? l10n.roleStartCreating : l10n.roleChooseStory,
           onPressed:
               _busy ||
+                  (!production && _draft.cast.isEmpty) ||
                   (_live && (_home?.editable != true || _home!.topics.isEmpty))
               ? null
               : production
@@ -1130,16 +1222,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
             label: l10n.roleRefreshStories,
             secondary: true,
             showArrow: false,
-            onPressed: _busy
-                ? null
-                : () {
-                    if (_live) {
-                      _recommend();
-                      return;
-                    }
-                    _draft.refreshStories();
-                    _step(RoleGuideStep.story);
-                  },
+            onPressed: _canRefreshStories ? _refreshStories : null,
           ),
         ],
       ],
@@ -1215,11 +1298,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _projectSummary(),
-          const SizedBox(height: 20),
+          if (_hasProjectSummary) ...[
+            _projectSummary(),
+            const SizedBox(height: 20),
+          ],
           _castSummary(),
           if (_busy) _loading(l10n),
-          if (!_busy && !_failed) ...[
+          if (!_busy) ...[
             const SizedBox(height: 20),
             Text(l10n.roleNoStories, textAlign: TextAlign.center),
           ],

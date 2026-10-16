@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/utils/app_url.dart';
 import '../../../shared/type/list_page.dart';
 import '../../assets/domain/library_role.dart';
 import '../domain/ip_account.dart';
@@ -65,6 +66,7 @@ class IpAccountRepository {
     id: _id(account['id']),
     title: _title(account),
     revision: account['revision'] as int? ?? 1,
+    avatar: _avatar(account),
     status: account['status'] as String? ?? 'active',
     preferences: Map<String, Object?>.from(
       account['preferences'] as Map? ?? const {},
@@ -309,5 +311,18 @@ class IpAccountRepository {
   String _title(Map<String, dynamic> value) {
     if (value['title'] is! String) throw const ApiException();
     return value['title'] as String;
+  }
+
+  String _avatar(Map<String, dynamic> account) {
+    final mainRole = account['mainRole'];
+    for (final value in [
+      account['avatar'],
+      if (mainRole is Map) mainRole['avatar'],
+    ]) {
+      if (value is String && value.trim().isNotEmpty) {
+        return AppUrl.resolve(value.trim());
+      }
+    }
+    return '';
   }
 }

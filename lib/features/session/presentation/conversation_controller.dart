@@ -124,7 +124,11 @@ class ConversationController extends ChangeNotifier {
           if (!current()) return;
           snapshot = applyConversationEvent(snapshot!, event);
           if (event.type.startsWith('run.')) _awaitingRun = false;
-          onSessionChanged?.call(snapshot!.session);
+          if (event.payload.containsKey('lastMessageAt') ||
+              event.type == 'session.updated' ||
+              event.type == 'session.bound') {
+            onSessionChanged?.call(snapshot!.session);
+          }
           attempts = 0;
           notifyListeners();
         }

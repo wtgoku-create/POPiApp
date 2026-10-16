@@ -95,6 +95,22 @@ class HomeCreationRepository extends MediaPreferencesRepository {
     ),
   );
 
+  /// Restores the current step and only recommends topics for an empty draft.
+  Future<HomeCreation> resumeAccount(
+    String accountId, {
+    CancelToken? cancelToken,
+  }) async {
+    final home = await open(accountId, cancelToken: cancelToken);
+    if (!home.editable ||
+        home.cast.isEmpty ||
+        home.topics.isNotEmpty ||
+        home.selectedTopic != null ||
+        home.task != null) {
+      return home;
+    }
+    return recommend(home, cancelToken: cancelToken);
+  }
+
   Future<HomeCreation> selectTopic(
     HomeCreation home,
     HomeTopic topic, {

@@ -617,6 +617,52 @@ void main() {
   );
 
   test(
+    'history keeps server row order and parses interaction and creation time',
+    () async {
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: {
+                  'list': [
+                    for (final id in ['a', 'z'])
+                      {
+                        'id': id,
+                        'title': id,
+                        'revision': 1,
+                        'createdAt': chatDate,
+                        'lastMessageAt': id == 'a'
+                            ? null
+                            : '2026-10-16T12:00:00Z',
+                        'updatedAt': chatDate,
+                      },
+                  ],
+                  'pageInfo': {
+                    'page': 1,
+                    'pageSize': 20,
+                    'pageCount': 1,
+                    'total': 2,
+                  },
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final result = await repository().list('a');
+      expect(result.items.map((s) => s.id), ['a', 'z']);
+      expect(result.items.first.createdAt, DateTime.parse(chatDate));
+      expect(result.items.first.lastMessageAt, isNull);
+      expect(
+        result.items.last.lastMessageAt,
+        DateTime.parse('2026-10-16T12:00:00Z'),
+      );
+    },
+  );
+
+  test(
     'question answers match the Web contract and generation is confirmed before the Agent card',
     () async {
       final paths = <String>[];

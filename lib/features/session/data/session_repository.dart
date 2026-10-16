@@ -152,9 +152,7 @@ abstract class SessionRepository {
         a.pinnedAt != null ? 1 : 0,
       );
       if (pinned != 0) return pinned;
-      final date = (b.pinnedAt ?? b.updatedAt).compareTo(
-        a.pinnedAt ?? a.updatedAt,
-      );
+      final date = b.activityAt.compareTo(a.activityAt);
       return date != 0 ? date : b.id.compareTo(a.id);
     });
     return List.unmodifiable(result);
@@ -214,7 +212,7 @@ class ApiSessionRepository extends SessionRepository {
       sessions[session.id] = session;
     }
     return ConversationSessionPage(
-      items: SessionRepository.sorted(sessions.values),
+      items: List.unmodifiable(sessions.values.where((item) => !item.archived)),
       page: page,
       pageCount: pageCount,
     );

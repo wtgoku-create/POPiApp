@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -502,6 +503,51 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+  }
+
+  for (final locale in [const Locale('zh'), const Locale('en')]) {
+    testWidgets(
+      'first character opens account session with an editable prompt in $locale',
+      (tester) async {
+        final draft = IpGuideDraft()
+          ..step = 5
+          ..nickname = '校园故事'
+          ..presentation = IpPresentation.animation3d;
+        draft.directions.toggle(IpContentDirection.campus);
+        draft.feelings.toggle(IpAudienceFeeling.authentic);
+        draft.audience.toggle(IpTargetAudience.students);
+        await repository.save(draft);
+        await pumpGuide(tester, locale: locale);
+        await tap(tester, 'ip-guide-start');
+        await tap(tester, 'ip-draft-resume');
+        await tap(tester, 'ip-confirm');
+        await tap(tester, 'ip-create-role');
+
+        final session = tester.widget<SessionPage>(find.byType(SessionPage));
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(SessionPage)),
+        )!;
+        expect(session.accountId, 'created-account');
+        expect(session.sessionId, isNull);
+        expect(session.initialPrompt, l10n.ipFirstRolePrompt);
+        final input = find.descendant(
+          of: find.byType(SessionPage),
+          matching: find.byType(ExtendedTextField),
+        );
+        expect(
+          tester.widget<ExtendedTextField>(input).controller!.text,
+          l10n.ipFirstRolePrompt,
+        );
+        await tester.tap(input);
+        tester.testTextInput.enterText('创建一个勇敢的校园角色');
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<ExtendedTextField>(input).controller!.text,
+          '创建一个勇敢的校园角色',
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets(

@@ -125,6 +125,44 @@ void main() {
   });
 
   test(
+    'assistant deltas, progress and failed send do not update list activity',
+    () async {
+      controller.dispose();
+      final changes = <DateTime?>[];
+      controller = ConversationController(
+        repository,
+        'a',
+        onSessionChanged: (session) => changes.add(session.lastMessageAt),
+      );
+      controller.open(chatId);
+      await flushConversation();
+      expect(changes, [null]);
+      repository.streams.single.add(
+        chatEvent(2, 'message.delta', {
+          'messageId': 'assistant',
+          'delta': 'Hello',
+        }),
+      );
+      repository.streams.single.add(
+        chatEvent(3, 'home.task.progress', {'progress': 10}),
+      );
+      await flushConversation();
+      expect(changes, [null]);
+      repository.failSend = true;
+      await controller.send('Failed message', [], 'New', 'Media');
+      expect(changes, [null]);
+      repository.streams.single.add(
+        chatEvent(4, 'topic.adopted', {
+          'lastMessageAt': '2026-10-16T12:00:00Z',
+        }),
+      );
+      await flushConversation();
+      expect(changes, [null, DateTime.parse('2026-10-16T12:00:00Z')]);
+      expect(repository.snapshots, 1);
+    },
+  );
+
+  test(
     'reconnecting reports a request failure once until connection recovers',
     () async {
       controller.dispose();

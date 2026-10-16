@@ -60,6 +60,41 @@ ConversationEvent chatEvent(
 });
 
 void main() {
+  test('SSE interaction time only advances from payload.lastMessageAt', () {
+    var snapshot = ConversationSnapshot.fromJson(chatSnapshotJson());
+    const latest = '2026-10-15T12:00:00Z';
+    snapshot = applyConversationEvent(
+      snapshot,
+      chatEvent(1, 'topic.adopted', {'lastMessageAt': latest}),
+    );
+    expect(snapshot.session.lastMessageAt, DateTime.parse(latest));
+    for (final (seq, type, payload) in <(int, String, Map<String, Object?>)>[
+      (2, 'run.started', {'runId': 'run'}),
+      (3, 'home.task.progress', {'progress': 50}),
+      (4, 'session.updated', {'title': 'Renamed'}),
+      (5, 'session.updated', {'lastMessageAt': chatDate}),
+      (6, 'topic.adopted', {'lastMessageAt': null}),
+      (7, 'topic.adopted', {'lastMessageAt': 'invalid'}),
+      (8, 'topic.adopted', {'lastMessageAt': latest}),
+    ]) {
+      snapshot = applyConversationEvent(
+        snapshot,
+        chatEvent(seq, type, payload),
+      );
+      expect(snapshot.session.lastMessageAt, DateTime.parse(latest));
+    }
+    snapshot = applyConversationEvent(
+      snapshot,
+      chatEvent(9, 'content.confirmed', {
+        'lastMessageAt': '2026-10-16T12:00:00Z',
+      }),
+    );
+    expect(
+      snapshot.session.lastMessageAt,
+      DateTime.parse('2026-10-16T12:00:00Z'),
+    );
+  });
+
   test(
     'SSE handles byte-split UTF-8, CRLF, comments, multiline data and a BOM',
     () async {

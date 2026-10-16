@@ -155,15 +155,9 @@ class _RoleProjectSheetState extends ConsumerState<RoleProjectSheet> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   contentPadding: const EdgeInsets.all(15),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: roleGuideTint(context),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const AppSvgIcon.asset('home_drawer_project'),
+                  leading: const AppSvgIcon.asset(
+                    'project_default_avatar',
+                    size: 50,
                   ),
                   title: Text(
                     project.title,

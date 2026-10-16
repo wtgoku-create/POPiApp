@@ -281,27 +281,36 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
           ),
       ],
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (widget.fullLibrary)
-          Padding(
+    if (widget.fullLibrary) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final header = Padding(
             key: const Key('role-guide-library-controls'),
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: controls,
-          )
-        else
-          controls,
-        const SizedBox(height: 20),
-        if (widget.fullLibrary)
-          Expanded(child: _libraryList(l10n))
-        else
-          content,
-      ],
+          );
+          // Keep enough room to tap a whole character row in short sheets.
+          if (constraints.maxHeight < 320) {
+            return _libraryList(l10n, header: controls);
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              const SizedBox(height: 20),
+              Expanded(child: _libraryList(l10n)),
+            ],
+          );
+        },
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [controls, const SizedBox(height: 20), content],
     );
   }
 
-  Widget _libraryList(AppLocalizations l10n) =>
+  Widget _libraryList(AppLocalizations l10n, {Widget? header}) =>
       NotificationListener<ScrollMetricsNotification>(
         onNotification: (_) {
           _fillViewport();
@@ -312,9 +321,17 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          itemCount: _roles.length + 1,
+          itemCount: _roles.length + 1 + (header == null ? 0 : 1),
           separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
+          itemBuilder: (context, position) {
+            if (header != null && position == 0) {
+              return Padding(
+                key: const Key('role-guide-library-controls'),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: header,
+              );
+            }
+            final index = position - (header == null ? 0 : 1);
             if (index < _roles.length) return _row(_roles[index]);
             if (_loading) {
               return AppSkeletonList(

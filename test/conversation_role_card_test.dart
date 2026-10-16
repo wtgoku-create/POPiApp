@@ -111,6 +111,10 @@ void main() {
     expect(role.snapshotRole.profileVersionId, 'saved-v1');
     expect(role.snapshotRole.profileVersion, 2);
     expect(role.snapshotRole.profile, block.data['profile']);
+    expect(
+      role.snapshotRole.threeViewImage,
+      'assets/images/role_guide_result_preview.png',
+    );
     expect(role.showProfileCard, isTrue);
     expect(
       ConversationRoleProfile.fromBlock(_role(action: 'cast')).showProfileCard,
@@ -147,6 +151,7 @@ void main() {
     final detail = tester.widget<RoleDetailPage>(find.byType(RoleDetailPage));
     expect(detail.useSnapshot, isTrue);
     expect(detail.role.avatar, 'assets/images/role_guide_result_preview.png');
+    expect(find.byKey(const Key('role-profile-three-view')), findsOneWidget);
     await _expandProfile(tester);
     await tester.scrollUntilVisible(
       find.text('Kind / Quiet / Patient'),

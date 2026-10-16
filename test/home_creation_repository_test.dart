@@ -8,6 +8,46 @@ import 'support/home_creation_fixtures.dart';
 
 void main() {
   test(
+    'account topics enter home before requesting missing recommendations',
+    () async {
+      final fixture = HomeCreationFixture();
+      final repository = fixture.repository;
+      final home = await repository.resumeAccount('202');
+      expect(home.accountId, '202');
+      expect(home.topics.single.title, 'Server story 1');
+      final writes = fixture.requests
+          .where((request) => request.path.endsWith('/topics'))
+          .toList();
+      expect(writes, hasLength(1));
+      expect(
+        writes.first.path,
+        '/api_agent/v2/sessions/${home.sessionId}/topics',
+      );
+      expect(fixture.requests.first.path, '/api_agent/v2/home/enter');
+      expect(fixture.requests.first.data['accountId'], '202');
+    },
+  );
+
+  test(
+    'account topics restore existing recommendations without generating again',
+    () async {
+      final fixture = HomeCreationFixture()
+        ..topics = [
+          {
+            'id': 'saved-topic',
+            'title': 'Saved story',
+            'summary': 'Saved summary',
+          },
+        ];
+      final home = await fixture.repository.resumeAccount('202');
+      expect(home.topics.single.title, 'Saved story');
+      expect(fixture.requests.map((request) => request.path), [
+        '/api_agent/v2/home/enter',
+      ]);
+    },
+  );
+
+  test(
     'recommended topics reuse uncertain request IDs and consume the returned snapshot',
     () async {
       final fixture = HomeCreationFixture();

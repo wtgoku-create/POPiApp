@@ -84,6 +84,7 @@ Map<String, Object?> _roleJson(LibraryRole role) => {
   'title': role.title,
   'description': role.description,
   'avatar': role.avatar,
+  'threeViewImage': role.threeViewImage,
   'profile': role.profile,
   'canRead': role.canRead,
   'canEdit': role.canEdit,

@@ -31,6 +31,25 @@ class PopiDrawerSessions extends ConsumerStatefulWidget {
 
 class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
   bool _loadMoreFailed = false;
+  final _scrollController = ScrollController();
+  int? _pageResetVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    final history = ref.read(sessionsProvider);
+    if (history.hasValue && !history.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refresh();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() async {
     _loadMoreFailed = false;
@@ -66,6 +85,17 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
   Widget build(BuildContext context) {
     final history = ref.watch(sessionsProvider);
     final controller = ref.read(sessionsProvider.notifier);
+    _pageResetVersion ??= controller.pageResetVersion;
+    ref.listen(sessionsProvider, (_, _) {
+      if (_pageResetVersion == controller.pageResetVersion) return;
+      _pageResetVersion = controller.pageResetVersion;
+      _loadMoreFailed = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
+    });
     ref.listen(userProvider.select((user) => user?.id), (_, _) {
       _loadMoreFailed = false;
     });
@@ -101,6 +131,7 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
         onRefresh: _refresh,
         child: CustomScrollView(
           key: const Key('drawer-session-list'),
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: widget.header),

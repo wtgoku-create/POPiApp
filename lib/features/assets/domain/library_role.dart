@@ -6,6 +6,7 @@ class LibraryRole {
     required this.title,
     required this.description,
     this.avatar = '',
+    this.threeViewImage = '',
     this.profile = const {},
     this.canRead = false,
     this.canEdit = false,
@@ -21,6 +22,7 @@ class LibraryRole {
   final String title;
   final String description;
   final String avatar;
+  final String threeViewImage;
   final Map<String, dynamic> profile;
   final bool canRead;
   final bool canEdit;
@@ -42,6 +44,7 @@ class LibraryRole {
     title: title,
     description: description,
     avatar: avatar.isEmpty ? fallback : avatar,
+    threeViewImage: threeViewImage,
     profile: profile,
     canRead: canRead,
     canEdit: canEdit,
@@ -78,6 +81,7 @@ class LibraryRole {
       avatar: AppUrl.resolve(
         firstText([json['avatar'], json['threeViewImage']]),
       ),
+      threeViewImage: AppUrl.resolve(firstText([json['threeViewImage']])),
       profile: Map<String, dynamic>.from(profile),
       canRead: json['canRead'] == true,
       canEdit: json['canEdit'] == true,

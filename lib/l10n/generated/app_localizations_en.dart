@@ -35,6 +35,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleNoStories => 'No story suggestions yet';
 
   @override
+  String get roleAccountFallbackTitle => 'IP account';
+
+  @override
   String get roleNoVideoModels => 'No video models available';
 
   @override
@@ -1417,6 +1420,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipOpenProject => 'Open account project';
+
+  @override
+  String get ipFirstRolePrompt =>
+      'Help me create the first character based on this account\'s positioning.';
 
   @override
   String get ipFirstContentPrompt =>

@@ -3,17 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_network_image.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../assets/domain/library_role.dart';
 import 'role_guide_controls.dart';
 
 class RoleProjectSummary extends StatelessWidget {
   const RoleProjectSummary({
-    required this.roles,
+    required this.title,
+    this.avatar = '',
+    this.loading = false,
     this.showStatus = false,
     this.onViewProfile,
     super.key,
   });
-  final List<LibraryRole> roles;
+  final String title;
+  final String avatar;
+  final bool loading;
   final bool showStatus;
   final VoidCallback? onViewProfile;
 
@@ -57,19 +63,47 @@ class RoleProjectSummary extends StatelessWidget {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  RoleGuideAvatar(role: roles.first),
+                  if (loading)
+                    const AppSkeletonBox(width: 50, height: 50, radius: 10)
+                  else
+                    ClipRRect(
+                      key: const Key('role-guide-account-avatar'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox.square(
+                        dimension: 50,
+                        child: avatar.isEmpty
+                            ? const AppSvgIcon.asset(
+                                'project_default_avatar',
+                                size: 50,
+                              )
+                            : avatar.startsWith('assets/')
+                            ? Image.asset(avatar, fit: BoxFit.cover)
+                            : AppNetworkImage(
+                                avatar,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) =>
+                                    const AppSvgIcon.asset(
+                                      'project_default_avatar',
+                                      size: 50,
+                                    ),
+                              ),
+                      ),
+                    ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          l10n.roleProjectName(roles.first.title),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                        if (loading)
+                          const AppSkeletonBox(height: 18)
+                        else
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
                         if (showStatus && stacked) ...[
                           const SizedBox(height: 8),
                           status,
@@ -107,6 +141,41 @@ class RoleCastSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (cast.isEmpty) {
+      return TextButton(
+        key: const Key('role-guide-select-cast'),
+        onPressed: onEdit,
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.brand,
+          backgroundColor: roleGuideTint(context),
+          minimumSize: const Size(0, 90),
+          padding: const EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AppSvgIcon.asset(
+              'role_guide_add',
+              size: 24,
+              color: onEdit == null
+                  ? Theme.of(context).disabledColor
+                  : AppColors.brand,
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                l10n.roleCastTitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Material(
       color: roleGuideTint(context),
       borderRadius: BorderRadius.circular(20),

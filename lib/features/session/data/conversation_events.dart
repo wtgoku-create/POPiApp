@@ -205,6 +205,17 @@ ConversationSnapshot applyConversationEvent(
       },
     };
   }
+  final interaction = DateTime.tryParse(p['lastMessageAt']?.toString() ?? '');
+  final previousInteraction = snapshot.session.lastMessageAt;
+  next['session'] = {
+    ...conversationMap(next['session']),
+    'lastMessageAt':
+        interaction != null &&
+            (previousInteraction == null ||
+                interaction.isAfter(previousInteraction))
+        ? interaction.toIso8601String()
+        : previousInteraction?.toIso8601String(),
+  };
   for (final (prefix, field, payloadField) in [
     ('content.', 'contents', 'content'),
     ('confirmation.', 'confirmations', 'confirmation'),

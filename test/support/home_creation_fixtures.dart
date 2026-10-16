@@ -22,13 +22,17 @@ class HomeCreationFixture {
   Map<String, Object?>? selected;
   Map<String, Object?>? config;
   Map<String, Object?>? task;
+  bool? editable;
   int recommendationCount = 0;
   bool failEntryOnce = false;
+  bool failAccountDetailOnce = false;
+  String accountAvatar = 'assets/images/role_guide_avatar_3.png';
   bool failTopicsOnce = false;
   bool failGenerateOnce = false;
   final _generationRequests = <String>{};
   bool failMediaOnce = false;
   bool failRoleSaveOnce = false;
+  bool clearTopicsOnRoleChange = true;
   bool failPreferenceSaveOnce = false;
   final modelCatalogs = <String, List<Map<String, Object?>>>{};
   int mediaPreferenceRevision = 1;
@@ -39,6 +43,7 @@ class HomeCreationFixture {
   Map<String, Object?>? imagePreference;
   final creationProfiles = <int, Map<String, Object?>>{};
   Completer<void>? waitForEntry;
+  Completer<void>? waitForAccountDetail;
   Completer<void>? waitForTopics;
   HomeCreationRepository get repository =>
       HomeCreationRepository(NetworkApi(business), NetworkAgentApi(agent));
@@ -89,8 +94,9 @@ class HomeCreationFixture {
       'specs': {if (config != null) 'homeConfig': config},
     },
     'editable':
-        task == null ||
-        (task!['state'] == 'canceled' && task!['lock'] == 'released'),
+        editable ??
+        (task == null ||
+            (task!['state'] == 'canceled' && task!['lock'] == 'released')),
     'topics': topics,
     'customTopics': <Object>[],
     'selectedTopic': selected,
@@ -207,14 +213,14 @@ class HomeCreationFixture {
         body['profile'] as Map,
       );
       selected = null;
-      topics = [];
+      if (clearTopicsOnRoleChange) topics = [];
       revision++;
       return snapshot();
     }
     if (path.endsWith('/cast')) {
       cast = (body['roleIds'] as List).cast<int>();
       selected = null;
-      topics = [];
+      if (clearTopicsOnRoleChange) topics = [];
       revision++;
       return {
         'cast': [for (final id in cast) role(id)],
@@ -229,6 +235,22 @@ class HomeCreationFixture {
       };
     }
     if (path.contains('/roles/')) return role(int.parse(path.split('/').last));
+    if (RegExp(r'/accounts/\d+$').hasMatch(path) && request.method == 'GET') {
+      final id = path.split('/').last;
+      final detail = {
+        'id': id,
+        'title': 'Account $id',
+        'avatar': accountAvatar,
+        'revision': 1,
+        'status': 'active',
+      };
+      if (waitForAccountDetail != null) await waitForAccountDetail!.future;
+      if (failAccountDetailOnce) {
+        failAccountDetailOnce = false;
+        throw StateError('Account detail unavailable');
+      }
+      return detail;
+    }
     if (path.endsWith('/accounts')) {
       final page = request.queryParameters['page'] as int;
       return {

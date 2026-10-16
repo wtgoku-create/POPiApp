@@ -18,6 +18,8 @@ class ConversationSession {
     required this.id,
     required this.title,
     required this.updatedAt,
+    this.createdAt,
+    this.lastMessageAt,
     this.pinnedAt,
     this.avatarIcon,
     this.revision = 1,
@@ -28,11 +30,45 @@ class ConversationSession {
   final String id;
   final String title;
   final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? lastMessageAt;
   final DateTime? pinnedAt;
   final String? avatarIcon;
   final int revision;
   final bool archived;
   final String bindingStatus;
+
+  bool get isPinned => pinnedAt != null;
+
+  /// Older responses without creation time remain stable by ID, never updatedAt.
+  DateTime get activityAt =>
+      lastMessageAt ??
+      createdAt ??
+      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+
+  /// Metadata revisions and interaction timestamps advance independently.
+  ConversationSession merge(ConversationSession incoming) {
+    assert(id == incoming.id);
+    if (identical(this, incoming)) return this;
+    final latest = incoming.revision >= revision ? incoming : this;
+    final interaction = incoming.lastMessageAt;
+    return ConversationSession(
+      id: id,
+      title: latest.title,
+      updatedAt: latest.updatedAt,
+      createdAt: createdAt ?? incoming.createdAt,
+      lastMessageAt:
+          interaction != null &&
+              (lastMessageAt == null || interaction.isAfter(lastMessageAt!))
+          ? interaction
+          : lastMessageAt,
+      pinnedAt: latest.pinnedAt,
+      avatarIcon: latest.avatarIcon,
+      revision: latest.revision,
+      archived: latest.archived,
+      bindingStatus: latest.bindingStatus,
+    );
+  }
 
   factory ConversationSession.fromJson(Map<String, Object?> json) {
     final id = json['id'];
@@ -54,6 +90,8 @@ class ConversationSession {
       archived: json['archived'] == true,
       bindingStatus: json['bindingStatus'] as String? ?? 'pending',
       updatedAt: updatedAt,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+      lastMessageAt: DateTime.tryParse(json['lastMessageAt']?.toString() ?? ''),
       pinnedAt: DateTime.tryParse(json['pinnedAt']?.toString() ?? ''),
     );
   }

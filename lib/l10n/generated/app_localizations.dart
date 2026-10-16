@@ -146,6 +146,12 @@ abstract class AppLocalizations {
   /// **'No story suggestions yet'**
   String get roleNoStories;
 
+  /// No description provided for @roleAccountFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'IP account'**
+  String get roleAccountFallbackTitle;
+
   /// No description provided for @roleNoVideoModels.
   ///
   /// In en, this message translates to:
@@ -2651,6 +2657,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open account project'**
   String get ipOpenProject;
+
+  /// No description provided for @ipFirstRolePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Help me create the first character based on this account\'s positioning.'**
+  String get ipFirstRolePrompt;
 
   /// No description provided for @ipFirstContentPrompt.
   ///

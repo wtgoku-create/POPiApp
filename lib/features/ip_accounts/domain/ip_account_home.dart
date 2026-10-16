@@ -6,6 +6,7 @@ class IpAccountHome {
     required this.id,
     required this.title,
     required this.revision,
+    this.avatar = '',
     this.status = 'active',
     this.profile = const {},
     this.residentRoles = const [],
@@ -17,6 +18,7 @@ class IpAccountHome {
   final String id;
   final String title;
   final int revision;
+  final String avatar;
   final String status;
   final Map<String, Object?> profile;
   final List<Map<String, Object?>> residentRoles;

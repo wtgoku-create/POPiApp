@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/app_network_image.dart';
+import '../../../shared/providers/media_image_provider.dart';
+import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_skeleton.dart';
 import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
@@ -669,73 +672,147 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
     );
     return Container(
       key: const Key('role-profile-summary'),
-      padding: const EdgeInsets.fromLTRB(10, 10, 20, 10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.light
             ? AppColors.brand.withValues(alpha: .05)
             : colors.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              color: AppColors.brand.withValues(alpha: .1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: SizedBox.square(
-                dimension: 64,
-                child: _role.avatar.isEmpty
-                    ? placeholder
-                    : _role.avatar.startsWith('assets/')
-                    ? Image.asset(
-                        _role.avatar,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => placeholder,
-                      )
-                    : AppNetworkImage(
-                        _role.avatar,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => placeholder,
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Row(
               children: [
-                _summaryTitle(),
-                const SizedBox(height: 5),
-                Text(
-                  _role.profileComplete
-                      ? l10n.roleProfileReady
-                      : l10n.roleProfilePending,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.25,
-                    color: colors.onSurfaceVariant,
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.brand.withValues(alpha: .1),
                   ),
-                ),
-                if (roleProfileText(_role.profile['contentTags']).isNotEmpty)
-                  Text(
-                    roleProfileText(_role.profile['contentTags']),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      height: 1.25,
-                      color: colors.onSurfaceVariant,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: SizedBox.square(
+                      dimension: 64,
+                      child: _role.avatar.isEmpty
+                          ? placeholder
+                          : _role.avatar.startsWith('assets/')
+                          ? Image.asset(
+                              _role.avatar,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => placeholder,
+                            )
+                          : AppNetworkImage(
+                              _role.avatar,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => placeholder,
+                            ),
                     ),
                   ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _summaryTitle(),
+                      const SizedBox(height: 5),
+                      Text(
+                        _role.profileComplete
+                            ? l10n.roleProfileReady
+                            : l10n.roleProfilePending,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.25,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      if (roleProfileText(
+                        _role.profile['contentTags'],
+                      ).isNotEmpty)
+                        Text(
+                          roleProfileText(_role.profile['contentTags']),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.25,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+          if (_role.threeViewImage.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _threeView(l10n),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _threeView(AppLocalizations l10n) {
+    final url = _role.threeViewImage;
+    final heroTag = 'role-profile-three-view-${_role.id}';
+    final loading = AppSkeleton(
+      label: l10n.loadingAssets,
+      child: const AppSkeletonBox(),
+    );
+    final placeholder = Center(
+      child: Icon(
+        Icons.image_not_supported_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+    Widget image(ImageProvider provider) => Semantics(
+      button: true,
+      label: l10n.chatPreviewImage,
+      child: GestureDetector(
+        onTap: () => AppImagePreview.show(
+          context: context,
+          image: provider,
+          heroTag: heroTag,
+          label: _role.title,
+        ),
+        child: Hero(
+          tag: heroTag,
+          child: Image(
+            image: provider,
+            fit: BoxFit.contain,
+            excludeFromSemantics: true,
+            errorBuilder: (_, __, ___) => placeholder,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : loading,
+          ),
+        ),
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: AspectRatio(
+        key: const Key('role-profile-three-view'),
+        aspectRatio: 16 / 9,
+        child: ColoredBox(
+          color: Theme.of(context).colorScheme.surface,
+          child: url.startsWith('assets/')
+              ? image(AssetImage(url))
+              : Consumer(
+                  builder: (context, ref, _) => ref
+                      .watch(mediaImageUrlProvider(url))
+                      .when(
+                        data: (resolved) =>
+                            image(AppImageCache.provider(resolved)),
+                        loading: () => loading,
+                        error: (_, __) => placeholder,
+                      ),
+                ),
+        ),
       ),
     );
   }

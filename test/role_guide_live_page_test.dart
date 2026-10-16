@@ -14,6 +14,8 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
+import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 import 'support/home_creation_fixtures.dart';
 import 'support/fake_video_player.dart';
@@ -93,6 +95,111 @@ Future<void> tapLive(
 }
 
 void main() {
+  testWidgets('project summary uses account detail independently of the cast', (
+    tester,
+  ) async {
+    final fixture = HomeCreationFixture();
+    await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+    final summary = find.byKey(const Key('role-guide-project-profile'));
+    expect(
+      find.descendant(of: summary, matching: find.text('Account 101')),
+      findsOneWidget,
+    );
+    expect(find.text('Character 1的项目'), findsNothing);
+    final avatar = tester.widget<Image>(
+      find.descendant(of: summary, matching: find.byType(Image)),
+    );
+    expect((avatar.image as AssetImage).assetName, fixture.accountAvatar);
+    await tapLive(tester, 'role-guide-edit-cast');
+    await tapLive(tester, 'role-library-select-1');
+    await tapLive(tester, 'role-library-create-project');
+    expect(fixture.cast, isEmpty);
+    expect(
+      find.descendant(of: summary, matching: find.text('Account 101')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('role-guide-select-cast')), findsOneWidget);
+    expect(
+      fixture.requests.where(
+        (request) => request.path == '/api_client/agent/v2/accounts/101',
+      ),
+      hasLength(1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('account switch ignores a late account detail response', (
+    tester,
+  ) async {
+    final pending = Completer<void>();
+    final fixture = HomeCreationFixture()..waitForAccountDetail = pending;
+    final container = await pumpLive(
+      tester,
+      fixture,
+      route: '/role-guide?accountId=101',
+    );
+    final summary = find.byKey(const Key('role-guide-project-profile'));
+    expect(
+      find.descendant(of: summary, matching: find.byType(AppSkeletonBox)),
+      findsNWidgets(2),
+    );
+    fixture.waitForAccountDetail = null;
+    container.read(routerProvider(false)).go('/role-guide?accountId=202');
+    await tester.pumpAndSettle();
+    expect(find.text('Account 202'), findsOneWidget);
+    pending.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Account 202'), findsOneWidget);
+    expect(find.text('Account 101'), findsNothing);
+    expect(
+      fixture.requests.where(
+        (request) => request.path == '/api_client/agent/v2/accounts/202',
+      ),
+      hasLength(1),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('account without an avatar uses the default project avatar', (
+    tester,
+  ) async {
+    final fixture = HomeCreationFixture()..accountAvatar = '';
+    await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+    final avatar = find.byKey(const Key('role-guide-account-avatar'));
+    expect(
+      tester
+          .widget<AppSvgIcon>(
+            find.descendant(of: avatar, matching: find.byType(AppSvgIcon)),
+          )
+          .assetName,
+      'project_default_avatar',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'account detail failure keeps the story and allows later refresh',
+    (tester) async {
+      final fixture = HomeCreationFixture()
+        ..failAccountDetailOnce = true
+        ..topics = [
+          {'id': 'saved', 'title': 'Saved story', 'summary': 'Saved summary'},
+        ];
+      await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+      expect(
+        find.byKey(const Key('role-guide-refresh-stories')),
+        findsOneWidget,
+      );
+      await tapLive(tester, 'role-guide-refresh-stories');
+      expect(find.text('Server story 1'), findsOneWidget);
+      expect(find.text('Account 101'), findsOneWidget);
+      expect(fixture.cast, [1]);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final (size, locale, scale) in [
     (const Size(390, 844), const Locale('zh'), 1.0),
     (const Size(320, 640), const Locale('en'), 1.5),
@@ -155,9 +262,10 @@ void main() {
     await tapLive(tester, 'role-library-select-1');
     await tapLive(tester, 'role-library-create-project');
     expect(fixture.cast, isEmpty);
-    expect(find.byKey(const Key('role-guide-create-project')), findsOneWidget);
-    await tapLive(tester, 'role-guide-select-2');
-    await tapLive(tester, 'role-guide-create-project');
+    expect(find.byKey(const Key('role-guide-choose-story')), findsOneWidget);
+    await tapLive(tester, 'role-guide-select-cast');
+    await tapLive(tester, 'role-library-select-2');
+    await tapLive(tester, 'role-library-create-project');
     expect(fixture.cast, [2]);
     expect(
       fixture.requests.where(
@@ -170,6 +278,156 @@ void main() {
     expect(fixture.accountId, '101');
     expect(tester.takeException(), isNull);
   });
+
+  for (final (locale, scale) in [
+    (const Locale('zh'), 1.0),
+    (const Locale('en'), 1.5),
+  ]) {
+    testWidgets('empty cast can be selected in place in $locale', (
+      tester,
+    ) async {
+      final fixture = HomeCreationFixture()..cast = [];
+      await pumpLive(
+        tester,
+        fixture,
+        route: '/role-guide?accountId=101',
+        size: const Size(320, 640),
+        locale: locale,
+        scale: scale,
+        dark: true,
+      );
+      final panel = find.byKey(const Key('role-guide-panel'));
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byKey(const Key('role-guide-select-cast')),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('role-guide-rematch-stories')), findsNothing);
+      await tapLive(tester, 'role-guide-select-cast');
+      expect(find.byKey(const Key('role-guide-library-sheet')), findsOneWidget);
+      expect(fixture.recommendationCount, 0);
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('role-library-select-2')),
+        80,
+        scrollable: find.descendant(
+          of: find.byKey(const Key('role-guide-library-scroll')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      await tapLive(tester, 'role-library-select-2');
+      await tapLive(tester, 'role-library-create-project');
+      expect(fixture.cast, [2]);
+      expect(fixture.accountId, '101');
+      expect(find.text('Server story 1'), findsOneWidget);
+      expect(find.byKey(const Key('role-guide-library-sheet')), findsNothing);
+      expect(find.byKey(const Key('role-guide-select-cast')), findsNothing);
+      expect(find.byKey(const Key('role-guide-rematch-stories')), findsNothing);
+      await tapLive(tester, 'role-guide-choose-story');
+      expect(fixture.selected?['id'], 'topic-1');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'refreshing existing topics preserves cast and disables repeated requests',
+    (tester) async {
+      final fixture = HomeCreationFixture()
+        ..topics = [
+          {'id': 'saved', 'title': 'Saved story', 'summary': 'Saved summary'},
+        ];
+      await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+      final cast = find.byKey(const Key('role-guide-view-profiles'));
+      final refresh = find.byKey(const Key('role-guide-refresh-stories'));
+      expect(cast, findsOneWidget);
+      expect(refresh, findsOneWidget);
+      fixture.waitForTopics = Completer<void>();
+      await tapLive(tester, 'role-guide-refresh-stories', running: true);
+      expect(find.byKey(const Key('role-guide-loading')), findsOneWidget);
+      expect(cast, findsOneWidget);
+      expect(
+        tester
+            .widget<TextButton>(
+              find.descendant(of: refresh, matching: find.byType(TextButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.byKey(const Key('role-guide-edit-cast')), findsNothing);
+      await tester.tap(
+        find.byKey(const Key('role-guide-refresh-stories')),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(
+        fixture.requests.where((request) => request.path.endsWith('/topics')),
+        hasLength(1),
+      );
+      fixture.waitForTopics!.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Server story 1'), findsOneWidget);
+      expect(find.byKey(const Key('role-guide-rematch-stories')), findsNothing);
+      expect(fixture.cast, [1]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final cast in [
+    <int>[],
+    [1],
+  ]) {
+    testWidgets('empty topics disable refresh with cast $cast', (tester) async {
+      final fixture = HomeCreationFixture()..cast = cast;
+      await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+      final refresh = find.byKey(const Key('role-guide-refresh-stories'));
+      expect(
+        tester
+            .widget<TextButton>(
+              find.descendant(of: refresh, matching: find.byType(TextButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(find.byKey(const Key('role-guide-rematch-stories')), findsNothing);
+      expect(find.text('重新匹配选题'), findsNothing);
+      await tapLive(tester, 'role-guide-refresh-stories');
+      expect(fixture.recommendationCount, 0);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('readonly empty plan disables changes with cast $cast', (
+      tester,
+    ) async {
+      final fixture = HomeCreationFixture()
+        ..cast = cast
+        ..editable = false;
+      await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+      if (cast.isEmpty) {
+        final select = find.byKey(const Key('role-guide-select-cast'));
+        expect(tester.widget<TextButton>(select).onPressed, isNull);
+        await tester.tap(select);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('role-guide-library-sheet')), findsNothing);
+      } else {
+        expect(find.byKey(const Key('role-guide-edit-cast')), findsNothing);
+      }
+      for (final key in ['role-guide-refresh-stories']) {
+        final action = find.byKey(Key(key));
+        expect(
+          tester
+              .widget<TextButton>(
+                find.descendant(of: action, matching: find.byType(TextButton)),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tapLive(tester, key);
+      }
+      expect(fixture.recommendationCount, 0);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
     'completed frozen creation can continue without resending old inputs',
@@ -207,7 +465,7 @@ void main() {
     testWidgets(
       'confirmed creation role edits save locally through $entry at $size scale $scale',
       (tester) async {
-        final fixture = HomeCreationFixture();
+        final fixture = HomeCreationFixture()..clearTopicsOnRoleChange = false;
         fixture.creationProfiles[1] = {
           'title': 'Character 1',
           'description': 'Profile 1',
@@ -280,6 +538,7 @@ void main() {
             ? '角色档案保存失败，请稍后重试'
             : 'Could not save the role profile. Try again.';
         expect(find.text(l10n), findsOneWidget);
+        expect(fixture.recommendationCount, 1);
         await tapLive(tester, 'home-role-edit-save');
         expect(sheet, findsNothing);
         expect(preview, findsOneWidget);
@@ -409,6 +668,45 @@ void main() {
     });
   }
 
+  for (final fromLibrary in [false, true]) {
+    testWidgets(
+      'updating cast refreshes retained topics from library=$fromLibrary',
+      (tester) async {
+        final fixture = HomeCreationFixture()..clearTopicsOnRoleChange = false;
+        await pumpLive(tester, fixture);
+        await tapLive(tester, 'role-guide-select-1');
+        await tapLive(tester, 'role-guide-create-project');
+        expect(find.text('Server story 1'), findsOneWidget);
+        if (fromLibrary) {
+          await tapLive(tester, 'role-guide-edit-cast');
+          await tapLive(tester, 'role-library-select-1');
+          await tapLive(tester, 'role-library-select-2');
+          await tapLive(tester, 'role-library-create-project');
+        } else {
+          await tapLive(tester, 'role-guide-back');
+          await tapLive(tester, 'role-guide-select-1');
+          await tapLive(tester, 'role-guide-select-2');
+          await tapLive(tester, 'role-guide-create-project');
+        }
+        expect(fixture.cast, [2]);
+        expect(fixture.recommendationCount, 2);
+        expect(find.text('Server story 1'), findsNothing);
+        expect(find.text('Server story 2'), findsOneWidget);
+        final requests = fixture.requests
+            .where(
+              (request) =>
+                  request.path.endsWith('/cast') ||
+                  request.path.endsWith('/topics'),
+            )
+            .toList();
+        expect(requests, hasLength(3));
+        expect(requests[1].path, endsWith('/cast'));
+        expect(requests[2].path, endsWith('/topics'));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('replacing the cast rematches topics and lets failures retry', (
     tester,
   ) async {
@@ -432,17 +730,19 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Server story 1'), findsNothing);
-    expect(find.text('选题请求失败'), findsOneWidget);
-    await tapLive(tester, 'role-guide-request-retry');
-    expect(find.text('选题请求失败'), findsNothing);
+    expect(find.byKey(const Key('role-guide-rematch-stories')), findsNothing);
+    await tapLive(tester, 'role-guide-edit-cast');
+    await tapLive(tester, 'role-library-create-project');
     expect(find.text('Server story 3'), findsOneWidget);
     expect(fixture.recommendationCount, 3);
     final replacements = fixture.requests.where(
       (request) => request.path.endsWith('/cast'),
     );
-    expect(replacements, hasLength(1));
+    expect(replacements, hasLength(2));
     await tapLive(tester, 'role-guide-choose-story');
     expect(fixture.selected!['id'], 'topic-3');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -494,7 +794,7 @@ void main() {
         generation.data.keys,
         unorderedEquals(['clientRequestId', 'config']),
       );
-      expect(find.text('Character 2的项目'), findsOneWidget);
+      expect(find.text('Account 101'), findsOneWidget);
       expect(
         fixture.requests.where(
           (request) => request.path.endsWith('/home/enter'),
@@ -581,7 +881,7 @@ void main() {
   );
 
   testWidgets(
-    'switch project loads twenty-item account pages on scroll and restores home without creating a session',
+    'switch project pages accounts and reads home on the topic step',
     (tester) async {
       final fixture = HomeCreationFixture();
       final container = await pumpLive(tester, fixture);
@@ -602,6 +902,8 @@ void main() {
       await tapLive(tester, 'role-project-select-202');
       await tapLive(tester, 'role-project-confirm');
       expect(find.byType(RoleGuidePage), findsOneWidget);
+      expect(find.text('Server story 1'), findsOneWidget);
+      expect(find.byKey(const Key('role-guide-choose-story')), findsOneWidget);
       expect(fixture.accountId, '202');
       final accounts = fixture.requests
           .where((request) => request.path.endsWith('/accounts'))
@@ -610,11 +912,19 @@ void main() {
         {'page': 1, 'pageSize': 20},
         {'page': 2, 'pageSize': 20},
       ]);
-      final entry = fixture.requests.firstWhere(
-        (request) => request.path.endsWith('/home/enter'),
+      final entries = fixture.requests
+          .where((request) => request.path.endsWith('/home/enter'))
+          .toList();
+      expect(entries, hasLength(1));
+      expect(entries.single.data['accountId'], '202');
+      expect(
+        fixture.requests.indexOf(entries.single),
+        lessThan(
+          fixture.requests.indexWhere(
+            (request) => request.path.endsWith('/topics'),
+          ),
+        ),
       );
-      expect(entry.data['accountId'], '202');
-      expect(entry.data.containsKey('sessionId'), isFalse);
       expect(
         fixture.requests.any(
           (request) =>
@@ -634,34 +944,198 @@ void main() {
     },
   );
 
-  testWidgets('story request failure stays inside the panel and can retry', (
+  testWidgets('switch project enters the topic step while home loads', (
     tester,
   ) async {
-    final fixture = HomeCreationFixture()..failTopicsOnce = true;
+    final fixture = HomeCreationFixture()..waitForEntry = Completer<void>();
+    addTearDown(() {
+      if (!fixture.waitForEntry!.isCompleted) {
+        fixture.waitForEntry!.complete();
+      }
+    });
     await pumpLive(tester, fixture);
     await tapLive(tester, 'role-guide-select-1');
-    await tapLive(tester, 'role-guide-create-project');
-    expect(find.text('创作请求失败，请重试'), findsNothing);
-    expect(find.text('暂无推荐故事'), findsNothing);
-    expect(find.text('选题请求失败'), findsOneWidget);
+    await tapLive(tester, 'role-guide-switch-project');
+    await tapLive(tester, 'role-project-select-101');
+    await tapLive(tester, 'role-project-confirm', running: true);
+    expect(find.byKey(const Key('role-guide-choose-story')), findsOneWidget);
+    expect(find.byKey(const Key('role-guide-loading')), findsOneWidget);
+    expect(find.byKey(const Key('role-guide-create-project')), findsNothing);
     expect(
-      find.descendant(
-        of: find.byKey(const Key('role-guide-panel')),
-        matching: find.byKey(const Key('role-guide-request-retry')),
-      ),
-      findsOneWidget,
+      fixture.requests.any((request) => request.path.endsWith('/topics')),
+      isFalse,
     );
-    expect(find.text('都不满意，换一批'), findsOneWidget);
-    await tapLive(tester, 'role-guide-request-retry');
-    expect(find.text('选题请求失败'), findsNothing);
-    expect(find.text('Server story 2'), findsOneWidget);
-    final requests = fixture.requests
-        .where((request) => request.path.endsWith('/topics'))
-        .toList();
-    expect(requests.length, 2);
-    expect(requests.first.data, requests.last.data);
+    fixture.waitForEntry!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Server story 1'), findsOneWidget);
+    await tapLive(tester, 'role-guide-choose-story');
+    expect(find.byKey(const Key('role-guide-produce')), findsOneWidget);
+    expect(
+      fixture.requests.where((request) => request.path.endsWith('/home/enter')),
+      hasLength(1),
+    );
     expect(tester.takeException(), isNull);
   });
+
+  for (final editable in [true, false]) {
+    for (final (state, expectedAction, previousAction) in [
+      ('story', 'role-guide-choose-story', 'role-guide-create-project'),
+      ('empty-cast', 'role-guide-choose-story', 'role-guide-create-project'),
+      ('production', 'role-guide-produce', 'role-guide-choose-story'),
+      ('generation', 'role-guide-generation-action', 'role-guide-produce'),
+    ]) {
+      testWidgets(
+        'account snapshot restores $state and editable=$editable controls back',
+        (tester) async {
+          final fixture = HomeCreationFixture()..editable = editable;
+          if (state == 'empty-cast') {
+            fixture.cast = [];
+          } else {
+            fixture.topics = [
+              {
+                'id': 'saved',
+                'title': 'Saved story',
+                'summary': 'Saved summary',
+              },
+            ];
+          }
+          if (state == 'production' || state == 'generation') {
+            fixture.selected = fixture.topics.single;
+          }
+          if (state == 'generation') {
+            fixture.task = fixture.taskValue('paused');
+          }
+          await pumpLive(tester, fixture);
+          await tapLive(tester, 'role-guide-switch-project');
+          await tapLive(tester, 'role-project-select-101');
+          await tapLive(tester, 'role-project-confirm');
+          expect(find.byKey(Key(expectedAction)), findsOneWidget);
+          expect(
+            fixture.requests.where(
+              (request) => request.path.endsWith('/home/enter'),
+            ),
+            hasLength(1),
+          );
+          expect(
+            fixture.requests.any((request) => request.path.endsWith('/topics')),
+            isFalse,
+          );
+          final back = find.byKey(const Key('role-guide-back'));
+          expect(
+            tester.widget<IconButton>(back).onPressed,
+            editable ? isNotNull : isNull,
+          );
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+          expect(
+            find.byKey(Key(editable ? previousAction : expectedAction)),
+            findsOneWidget,
+          );
+          if (editable) {
+            // Restore the snapshot to exercise the app-bar button separately.
+            final router = ProviderScope.containerOf(
+              tester.element(find.byType(RoleGuidePage)),
+            ).read(routerProvider(false));
+            router.go('/role-guide');
+            await tester.pumpAndSettle();
+            await tapLive(tester, 'role-guide-switch-project');
+            await tapLive(tester, 'role-project-select-101');
+            await tapLive(tester, 'role-project-confirm');
+            await tester.tap(back);
+            await tester.pumpAndSettle();
+            expect(find.byKey(Key(previousAction)), findsOneWidget);
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  for (final (cast, editable, enabled) in [
+    (<int>[], true, false),
+    ([1], true, true),
+    ([1], false, false),
+  ]) {
+    testWidgets(
+      'topic confirmation with ${cast.length} characters and editable=$editable',
+      (tester) async {
+        final fixture = HomeCreationFixture()
+          ..cast = cast
+          ..editable = editable
+          ..topics = [
+            {'id': 'saved', 'title': 'Saved story', 'summary': 'Saved summary'},
+          ];
+        await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+        final confirm = find.byKey(const Key('role-guide-choose-story'));
+        final button = tester.widget<TextButton>(
+          find.descendant(of: confirm, matching: find.byType(TextButton)),
+        );
+        expect(button.onPressed, enabled ? isNotNull : isNull);
+        await tester.tap(confirm);
+        await tester.pumpAndSettle();
+        expect(
+          fixture.requests.where((request) => request.path.endsWith('/topic')),
+          hasLength(enabled ? 1 : 0),
+        );
+        expect(
+          find.byKey(
+            Key(enabled ? 'role-guide-produce' : 'role-guide-choose-story'),
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'story request failure keeps cast and disables refresh for empty topics',
+    (tester) async {
+      final fixture = HomeCreationFixture()..failTopicsOnce = true;
+      await pumpLive(tester, fixture);
+      await tapLive(tester, 'role-guide-select-1');
+      await tapLive(tester, 'role-guide-create-project');
+      expect(find.text('创作请求失败，请重试'), findsNothing);
+      expect(find.text('暂无推荐故事'), findsOneWidget);
+      final panel = find.byKey(const Key('role-guide-panel'));
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byKey(const Key('role-guide-request-retry')),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: panel, matching: find.text('选题请求失败')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byKey(const Key('role-guide-rematch-stories')),
+        ),
+        findsNothing,
+      );
+      expect(find.text('都不满意，换一批'), findsOneWidget);
+      final refresh = find.byKey(const Key('role-guide-refresh-stories'));
+      expect(
+        tester
+            .widget<TextButton>(
+              find.descendant(of: refresh, matching: find.byType(TextButton)),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tapLive(tester, 'role-guide-refresh-stories');
+      final requests = fixture.requests
+          .where((request) => request.path.endsWith('/topics'))
+          .toList();
+      expect(requests.length, 1);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('entry retry keeps request ID; logout discards a late response', (
     tester,

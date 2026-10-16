@@ -364,6 +364,23 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     }
   }
 
+  void _createFirstRole() {
+    if (_busy || _draft.accountId == null) return;
+    if (ref.read(userProvider)?.id != _ownerId) {
+      context.go('/');
+      return;
+    }
+    context.push(
+      Uri(
+        path: '/session',
+        queryParameters: {
+          'accountId': _draft.accountId!,
+          'prompt': AppLocalizations.of(context)!.ipFirstRolePrompt,
+        },
+      ).toString(),
+    );
+  }
+
   Future<void> _openProject({bool createContent = false}) async {
     if (_busy || _draft.accountId == null) return;
     if (ref.read(userProvider)?.id != _ownerId) {
@@ -648,7 +665,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                             submitted: _draft.submitted,
                             busy: _busy,
                             completed: _completed,
-                            onCreateRole: () => context.push('/role-guide'),
+                            onCreateRole: _createFirstRole,
                             onCreateContent: () =>
                                 _openProject(createContent: true),
                             onOpenProject: _openProject,

@@ -443,7 +443,9 @@ class _SessionPageState extends ConsumerState<SessionPage> {
               if (!mounted || ref.read(userProvider)?.id != userId) return;
               final changed = _activeSessionId != session.id;
               _activeSessionId = session.id;
-              ref.read(sessionsProvider.notifier).upsert(session);
+              ref
+                  .read(sessionsProvider.notifier)
+                  .upsert(session, insertIfMissing: changed);
               // 先保存新会话的路由，首条消息超时后仍能回到同一会话重试。
               if (changed) {
                 GoRouter.maybeOf(context)?.replace(

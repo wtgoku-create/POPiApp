@@ -30,6 +30,7 @@ class ConversationRoleProfile {
       title: title,
       description: description,
       avatar: portrait,
+      threeViewImage: threeView,
       profile: profile,
       canRead: true,
       profileComplete: data['profileComplete'] == true,

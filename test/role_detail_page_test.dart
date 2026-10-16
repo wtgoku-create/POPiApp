@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/utils/app_url.dart';
 import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/assets/domain/role_profile_edit.dart';
@@ -326,6 +327,90 @@ void main() {
       'profile': {'schemaVersion': 1.2},
     });
     expect(legacy.profileVersion, 1.2);
+  });
+
+  test('three-view image is independent of avatar and survives copying', () {
+    final role = LibraryRole.fromJson({
+      'id': '7',
+      'avatar': sample.avatar,
+      'threeViewImage': '/roles/alice-three-view.png',
+    });
+    expect(role.avatar, sample.avatar);
+    expect(role.threeViewImage, AppUrl.resolve('/roles/alice-three-view.png'));
+    expect(
+      role.withFallbackAvatar('fallback').threeViewImage,
+      role.threeViewImage,
+    );
+    final withoutAvatar = LibraryRole.fromJson({
+      'id': '8',
+      'threeViewImage': 'assets/images/role_guide_result_preview.png',
+    });
+    expect(withoutAvatar.avatar, withoutAvatar.threeViewImage);
+    expect(LibraryRole.fromJson({'id': '9'}).threeViewImage, isEmpty);
+  });
+
+  final threeViewRole = LibraryRole(
+    id: sample.id,
+    title: sample.title,
+    description: sample.description,
+    avatar: sample.avatar,
+    threeViewImage: 'assets/images/role_guide_result_preview.png',
+    profile: sample.profile,
+    profileComplete: true,
+  );
+
+  for (final sheet in [false, true]) {
+    testWidgets(
+      'three-view is shown in ${sheet ? 'sheet' : 'page'} and opens preview',
+      (tester) async {
+        await pumpPage(tester, sheet: sheet, load: (_) async => threeViewRole);
+        final region = find.byKey(const Key('role-profile-three-view'));
+        expect(region, findsOneWidget);
+        final size = tester.getSize(region);
+        expect(size.width / size.height, closeTo(16 / 9, .001));
+        final image = tester.widget<Image>(
+          find.descendant(of: region, matching: find.byType(Image)),
+        );
+        expect(image.fit, BoxFit.contain);
+        expect(
+          (image.image as AssetImage).assetName,
+          threeViewRole.threeViewImage,
+        );
+        await tester.runAsync(
+          () => precacheImage(
+            AssetImage(threeViewRole.threeViewImage),
+            boundaryKey.currentContext!,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await capture(
+          tester,
+          '/tmp/popi-role-three-view-${sheet ? 'sheet' : 'page'}.png',
+        );
+        await tester.tap(region);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('asset-preview-image')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('three-view fits narrow dark profiles with large text', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      size: const Size(320, 812),
+      dark: true,
+      textScale: 1.8,
+      sheet: true,
+      load: (_) async => threeViewRole,
+    );
+    final region = find.byKey(const Key('role-profile-three-view'));
+    expect(region, findsOneWidget);
+    expect(tester.getRect(region).right, lessThanOrEqualTo(320));
+    expect(tester.takeException(), isNull);
+    await capture(tester, '/tmp/popi-role-three-view-small.png');
   });
 
   test('profile edits keep number, boolean and unchanged object values', () {

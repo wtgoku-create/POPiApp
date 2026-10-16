@@ -96,6 +96,34 @@ void main() {
     },
   );
 
+  for (final (fields, avatar) in [
+    (
+      {'avatar': 'https://example.test/account.png'},
+      'https://example.test/account.png',
+    ),
+    (
+      {
+        'mainRole': {'avatar': 'https://example.test/main.png'},
+      },
+      'https://example.test/main.png',
+    ),
+    (<String, Object?>{}, ''),
+  ]) {
+    test('account detail preserves its avatar from $fields', () async {
+      respond = (_) => {
+        'id': '42',
+        'title': 'Account',
+        'revision': 1,
+        ...fields,
+      };
+      final account = await repository.detail('42');
+      expect(account.title, 'Account');
+      expect(account.avatar, avatar);
+      expect(requests, hasLength(1));
+      expect(requests.single.path, '/api_client/agent/v2/accounts/42');
+    });
+  }
+
   test(
     'new accounts without an active profile skip version requests',
     () async {

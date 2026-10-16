@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -33,7 +35,13 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
   bool _hasMore = false;
   int _page = 0;
   int _generation = 0;
+  int _pageResetVersion = 0;
+  final _known = <String, ConversationSession>{};
+  final _insertions = <String>{};
+  List<ConversationSession>? _firstPage;
+  bool _firstPageHasMore = false;
 
+  int get pageResetVersion => _pageResetVersion;
   bool get hasMore => _hasMore;
   bool get loadingMore => state.isLoading && _loadingMore;
   bool get initialLoading => state.isLoading && !_loadingMore;
@@ -49,6 +57,11 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     _loadMoreToken?.cancel();
     _page = 0;
     _hasMore = false;
+    _known.clear();
+    _insertions.clear();
+    _firstPage = null;
+    _firstPageHasMore = false;
+    _pageResetVersion++;
     final token = CancelToken();
     _token = token;
     ref.onDispose(() {
@@ -62,11 +75,8 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
       pageSize: pageSize,
       cancelToken: token,
     );
-    if (!token.isCancelled) {
-      _page = result.page;
-      _hasMore = result.hasMore;
-    }
-    return result.items;
+    if (token.isCancelled) return const [];
+    return _acceptPage(result, append: false);
   }
 
   Future<ConversationSession?> create(String title) => _mutate(
@@ -106,25 +116,18 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     _cancelLoadMore();
     _refreshing = true;
     final generation = _generation;
-    final previous = state;
     final token = _token ?? CancelToken();
     try {
       final result = await ref
           .read(sessionRepositoryProvider)
           .list(userId, pageSize: pageSize, cancelToken: token);
-      // A refresh must not overwrite a newer account or completed mutation.
       if (!token.isCancelled &&
           generation == _generation &&
-          ref.read(userProvider)?.id == userId &&
-          identical(state, previous)) {
-        _page = result.page;
-        _hasMore = result.hasMore;
-        state = AsyncData(result.items);
+          ref.read(userProvider)?.id == userId) {
+        state = AsyncData(_acceptPage(result, append: false));
       }
     } catch (_) {
-      if (generation != _generation ||
-          token.isCancelled ||
-          !identical(state, previous)) {
+      if (generation != _generation || token.isCancelled) {
         return;
       }
       rethrow;
@@ -151,41 +154,28 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
       state,
       isRefresh: false,
     );
-    final loading = state;
+    final nextPage = _page + 1;
     try {
       final result = await ref
           .read(sessionRepositoryProvider)
-          .list(
-            userId,
-            page: _page + 1,
-            pageSize: pageSize,
-            cancelToken: token,
-          );
+          .list(userId, page: nextPage, pageSize: pageSize, cancelToken: token);
       if (token.isCancelled ||
           generation != _generation ||
-          ref.read(userProvider)?.id != userId ||
-          !identical(state, loading)) {
+          ref.read(userProvider)?.id != userId) {
         return;
       }
-      _page = result.page;
-      _hasMore = result.hasMore;
+      final merged = _acceptPage(result, append: nextPage > 1);
       _loadingMore = false;
-      final merged = {
-        for (final item in result.items) item.id: item,
-        for (final item in items) item.id: item,
-      };
-      state = AsyncData(SessionRepository.sorted(merged.values));
+      state = AsyncData(merged);
     } catch (_) {
-      if (token.isCancelled ||
-          generation != _generation ||
-          !identical(state, loading)) {
+      if (token.isCancelled || generation != _generation) {
         return;
       }
       rethrow;
     } finally {
-      if (generation == _generation && identical(state, loading)) {
+      if (generation == _generation && identical(_loadMoreToken, token)) {
         _loadingMore = false;
-        state = AsyncData(items);
+        state = AsyncData(state.valueOrNull ?? items);
       }
       if (identical(_loadMoreToken, token)) _loadMoreToken = null;
     }
@@ -199,19 +189,138 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     if (wasLoading) state = AsyncData(state.requireValue);
   }
 
-  void upsert(ConversationSession session) {
+  void _setItems(List<ConversationSession> items) {
+    state = AsyncData(items);
+    if (_loadingMore) {
+      state = const AsyncLoading<List<ConversationSession>>().copyWithPrevious(
+        state,
+        isRefresh: false,
+      );
+    }
+  }
+
+  ConversationSession _remember(ConversationSession incoming) {
+    final known = _known[incoming.id];
+    return _known[incoming.id] = known == null
+        ? incoming
+        : known.merge(incoming);
+  }
+
+  bool _sameOrder(ConversationSession a, ConversationSession b) =>
+      a.isPinned == b.isPinned && a.activityAt.isAtSameMomentAs(b.activityAt);
+
+  /// Preserve the server's page order unless a newer local ordering value exists.
+  List<ConversationSession> _acceptPage(
+    ConversationSessionPage result, {
+    required bool append,
+  }) {
+    var reorder = false;
+    for (final incoming in result.items) {
+      final merged = _remember(incoming);
+      if (!_sameOrder(incoming, merged)) reorder = true;
+      if (incoming.revision >= merged.revision &&
+          _sameOrder(incoming, merged)) {
+        _insertions.remove(incoming.id);
+      }
+    }
+    final merged = <String, ConversationSession>{};
+    for (final item in [if (append) ...?state.valueOrNull, ...result.items]) {
+      merged[item.id] = _known[item.id]!;
+    }
+    if (!append) {
+      for (final id in _insertions) {
+        if (!merged.containsKey(id)) {
+          merged[id] = _known[id]!;
+          reorder = true;
+        }
+      }
+    }
+    var items = merged.values.where((item) => !item.archived).toList();
+    if (reorder) items = SessionRepository.sorted(items);
+    _page = result.page;
+    _hasMore = result.hasMore || (!append && items.length > pageSize);
+    if (!append) {
+      items = items.take(pageSize).toList();
+      _firstPage = items;
+      _firstPageHasMore = _hasMore;
+    }
+    return List.unmodifiable(items);
+  }
+
+  void upsert(ConversationSession session, {bool insertIfMissing = true}) {
+    final previous = _known[session.id];
+    final merged = _remember(session);
+    final interaction = merged.lastMessageAt;
+    final newInteraction =
+        interaction != null &&
+        (previous?.lastMessageAt == null ||
+            interaction.isAfter(previous!.lastMessageAt!));
+    final orderMutation = previous == null
+        ? insertIfMissing
+        : previous.isPinned != merged.isPinned ||
+              previous.archived != merged.archived;
+    if (newInteraction || (orderMutation && !merged.archived)) {
+      _insertions.add(session.id);
+    }
+    // AsyncValue may still retain the previous account's rows during build.
+    if (_firstPage == null) return;
     final items = state.valueOrNull;
     if (items == null) return;
-    _cancelLoadMore();
-    // Mutations can shift page offsets. Reconcile from page one on the next pull.
-    _page = 0;
-    _hasMore = true;
-    state = AsyncData(
-      SessionRepository.sorted([
-        ...items.where((item) => item.id != session.id),
-        session,
-      ]),
+    if (newInteraction || orderMutation) _cancelLoadMore();
+    if (_page > 1 && (newInteraction || orderMutation)) {
+      _returnToFirstPage();
+    }
+    final visible = state.valueOrNull ?? items;
+    final next = [
+      for (final item in visible)
+        if (item.id != merged.id)
+          _known[item.id]!
+        else if (!merged.archived)
+          merged,
+      if (!merged.archived &&
+          !visible.any((item) => item.id == merged.id) &&
+          (newInteraction || insertIfMissing))
+        merged,
+    ];
+    final reordered = newInteraction || orderMutation
+        ? SessionRepository.sorted(next)
+        : next;
+    _hasMore = _hasMore || (_page <= 1 && reordered.length > pageSize);
+    _setItems(
+      List.unmodifiable(_page <= 1 ? reordered.take(pageSize) : reordered),
     );
+    if (_page <= 1 && _firstPage != null) {
+      _firstPage = state.valueOrNull;
+      _firstPageHasMore = _hasMore;
+    } else if (_firstPage != null) {
+      _firstPage = [
+        for (final item in _firstPage!)
+          if (!_known[item.id]!.archived) _known[item.id]!,
+      ];
+    }
+    if (orderMutation) {
+      // Pinning, creation and deletion change page offsets; reconcile on paging.
+      _page = 0;
+      _hasMore = true;
+    }
+  }
+
+  void _returnToFirstPage() {
+    _pageResetVersion++;
+    final cached = _firstPage;
+    if (cached == null) {
+      _page = 0;
+      _hasMore = true;
+      // Automatic recovery retains existing data if the network is unavailable.
+      unawaited(refresh().catchError((Object _) {}));
+      return;
+    }
+    _page = 1;
+    _hasMore = _firstPageHasMore;
+    _setItems([
+      for (final item in cached)
+        if (!_known[item.id]!.archived) _known[item.id]!,
+    ]);
   }
 
   Future<ConversationSession?> _mutate(
@@ -221,7 +330,6 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     final userId = ref.read(userProvider)?.id;
     if (userId == null) throw StateError('Sign in required');
     if (_mutating) throw StateError('Session mutation already pending');
-    _cancelLoadMore();
     final generation = _generation;
     _mutating = true;
     final token = _token ?? CancelToken();

@@ -194,6 +194,59 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('live interaction returns paged drawer to top without fetching', (
+    tester,
+  ) async {
+    final repository = _RefreshingDrawerRepository(45);
+    final container = await pumpDrawer(tester, repository: repository);
+    final scroll = tester
+        .widget<CustomScrollView>(find.byKey(const Key('drawer-session-list')))
+        .controller!;
+    await container.read(sessionsProvider.notifier).loadMore();
+    await tester.pumpAndSettle();
+    scroll.jumpTo(300);
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(0));
+    expect(
+      container.read(sessionsProvider).requireValue.length,
+      greaterThan(20),
+    );
+    final requestsBefore = repository.requests;
+    container
+        .read(sessionsProvider.notifier)
+        .upsert(
+          ConversationSession(
+            id: 'history-30',
+            title: 'History 30',
+            revision: 2,
+            updatedAt: DateTime(2026),
+            createdAt: repository.items[30].createdAt,
+            lastMessageAt: DateTime.utc(2026, 10, 16),
+          ),
+        );
+    await tester.pumpAndSettle();
+    expect(scroll.offset, 0);
+    expect(container.read(sessionsProvider).requireValue, hasLength(20));
+    expect(
+      container.read(sessionsProvider).requireValue.first.id,
+      'history-30',
+    );
+    expect(repository.requests, requestsBefore);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reopening history requests a fresh first page', (tester) async {
+    final repository = _RefreshingDrawerRepository(2);
+    await pumpDrawer(tester, repository: repository);
+    tester.state<ScaffoldState>(find.byType(Scaffold).first).closeDrawer();
+    await tester.pumpAndSettle();
+    final requestsBefore = repository.requests;
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    expect(repository.requests, requestsBefore + 1);
+    expect(repository.requestedPages.last, (1, 20));
+  });
+
   for (final count in [0, 1, 40]) {
     testWidgets('pull refreshes drawer history with $count sessions', (
       tester,
@@ -593,11 +646,15 @@ void main() {
       await openMenu(tester, 'mock-8');
       await tester.tap(find.text('置顶会话'));
       await tester.pumpAndSettle();
-      expect(container.read(sessionsProvider).requireValue.first.id, 'mock-8');
+      expect(
+        container.read(sessionsProvider).requireValue.take(2).map((s) => s.id),
+        ['mock-1', 'mock-8'],
+      );
       await tester.scrollUntilVisible(last, -400, scrollable: scrollable);
+      await tester.scrollUntilVisible(first, -400, scrollable: scrollable);
       await tester.pumpAndSettle();
       expect(last.hitTestable(), findsOneWidget);
-      expect(tester.getRect(last).top, lessThan(tester.getRect(first).top));
+      expect(tester.getRect(first).top, lessThan(tester.getRect(last).top));
       await tester.tap(last);
       await tester.pumpAndSettle();
       expect(
@@ -719,7 +776,10 @@ void main() {
     await openMenu(tester, 'mock-2');
     await tester.tap(find.text('置顶会话'));
     await tester.pumpAndSettle();
-    expect(container.read(sessionsProvider).requireValue.first.id, 'mock-2');
+    expect(
+      container.read(sessionsProvider).requireValue.take(2).map((s) => s.id),
+      ['mock-1', 'mock-2'],
+    );
     expect(
       tester
           .widget<AppSvgIcon>(
@@ -906,6 +966,7 @@ class _RefreshingDrawerRepository extends FixtureSessionRepository {
           id: 'history-$index',
           title: 'History $index',
           updatedAt: DateTime(2026).subtract(Duration(seconds: index)),
+          createdAt: DateTime(2026).subtract(Duration(seconds: index)),
         ),
       );
 
