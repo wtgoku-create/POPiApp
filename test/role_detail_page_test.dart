@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/core/utils/app_url.dart';
 import 'package:popi_ai_app/features/assets/data/role_library_repository.dart';
@@ -18,6 +19,9 @@ import 'package:popi_ai_app/features/assets/domain/role_profile_edit.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_guide_picker.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_guide_controls.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -72,6 +76,7 @@ void main() {
     bool dark = false,
     bool sheet = false,
     Future<LibraryRole> Function(String)? load,
+    RolePageLoader? loadPage,
     Future<void> Function(String)? delete,
     RoleProfileSaver? save,
     ValueChanged<LibraryRole>? onRoleUpdated,
@@ -102,6 +107,14 @@ void main() {
         ),
       );
     }
+    final routeContainer = ProviderContainer();
+    final appRouter = routeContainer.read(routerProvider(false));
+    final appHome = appRouter.configuration.routes.first as GoRoute;
+    final roleGuideRoute = appHome.routes.whereType<GoRoute>().firstWhere(
+      (route) => route.path == 'role-guide',
+    );
+    appRouter.dispose();
+    routeContainer.dispose();
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -139,6 +152,7 @@ void main() {
           builder: (_, state) =>
               SessionPage(initialPrompt: state.uri.queryParameters['prompt']),
         ),
+        GoRoute(path: '/role-guide', builder: roleGuideRoute.builder),
       ],
     );
     addTearDown(router.dispose);
@@ -148,6 +162,7 @@ void main() {
           dioProvider.overrideWithValue(
             roleLibraryDio(
               loadDetail: load ?? (_) async => sample,
+              loadPage: loadPage,
               delete: delete,
               save: save ?? (_, _) async => sample,
             ),
@@ -1075,9 +1090,19 @@ void main() {
     await tester.tap(find.byKey(const Key('role-create')));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<SessionPage>(find.byType(SessionPage)).initialPrompt,
-      contains('Official role'),
+      tester
+          .widget<RoleGuidePage>(find.byType(RoleGuidePage))
+          .initialRole
+          ?.title,
+      'Official role',
     );
+    expect(
+      tester
+          .widget<RoleGuidePicker>(find.byType(RoleGuidePicker))
+          .initialCategory,
+      'official',
+    );
+    expect(find.text('创建项目（已选1个角色）'), findsOneWidget);
   });
 
   testWidgets('failed details can retry and actions wait for permissions', (
@@ -1191,21 +1216,90 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('creative action carries the role into the existing composer', (
-    tester,
-  ) async {
-    await pumpPage(tester);
-    await tester.ensureVisible(find.byKey(const Key('role-create')));
-    await tester.tap(find.byKey(const Key('role-create')));
-    await tester.pumpAndSettle();
-    final home = tester.widget<SessionPage>(find.byType(SessionPage));
-    expect(home.initialPrompt, contains('爱丽丝'));
-    expect(home.initialPrompt, contains('ID: 7'));
-    await tester.tap(find.byKey(const Key('popi-open-navigation')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'creative action opens role selection with the current role checked',
+    (tester) async {
+      await pumpPage(tester);
+      await tester.ensureVisible(find.byKey(const Key('role-create')));
+      await tester.tap(find.byKey(const Key('role-create')));
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionPage), findsNothing);
+      expect(find.text('从角色出发'), findsOneWidget);
+      final guide = tester.widget<RoleGuidePage>(find.byType(RoleGuidePage));
+      expect(guide.initialRole?.id, sample.id);
+      expect(guide.initialRole?.title, sample.title);
+      expect(guide.initialCategory, 'personal');
+      expect(find.text('创建项目（已选1个角色）'), findsOneWidget);
+      final badge = find.descendant(
+        of: find.byKey(const Key('role-guide-check-7')),
+        matching: find.byType(RoleSelectionBadge),
+      );
+      expect(tester.widget<RoleSelectionBadge>(badge).order, 1);
+      await capture(tester, '/tmp/popi-role-create-selection.png');
+      await tester.tap(find.byKey(const Key('role-guide-check-7')));
+      await tester.pumpAndSettle();
+      expect(tester.widget<RoleSelectionBadge>(badge).order, 0);
+      expect(find.text('创建项目（已选1个角色）'), findsNothing);
+      await tester.tap(find.byKey(const Key('role-guide-menu')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('popi-navigation-drawer')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'entry role stays visible once and respects the library category',
+    (tester) async {
+      final categories = <String>[];
+      await pumpPage(
+        tester,
+        size: const Size(390, 844),
+        loadPage:
+            ({required category, required page, required pageSize}) async {
+              categories.add(category);
+              return LibraryRolePage(
+                items: category == 'personal'
+                    ? [
+                        for (var i = 0; i < 10; i++)
+                          LibraryRole(
+                            id: 'other-$i',
+                            title: 'Role $i',
+                            description: '',
+                          ),
+                        sample,
+                      ]
+                    : const [],
+                page: page,
+                pageCount: 1,
+              );
+            },
+      );
+      await tester.ensureVisible(find.byKey(const Key('role-create')));
+      await tester.tap(find.byKey(const Key('role-create')));
+      await tester.pumpAndSettle();
+      final role = find.byKey(const Key('role-guide-check-7'));
+      expect(categories, ['personal']);
+      expect(role, findsOneWidget);
+      expect(
+        tester.getRect(role).overlaps(Offset.zero & const Size(390, 844)),
+        isTrue,
+      );
+      expect(find.text('创建项目（已选1个角色）'), findsOneWidget);
+      await capture(tester, '/tmp/popi-role-create-selection-mobile.png');
+
+      await tester.tap(find.text('官方角色'));
+      await tester.pumpAndSettle();
+      expect(categories, ['personal', 'official']);
+      expect(role, findsNothing);
+      expect(find.text('创建项目（已选1个角色）'), findsOneWidget);
+
+      await tester.tap(find.text('我的角色'));
+      await tester.pumpAndSettle();
+      expect(role, findsOneWidget);
+      expect(find.text('创建项目（已选1个角色）'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('small screens and larger English text remain scrollable', (
     tester,

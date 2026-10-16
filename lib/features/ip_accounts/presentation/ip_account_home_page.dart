@@ -18,6 +18,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_expanded_text_field.dart';
 import '../../../shared/type/account_input_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_account_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../projects/data/project_repository.dart';
 import '../../projects/domain/project.dart';
@@ -342,15 +343,11 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         return;
       }
       final bound = _boundSession;
+      if (bound == null) throw StateError('Account session is unavailable');
       await context.push(
         Uri(
           path: '/session',
-          queryParameters: {
-            if (bound != null)
-              'sessionId': bound.id
-            else
-              'accountId': account.id,
-          },
+          queryParameters: {'sessionId': bound.id},
         ).toString(),
       );
       if (mounted && !token.isCancelled) await _load();
@@ -632,7 +629,10 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         children: [
           Row(
             children: [
-              const AppSvgIcon.asset('ip_guide_account', size: 50),
+              AppAccountIcon(
+                key: ValueKey('ip-account-icon-${account.id}'),
+                backgroundColor: account.iconBackgroundColor,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

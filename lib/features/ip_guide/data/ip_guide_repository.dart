@@ -4,18 +4,25 @@ import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/network/network_api.dart';
+import '../../../core/network/network_agent_api.dart';
 import '../../../core/storage/preferences_storage.dart';
 import '../../ip_accounts/data/ip_account_repository.dart';
 import '../../ip_accounts/domain/account_preferences.dart';
+import '../../session/domain/conversation_session.dart';
 import '../domain/ip_guide_draft.dart';
 
 /// Serializes writes so an older autosave cannot resurrect a cleared draft.
 class IpGuideRepository {
-  IpGuideRepository(this._storage, this._api, {required String? userId})
-    : _key = 'ip_guide_draft_v1:${userId ?? 'guest'}';
+  IpGuideRepository(
+    this._storage,
+    this._api,
+    this._agent, {
+    required String? userId,
+  }) : _key = 'ip_guide_draft_v1:${userId ?? 'guest'}';
 
   final PreferencesStorage _storage;
   final NetworkApi _api;
+  final NetworkAgentApi _agent;
   final String _key;
   Future<void>? _writes;
   final _creationToken = CancelToken();
@@ -62,7 +69,9 @@ class IpGuideRepository {
       draft.step = (json['step'] as int? ?? 1).clamp(1, 5);
       draft.creationRequestId = json['creationRequestId'] as String?;
       draft.profileRequestId = json['profileRequestId'] as String?;
+      draft.sessionRequestId = json['sessionRequestId'] as String?;
       draft.accountId = json['accountId'] as String?;
+      draft.sessionId = json['sessionId'] as String?;
       draft.accountRevision = json['accountRevision'] as int?;
       draft.submittedProfile =
           (json['submittedProfile'] as Map<String, dynamic>?)
@@ -96,7 +105,9 @@ class IpGuideRepository {
       },
       'creationRequestId': draft.creationRequestId,
       'profileRequestId': draft.profileRequestId,
+      'sessionRequestId': draft.sessionRequestId,
       'accountId': draft.accountId,
+      'sessionId': draft.sessionId,
       'accountRevision': draft.accountRevision,
       'submittedProfile': draft.submittedProfile,
     });
@@ -105,7 +116,7 @@ class IpGuideRepository {
 
   Future<void> clear() => _enqueue(() => _storage.remove(_key));
 
-  /// Persist retry identifiers before sending either creation command.
+  /// Account creation completes only after its main session is bound.
   Future<String> create(
     IpGuideDraft draft,
     Map<String, Object?> profile,
@@ -113,6 +124,7 @@ class IpGuideRepository {
     _checkActive();
     draft.creationRequestId ??= const Uuid().v4();
     draft.profileRequestId ??= const Uuid().v4();
+    draft.sessionRequestId ??= const Uuid().v4();
     draft.submittedProfile ??= profile;
     await save(draft);
     _checkActive();
@@ -134,6 +146,23 @@ class IpGuideRepository {
       profile: _preferences(draft.submittedProfile!),
       cancelToken: _creationToken,
     );
+    _checkActive();
+    if (draft.sessionId == null) {
+      final session = ConversationSession.fromJson(
+        await _agent.createProjectSession(
+          draft.accountId!,
+          draft.nickname.trim(),
+          clientRequestId: draft.sessionRequestId!,
+          cancelToken: _creationToken,
+        ),
+      );
+      _checkActive();
+      if (session.bindingStatus != 'ready') {
+        throw const FormatException('Account session is not bound');
+      }
+      draft.sessionId = session.id;
+      await save(draft);
+    }
     _checkActive();
     await clear();
     return draft.accountId!;

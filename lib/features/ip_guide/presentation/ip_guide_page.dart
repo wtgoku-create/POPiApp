@@ -12,6 +12,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/ip_guide_provider.dart';
 import '../../../shared/providers/project_provider.dart';
+import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -21,7 +22,6 @@ import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../domain/ip_guide_draft.dart';
 import '../data/ip_guide_repository.dart';
 import '../../ip_accounts/domain/account_preferences.dart';
-import '../../projects/data/project_repository.dart';
 import 'ip_guide_copy.dart';
 import 'widgets/ip_guide_choices.dart';
 import 'widgets/ip_guide_controls.dart';
@@ -57,8 +57,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   bool _completed = false;
   bool _saveErrorShown = false;
   bool _draftSheetOpen = false;
-  String? _projectSessionId;
-  String? _sessionRequestId;
   static const _preferenceKeys = [
     'contentDirections',
     'audienceFeelings',
@@ -345,6 +343,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       await _repository.create(_draft, guideAccountProfile(_draft, l10n));
       if (!mounted || ref.read(userProvider)?.id != _ownerId) return;
       ref.invalidate(projectsProvider);
+      ref.invalidate(sessionsProvider);
       if (mounted) setState(() => _completed = true);
     } catch (_) {
       if (mounted) AppToast.info(context, l10n.ipCreateFailed);
@@ -365,7 +364,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   }
 
   void _createFirstRole() {
-    if (_busy || _draft.accountId == null) return;
+    if (_busy || !_completed || _draft.sessionId == null) return;
     if (ref.read(userProvider)?.id != _ownerId) {
       context.go('/');
       return;
@@ -374,7 +373,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       Uri(
         path: '/session',
         queryParameters: {
-          'accountId': _draft.accountId!,
+          'sessionId': _draft.sessionId!,
           'prompt': AppLocalizations.of(context)!.ipFirstRolePrompt,
         },
       ).toString(),
@@ -382,7 +381,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   }
 
   Future<void> _openProject({bool createContent = false}) async {
-    if (_busy || _draft.accountId == null) return;
+    if (_busy || !_completed || _draft.sessionId == null) return;
     if (ref.read(userProvider)?.id != _ownerId) {
       context.go('/');
       return;
@@ -393,38 +392,15 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       );
       return;
     }
-    final l10n = AppLocalizations.of(context)!;
-    setState(() => _busy = true);
-    try {
-      if (_projectSessionId == null) {
-        _sessionRequestId ??= ProjectRepository.createClientRequestId();
-        final session = await ref
-            .read(projectRepositoryProvider)
-            .createSession(
-              _draft.accountId!,
-              _draft.nickname,
-              clientRequestId: _sessionRequestId!,
-            );
-        _projectSessionId = session.id;
-      }
-      if (mounted && ref.read(userProvider)?.id == _ownerId) {
-        unawaited(
-          context.push(
-            Uri(
-              path: '/session',
-              queryParameters: {
-                'sessionId': _projectSessionId!,
-                if (createContent) 'prompt': l10n.ipFirstContentPrompt,
-              },
-            ).toString(),
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) AppToast.info(context, l10n.chatRequestFailed);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    await context.push(
+      Uri(
+        path: '/session',
+        queryParameters: {
+          'sessionId': _draft.sessionId!,
+          'prompt': AppLocalizations.of(context)!.ipFirstContentPrompt,
+        },
+      ).toString(),
+    );
   }
 
   @override

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:popi_ai_app/core/storage/secure_storage.dart';
+import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/features/auth/data/auth_api.dart';
 import 'package:popi_ai_app/features/auth/data/auth_repository.dart';
 import 'package:popi_ai_app/features/auth/domain/auth_session.dart';
@@ -119,11 +122,83 @@ void main() {
     expect(container.read(userPointsProvider).valueOrNull, isNull);
     expect(api.logoutCalled, isTrue);
   });
+
+  test('cancellation clears user and points after the API succeeds', () async {
+    final api = _FakeAuthApi();
+    final container = createContainer(api);
+    addTearDown(container.dispose);
+    await container.read(userProvider.notifier).setUser(user);
+    await container.read(userPointsProvider.notifier).refresh();
+
+    await container.read(userProvider.notifier).cancelAccount();
+
+    expect(api.cancellationCalls, 1);
+    expect(api.logoutCalled, isFalse);
+    expect(container.read(userProvider), isNull);
+    expect(container.read(userPointsProvider).valueOrNull, isNull);
+  });
+
+  test('cancellation failure retains the current user and points', () async {
+    final api = _FakeAuthApi()..failCancellation = true;
+    final container = createContainer(api);
+    addTearDown(container.dispose);
+    await container.read(userProvider.notifier).setUser(user);
+    await container.read(userPointsProvider.notifier).refresh();
+
+    await expectLater(
+      container.read(userProvider.notifier).cancelAccount(),
+      throwsA(isA<ApiException>()),
+    );
+
+    expect(container.read(userProvider), user);
+    expect(
+      container.read(userPointsProvider).valueOrNull?.availableTotalPoints,
+      739,
+    );
+    expect(api.logoutCalled, isFalse);
+  });
+
+  test(
+    'late user and points responses cannot restore a canceled session',
+    () async {
+      final api = _FakeAuthApi();
+      final container = createContainer(api);
+      addTearDown(container.dispose);
+      await container.read(userProvider.notifier).setUser(user);
+      await container.read(userPointsProvider.future);
+      final pendingUser = Completer<User>();
+      final pendingPoints = Completer<UserPoints>();
+      api.pendingUser = pendingUser.future;
+      api.pendingPoints = pendingPoints.future;
+      final userRefresh = container.read(userProvider.notifier).refreshUser();
+      final pointsRefresh = container
+          .read(userPointsProvider.notifier)
+          .refresh();
+      await container.read(userProvider.notifier).cancelAccount();
+      pendingUser.complete(user);
+      pendingPoints.complete(
+        const UserPoints(
+          availableMemberPoints: 0,
+          availableOtherPoints: 100,
+          availableTotalPoints: 100,
+          consumePoints: 0,
+        ),
+      );
+      await Future.wait([userRefresh, pointsRefresh]);
+
+      expect(container.read(userProvider), isNull);
+      expect(container.read(userPointsProvider).valueOrNull, isNull);
+    },
+  );
 }
 
 class _FakeAuthApi implements AuthApi {
   bool logoutCalled = false;
   int currentUserCalls = 0;
+  int cancellationCalls = 0;
+  bool failCancellation = false;
+  Future<User>? pendingUser;
+  Future<UserPoints>? pendingPoints;
 
   @override
   Future<CaptchaChallenge> createCaptcha({required String phone}) =>
@@ -136,6 +211,7 @@ class _FakeAuthApi implements AuthApi {
   @override
   Future<User> currentUser() async {
     currentUserCalls++;
+    if (pendingUser != null) return await pendingUser!;
     return const User(
       id: '1',
       name: '张三',
@@ -179,6 +255,12 @@ class _FakeAuthApi implements AuthApi {
   Future<void> logout() async => logoutCalled = true;
 
   @override
+  Future<void> cancelAccount() async {
+    if (failCancellation) throw const ApiException(message: 'Cannot cancel');
+    cancellationCalls++;
+  }
+
+  @override
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,
@@ -192,12 +274,15 @@ class _FakeAuthApi implements AuthApi {
   }) => throw UnimplementedError();
 
   @override
-  Future<UserPoints> userPoints() async => const UserPoints(
-    availableMemberPoints: 0,
-    availableOtherPoints: 739,
-    availableTotalPoints: 739,
-    consumePoints: 18164,
-  );
+  Future<UserPoints> userPoints() async {
+    if (pendingPoints != null) return await pendingPoints!;
+    return const UserPoints(
+      availableMemberPoints: 0,
+      availableOtherPoints: 739,
+      availableTotalPoints: 739,
+      consumePoints: 18164,
+    );
+  }
 }
 
 class _MemoryTokenStorage implements TokenStorage {

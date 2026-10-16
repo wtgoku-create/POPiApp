@@ -94,6 +94,23 @@ void main() {
     expect(storage.token, 'token-from-wechat');
     expect(events, ['wechat-login', 'save-token', 'current-user']);
   });
+
+  test(
+    'account cancellation removes the token after server confirmation',
+    () async {
+      final events = <String>[];
+      final storage = _EventTokenStorage(events)..token = 'current-token';
+      final repository = AuthRepository(
+        api: _FakeAuthApi(events),
+        secureStorage: storage,
+      );
+
+      await repository.cancelAccount();
+
+      expect(events, ['cancel-account']);
+      expect(storage.token, isNull);
+    },
+  );
 }
 
 class _FakeAuthApi implements AuthApi {
@@ -166,6 +183,9 @@ class _FakeAuthApi implements AuthApi {
 
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<void> cancelAccount() async => events.add('cancel-account');
 
   @override
   Future<void> sendLoginCode({

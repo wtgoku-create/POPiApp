@@ -53,6 +53,8 @@ class RoleGuidePage extends ConsumerStatefulWidget {
     this.homeRepository,
     this.accountId,
     this.sessionId,
+    this.initialRole,
+    this.initialCategory = 'official',
     super.key,
   });
 
@@ -60,6 +62,8 @@ class RoleGuidePage extends ConsumerStatefulWidget {
   final HomeCreationRepository? homeRepository;
   final String? accountId;
   final String? sessionId;
+  final LibraryRole? initialRole;
+  final String initialCategory;
 
   @override
   ConsumerState<RoleGuidePage> createState() => _RoleGuidePageState();
@@ -115,6 +119,10 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
   @override
   void initState() {
     super.initState();
+    _category = widget.initialCategory;
+    if (widget.accountId == null && widget.initialRole != null) {
+      _draft.toggleRole(widget.initialRole!);
+    }
     _accountRepository = IpAccountRepository(NetworkApi(ref.read(dioProvider)));
     _repository =
         widget.homeRepository ??
@@ -440,7 +448,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
 
   void _toggleRole(LibraryRole role) {
     if (_busy) return;
-    if (_live && !role.readyForHomeCreation) {
+    if (_live &&
+        !role.readyForHomeCreation &&
+        !_draft.roles.any((selected) => selected.id == role.id)) {
       AppToast.info(
         context,
         AppLocalizations.of(context)!.roleNotReadyForVideo,
@@ -459,6 +469,13 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_busy) return false;
     if (_live) {
       final roles = _draft.roles;
+      if (roles.any((role) => !role.readyForHomeCreation)) {
+        AppToast.info(
+          context,
+          AppLocalizations.of(context)!.roleNotReadyForVideo,
+        );
+        return false;
+      }
       final replacingCast = _home != null;
       final ok = await _update(
         () => _home == null
@@ -525,7 +542,11 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                 selected: () => editing ? selection : _draft.roles,
                 onToggle: (role) {
                   if (_busy) return;
-                  if (_live && !role.readyForHomeCreation) {
+                  if (_live &&
+                      !role.readyForHomeCreation &&
+                      !(editing ? selection : _draft.roles).any(
+                        (selected) => selected.id == role.id,
+                      )) {
                     AppToast.info(context, l10n.roleNotReadyForVideo);
                     return;
                   }
@@ -828,6 +849,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           ? _account?.title ?? l10n.roleAccountFallbackTitle
           : l10n.roleProjectName(_draft.roles.first.title),
       avatar: _live ? _account?.avatar ?? '' : _draft.roles.first.avatar,
+      iconBackgroundColor: _live ? _account?.iconBackgroundColor : null,
       loading: _live && _accountLoading,
       onViewProfile: _busy || _accountLoading || _draft.roles.isEmpty
           ? null
@@ -1233,6 +1255,9 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
     if (_draft.step == RoleGuideStep.roles) {
       return RoleGuidePicker(
         initialCategory: _category,
+        featuredRole: _category == widget.initialCategory
+            ? widget.initialRole
+            : null,
         selected: () => _draft.roles,
         onToggle: _toggleRole,
         onDetails: _details,

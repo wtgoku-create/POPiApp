@@ -95,7 +95,7 @@ void main() {
             theme: dark ? AppTheme.dark : AppTheme.light,
           );
           expect(newButton, findsOneWidget);
-          expect(find.byTooltip('新建对话'), findsOneWidget);
+          expect(find.byTooltip('功能待开发'), findsOneWidget);
           expect(find.byKey(const Key('home-membership-entry')), findsNothing);
           expect(find.byKey(const Key('popi-open-activity')), findsNothing);
           expect(find.text('12345'), findsNothing);
@@ -116,42 +116,24 @@ void main() {
     }
   }
 
-  testWidgets('new action opens a clean draft and creates only on first send', (
+  testWidgets('pending action preserves the current conversation and draft', (
     tester,
   ) async {
-    final repository = _SessionRepository()..pending = Completer<void>();
-    final (container, router) = await pumpSession(tester, repository);
+    final repository = _SessionRepository();
+    final (_, router) = await pumpSession(tester, repository);
     await tester.tap(input);
     tester.testTextInput.enterText('当前草稿');
     await tester.pump();
     await tester.tap(newButton);
     await tester.pumpAndSettle();
     expect(repository.createCalls, 0);
-    expect(router.state.uri.queryParameters, isEmpty);
-    expect(tester.widget<ExtendedTextField>(input).controller!.text, isEmpty);
-    expect(find.text('已有会话内容'), findsNothing);
-    await tester.tap(newButton);
+    expect(router.state.uri.queryParameters, {'sessionId': chatId});
+    expect(tester.widget<ExtendedTextField>(input).controller!.text, '当前草稿');
+    expect(find.text('已有会话内容'), findsOneWidget);
+    expect(find.text('功能待开发'), findsOneWidget);
+    expect(repository.snapshotIds, [chatId]);
+    await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
-    expect(repository.createCalls, 0);
-    await enter(tester, '新项目内容');
-    await tester.tap(find.byKey(const Key('popi-send-button')));
-    await tester.pump();
-    expect(repository.createCalls, 1);
-    repository.pending!.complete();
-    await tester.pumpAndSettle();
-    final newId =
-        router.routeInformationProvider.value.uri.queryParameters['sessionId'];
-    expect(newId, 'mock-new-1');
-    expect(repository.snapshotIds.last, newId);
-    expect(
-      container
-          .read(sessionsProvider)
-          .requireValue
-          .any((item) => item.id == newId),
-      isTrue,
-    );
-    expect(tester.widget<ExtendedTextField>(input).controller!.text, isEmpty);
-    expect(find.text('已有会话内容'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -159,9 +141,7 @@ void main() {
     'failed first-send creation keeps the draft and retries on send',
     (tester) async {
       final repository = _SessionRepository()..failNext = true;
-      final (_, router) = await pumpSession(tester, repository);
-      await tester.tap(newButton);
-      await tester.pumpAndSettle();
+      final (_, router) = await pumpSession(tester, repository, welcome: true);
       await enter(tester, '保留这段草稿');
       final send = find.byKey(const Key('popi-send-button'));
       await tester.tap(send);
@@ -189,24 +169,35 @@ void main() {
     },
   );
 
-  testWidgets('guest new action opens login without creating a session', (
+  testWidgets('guest pending action shows a notice without leaving the page', (
     tester,
   ) async {
     final repository = _SessionRepository();
-    await pumpSession(tester, repository, guest: true, welcome: true);
+    final (_, router) = await pumpSession(
+      tester,
+      repository,
+      guest: true,
+      welcome: true,
+    );
     await tester.tap(newButton);
     await tester.pumpAndSettle();
-    expect(find.text('Login page'), findsOneWidget);
+    expect(find.text('Login page'), findsNothing);
+    expect(find.text('功能待开发'), findsOneWidget);
+    expect(router.state.uri.path, '/session');
     expect(repository.createCalls, 0);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('account changes discard pending creation results', (
     tester,
   ) async {
     final repository = _SessionRepository()..pending = Completer<void>();
-    final (container, router) = await pumpSession(tester, repository);
-    await tester.tap(newButton);
-    await tester.pumpAndSettle();
+    final (container, router) = await pumpSession(
+      tester,
+      repository,
+      welcome: true,
+    );
     await enter(tester, 'Do not send after switching users');
     await tester.tap(find.byKey(const Key('popi-send-button')));
     await tester.pump();
@@ -220,12 +211,11 @@ void main() {
       router.routeInformationProvider.value.uri.queryParameters['sessionId'],
       isNull,
     );
-    expect(repository.snapshotIds, [chatId]);
+    expect(repository.snapshotIds, isEmpty);
     expect(
-      container
-          .read(sessionsProvider)
-          .requireValue
-          .any((item) => item.id == 'mock-new-1'),
+      (await container.read(
+        sessionsProvider.future,
+      )).any((item) => item.id == 'mock-new-1'),
       isFalse,
     );
     expect(tester.widget<IconButton>(newButton).onPressed, isNotNull);

@@ -20,6 +20,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
     required this.onCategoryChanged,
     this.onCreate,
     this.initialCategory = 'official',
+    this.featuredRole,
     this.fullLibrary = false,
     this.scrollController,
     this.onMore,
@@ -32,6 +33,7 @@ class RoleGuidePicker extends ConsumerStatefulWidget {
   final VoidCallback? onCreate;
   final ValueChanged<String> onCategoryChanged;
   final String initialCategory;
+  final LibraryRole? featuredRole;
   final bool fullLibrary;
   final ScrollController? scrollController;
   final VoidCallback? onMore;
@@ -52,7 +54,12 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
   int _generation = 0;
 
   ScrollController get _scroll => widget.scrollController ?? _localScroll;
-  bool get _showMore => _roles.length > 9;
+  // Keep a role opened from its archive visible even beyond the first page.
+  List<LibraryRole> get _previewRoles => [
+    if (widget.featuredRole case final role?) role,
+    ..._roles.where((role) => role.id != widget.featuredRole?.id),
+  ];
+  bool get _showMore => _previewRoles.length > 9;
 
   @override
   void initState() {
@@ -252,9 +259,9 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_roles.isNotEmpty)
+        if (_previewRoles.isNotEmpty)
           RoleGuideGrid(
-            roles: _roles.take(_showMore ? 8 : 9).toList(),
+            roles: _previewRoles.take(_showMore ? 8 : 9).toList(),
             selected: widget.selected(),
             onToggle: _toggle,
             onDetails: widget.onDetails,
@@ -271,7 +278,7 @@ class _RoleGuidePickerState extends ConsumerState<RoleGuidePicker> {
             onPressed: _load,
             child: Text(l10n.retryLoadingRoles),
           )
-        else if (_roles.isEmpty)
+        else if (_previewRoles.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 45),
             child: Text(

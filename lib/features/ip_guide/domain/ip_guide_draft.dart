@@ -77,7 +77,9 @@ class IpGuideDraft {
   int step = 1;
   String? creationRequestId;
   String? profileRequestId;
+  String? sessionRequestId;
   String? accountId;
+  String? sessionId;
   int? accountRevision;
   Map<String, Object?>? submittedProfile;
 

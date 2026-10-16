@@ -62,6 +62,7 @@ void main() {
           IpGuideRepository(
             guideStorage,
             FixtureIpGuideApi(),
+            FixtureIpGuideAgentApi(),
             userId: user?.id,
           ),
         ),

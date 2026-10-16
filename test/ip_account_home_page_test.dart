@@ -745,7 +745,7 @@ void main() {
   }
 
   testWidgets(
-    'new content opens an account draft without creating or prefilling',
+    'missing account session keeps the account page without creating',
     (tester) async {
       await pump(tester);
       expect(find.text('开始一条新内容'), findsOneWidget);
@@ -753,7 +753,8 @@ void main() {
       expect(projects.accountIds, isEmpty);
       expect(projects.bindingAccountIds, ['42']);
       expect(projects.contentRequests, ['lookup']);
-      expect(router.state.uri.queryParameters, {'accountId': '42'});
+      expect(find.byType(IpAccountHomePage), findsOneWidget);
+      expect(router.state.uri.queryParameters, isEmpty);
       expect(find.text('请根据这个账号的定位，帮我制作一条新内容。'), findsNothing);
     },
   );
@@ -824,24 +825,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'returning from a draft reloads the binding and changes the action',
-    (tester) async {
-      await pump(tester);
-      await tap(tester, 'ip-account-start-content');
-      projects.binding = const ProjectSession(
-        id: 'bound-session',
-        title: 'Bound',
-      );
-      router.pop();
-      await tester.pumpAndSettle();
-      expect(find.text('继续对话'), findsOneWidget);
-      await tap(tester, 'ip-account-start-content');
-      expect(projects.accountIds, isEmpty);
-      expect(projects.contentRequests, ['lookup', 'lookup']);
-      expect(find.text('session:bound-session'), findsOneWidget);
-    },
-  );
+  testWidgets('returning from a conversation reloads its bound session', (
+    tester,
+  ) async {
+    projects.binding = const ProjectSession(
+      id: 'initial-session',
+      title: 'Initial',
+    );
+    await pump(tester);
+    await tap(tester, 'ip-account-start-content');
+    projects.binding = const ProjectSession(
+      id: 'bound-session',
+      title: 'Bound',
+    );
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('继续对话'), findsOneWidget);
+    await tap(tester, 'ip-account-start-content');
+    expect(projects.accountIds, isEmpty);
+    expect(projects.contentRequests, ['lookup', 'lookup']);
+    expect(find.text('session:bound-session'), findsOneWidget);
+  });
 
   testWidgets('archives page remains searchable', (tester) async {
     await pump(tester);

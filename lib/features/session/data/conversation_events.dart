@@ -67,6 +67,23 @@ ConversationSnapshot applyConversationEvent(
   }
   final next = {...snapshot.source, 'lastSeq': event.seq};
   final p = event.payload;
+  if (event.type == 'context.recorded' && p['context'] is Map) {
+    final context = conversationMap(p['context']);
+    final data = context['data'] is Map
+        ? conversationMap(context['data'])
+        : <String, Object?>{};
+    if (context['kind'] == 'cast.updated' &&
+        ['session_cast', 'conversation_cast'].contains(data['source']) &&
+        data['cast'] is List) {
+      next['sessionCast'] = data['cast'];
+    }
+    next['contextEvents'] = [
+      ...conversationMaps(
+        next['contextEvents'],
+      ).where((item) => item['seq'] != event.seq),
+      {...context, 'seq': event.seq},
+    ];
+  }
   if (next['timelineVersion'] == 1) {
     final messages = {
       for (final message in snapshot.messages) message.id: message,

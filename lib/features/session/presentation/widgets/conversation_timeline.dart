@@ -48,13 +48,16 @@ double _messageSpacing(
   ConversationMessage previous,
   ConversationMessage current,
 ) {
-  // Progress and result cards can arrive in separate protocol messages.
+  // Progress and its reply can arrive in separate protocol messages.
   if (previous.role != 'user' &&
       current.role != 'user' &&
       previous.blocks.isNotEmpty &&
       current.blocks.isNotEmpty &&
       _isCardBlock(previous.blocks.last) &&
-      _isCardBlock(current.blocks.first)) {
+      (_isCardBlock(current.blocks.first) ||
+          previous.blocks.last.kind == 'progress' &&
+              current.blocks.first.type == 'text' &&
+              previous.runId == current.runId)) {
     return _conversationCardSpacing;
   }
   return _conversationMessageSpacing;

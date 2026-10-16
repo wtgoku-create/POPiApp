@@ -46,6 +46,8 @@ abstract interface class AuthApi {
   });
 
   Future<void> logout();
+
+  Future<void> cancelAccount();
 }
 
 class DefaultAuthApi implements AuthApi {
@@ -152,4 +154,7 @@ class DefaultAuthApi implements AuthApi {
   Future<void> logout() async {
     await networkApi.logout();
   }
+
+  @override
+  Future<void> cancelAccount() => networkApi.cancelAccount();
 }

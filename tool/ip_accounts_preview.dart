@@ -104,7 +104,12 @@ Future<void> main() async {
 
 class _PreviewGuideRepository extends IpGuideRepository {
   _PreviewGuideRepository(PreferencesStorage storage, this.accounts)
-    : super(storage, NetworkApi(Dio()), userId: 'preview');
+    : super(
+        storage,
+        NetworkApi(Dio()),
+        NetworkAgentApi(Dio()),
+        userId: 'preview',
+      );
 
   final IpAccountRepository accounts;
 
@@ -124,6 +129,7 @@ class _PreviewGuideRepository extends IpGuideRepository {
       title: draft.nickname.trim(),
       preferences: profile,
     );
+    draft.sessionId ??= const Uuid().v4();
     await clear();
     return draft.accountId!;
   }

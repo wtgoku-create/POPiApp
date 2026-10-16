@@ -75,6 +75,39 @@ void main() {
     expect(newer.merge(_session('a', revision: 5)).lastMessageAt, _time(5));
   });
 
+  test('session icon color parses and survives partial or stale metadata', () {
+    Map<String, Object?> json(int revision, {Object? color}) => {
+      'id': 'a',
+      'title': 'session',
+      'revision': revision,
+      'updatedAt': _time(1).toIso8601String(),
+      if (color != null) 'iconBackgroundColor': color,
+    };
+    final session = ConversationSession.fromJson(json(2, color: '#FEF2ED'));
+    expect(session.iconBackgroundColor, '#FEF2ED');
+    expect(
+      session.merge(_session('a', revision: 3)).iconBackgroundColor,
+      '#FEF2ED',
+    );
+    expect(
+      session
+          .merge(ConversationSession.fromJson(json(1, color: '#EDF5FE')))
+          .iconBackgroundColor,
+      '#FEF2ED',
+    );
+    expect(
+      session
+          .merge(ConversationSession.fromJson(json(3, color: '#EDF5FE')))
+          .iconBackgroundColor,
+      '#EDF5FE',
+    );
+    expect(ConversationSession.fromJson(json(1)).iconBackgroundColor, isNull);
+    expect(
+      ConversationSession.fromJson(json(1, color: 123)).iconBackgroundColor,
+      isNull,
+    );
+  });
+
   late _OrderedRepository repository;
   late ProviderContainer container;
   setUp(() {

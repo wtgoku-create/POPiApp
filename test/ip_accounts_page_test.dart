@@ -10,6 +10,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
+import 'package:popi_ai_app/shared/widgets/app_account_icon.dart';
 import 'package:popi_ai_app/shared/widgets/popi_navigation_drawer.dart';
 
 import 'support/project_fixtures.dart';
@@ -175,6 +176,34 @@ void main() {
     );
     await tester.tap(find.text('Custom account'));
     expect(opened, same(account));
+  });
+
+  testWidgets('account rows use each server icon color', (tester) async {
+    await pumpPage(
+      tester,
+      page: const IpAccountsPage(
+        accounts: [
+          IpAccount(
+            id: 'pink',
+            title: 'Pink',
+            description: '',
+            iconBackgroundColor: '#FEF2ED',
+          ),
+          IpAccount(
+            id: 'blue',
+            title: 'Blue',
+            description: '',
+            iconBackgroundColor: '#EDF5FE',
+          ),
+        ],
+      ),
+    );
+    for (final (id, color) in [('pink', '#FEF2ED'), ('blue', '#EDF5FE')]) {
+      final icon = find.byKey(ValueKey('ip-account-icon-$id'));
+      expect(tester.widget<AppAccountIcon>(icon).backgroundColor, color);
+      expect(tester.getSize(icon), const Size(50, 50));
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('empty loaded list shows an empty state', (tester) async {

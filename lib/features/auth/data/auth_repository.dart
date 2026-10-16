@@ -222,4 +222,13 @@ class AuthRepository {
       await secureStorage.deleteAccessToken();
     }
   }
+
+  Future<void> cancelAccount() async {
+    try {
+      await api.cancelAccount();
+    } on DioException catch (exception) {
+      throw ApiException.fromDioException(exception);
+    }
+    await secureStorage.deleteAccessToken();
+  }
 }

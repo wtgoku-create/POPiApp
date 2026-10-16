@@ -64,6 +64,7 @@ void main() {
             'id': '42',
             'title': 'Archived',
             'status': 'archived',
+            'iconBackgroundColor': '#FEF2ED',
             'preferences': {
               'contentDirections': ['校园'],
             },
@@ -76,6 +77,7 @@ void main() {
       expect(items.items, hasLength(1));
       expect(items.hasMore, isTrue);
       expect(items.items.first.isPaused, isTrue);
+      expect(items.items.first.iconBackgroundColor, '#FEF2ED');
       expect(items.items.first.description, '校园');
       expect(requests.map((r) => r.queryParameters['status']), ['archived']);
       respond = (_) => page([], count: 0);

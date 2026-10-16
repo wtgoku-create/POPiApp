@@ -6,6 +6,7 @@ class IpAccount {
     required this.description,
     this.isPaused = false,
     this.isRecentlyUsed = false,
+    this.iconBackgroundColor,
   });
 
   final String id;
@@ -13,4 +14,5 @@ class IpAccount {
   final String description;
   final bool isPaused;
   final bool isRecentlyUsed;
+  final String? iconBackgroundColor;
 }

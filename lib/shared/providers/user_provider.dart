@@ -47,10 +47,13 @@ final userBootstrapProvider = FutureProvider<void>((ref) async {
 });
 
 class UserController extends Notifier<User?> {
+  int _sessionRevision = 0;
+
   @override
   User? build() => null;
 
   Future<void> setUser(User user) async {
+    if (state?.id != user.id) _sessionRevision++;
     state = user;
   }
 
@@ -135,7 +138,9 @@ class UserController extends Notifier<User?> {
   }
 
   Future<void> refreshUser() async {
-    await setUser(await ref.read(authRepositoryProvider).fetchCurrentUser());
+    final revision = _sessionRevision;
+    final user = await ref.read(authRepositoryProvider).fetchCurrentUser();
+    if (revision == _sessionRevision) await setUser(user);
   }
 
   Future<void> updateUser({
@@ -145,6 +150,7 @@ class UserController extends Notifier<User?> {
   }) async {
     final currentUser = state;
     if (currentUser == null) return;
+    final revision = _sessionRevision;
     final updatedUser = await ref
         .read(authRepositoryProvider)
         .updateUser(
@@ -152,35 +158,46 @@ class UserController extends Notifier<User?> {
           name: name ?? currentUser.name,
           signature: signature ?? currentUser.signature,
         );
-    await setUser(updatedUser);
+    if (revision == _sessionRevision) await setUser(updatedUser);
   }
 
   Future<void> clearUser() async {
     try {
       await ref.read(authRepositoryProvider).logout();
     } finally {
+      _sessionRevision++;
       state = null;
       ref.read(userPointsProvider.notifier).clear();
     }
   }
+
+  Future<void> cancelAccount() async {
+    await ref.read(authRepositoryProvider).cancelAccount();
+    _sessionRevision++;
+    state = null;
+    ref.read(userPointsProvider.notifier).clear();
+  }
 }
 
 class UserPointsController extends AsyncNotifier<UserPoints?> {
+  int _revision = 0;
+
   @override
   FutureOr<UserPoints?> build() => null;
 
   Future<void> refresh() async {
+    final revision = ++_revision;
     state = const AsyncLoading();
     try {
-      state = AsyncData(
-        await ref.read(authRepositoryProvider).fetchUserPoints(),
-      );
+      final points = await ref.read(authRepositoryProvider).fetchUserPoints();
+      if (revision == _revision) state = AsyncData(points);
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      if (revision == _revision) state = AsyncError(error, stackTrace);
     }
   }
 
   void clear() {
+    _revision++;
     state = const AsyncData(null);
   }
 }

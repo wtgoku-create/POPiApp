@@ -45,6 +45,9 @@ class IpAccountRepository {
         title: _title(item),
         description: _account(item).description,
         isPaused: item['status'] != 'active',
+        iconBackgroundColor: item['iconBackgroundColor'] is String
+            ? item['iconBackgroundColor'] as String
+            : null,
       ),
     );
   });
@@ -67,6 +70,9 @@ class IpAccountRepository {
     title: _title(account),
     revision: account['revision'] as int? ?? 1,
     avatar: _avatar(account),
+    iconBackgroundColor: account['iconBackgroundColor'] is String
+        ? account['iconBackgroundColor'] as String
+        : null,
     status: account['status'] as String? ?? 'active',
     preferences: Map<String, Object?>.from(
       account['preferences'] as Map? ?? const {},

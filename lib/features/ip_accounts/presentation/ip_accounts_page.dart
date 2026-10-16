@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_account_icon.dart';
 import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/ip_account_examples.dart';
@@ -292,7 +293,10 @@ class _AccountCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              const AppSvgIcon.asset('ip_guide_account', size: 50),
+              AppAccountIcon(
+                key: ValueKey('ip-account-icon-${account.id}'),
+                backgroundColor: account.iconBackgroundColor,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(

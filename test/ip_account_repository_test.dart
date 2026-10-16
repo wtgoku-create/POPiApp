@@ -134,6 +134,20 @@ void main() {
     },
   );
 
+  for (final color in ['#FEF2ED', '', null, 123]) {
+    test('account detail preserves optional icon color $color', () async {
+      respond = (_) => {
+        'id': '42',
+        'title': 'Account',
+        'revision': 1,
+        'iconBackgroundColor': color,
+      };
+      final account = await repository.detail('42');
+      expect(account.iconBackgroundColor, color is String ? color : null);
+      expect(requests, hasLength(1));
+    });
+  }
+
   test('profile saves patch only submitted preferences', () async {
     respond = (_) => {'id': 'saved-version'};
     const account = IpAccountHome(

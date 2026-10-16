@@ -12,6 +12,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
+import 'package:popi_ai_app/shared/widgets/app_account_icon.dart';
 import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
 import 'package:toastification/toastification.dart';
 
@@ -57,6 +58,7 @@ class _ProjectRepository extends FixtureProjectRepository {
         for (var index = 0; index < 180; index++)
           Project(
             id: '$index',
+            iconBackgroundColor: '#FEF2ED',
             title: index.isEven
                 ? 'Project $index with a longer title that wraps on narrow screens'
                 : 'Project $index',
@@ -171,6 +173,17 @@ void main() {
       await pumpSheet(tester, size: size);
       expect(repository.pages, [(1, 20)]);
       expect(project('0'), findsOneWidget);
+      expect(
+        tester
+            .widget<AppAccountIcon>(
+              find.descendant(
+                of: project('0'),
+                matching: find.byType(AppAccountIcon),
+              ),
+            )
+            .backgroundColor,
+        '#FEF2ED',
+      );
       expect(project('179'), findsNothing);
       expect(find.byType(ListTile).evaluate().length, lessThan(30));
       await tester.tap(project('0'));

@@ -22,9 +22,11 @@ class ConversationSession {
     this.lastMessageAt,
     this.pinnedAt,
     this.avatarIcon,
+    this.iconBackgroundColor,
     this.revision = 1,
     this.archived = false,
     this.bindingStatus = 'pending',
+    this.creatorV1 = false,
   });
 
   final String id;
@@ -34,9 +36,11 @@ class ConversationSession {
   final DateTime? lastMessageAt;
   final DateTime? pinnedAt;
   final String? avatarIcon;
+  final String? iconBackgroundColor;
   final int revision;
   final bool archived;
   final String bindingStatus;
+  final bool creatorV1;
 
   bool get isPinned => pinnedAt != null;
 
@@ -64,9 +68,14 @@ class ConversationSession {
           : lastMessageAt,
       pinnedAt: latest.pinnedAt,
       avatarIcon: latest.avatarIcon,
+      iconBackgroundColor:
+          latest.iconBackgroundColor ??
+          iconBackgroundColor ??
+          incoming.iconBackgroundColor,
       revision: latest.revision,
       archived: latest.archived,
       bindingStatus: latest.bindingStatus,
+      creatorV1: latest.creatorV1,
     );
   }
 
@@ -89,10 +98,14 @@ class ConversationSession {
       revision: revision,
       archived: json['archived'] == true,
       bindingStatus: json['bindingStatus'] as String? ?? 'pending',
+      creatorV1: json['creatorV1'] == true,
       updatedAt: updatedAt,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       lastMessageAt: DateTime.tryParse(json['lastMessageAt']?.toString() ?? ''),
       pinnedAt: DateTime.tryParse(json['pinnedAt']?.toString() ?? ''),
+      iconBackgroundColor: json['iconBackgroundColor'] is String
+          ? json['iconBackgroundColor'] as String
+          : null,
     );
   }
 }

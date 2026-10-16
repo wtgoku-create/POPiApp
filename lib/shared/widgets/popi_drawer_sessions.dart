@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../app/theme.dart';
 import '../../features/session/domain/conversation_session.dart';
@@ -135,16 +136,20 @@ class _PopiDrawerSessionsState extends ConsumerState<PopiDrawerSessions> {
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(child: widget.header),
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: 40,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      l10n.drawerSessions,
-                      style: TextStyle(fontSize: 14, color: mutedColor),
+            PinnedHeaderSliver(
+              child: ColoredBox(
+                key: const Key('drawer-sessions-header'),
+                color: colors.surface,
+                child: SizedBox(
+                  height: 40,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        l10n.drawerSessions,
+                        style: TextStyle(fontSize: 14, color: mutedColor),
+                      ),
                     ),
                   ),
                 ),
@@ -292,14 +297,23 @@ class _SessionItem extends ConsumerWidget {
     final bubbleIndex =
         session.id.codeUnits.fold<int>(0, (total, unit) => total + unit) %
         bubbleIcons.length;
+    final hex = session.iconBackgroundColor?.trim() ?? '';
+    final backgroundColor = RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(hex)
+        ? Color(0xFF000000 | int.parse(hex.substring(1), radix: 16))
+        : null;
     Widget menuIcon(String name, double size) =>
         AppSvgIcon.asset(name, size: size, color: colors.onSurface);
     Widget label() => Row(
       children: [
         AppSvgIcon.asset(
-          bubbleIcons[bubbleIndex],
+          backgroundColor == null
+              ? bubbleIcons[bubbleIndex]
+              : 'home_drawer_session_pink',
           key: Key('drawer-session-avatar-${session.id}'),
           size: 30,
+          colorMapper: backgroundColor == null
+              ? null
+              : _SessionBubbleColorMapper(backgroundColor),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -430,6 +444,31 @@ class _SessionItem extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Recolors only the opaque circle, preserving the existing white speech glyph.
+class _SessionBubbleColorMapper extends ColorMapper {
+  const _SessionBubbleColorMapper(this.backgroundColor);
+
+  final Color backgroundColor;
+
+  @override
+  Color substitute(
+    String? id,
+    String elementName,
+    String attributeName,
+    Color color,
+  ) => elementName == 'rect' && attributeName == 'fill'
+      ? backgroundColor
+      : color;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SessionBubbleColorMapper &&
+      other.backgroundColor == backgroundColor;
+
+  @override
+  int get hashCode => backgroundColor.hashCode;
 }
 
 class _RenameSessionDialog extends ConsumerStatefulWidget {

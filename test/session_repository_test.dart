@@ -30,113 +30,6 @@ void main() {
   });
   tearDown(() => dio.close(force: true));
 
-  for (final scenario in [
-    'bound',
-    'missing',
-    'lookup-failed',
-    'raced',
-    'timeout',
-  ]) {
-    test('account first send resolves binding: $scenario', () async {
-      final requests = <RequestOptions>[];
-      var lookups = 0;
-      var creates = 0;
-      dio.interceptors.add(
-        InterceptorsWrapper(
-          onRequest: (options, handler) {
-            requests.add(options);
-            void reject(int status, String code) => handler.reject(
-              DioException(
-                requestOptions: options,
-                response: Response(
-                  requestOptions: options,
-                  statusCode: status,
-                  data: {'code': code},
-                ),
-                type: DioExceptionType.badResponse,
-              ),
-            );
-            if (options.method == 'GET') {
-              expect(options.path, '/api_agent/v2/sessions/by-account/42');
-              lookups++;
-              if (scenario == 'lookup-failed') {
-                reject(503, 'DEPENDENCY_UNAVAILABLE');
-                return;
-              }
-              if (scenario != 'bound' &&
-                  !(scenario == 'raced' && lookups > 1)) {
-                reject(404, 'ACCOUNT_SESSION_NOT_FOUND');
-                return;
-              }
-            } else {
-              expect(options.path, '/api_agent/v2/sessions');
-              expect(options.data['accountId'], '42');
-              creates++;
-              if (scenario == 'raced') {
-                reject(409, 'ACCOUNT_SESSION_EXISTS');
-                return;
-              }
-              if (scenario == 'timeout' && creates == 1) {
-                handler.reject(
-                  DioException(
-                    requestOptions: options,
-                    type: DioExceptionType.receiveTimeout,
-                  ),
-                );
-                return;
-              }
-            }
-            handler.resolve(
-              Response(
-                requestOptions: options,
-                statusCode: 200,
-                data: {
-                  'id': chatId,
-                  'title': 'Account session',
-                  'revision': 1,
-                  'updatedAt': chatDate,
-                  'bindingStatus': 'ready',
-                },
-              ),
-            );
-          },
-        ),
-      );
-      if (scenario == 'lookup-failed') {
-        await expectLater(
-          repository().resolveAccountSession('a', '42', 'New'),
-          throwsA(anything),
-        );
-        expect(creates, 0);
-        return;
-      }
-      if (scenario == 'timeout') {
-        await expectLater(
-          repository().resolveAccountSession('a', '42', 'New'),
-          throwsA(anything),
-        );
-      }
-      final result = await repository().resolveAccountSession('a', '42', 'New');
-      expect(result.id, chatId);
-      expect(
-        creates,
-        scenario == 'bound'
-            ? 0
-            : scenario == 'timeout'
-            ? 2
-            : 1,
-      );
-      expect(lookups, scenario == 'raced' || scenario == 'timeout' ? 2 : 1);
-      if (scenario == 'timeout') {
-        final commands = requests
-            .where((request) => request.method == 'POST')
-            .toList();
-        expect(commands.first.data, commands.last.data);
-      }
-      expect(storage.preferences.getKeys(), isEmpty);
-    });
-  }
-
   for (final failure in ['timeout', 'server', 'pending', 'binding']) {
     test(
       'content entry recovers from $failure with the same request ID',
@@ -587,6 +480,7 @@ void main() {
                     {
                       'id': page == 1 ? 'new' : 'pinned',
                       'title': 'session',
+                      'iconBackgroundColor': '#FEF2ED',
                       'revision': 1,
                       'updatedAt': chatDate,
                       'pinnedAt': page == 2 ? '2026-10-08T00:00:00Z' : null,
@@ -606,6 +500,7 @@ void main() {
       );
       final first = await repository().list('a');
       expect(first.items.single.id, 'new');
+      expect(first.items.single.iconBackgroundColor, '#FEF2ED');
       expect(first.page, 1);
       expect(first.hasMore, isTrue);
       expect(requests, [1]);

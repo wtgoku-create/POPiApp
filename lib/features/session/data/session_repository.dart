@@ -32,12 +32,6 @@ abstract class SessionRepository {
     String title, {
     CancelToken? cancelToken,
   });
-  Future<ConversationSession> resolveAccountSession(
-    String userId,
-    String accountId,
-    String title, {
-    CancelToken? cancelToken,
-  });
   Future<ConversationSession> createFromContent(
     String userId, {
     CancelToken? cancelToken,
@@ -51,6 +45,12 @@ abstract class SessionRepository {
     CancelToken? cancelToken,
   });
   Future<ConversationSnapshot> snapshot(String id, {CancelToken? cancelToken});
+  Future<void> updateCast(
+    String userId,
+    String id,
+    List<String> roleIds, {
+    CancelToken? cancelToken,
+  });
   Stream<ConversationEvent> events(
     String id,
     int afterSeq,
@@ -245,53 +245,6 @@ class ApiSessionRepository extends SessionRepository {
   );
 
   @override
-  Future<ConversationSession> resolveAccountSession(
-    String userId,
-    String accountId,
-    String title, {
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      return ConversationSession.fromJson(
-        await agent.sessionByAccount(accountId, cancelToken: cancelToken),
-      );
-    } on AgentApiException catch (error) {
-      if (error.statusCode != 404 ||
-          error.code != 'ACCOUNT_SESSION_NOT_FOUND') {
-        rethrow;
-      }
-    }
-    if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
-    // Retain the account-scoped command across timeouts and application restarts.
-    return _command(
-      userId,
-      'create-account:$accountId',
-      {'accountId': accountId, 'title': _title(title)},
-      (input) async {
-        try {
-          return ConversationSession.fromJson(
-            await agent.createSession(
-              clientRequestId: input['clientRequestId'] as String,
-              accountId: input['accountId'] as String,
-              title: input['title'] as String,
-              cancelToken: cancelToken,
-            ),
-          );
-        } on AgentApiException catch (error) {
-          if (error.statusCode != 409 ||
-              error.code != 'ACCOUNT_SESSION_EXISTS') {
-            rethrow;
-          }
-          // Another client may have bound the account after our lookup.
-          return ConversationSession.fromJson(
-            await agent.sessionByAccount(accountId, cancelToken: cancelToken),
-          );
-        }
-      },
-    );
-  }
-
-  @override
   Future<ConversationSession> createFromContent(
     String userId, {
     CancelToken? cancelToken,
@@ -406,6 +359,22 @@ class ApiSessionRepository extends SessionRepository {
         );
       },
     );
+  }
+
+  @override
+  Future<void> updateCast(
+    String userId,
+    String id,
+    List<String> roleIds, {
+    CancelToken? cancelToken,
+  }) async {
+    final cast = roleIds.map(_roleId).toList();
+    if (cast.length > 5 || cast.toSet().length != cast.length) {
+      throw ArgumentError.value(roleIds, 'roleIds');
+    }
+    await _command(userId, 'cast:$id', {'roleIds': cast}, (input) async {
+      await agent.updateSessionCast(id, input, cancelToken: cancelToken);
+    });
   }
 
   int _roleId(String value) {

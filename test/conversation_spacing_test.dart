@@ -50,6 +50,7 @@ void main() {
               ...chatMessageJson(seq: 3),
               'id': 'results',
               'blocks': [
+                {'type': 'text', 'text': 'Progress reply'},
                 for (final id in ['result-1', 'result-2'])
                   {
                     'type': 'object',
@@ -106,8 +107,13 @@ void main() {
         final nextBubble = tester.getRect(text('Next request')).inflate(20);
         expect(tester.getTopLeft(progress).dy - firstBubble.bottom, 30);
         expect(
-          tester.getTopLeft(result('result-1')).dy -
+          tester.getTopLeft(text('Progress reply')).dy -
               tester.getBottomLeft(progress).dy,
+          10,
+        );
+        expect(
+          tester.getTopLeft(result('result-1')).dy -
+              tester.getBottomLeft(text('Progress reply')).dy,
           10,
         );
         expect(

@@ -23,13 +23,11 @@ class ConversationController extends ChangeNotifier {
     this.userId, {
     this.onSessionChanged,
     this.onError,
-    this.accountId,
     this.mediaPreferencesRepository,
     this.reconnectDelay = const Duration(seconds: 1),
   });
   final SessionRepository repository;
   final String userId;
-  final String? accountId;
   final MediaPreferencesRepository? mediaPreferencesRepository;
   final void Function(ConversationSession)? onSessionChanged;
   final void Function(Object)? onError;
@@ -188,7 +186,11 @@ class ConversationController extends ChangeNotifier {
       ? Future.value(false)
       : act((token) async {
           if (sessionId == null) {
-            final session = await _resolveSession(newTitle, token);
+            final session = await repository.create(
+              userId,
+              newTitle,
+              cancelToken: token,
+            );
             if (token.isCancelled || _disposed) return;
             sessionId = session.id;
             onSessionChanged?.call(session);
@@ -235,16 +237,22 @@ class ConversationController extends ChangeNotifier {
           if (!token.isCancelled) _awaitingRun = true;
         }, refreshAfter: true);
 
-  Future<ConversationSession> _resolveSession(
-    String title,
-    CancelToken token,
-  ) => accountId == null
-      ? repository.create(userId, title, cancelToken: token)
-      : repository.resolveAccountSession(
-          userId,
-          accountId!,
-          title,
-          cancelToken: token,
+  Future<bool> updateCast(List<String> roleIds) =>
+      sessionId == null ||
+          running ||
+          loading ||
+          snapshot?.session.archived != false ||
+          snapshot?.session.bindingStatus != 'ready' ||
+          connection != ConversationConnection.connected
+      ? Future.value(false)
+      : act(
+          (token) => repository.updateCast(
+            userId,
+            sessionId!,
+            roleIds,
+            cancelToken: token,
+          ),
+          refreshAfter: true,
         );
 
   Future<bool> stop() => act(

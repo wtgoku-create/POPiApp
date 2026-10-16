@@ -72,7 +72,17 @@ void main() {
   }
 
   Future<void> openParameters(WidgetTester tester) async {
-    await tester.tap(find.byKey(const Key('popi-model-parameters')));
+    await Scrollable.ensureVisible(
+      tester.element(find.byKey(const Key('popi-model-parameters'))),
+      alignment: 1,
+    );
+    await tester.pumpAndSettle();
+    final visibleButton = tester
+        .getRect(find.byKey(const Key('popi-model-parameters')))
+        .intersect(
+          tester.getRect(find.byKey(const Key('popi-composer-tools'))),
+        );
+    await tester.tapAt(visibleButton.center);
     await tester.pumpAndSettle();
   }
 
@@ -260,16 +270,16 @@ void main() {
       'compact composer keeps tools separate, English: $englishDark',
       (tester) async {
         await mount(tester, width: 320, englishDark: englishDark);
-        final parameters = tester.getRect(
-          find.byKey(const Key('popi-model-parameters')),
+        final toolbar = tester.getRect(
+          find.byKey(const Key('popi-composer-tools')),
         );
         final attachment = tester.getRect(
           find.byTooltip(englishDark ? 'Add attachment' : '添加附件'),
         );
         final send = tester.getRect(find.byKey(const Key('popi-send-button')));
         expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
-        expect(parameters.left, greaterThanOrEqualTo(attachment.right));
-        expect(parameters.right, lessThanOrEqualTo(send.left));
+        expect(toolbar.left, greaterThanOrEqualTo(attachment.right));
+        expect(toolbar.right, lessThanOrEqualTo(send.left));
         expect(tester.takeException(), isNull);
         await openParameters(tester);
         expect(find.byType(RoleGenerationSheet), findsOneWidget);

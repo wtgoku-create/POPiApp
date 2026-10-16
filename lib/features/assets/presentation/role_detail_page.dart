@@ -169,15 +169,12 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
   }
 
   void _compose() {
-    final l10n = AppLocalizations.of(context)!;
-    final prompt = l10n.createRolePrompt(_role.title);
     context.push(
       Uri(
-        path: '/session',
-        queryParameters: {
-          'prompt': '$prompt\nID: ${_role.id}\n${_role.description}',
-        },
+        path: '/role-guide',
+        queryParameters: {'category': widget.category},
       ).toString(),
+      extra: _role,
     );
   }
 

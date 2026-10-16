@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 
 class MemoryGuideStorage extends PreferencesStorage {
   MemoryGuideStorage(super.preferences);
   final values = <String, String>{};
   bool failWrites = false;
+  bool failRemoves = false;
   int readCount = 0;
 
   @override
@@ -21,7 +23,10 @@ class MemoryGuideStorage extends PreferencesStorage {
   }
 
   @override
-  Future<void> remove(String key) async => values.remove(key);
+  Future<void> remove(String key) async {
+    if (failRemoves) throw StateError('Storage unavailable');
+    values.remove(key);
+  }
 }
 
 class FixtureIpGuideApi extends NetworkApi {
@@ -110,5 +115,38 @@ class FixtureIpGuideApi extends NetworkApi {
     profileRequests.add(clientRequestId);
     if (failProfile) throw StateError('Profile unavailable');
     savedProfile = profile;
+  }
+}
+
+class FixtureIpGuideAgentApi extends NetworkAgentApi {
+  FixtureIpGuideAgentApi() : super(Dio());
+
+  final requests = <Map<String, Object?>>[];
+  bool fail = false;
+  String bindingStatus = 'ready';
+  Future<void>? wait;
+
+  @override
+  Future<Map<String, dynamic>> createSession({
+    required String clientRequestId,
+    String? title,
+    String? accountId,
+    CancelToken? cancelToken,
+  }) async {
+    requests.add({
+      'clientRequestId': clientRequestId,
+      'title': title,
+      'accountId': accountId,
+    });
+    await wait;
+    if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
+    if (fail) throw StateError('Session binding unavailable');
+    return {
+      'id': 'created-session',
+      'title': title,
+      'revision': 1,
+      'updatedAt': '2026-10-16T00:00:00Z',
+      'bindingStatus': bindingStatus,
+    };
   }
 }

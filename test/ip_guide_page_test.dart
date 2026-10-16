@@ -21,17 +21,21 @@ import 'package:popi_ai_app/shared/providers/ip_guide_provider.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'support/ip_guide_fixtures.dart';
+import 'support/session_fixtures.dart';
 
 void main() {
   late MemoryGuideStorage storage;
   late FixtureIpGuideApi api;
+  late FixtureIpGuideAgentApi agent;
   late IpGuideRepository repository;
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     storage = MemoryGuideStorage(await SharedPreferences.getInstance());
     api = FixtureIpGuideApi();
-    repository = IpGuideRepository(storage, api, userId: '1');
+    agent = FixtureIpGuideAgentApi();
+    repository = IpGuideRepository(storage, api, agent, userId: '1');
   });
 
   Future<void> pumpGuide(
@@ -51,7 +55,10 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPadding);
     final container = ProviderContainer(
-      overrides: [ipGuideRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        ipGuideRepositoryProvider.overrideWithValue(repository),
+        sessionRepositoryProvider.overrideWithValue(FixtureSessionRepository()),
+      ],
     );
     addTearDown(container.dispose);
     await container
@@ -505,9 +512,14 @@ void main() {
     });
   }
 
-  for (final locale in [const Locale('zh'), const Locale('en')]) {
+  for (final (locale, entry) in [
+    (const Locale('zh'), 'ip-create-role'),
+    (const Locale('en'), 'ip-create-role'),
+    (const Locale('zh'), 'ip-create-content'),
+    (const Locale('en'), 'ip-create-content'),
+  ]) {
     testWidgets(
-      'first character opens account session with an editable prompt in $locale',
+      '$entry opens the created session with an editable prompt in $locale',
       (tester) async {
         final draft = IpGuideDraft()
           ..step = 5
@@ -521,22 +533,27 @@ void main() {
         await tap(tester, 'ip-guide-start');
         await tap(tester, 'ip-draft-resume');
         await tap(tester, 'ip-confirm');
-        await tap(tester, 'ip-create-role');
+        expect(agent.requests, hasLength(1));
+        await tap(tester, entry);
 
         final session = tester.widget<SessionPage>(find.byType(SessionPage));
         final l10n = AppLocalizations.of(
           tester.element(find.byType(SessionPage)),
         )!;
-        expect(session.accountId, 'created-account');
-        expect(session.sessionId, isNull);
-        expect(session.initialPrompt, l10n.ipFirstRolePrompt);
+        expect(session.sessionId, 'created-session');
+        expect(agent.requests, hasLength(1));
+        expect(agent.requests.single['accountId'], 'created-account');
+        final prompt = entry == 'ip-create-role'
+            ? l10n.ipFirstRolePrompt
+            : l10n.ipFirstContentPrompt;
+        expect(session.initialPrompt, prompt);
         final input = find.descendant(
           of: find.byType(SessionPage),
           matching: find.byType(ExtendedTextField),
         );
         expect(
           tester.widget<ExtendedTextField>(input).controller!.text,
-          l10n.ipFirstRolePrompt,
+          prompt,
         );
         await tester.tap(input);
         tester.testTextInput.enterText('创建一个勇敢的校园角色');

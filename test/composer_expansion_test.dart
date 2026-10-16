@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:toastification/toastification.dart';
 
 void main() {
+  tearDown(() => toastification.dismissAll(delayForAnimation: false));
   final input = find.byKey(const Key('popi-message-input'));
   final frame = find.byKey(const Key('popi-message-composer'));
 
@@ -154,9 +156,48 @@ void main() {
     final inputRect = tester.getRect(input);
     expect(inputRect.overlaps(stopRect), isFalse);
     expect(tester.getRect(frame).contains(stopRect.center), isTrue);
+    expect(tester.widget<ExtendedTextField>(input).enabled, isFalse);
+    await tester.tapAt(tester.getCenter(input));
+    await tester.pumpAndSettle();
+    expect(find.text('Session is running'), findsOneWidget);
+    toastification.dismissAll(delayForAnimation: false);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(frame).height, 60);
+    expect(
+      tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
+      isFalse,
+    );
     await tester.tap(stop);
     await tester.pumpAndSettle();
     expect(stopped, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('running locks an active draft and completion restores editing', (
+    tester,
+  ) async {
+    final controller = PopiMessageComposerController(initialText: 'Draft');
+    addTearDown(controller.dispose);
+    await pumpComposer(tester, controller);
+    await tester.tap(input);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ExtendedTextField>(input).focusNode!.hasFocus, isTrue);
+
+    await pumpComposer(tester, controller, running: true);
+    expect(tester.widget<ExtendedTextField>(input).readOnly, isTrue);
+    expect(
+      tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
+      isFalse,
+    );
+    expect(controller.markdown, 'Draft');
+
+    await pumpComposer(tester, controller);
+    expect(tester.widget<ExtendedTextField>(input).enabled, isTrue);
+    expect(tester.widget<ExtendedTextField>(input).readOnly, isFalse);
+    await tester.tap(input);
+    await tester.pumpAndSettle();
+    tester.testTextInput.enterText('Updated draft');
+    expect(controller.markdown, 'Updated draft');
     await tester.pumpWidget(const SizedBox());
   });
 

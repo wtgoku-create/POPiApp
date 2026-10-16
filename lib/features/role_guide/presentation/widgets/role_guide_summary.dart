@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_account_icon.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
@@ -12,6 +13,7 @@ class RoleProjectSummary extends StatelessWidget {
   const RoleProjectSummary({
     required this.title,
     this.avatar = '',
+    this.iconBackgroundColor,
     this.loading = false,
     this.showStatus = false,
     this.onViewProfile,
@@ -19,6 +21,7 @@ class RoleProjectSummary extends StatelessWidget {
   });
   final String title;
   final String avatar;
+  final String? iconBackgroundColor;
   final bool loading;
   final bool showStatus;
   final VoidCallback? onViewProfile;
@@ -72,20 +75,19 @@ class RoleProjectSummary extends StatelessWidget {
                       child: SizedBox.square(
                         dimension: 50,
                         child: avatar.isEmpty
-                            ? const AppSvgIcon.asset(
-                                'project_default_avatar',
-                                size: 50,
+                            ? AppAccountIcon(
+                                assetName: 'project_default_avatar',
+                                backgroundColor: iconBackgroundColor,
                               )
                             : avatar.startsWith('assets/')
                             ? Image.asset(avatar, fit: BoxFit.cover)
                             : AppNetworkImage(
                                 avatar,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) =>
-                                    const AppSvgIcon.asset(
-                                      'project_default_avatar',
-                                      size: 50,
-                                    ),
+                                errorBuilder: (_, _, _) => AppAccountIcon(
+                                  assetName: 'project_default_avatar',
+                                  backgroundColor: iconBackgroundColor,
+                                ),
                               ),
                       ),
                     ),

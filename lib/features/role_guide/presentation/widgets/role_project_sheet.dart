@@ -9,7 +9,7 @@ import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/providers/project_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
-import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_account_icon.dart';
 import '../../../projects/domain/project.dart';
 import 'role_guide_controls.dart';
 import 'role_guide_sheet.dart';
@@ -155,9 +155,9 @@ class _RoleProjectSheetState extends ConsumerState<RoleProjectSheet> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   contentPadding: const EdgeInsets.all(15),
-                  leading: const AppSvgIcon.asset(
-                    'project_default_avatar',
-                    size: 50,
+                  leading: AppAccountIcon(
+                    assetName: 'project_default_avatar',
+                    backgroundColor: project.iconBackgroundColor,
                   ),
                   title: Text(
                     project.title,

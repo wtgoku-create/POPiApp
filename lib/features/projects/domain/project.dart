@@ -1,12 +1,22 @@
 /// A Studio account displayed as an IP project in the navigation drawer.
 class Project {
-  const Project({required this.id, required this.title});
+  const Project({
+    required this.id,
+    required this.title,
+    this.iconBackgroundColor,
+  });
 
   final String id;
   final String title;
+  final String? iconBackgroundColor;
 
-  factory Project.fromJson(Map<String, dynamic> json) =>
-      Project(id: json['id'] as String, title: json['title'] as String);
+  factory Project.fromJson(Map<String, dynamic> json) => Project(
+    id: json['id'] as String,
+    title: json['title'] as String,
+    iconBackgroundColor: json['iconBackgroundColor'] is String
+        ? json['iconBackgroundColor'] as String
+        : null,
+  );
 }
 
 class ProjectSession {

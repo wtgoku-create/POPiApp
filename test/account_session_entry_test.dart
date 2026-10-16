@@ -17,12 +17,9 @@ import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'support/session_fixtures.dart';
 
 class _AccountSessions extends FixtureSessionRepository {
-  final resolutions = <String>[];
   final sent = <(String, String)>[];
-  ConversationSession? binding;
   Completer<void>? pending;
-  CancelToken? resolutionToken;
-  bool failLookup = false;
+  CancelToken? sendToken;
   bool failSend = false;
   int creates = 0;
 
@@ -37,21 +34,6 @@ class _AccountSessions extends FixtureSessionRepository {
   }
 
   @override
-  Future<ConversationSession> resolveAccountSession(
-    String userId,
-    String accountId,
-    String title, {
-    CancelToken? cancelToken,
-  }) async {
-    resolutions.add(accountId);
-    resolutionToken = cancelToken;
-    await pending?.future;
-    if (failLookup) throw StateError('offline');
-    if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
-    return binding ??= await create(userId, title, cancelToken: cancelToken);
-  }
-
-  @override
   Future<void> send(
     String userId,
     String id,
@@ -60,8 +42,11 @@ class _AccountSessions extends FixtureSessionRepository {
     List<String> roleIds = const [],
     CancelToken? cancelToken,
   }) async {
-    sent.add((id, text));
+    sendToken = cancelToken;
+    await pending?.future;
+    if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
     if (failSend) throw StateError('offline');
+    sent.add((id, text));
   }
 }
 
@@ -89,14 +74,12 @@ void main() {
         .read(userProvider.notifier)
         .setUser(const User(id: 'user', name: 'User', email: ''));
     router = GoRouter(
-      initialLocation: '/session?accountId=42',
+      initialLocation: '/session?sessionId=existing-session',
       routes: [
         GoRoute(
           path: '/session',
-          builder: (_, state) => SessionPage(
-            accountId: state.uri.queryParameters['accountId'],
-            sessionId: state.uri.queryParameters['sessionId'],
-          ),
+          builder: (_, state) =>
+              SessionPage(sessionId: state.uri.queryParameters['sessionId']),
         ),
       ],
     );
@@ -114,58 +97,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(repository.resolutions, isEmpty);
     expect(repository.creates, 0);
   }
 
-  for (final alreadyBound in [false, true]) {
-    testWidgets('first send resolves account binding: bound=$alreadyBound', (
-      tester,
-    ) async {
-      await pump(tester);
-      if (alreadyBound) {
-        repository.binding = ConversationSession(
-          id: 'existing-session',
-          title: 'Existing',
-          updatedAt: DateTime(2026),
-        );
-      }
-      await enter(tester, 'Create content for this account');
-      await tester.tap(send);
-      await tester.pumpAndSettle();
-      final id = alreadyBound ? 'existing-session' : 'mock-new-1';
-      expect(repository.resolutions, ['42']);
-      expect(repository.creates, alreadyBound ? 0 : 1);
-      expect(repository.sent, [(id, 'Create content for this account')]);
-      expect(router.state.uri.queryParameters, {'sessionId': id});
-      expect(tester.widget<ExtendedTextField>(input).controller!.text, isEmpty);
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('failed lookup retains draft and rechecks binding on retry', (
+  testWidgets('first send uses the session bound during account creation', (
     tester,
   ) async {
     await pump(tester);
-    repository.failLookup = true;
-    await enter(tester, 'Keep this draft');
+    await enter(tester, 'Create content for this account');
     await tester.tap(send);
     await tester.pumpAndSettle();
+    const id = 'existing-session';
     expect(repository.creates, 0);
-    expect(repository.sent, isEmpty);
-    expect(router.state.uri.queryParameters, {'accountId': '42'});
-    expect(
-      tester.widget<ExtendedTextField>(input).controller!.text,
-      'Keep this draft',
-    );
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
-    repository.failLookup = false;
-    await tester.tap(send);
-    await tester.pumpAndSettle();
-    expect(repository.resolutions, ['42', '42']);
-    expect(repository.creates, 1);
-    expect(repository.sent.single.$2, 'Keep this draft');
+    expect(repository.sent, [(id, 'Create content for this account')]);
+    expect(router.state.uri.queryParameters, {'sessionId': id});
+    expect(tester.widget<ExtendedTextField>(input).controller!.text, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
@@ -177,7 +123,7 @@ void main() {
     await enter(tester, 'Retry this message');
     await tester.tap(send);
     await tester.pumpAndSettle();
-    expect(router.state.uri.queryParameters, {'sessionId': 'mock-new-1'});
+    expect(router.state.uri.queryParameters, {'sessionId': 'existing-session'});
     expect(
       tester.widget<ExtendedTextField>(input).controller!.text,
       'Retry this message',
@@ -187,34 +133,33 @@ void main() {
     repository.failSend = false;
     await tester.tap(send);
     await tester.pumpAndSettle();
-    expect(repository.resolutions, ['42']);
-    expect(repository.creates, 1);
-    expect(repository.sent.map((item) => item.$1), [
-      'mock-new-1',
-      'mock-new-1',
-    ]);
+    expect(repository.creates, 0);
+    expect(repository.sent.map((item) => item.$1), ['existing-session']);
     expect(tester.takeException(), isNull);
   });
 
   for (final leave in ['new', 'user']) {
-    testWidgets('pending resolution is cancelled on $leave', (tester) async {
+    testWidgets('pending send is cancelled on $leave', (tester) async {
       await pump(tester);
       repository.pending = Completer<void>();
       await enter(tester, 'Do not send stale content');
       await tester.tap(send);
       await tester.pump();
-      expect(repository.resolutions, ['42']);
+      expect(repository.sendToken, isNotNull);
       await tester.tap(send);
-      expect(repository.resolutions, ['42']);
+      expect(repository.sent, isEmpty);
       if (leave == 'new') {
-        await tester.tap(find.byKey(const Key('session-new-conversation')));
+        await tester.tap(find.byKey(const Key('popi-open-navigation')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.byKey(const Key('drawer-new-session')));
       } else {
         await container
             .read(userProvider.notifier)
             .setUser(const User(id: 'other', name: 'Other', email: ''));
       }
       await tester.pump();
-      expect(repository.resolutionToken!.isCancelled, isTrue);
+      expect(repository.sendToken!.isCancelled, isTrue);
       repository.pending!.complete();
       await tester.pumpAndSettle();
       expect(repository.sent, isEmpty);

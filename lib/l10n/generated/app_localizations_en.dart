@@ -1716,6 +1716,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get composerPlaceholder => 'Say something to POPi...';
 
   @override
+  String get composerRunning => 'Session is running';
+
+  @override
   String get sessionWelcomeTitle => 'Hi there!';
 
   @override
@@ -2165,6 +2168,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logoutFailed => 'Unable to sign out. Try again later';
+
+  @override
+  String get cancelAccount => 'Delete account';
+
+  @override
+  String get cancelAccountTitle => 'Delete your account?';
+
+  @override
+  String get cancelAccountDescription =>
+      'This cannot be undone. You will no longer be able to sign in, and all devices will be signed out.\nYour phone number and linked accounts cannot automatically register a new account. Historical data and works will be retained.';
+
+  @override
+  String get confirmCancelAccount => 'Delete account';
+
+  @override
+  String get cancelAccountFailed =>
+      'Unable to delete your account. Try again later';
 
   @override
   String get regularUser => 'Regular user';
@@ -2680,6 +2700,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatCastRole => 'Cast';
+
+  @override
+  String get chatCastUnmatched => 'Unmatched';
+
+  @override
+  String chatCastMultiple(int count) {
+    return '$count roles';
+  }
+
+  @override
+  String get chatConfirmCast => 'Confirm cast';
+
+  @override
+  String get chatCastRoleUnavailable =>
+      'This role is unavailable. Choose a readable role with a saved profile.';
 
   @override
   String get chatRoleActive => 'Published';

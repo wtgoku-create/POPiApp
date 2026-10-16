@@ -279,6 +279,9 @@ class _StartupAuthApi implements AuthApi {
   Future<void> logout() => throw UnimplementedError();
 
   @override
+  Future<void> cancelAccount() => throw UnimplementedError();
+
+  @override
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,

@@ -11,6 +11,7 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/popi_expanded_message_editor.dart';
 import '../../../assets/domain/library_role.dart';
 import '../../../assets/domain/library_work.dart';
@@ -189,6 +190,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.conversationMode = false,
     this.sessionLayout = false,
     this.onStop,
+    this.castRoles,
+    this.onCastRequested,
+    this.castEnabled = true,
     super.key,
   });
 
@@ -219,6 +223,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   /// Session screens use the compact Figma insets, including above the keyboard.
   final bool sessionLayout;
   final VoidCallback? onStop;
+  final List<LibraryRole>? castRoles;
+  final VoidCallback? onCastRequested;
+  final bool castEnabled;
 
   @override
   ConsumerState<PopiMessageComposer> createState() =>
@@ -296,6 +303,10 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   }
 
   Future<void> _openExpandedEditor() async {
+    if (widget.running) {
+      _showRunningToast();
+      return;
+    }
     if (_expandedEditorOpen || widget.sending) return;
     _expandedEditorOpen = true;
     try {
@@ -319,6 +330,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                   placeholderFontSize: 18,
                   expandedEditor: true,
                   readOnly: status.sending,
+                  running: status.running,
                 ),
                 action: _SendButton(
                   icon: Icons.check_rounded,
@@ -399,6 +411,18 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   void _dismissEditor() {
     widget.controller.dismissKeyboard();
     _focusNode.unfocus();
+  }
+
+  void _showRunningToast() {
+    AppToast.info(context, AppLocalizations.of(context)!.composerRunning);
+  }
+
+  void _focusInput() {
+    if (widget.running) {
+      _showRunningToast();
+      return;
+    }
+    _focusNode.requestFocus();
   }
 
   void _reportHeight() {
@@ -614,6 +638,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                     widget.onModelParametersRequested,
                                 modelParametersDescription:
                                     widget.modelParametersDescription,
+                                castRoles: widget.castRoles,
+                                onCastRequested: widget.onCastRequested,
+                                castEnabled: widget.castEnabled,
                               );
                               return AnimatedBuilder(
                                 animation: _composerAnimationController,
@@ -637,7 +664,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                     onTapOutside: (_) => _dismissEditor(),
                                     child: GestureDetector(
                                       behavior: HitTestBehavior.translucent,
-                                      onTap: _focusNode.requestFocus,
+                                      onTap: _focusInput,
                                       child: Container(
                                         key: const Key('popi-message-composer'),
                                         width: double.infinity,
@@ -732,47 +759,60 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     required double placeholderFontSize,
     bool expandedEditor = false,
     bool? readOnly,
+    bool? running,
   }) {
     final l10n = AppLocalizations.of(context)!;
+    final isRunning = running ?? widget.running;
     final placeholderStyle = TextStyle(
       color: colorScheme.onSurfaceVariant,
       fontSize: placeholderFontSize,
       fontWeight: FontWeight.w400,
     );
-    return ExtendedTextField(
-      key: Key(
-        expandedEditor ? 'popi-expanded-message-input' : 'popi-message-input',
-      ),
-      focusNode: expandedEditor ? null : _focusNode,
-      autofocus: expandedEditor,
-      onTapOutside: (_) => widget.controller.dismissKeyboard(),
-      controller: widget.controller.textController,
-      readOnly: readOnly ?? widget.sending,
-      specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
-      minLines: expandedEditor
-          ? null
-          : _isExpanded && !widget.conversationMode
-          ? 2
-          : 1,
-      maxLines: expandedEditor ? null : 3,
-      expands: expandedEditor,
-      cursorColor: colorScheme.primary,
-      style: TextStyle(
-        color: colorScheme.onSurface,
-        fontSize: expandedEditor || widget.conversationMode ? 18 : 14,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-      ),
-      decoration: InputDecoration(
-        isDense: true,
-        filled: false,
-        fillColor: Colors.transparent,
-        contentPadding: EdgeInsets.zero,
-        border: InputBorder.none,
-        enabledBorder: InputBorder.none,
-        focusedBorder: InputBorder.none,
-        hintText: l10n.composerPlaceholder,
-        hintStyle: placeholderStyle,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: isRunning ? _showRunningToast : null,
+      child: AbsorbPointer(
+        absorbing: isRunning,
+        child: ExtendedTextField(
+          key: Key(
+            expandedEditor
+                ? 'popi-expanded-message-input'
+                : 'popi-message-input',
+          ),
+          focusNode: expandedEditor ? null : _focusNode,
+          autofocus: expandedEditor,
+          onTapOutside: (_) => widget.controller.dismissKeyboard(),
+          controller: widget.controller.textController,
+          enabled: !isRunning,
+          readOnly: isRunning || (readOnly ?? widget.sending),
+          specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
+          minLines: expandedEditor
+              ? null
+              : _isExpanded && !widget.conversationMode
+              ? 2
+              : 1,
+          maxLines: expandedEditor ? null : 3,
+          expands: expandedEditor,
+          cursorColor: colorScheme.primary,
+          style: TextStyle(
+            color: colorScheme.onSurface,
+            fontSize: expandedEditor || widget.conversationMode ? 18 : 14,
+            fontWeight: FontWeight.w400,
+            height: 1.5,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: false,
+            fillColor: Colors.transparent,
+            contentPadding: EdgeInsets.zero,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            hintText: l10n.composerPlaceholder,
+            hintStyle: placeholderStyle,
+          ),
+        ),
       ),
     );
   }
@@ -1053,6 +1093,9 @@ class _ComposerContent extends StatelessWidget {
     required this.sending,
     required this.running,
     required this.onStop,
+    required this.castRoles,
+    required this.onCastRequested,
+    required this.castEnabled,
   });
 
   final bool isExpanded;
@@ -1072,6 +1115,9 @@ class _ComposerContent extends StatelessWidget {
   final bool sending;
   final bool running;
   final VoidCallback? onStop;
+  final List<LibraryRole>? castRoles;
+  final VoidCallback? onCastRequested;
+  final bool castEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -1079,6 +1125,8 @@ class _ComposerContent extends StatelessWidget {
     const curve = Curves.easeOutCubic;
     final hasImages = images.isNotEmpty;
     final showAction = isExpanded || running || sending;
+    final showCast = castRoles != null;
+    final compactTrailingWidth = showAction ? 48.0 : 0.0;
     final compactImageStripWidth = images.isEmpty
         ? 0.0
         : images.length * 28.0 + (images.length - 1) * 6.0;
@@ -1118,11 +1166,11 @@ class _ComposerContent extends StatelessWidget {
                         )
                       : EdgeInsets.only(
                           left: 58 + compactImageStripWidth,
-                          right: showAction ? 48 : 0,
+                          right: compactTrailingWidth,
                         )
                 : isExpanded
                 ? EdgeInsets.only(bottom: 50, right: onExpand != null ? 36 : 0)
-                : EdgeInsets.only(left: 50, right: showAction ? 48 : 0),
+                : EdgeInsets.only(left: 50, right: compactTrailingWidth),
             child: Align(
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
@@ -1157,11 +1205,12 @@ class _ComposerContent extends StatelessWidget {
             onPressed: onAttachment,
           ),
         ),
-        if (onModelParametersRequested != null)
+        if (onModelParametersRequested != null || showCast)
           Positioned(
-            left: 50,
-            right: hasText ? 48 : 0,
-            bottom: 0,
+            left: isExpanded ? 50 : null,
+            right: showAction ? 48 : 0,
+            width: isExpanded ? null : 132,
+            bottom: isExpanded ? 0 : 10,
             height: 40,
             child: IgnorePointer(
               ignoring: !isExpanded,
@@ -1169,11 +1218,27 @@ class _ComposerContent extends StatelessWidget {
                 duration: duration,
                 curve: curve,
                 opacity: isExpanded ? 1 : 0,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: _ModelParametersButton(
-                    description: modelParametersDescription,
-                    onPressed: onModelParametersRequested!,
+                child: SingleChildScrollView(
+                  key: const Key('popi-composer-tools'),
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (showCast)
+                        _CastButton(
+                          roles: castRoles!,
+                          onPressed: castEnabled && !sending && !running
+                              ? onCastRequested
+                              : null,
+                        ),
+                      if (isExpanded && onModelParametersRequested != null) ...[
+                        if (showCast) const SizedBox(width: 4),
+                        _ModelParametersButton(
+                          description: modelParametersDescription,
+                          onPressed: onModelParametersRequested!,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -1209,6 +1274,76 @@ class _ComposerContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CastButton extends StatelessWidget {
+  const _CastButton({required this.roles, required this.onPressed});
+
+  final List<LibraryRole> roles;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = roles.isEmpty
+        ? l10n.chatCastUnmatched
+        : roles.length == 1
+        ? roles.single.title
+        : l10n.chatCastMultiple(roles.length);
+    return Tooltip(
+      message: '${l10n.chatCastRole}: $label',
+      child: TextButton(
+        key: const Key('popi-composer-cast'),
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          backgroundColor: AppColors.brand.withValues(alpha: .05),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          minimumSize: const Size(0, 34),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const StadiumBorder(),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (roles.isEmpty)
+              SizedBox.square(
+                dimension: 24,
+                child: Center(
+                  child: Transform.flip(
+                    flipY: true,
+                    child: const AppSvgIcon.asset(
+                      'chat_cast_unmatched',
+                      size: 19,
+                    ),
+                  ),
+                ),
+              ),
+            if (roles.isNotEmpty)
+              SizedBox(
+                width: 24 + (roles.length.clamp(1, 3) - 1) * 12,
+                height: 24,
+                child: Stack(
+                  children: [
+                    for (final (index, role) in roles.take(3).indexed)
+                      Positioned(
+                        left: index * 12,
+                        top: 0,
+                        child: RoleGuideAvatar(role: role, size: 24),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1255,17 +1390,9 @@ class _ModelParametersButton extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 5),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  AppLocalizations.of(context)!.roleModelParameters,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
+            Text(
+              AppLocalizations.of(context)!.roleModelParameters,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
             ),
           ],
         ),

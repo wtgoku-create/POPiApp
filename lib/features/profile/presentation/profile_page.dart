@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -41,6 +42,8 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   bool _languageExpanded = false;
   bool _themeExpanded = false;
+  bool _accountConfirmationOpen = false;
+  bool _cancelingAccount = false;
 
   Future<void> _setLocale(Locale? locale) async {
     await ref.read(localeProvider.notifier).setLocale(locale);
@@ -252,10 +255,42 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       icon: Icons.logout,
                       label: l10n.logout,
                       showChevron: false,
-                      onTap: () => _confirmLogout(context, ref),
+                      onTap: _cancelingAccount
+                          ? null
+                          : () => _confirmLogout(context, ref),
                     ),
                   ],
                 ),
+                if (user != null) ...[
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 50,
+                    child: FilledButton(
+                      key: const Key('profile-cancel-account-menu'),
+                      onPressed: _cancelingAccount
+                          ? null
+                          : _confirmCancelAccount,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFD63D43),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(
+                          0xFFD63D43,
+                        ).withValues(alpha: .5),
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
+                      child: _cancelingAccount
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(l10n.cancelAccount),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -265,16 +300,23 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    if (_accountConfirmationOpen || _cancelingAccount) return;
+    _accountConfirmationOpen = true;
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await AppDialog.confirm(
-      context: context,
-      title: l10n.logoutConfirmationTitle,
-      description: l10n.logoutDescription,
-      cancelLabel: l10n.cancel,
-      confirmLabel: l10n.confirmLogout,
-      confirmKey: const Key('confirm-logout-button'),
-      destructive: true,
-    );
+    final bool? confirmed;
+    try {
+      confirmed = await AppDialog.confirm(
+        context: context,
+        title: l10n.logoutConfirmationTitle,
+        description: l10n.logoutDescription,
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.confirmLogout,
+        confirmKey: const Key('confirm-logout-button'),
+        destructive: true,
+      );
+    } finally {
+      _accountConfirmationOpen = false;
+    }
 
     if (confirmed != true || !context.mounted) return;
 
@@ -283,6 +325,51 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (context.mounted) context.push('/login');
     } catch (_) {
       if (context.mounted) AppToast.error(context, l10n.logoutFailed);
+    }
+  }
+
+  Future<void> _confirmCancelAccount() async {
+    if (_accountConfirmationOpen || _cancelingAccount) return;
+    final user = ref.read(userProvider);
+    if (user == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    _accountConfirmationOpen = true;
+    final bool? confirmed;
+    try {
+      confirmed = await AppDialog.confirm(
+        context: context,
+        title: l10n.cancelAccountTitle,
+        description: l10n.cancelAccountDescription,
+        cancelLabel: l10n.cancel,
+        confirmLabel: l10n.confirmCancelAccount,
+        confirmKey: const Key('confirm-cancel-account-button'),
+        destructive: true,
+      );
+    } finally {
+      _accountConfirmationOpen = false;
+    }
+    if (confirmed != true ||
+        !mounted ||
+        ref.read(userProvider)?.id != user.id) {
+      return;
+    }
+
+    setState(() => _cancelingAccount = true);
+    try {
+      await ref.read(userProvider.notifier).cancelAccount();
+      if (mounted) context.go('/login');
+    } catch (error) {
+      if (mounted) {
+        final message = error is ApiException ? error.message : null;
+        AppToast.error(
+          context,
+          message?.trim().isNotEmpty == true
+              ? message!
+              : l10n.cancelAccountFailed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancelingAccount = false);
     }
   }
 

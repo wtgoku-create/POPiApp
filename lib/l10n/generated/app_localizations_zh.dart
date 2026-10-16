@@ -1641,6 +1641,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get composerPlaceholder => '跟POPi说点什么...';
 
   @override
+  String get composerRunning => '正在运行中';
+
+  @override
   String get sessionWelcomeTitle => '嗨，用户～';
 
   @override
@@ -2070,6 +2073,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get logoutFailed => '退出登录失败，请稍后重试';
+
+  @override
+  String get cancelAccount => '注销账号';
+
+  @override
+  String get cancelAccountTitle => '确认注销账号？';
+
+  @override
+  String get cancelAccountDescription =>
+      '注销后无法恢复或再次登录，所有设备将退出登录。\n原手机号及第三方账号无法自动重新注册。历史数据和作品仍会保留。';
+
+  @override
+  String get confirmCancelAccount => '确认注销';
+
+  @override
+  String get cancelAccountFailed => '注销失败，请稍后重试';
 
   @override
   String get regularUser => '普通用户';
@@ -2557,6 +2576,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatCastRole => '出场角色';
+
+  @override
+  String get chatCastUnmatched => '未匹配';
+
+  @override
+  String chatCastMultiple(int count) {
+    return '$count个角色';
+  }
+
+  @override
+  String get chatConfirmCast => '确认出场角色';
+
+  @override
+  String get chatCastRoleUnavailable => '该角色暂不可用，请选择可读取且已保存档案的角色';
 
   @override
   String get chatRoleActive => '已发布';

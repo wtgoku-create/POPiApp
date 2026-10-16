@@ -9,8 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:toastification/toastification.dart';
 
 void main() {
+  tearDown(() => toastification.dismissAll(delayForAnimation: false));
   final frame = find.byKey(const Key('popi-message-composer'));
   final input = find.byKey(const Key('popi-message-input'));
   final expand = find.byKey(const Key('popi-expand-input'));
@@ -207,6 +209,12 @@ void main() {
     );
     running.value = true;
     await tester.pumpAndSettle();
+    expect(tester.widget<ExtendedTextField>(expandedInput).enabled, isFalse);
+    await tester.tapAt(tester.getCenter(expandedInput));
+    await tester.pumpAndSettle();
+    expect(find.text('Session is running'), findsOneWidget);
+    toastification.dismissAll(delayForAnimation: false);
+    await tester.pumpAndSettle();
     expect(
       find.descendant(of: editor, matching: find.byTooltip('Stop reply')),
       findsOneWidget,
@@ -217,6 +225,7 @@ void main() {
     expect(editor, findsOneWidget);
     running.value = false;
     await tester.pumpAndSettle();
+    expect(tester.widget<ExtendedTextField>(expandedInput).enabled, isTrue);
     expect(
       find.descendant(of: editor, matching: find.byTooltip('Send message')),
       findsOneWidget,

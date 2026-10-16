@@ -877,6 +877,9 @@ class _FakeAuthApi implements AuthApi {
   Future<void> logout() async {}
 
   @override
+  Future<void> cancelAccount() => throw UnimplementedError();
+
+  @override
   Future<void> sendLoginCode({
     required String phone,
     required String captchaToken,

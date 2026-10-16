@@ -113,6 +113,9 @@ class _FakeAuthApi implements AuthApi {
   int logoutCalls = 0;
 
   @override
+  Future<void> cancelAccount() => throw UnimplementedError();
+
+  @override
   Future<void> logout() async {
     logoutCalls++;
   }

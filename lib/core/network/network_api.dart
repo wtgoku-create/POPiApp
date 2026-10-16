@@ -1112,6 +1112,15 @@ class NetworkApi {
     _data(response);
   }
 
+  Future<void> cancelAccount() async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_client/users/user/cancel',
+      data: {'confirm': true},
+    );
+    if (response.data?.isEmpty == true) return;
+    _data(response);
+  }
+
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
     final body = response.data;
     if (body == null) {

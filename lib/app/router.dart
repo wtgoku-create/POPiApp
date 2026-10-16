@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/assets/presentation/assets_page.dart';
+import '../features/assets/domain/library_role.dart';
 import '../features/activities/domain/activity.dart';
 import '../features/activities/presentation/activities_page.dart';
 import '../features/activities/presentation/activity_detail_page.dart';
@@ -98,14 +99,28 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
             builder: (context, state) => RoleGuidePage(
               accountId: state.uri.queryParameters['accountId'],
               sessionId: state.uri.queryParameters['sessionId'],
+              initialRole: state.extra is LibraryRole
+                  ? state.extra! as LibraryRole
+                  : null,
+              initialCategory:
+                  state.uri.queryParameters['category'] == 'personal'
+                  ? 'personal'
+                  : 'official',
             ),
           ),
           GoRoute(
             path: 'session',
+            redirect: (context, state) {
+              final accountId = state.uri.queryParameters['accountId'];
+              if (accountId != null &&
+                  state.uri.queryParameters['sessionId'] == null) {
+                return '/ip-accounts/${Uri.encodeComponent(accountId)}';
+              }
+              return null;
+            },
             builder: (context, state) => SessionPage(
               initialPrompt: state.uri.queryParameters['prompt'],
               sessionId: state.uri.queryParameters['sessionId'],
-              accountId: state.uri.queryParameters['accountId'],
             ),
           ),
           GoRoute(

@@ -156,16 +156,25 @@ class GenerationOptions extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final colors = Theme.of(context).colorScheme;
+      const spacing = 8.0;
+      const minWidth = 88.0;
+      final columns = math.max(
+        1,
+        ((constraints.maxWidth + spacing) / (minWidth + spacing)).floor(),
+      );
+      double optionWidth(int index) {
+        final rowStart = index ~/ columns * columns;
+        final count = math.min(columns, options.length - rowStart);
+        return (constraints.maxWidth - spacing * (count - 1)) / count;
+      }
+
       return Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: spacing,
+        runSpacing: spacing,
         children: [
-          for (final option in options)
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: math.min(88, constraints.maxWidth),
-                maxWidth: constraints.maxWidth,
-              ),
+          for (final (index, option) in options.indexed)
+            SizedBox(
+              width: optionWidth(index),
               child: Semantics(
                 selected: option.value == value,
                 child: TextButton(

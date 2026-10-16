@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,13 +13,15 @@ import 'support/ip_guide_fixtures.dart';
 void main() {
   late MemoryGuideStorage storage;
   late FixtureIpGuideApi api;
+  late FixtureIpGuideAgentApi agent;
   late IpGuideRepository repository;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     storage = MemoryGuideStorage(await SharedPreferences.getInstance());
     api = FixtureIpGuideApi();
-    repository = IpGuideRepository(storage, api, userId: '1');
+    agent = FixtureIpGuideAgentApi();
+    repository = IpGuideRepository(storage, api, agent, userId: '1');
   });
 
   test(
@@ -37,7 +40,12 @@ void main() {
       draft.audience.toggle(IpTargetAudience.workers);
       draft.audience.toggle(IpTargetAudience.students);
       await repository.save(draft);
-      final restored = IpGuideRepository(storage, api, userId: '1').load()!;
+      final restored = IpGuideRepository(
+        storage,
+        api,
+        agent,
+        userId: '1',
+      ).load()!;
       expect(restored.step, 5);
       expect(restored.directions.values, [
         IpContentDirection.emotion,
@@ -52,7 +60,10 @@ void main() {
       expect(restored.format, IpContentFormat.comicDrama);
       expect(restored.customFormat, '音乐故事');
       expect(restored.nickname, '后来才懂');
-      expect(IpGuideRepository(storage, api, userId: '2').load(), isNull);
+      expect(
+        IpGuideRepository(storage, api, agent, userId: '2').load(),
+        isNull,
+      );
     },
   );
 
@@ -86,7 +97,12 @@ void main() {
       draft.preferences['audienceFeelings'] = IpGuideSelection<String>()
         ..customText = '好奇';
       await repository.save(draft);
-      final restored = IpGuideRepository(storage, api, userId: '1').load()!;
+      final restored = IpGuideRepository(
+        storage,
+        api,
+        agent,
+        userId: '1',
+      ).load()!;
       expect(restored.preferences['contentDirections']!.values, [
         '天文观察',
         '城市散步',
@@ -138,7 +154,12 @@ void main() {
       repository.create(draft, {'direction': '校园'}),
       throwsStateError,
     );
-    final restored = IpGuideRepository(storage, api, userId: '1').load()!;
+    final restored = IpGuideRepository(
+      storage,
+      api,
+      agent,
+      userId: '1',
+    ).load()!;
     expect(restored.submitted, isTrue);
     expect(restored.step, 5);
     api.failAccount = false;
@@ -171,6 +192,95 @@ void main() {
         'targetAudience': ['学生'],
       });
       expect(repository.load(), isNull);
+    },
+  );
+
+  test(
+    'confirmation binds the account session before clearing the draft',
+    () async {
+      final draft = IpGuideDraft()..nickname = '账号';
+      expect(
+        await repository.create(draft, {'targetAudience': '学生'}),
+        'created-account',
+      );
+      expect(api.accountRequests, hasLength(1));
+      expect(api.savedProfile, isNotNull);
+      expect(agent.requests, hasLength(1));
+      expect(agent.requests.single, {
+        'clientRequestId': draft.sessionRequestId,
+        'accountId': 'created-account',
+        'title': '账号',
+      });
+      expect(draft.sessionId, 'created-session');
+      expect(repository.load(), isNull);
+    },
+  );
+
+  for (final failure in ['network', 'pending']) {
+    test(
+      'session $failure keeps the draft and reuses its request after restart',
+      () async {
+        final draft = IpGuideDraft()..nickname = '账号';
+        agent.fail = failure == 'network';
+        agent.bindingStatus = failure == 'pending' ? 'pending' : 'ready';
+        await expectLater(repository.create(draft, {}), throwsA(anything));
+        final resumedRepository = IpGuideRepository(
+          storage,
+          api,
+          agent,
+          userId: '1',
+        );
+        final resumed = resumedRepository.load()!;
+        expect(resumed.accountId, 'created-account');
+        expect(resumed.sessionId, isNull);
+        expect(
+          resumed.sessionRequestId,
+          agent.requests.single['clientRequestId'],
+        );
+        agent.fail = false;
+        agent.bindingStatus = 'ready';
+        await resumedRepository.create(resumed, {});
+        expect(api.accountRequests, hasLength(1));
+        expect(agent.requests, hasLength(2));
+        expect(agent.requests.first, agent.requests.last);
+        expect(resumed.sessionId, 'created-session');
+        expect(resumedRepository.load(), isNull);
+      },
+    );
+  }
+
+  test(
+    'restored bound session is retained when clearing the draft fails',
+    () async {
+      final draft = IpGuideDraft()..nickname = '账号';
+      storage.failRemoves = true;
+      await expectLater(repository.create(draft, {}), throwsStateError);
+      final restored = repository.load()!;
+      expect(restored.sessionId, 'created-session');
+      storage.failRemoves = false;
+      await repository.create(restored, {});
+      expect(agent.requests, hasLength(1));
+      expect(api.accountRequests, hasLength(1));
+      expect(repository.load(), isNull);
+    },
+  );
+
+  test(
+    'disposal during binding preserves the unfinished creation draft',
+    () async {
+      final pending = Completer<void>();
+      agent.wait = pending.future;
+      final draft = IpGuideDraft()..nickname = '账号';
+      final creation = repository.create(draft, {});
+      final result = expectLater(creation, throwsA(isA<DioException>()));
+      while (agent.requests.isEmpty) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      repository.dispose();
+      pending.complete();
+      await result;
+      expect(repository.load()!.accountId, 'created-account');
+      expect(repository.load()!.sessionId, isNull);
     },
   );
 

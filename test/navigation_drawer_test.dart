@@ -603,7 +603,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+  for (final (size, dark) in [
+    (const Size(390, 844), false),
+    (const Size(320, 568), true),
+    (const Size(1280, 900), false),
+  ]) {
     testWidgets('long drawer history builds on demand and pins at $size', (
       tester,
     ) async {
@@ -614,6 +618,7 @@ void main() {
       final container = await pumpDrawer(
         tester,
         size: size,
+        theme: dark ? AppTheme.dark : AppTheme.light,
         repository: repository,
       );
       final first = find.byKey(const Key('drawer-session-mock-1'));
@@ -627,6 +632,12 @@ void main() {
       expect(first, findsOneWidget);
       expect(last, findsNothing);
       expect(rows.evaluate().length, lessThan(30));
+      final header = find.byKey(const Key('drawer-sessions-header'));
+      final list = find.byKey(const Key('drawer-session-list'));
+      final newSession = tester.getRect(
+        find.byKey(const Key('drawer-new-session')),
+      );
+      expect(tester.getRect(header).top, greaterThan(tester.getRect(list).top));
       final footer = tester.getRect(
         find.byKey(const Key('drawer-profile-button')),
       );
@@ -639,6 +650,18 @@ void main() {
       expect(first, findsNothing);
       expect(last.hitTestable(), findsOneWidget);
       expect(rows.evaluate().length, lessThan(30));
+      final pinnedHeader = tester.getRect(header);
+      expect(pinnedHeader.top, tester.getRect(list).top);
+      expect(pinnedHeader.top, newSession.bottom + 10);
+      expect(pinnedHeader.height, 40);
+      expect(
+        tester.widget<ColoredBox>(header).color,
+        Theme.of(tester.element(header)).colorScheme.surface,
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('drawer-new-session'))),
+        newSession,
+      );
       expect(
         tester.getRect(find.byKey(const Key('drawer-profile-button'))),
         footer,
@@ -676,7 +699,16 @@ void main() {
       final container = await pumpDrawer(tester);
       await tester.tap(find.byKey(const Key('drawer-session-mock-2')));
       await tester.pumpAndSettle();
-      expect(tester.widget<AppBar>(find.byType(AppBar)).title, isNull);
+      final title = find.byKey(const Key('session-app-bar-title'));
+      expect(tester.widget<Text>(title).data, '校园野餐vlog');
+      expect(tester.widget<Text>(title).maxLines, 1);
+      expect(tester.widget<Text>(title).overflow, TextOverflow.ellipsis);
+      expect(tester.widget<AppBar>(find.byType(AppBar)).centerTitle, isTrue);
+      await container
+          .read(sessionsProvider.notifier)
+          .rename('mock-2', '更新后的会话标题');
+      await tester.pumpAndSettle();
+      expect(tester.widget<Text>(title).data, '更新后的会话标题');
       expect(
         container
             .read(routerProvider(false))
@@ -763,6 +795,95 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final dark in [false, true]) {
+    testWidgets(
+      'server bubble colors render in history and preview dark=$dark',
+      (tester) async {
+        final container = await pumpDrawer(
+          tester,
+          theme: dark ? AppTheme.dark : AppTheme.light,
+        );
+        final controller = container.read(sessionsProvider.notifier);
+        final original = container.read(sessionsProvider).requireValue.first;
+        void updateColor(String color, int revision) {
+          controller.upsert(
+            ConversationSession(
+              id: original.id,
+              title: original.title,
+              updatedAt: original.updatedAt,
+              createdAt: original.createdAt,
+              lastMessageAt: original.lastMessageAt,
+              pinnedAt: original.pinnedAt,
+              revision: revision,
+              iconBackgroundColor: color,
+            ),
+          );
+        }
+
+        final avatar = find.byKey(Key('drawer-session-avatar-${original.id}'));
+        Future<Color> renderedBackground(Finder icon) async {
+          final point = tester.getTopLeft(icon) + const Offset(3, 15);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const Key('drawer-capture')),
+          );
+          final result = await tester.runAsync(() async {
+            final image = await boundary.toImage();
+            final bytes = (await image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            ))!;
+            final offset =
+                (point.dy.floor() * image.width + point.dx.floor()) * 4;
+            final color = Color.fromARGB(
+              bytes.getUint8(offset + 3),
+              bytes.getUint8(offset),
+              bytes.getUint8(offset + 1),
+              bytes.getUint8(offset + 2),
+            );
+            image.dispose();
+            return color;
+          });
+          return result!;
+        }
+
+        updateColor('#FEF2ED', 2);
+        await tester.pumpAndSettle();
+        expect(tester.getSize(avatar), const Size(30, 30));
+        expect(await renderedBackground(avatar), const Color(0xFFFEF2ED));
+        expect(
+          tester
+              .widget<AppSvgIcon>(avatar)
+              .colorMapper!
+              .substitute(null, 'path', 'fill', Colors.white),
+          Colors.white,
+        );
+        await openMenu(tester, original.id);
+        final previewAvatar = find.descendant(
+          of: find.byKey(const Key('app-context-menu-preview')),
+          matching: avatar,
+        );
+        expect(
+          await renderedBackground(previewAvatar),
+          const Color(0xFFFEF2ED),
+        );
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        updateColor('#edf5fe', 3);
+        await tester.pumpAndSettle();
+        expect(await renderedBackground(avatar), const Color(0xFFEDF5FE));
+        for (final invalid in ['', '#FFF', '#GGGGGG', 'red']) {
+          updateColor(invalid, 4);
+          await tester.pumpAndSettle();
+          expect(
+            tester.widget<AppSvgIcon>(avatar).assetName,
+            startsWith('drawer_conversation_'),
+          );
+          expect(tester.widget<AppSvgIcon>(avatar).colorMapper, isNull);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('pin, rename and delete stay updated after reopening', (
     tester,

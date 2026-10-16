@@ -22,12 +22,14 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../attachments/presentation/attachment_picker_sheet.dart';
 import '../../assets/domain/library_role.dart';
 import '../../assets/domain/library_work.dart';
+import '../../assets/presentation/role_selection_sheet.dart';
 import '../../role_guide/domain/role_guide_draft.dart';
 import '../../role_guide/domain/home_creation.dart';
 import '../../role_guide/data/media_preferences_repository.dart';
 import '../../role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import '../../role_guide/presentation/widgets/role_generation_sheet.dart';
 import '../domain/conversation_session.dart';
+import '../domain/conversation_cast.dart';
 import 'widgets/popi_message_composer.dart';
 import 'conversation_controller.dart';
 import 'composer_image_upload_controller.dart';
@@ -41,14 +43,12 @@ class SessionPage extends ConsumerStatefulWidget {
     this.pickImages,
     this.initialPrompt,
     this.sessionId,
-    this.accountId,
     super.key,
   });
 
   final Future<List<XFile>> Function()? pickImages;
   final String? initialPrompt;
   final String? sessionId;
-  final String? accountId;
 
   @override
   ConsumerState<SessionPage> createState() => _SessionPageState();
@@ -67,9 +67,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   int _composerRevision = 0;
   RoleGenerationSettings _generationSettings = const RoleGenerationSettings();
   bool _generationSheetOpen = false;
+  bool _castSheetOpen = false;
   String? _mediaPreferenceDescription;
   String? _activeSessionId;
-  String? _accountId;
+  String? _sessionTitle;
   Map<String, HomeConfig> _draftMediaPreferences = const {};
   ConversationController? _conversation;
 
@@ -81,7 +82,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     super.initState();
     _imageUploads.addListener(_onImageUploadsChanged);
     _activeSessionId = widget.sessionId;
-    _accountId = widget.accountId;
     _bindConversation();
     if (widget.initialPrompt != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,14 +93,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   @override
   void didUpdateWidget(SessionPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.sessionId != widget.sessionId ||
-        oldWidget.accountId != widget.accountId) {
+    if (oldWidget.sessionId != widget.sessionId) {
       // 新建会话写回路由时沿用正在发送的控制器，避免取消首条消息。
       if (widget.sessionId != null && widget.sessionId == _activeSessionId) {
         return;
       }
       _activeSessionId = widget.sessionId;
-      _accountId = widget.accountId;
       _draftMediaPreferences = const {};
       _mediaPreferenceDescription = null;
       _bindConversation();
@@ -138,7 +136,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
       if (previous == next) return;
       setState(() {
         _activeSessionId = null;
-        _accountId = null;
         _draftMediaPreferences = const {};
         _mediaPreferenceDescription = null;
         _resetComposer();
@@ -159,6 +156,15 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLoggedIn = ref.watch(userProvider) != null;
+    final sessionTitle = _activeSessionId == null
+        ? null
+        : ref
+                  .watch(sessionsProvider)
+                  .valueOrNull
+                  ?.where((session) => session.id == _activeSessionId)
+                  .firstOrNull
+                  ?.title ??
+              _sessionTitle;
     final showWelcome =
         _activeSessionId == null ||
         (_conversation?.snapshot?.messages.isEmpty == true &&
@@ -201,6 +207,22 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     surfaceTintColor: Colors.transparent,
                     elevation: 0,
                     toolbarHeight: 56,
+                    centerTitle: true,
+                    title: sessionTitle == null
+                        ? null
+                        : Tooltip(
+                            message: sessionTitle,
+                            child: Text(
+                              sessionTitle,
+                              key: const Key('session-app-bar-title'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                     leadingWidth: 80,
                     leading: Align(
                       alignment: Alignment.centerLeft,
@@ -231,9 +253,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                           dimension: 40,
                           child: IconButton(
                             key: const Key('session-new-conversation'),
-                            tooltip: l10n.newConversation,
+                            tooltip: l10n.attachmentFeaturePending,
                             padding: const EdgeInsets.all(4),
-                            onPressed: _startNewConversation,
+                            onPressed: () => AppToast.info(
+                              context,
+                              l10n.attachmentFeaturePending,
+                            ),
                             icon: SizedBox(
                               width: 30,
                               height: 32,
@@ -334,6 +359,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             controller: _messageController,
                             selectedImages: _selectedImages,
                             selectedRoles: _selectedRoles,
+                            castRoles: _activeSessionId == null
+                                ? _selectedRoles
+                                : conversationCastSelection(
+                                    _conversation?.snapshot,
+                                  ),
+                            onCastRequested: _showCastSheet,
+                            castEnabled: _canEditCast,
                             onRemoveRole: _removeSelectedRole,
                             selectedAssets: _selectedAssets,
                             onRemoveAsset: _removeSelectedAsset,
@@ -386,10 +418,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
   void _selectConversation(ConversationSession session) {
     setState(() {
       _activeSessionId = session.id;
-      _accountId = null;
       _draftMediaPreferences = const {};
       _mediaPreferenceDescription = null;
       _bindConversation();
+      _sessionTitle = session.title;
       _resetComposer();
     });
     final router = GoRouter.maybeOf(context);
@@ -410,7 +442,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     }
     setState(() {
       _activeSessionId = null;
-      _accountId = null;
       _draftMediaPreferences = const {};
       _mediaPreferenceDescription = null;
       _resetComposer();
@@ -422,13 +453,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
 
   void _bindConversation() {
     _conversation?.dispose();
+    _sessionTitle = null;
     final userId = ref.read(userProvider)?.id;
     _conversation = userId == null
         ? null
         : ConversationController(
             ref.read(sessionRepositoryProvider),
             userId,
-            accountId: _accountId,
             mediaPreferencesRepository: MediaPreferencesRepository(
               NetworkApi(ref.read(dioProvider)),
             ),
@@ -443,6 +474,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
               if (!mounted || ref.read(userProvider)?.id != userId) return;
               final changed = _activeSessionId != session.id;
               _activeSessionId = session.id;
+              _sessionTitle = session.title;
               ref
                   .read(sessionsProvider.notifier)
                   .upsert(session, insertIfMissing: changed);
@@ -511,6 +543,77 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           queryParameters: {'sessionId': conversation.sessionId!},
         ).toString(),
       );
+    }
+  }
+
+  bool get _canEditCast {
+    final conversation = _conversation;
+    if (conversation == null) return true;
+    if (conversation.pending || conversation.running || conversation.loading) {
+      return false;
+    }
+    if (_activeSessionId == null) return true;
+    return conversation.snapshot?.session.archived == false &&
+        conversation.snapshot?.session.bindingStatus == 'ready' &&
+        conversation.connection == ConversationConnection.connected;
+  }
+
+  Future<void> _showCastSheet() async {
+    if (_castSheetOpen || !_canEditCast) return;
+    if (ref.read(userProvider) == null) {
+      GoRouter.maybeOf(context)?.push('/login');
+      return;
+    }
+    _castSheetOpen = true;
+    _messageController.dismissKeyboard();
+    final conversation = _conversation;
+    final revision = _composerRevision;
+    final sessionId = _activeSessionId;
+    final userId = ref.read(userProvider)?.id;
+    bool current() =>
+        mounted &&
+        revision == _composerRevision &&
+        identical(conversation, _conversation) &&
+        sessionId == _activeSessionId &&
+        ref.read(userProvider)?.id == userId;
+    try {
+      await RoleSelectionSheet.show(
+        context: context,
+        selected: sessionId == null
+            ? List.of(_selectedRoles)
+            : conversationCastSelection(conversation?.snapshot),
+        conversationMode: true,
+        creatorMode:
+            sessionId == null ||
+            conversation?.snapshot?.session.creatorV1 == true,
+        status: conversation,
+        enabled: () => current() && _canEditCast,
+        onCreate: () {
+          if (!current() || !_canEditCast) return;
+          Navigator.of(context).pop();
+          _messageController.setText(
+            AppLocalizations.of(context)!.createNewRolePrompt,
+          );
+        },
+        onConfirm: (roles) async {
+          if (!current() || !_canEditCast) return false;
+          if (sessionId == null) {
+            setState(
+              () => _selectedRoles
+                ..clear()
+                ..addAll(roles),
+            );
+            return true;
+          }
+          final success = await conversation!.updateCast(
+            roles.map((role) => role.id).toList(),
+          );
+          if (success && current()) setState(_selectedRoles.clear);
+          return success && current();
+        },
+      );
+    } finally {
+      _castSheetOpen = false;
     }
   }
 

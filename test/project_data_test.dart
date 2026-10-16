@@ -37,6 +37,7 @@ void main() {
                         'id': 'project-$page',
                         'title': 'Project $page',
                         'status': 'active',
+                        'iconBackgroundColor': '#FEF2ED',
                       },
                       if (page == 2)
                         {
@@ -59,6 +60,7 @@ void main() {
         NetworkAgentApi(dio),
       ).listProjects();
       expect(projects.items.map((item) => item.id), ['project-1']);
+      expect(projects.items.single.iconBackgroundColor, '#FEF2ED');
       expect(projects.hasMore, isTrue);
       expect(requests.length, 1);
       for (final request in requests) {

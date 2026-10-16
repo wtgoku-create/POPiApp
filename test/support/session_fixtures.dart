@@ -47,14 +47,6 @@ class FixtureSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<ConversationSession> resolveAccountSession(
-    String userId,
-    String accountId,
-    String title, {
-    CancelToken? cancelToken,
-  }) => create(userId, title, cancelToken: cancelToken);
-
-  @override
   Future<ConversationSession> createFromContent(
     String userId, {
     CancelToken? cancelToken,
@@ -224,6 +216,14 @@ class FixtureSessionRepository extends SessionRepository {
     List<String> roleIds = const [],
     CancelToken? cancelToken,
   }) async {}
+  @override
+  Future<void> updateCast(
+    String userId,
+    String id,
+    List<String> roleIds, {
+    CancelToken? cancelToken,
+  }) async {}
+
   @override
   Future<void> stop(
     String userId,

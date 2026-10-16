@@ -3187,6 +3187,12 @@ abstract class AppLocalizations {
   /// **'Say something to POPi...'**
   String get composerPlaceholder;
 
+  /// No description provided for @composerRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Session is running'**
+  String get composerRunning;
+
   /// No description provided for @sessionWelcomeTitle.
   ///
   /// In en, this message translates to:
@@ -4008,6 +4014,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to sign out. Try again later'**
   String get logoutFailed;
+
+  /// No description provided for @cancelAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get cancelAccount;
+
+  /// No description provided for @cancelAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get cancelAccountTitle;
+
+  /// No description provided for @cancelAccountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone. You will no longer be able to sign in, and all devices will be signed out.\nYour phone number and linked accounts cannot automatically register a new account. Historical data and works will be retained.'**
+  String get cancelAccountDescription;
+
+  /// No description provided for @confirmCancelAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get confirmCancelAccount;
+
+  /// No description provided for @cancelAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to delete your account. Try again later'**
+  String get cancelAccountFailed;
 
   /// No description provided for @regularUser.
   ///
@@ -4944,6 +4980,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cast'**
   String get chatCastRole;
+
+  /// No description provided for @chatCastUnmatched.
+  ///
+  /// In en, this message translates to:
+  /// **'Unmatched'**
+  String get chatCastUnmatched;
+
+  /// No description provided for @chatCastMultiple.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} roles'**
+  String chatCastMultiple(int count);
+
+  /// No description provided for @chatConfirmCast.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm cast'**
+  String get chatConfirmCast;
+
+  /// No description provided for @chatCastRoleUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This role is unavailable. Choose a readable role with a saved profile.'**
+  String get chatCastRoleUnavailable;
 
   /// No description provided for @chatRoleActive.
   ///

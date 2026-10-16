@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/generation_config_controls.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/home_generation_config_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
@@ -186,6 +187,54 @@ Future<void> configTap(WidgetTester tester, String key) async {
 }
 
 void main() {
+  for (final width in [344.0, 200.0, 70.0]) {
+    testWidgets('parameter pills fill each row at width $width', (
+      tester,
+    ) async {
+      Object? selected;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: GenerationOptions(
+                  options: const [
+                    (label: '720p', value: '720p'),
+                    (label: '1080p', value: '1080p'),
+                    (label: '4K', value: '4k'),
+                  ],
+                  value: '720p',
+                  onSelected: (value) => selected = value,
+                  keyPrefix: 'layout',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final rows = <double, List<Rect>>{};
+      for (final value in ['720p', '1080p', '4k']) {
+        final rect = tester.getRect(find.byKey(Key('layout-$value')));
+        rows.putIfAbsent(rect.top, () => []).add(rect);
+        expect(rect.width, greaterThanOrEqualTo(width < 88 ? width : 88));
+      }
+      expect(rows.length, width == 344 ? 1 : (width == 200 ? 2 : 3));
+      for (final row in rows.values) {
+        expect(row.first.left, closeTo(0, .01));
+        expect(row.last.right, closeTo(width, .01));
+        for (final rect in row) {
+          expect(rect.width, closeTo(row.first.width, .01));
+        }
+      }
+      await tester.tap(find.byKey(const Key('layout-4k')));
+      expect(selected, '4k');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final mediaType in ['video', 'image']) {
     testWidgets(
       '$mediaType quality options select and save through pill buttons',
