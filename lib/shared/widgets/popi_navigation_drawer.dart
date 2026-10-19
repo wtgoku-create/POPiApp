@@ -30,7 +30,7 @@ class PopiNavigationDrawer extends ConsumerStatefulWidget {
 }
 
 class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
-  bool? _showAllNavigation;
+  bool _showAllNavigation = false;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -44,8 +44,7 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
     final uri = GoRouter.maybeOf(context)?.state.uri ?? Uri(path: '/');
     final route = uri.path;
     final showingRoles = uri.queryParameters['section'] == 'roles';
-    final showAllNavigation =
-        _showAllNavigation ?? (route != '/' && route != '/session');
+    final showAllNavigation = _showAllNavigation;
 
     return Container(
       key: const Key('popi-navigation-drawer'),
@@ -154,8 +153,9 @@ class _PopiNavigationDrawerState extends ConsumerState<PopiNavigationDrawer> {
                             key: const Key('drawer-nav-view-all'),
                             label: l10n.drawerViewAll,
                             muted: true,
-                            onTap: () =>
-                                setState(() => _showAllNavigation = true),
+                            onTap: () {
+                              setState(() => _showAllNavigation = true);
+                            },
                           ),
                         if (showAllNavigation) ...[
                           _NavigationItem(
