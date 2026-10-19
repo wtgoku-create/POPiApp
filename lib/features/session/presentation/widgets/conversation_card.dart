@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import 'conversation_style.dart';
 
 /// Shared text hierarchy for conversation cards and their embedded documents.
 abstract final class ConversationCardTypography {
@@ -26,16 +26,16 @@ class ConversationCard extends StatelessWidget {
     width: double.infinity,
     decoration: framed
         ? BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.light
-                ? Colors.white.withValues(alpha: .6)
-                : Theme.of(context).colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(AppRadii.card),
+            color: ConversationStyle.cardColor(context),
+            borderRadius: BorderRadius.circular(ConversationStyle.cardRadius),
           )
         : null,
     child: Material(
       type: MaterialType.transparency,
       child: DefaultTextStyle.merge(
-        style: ConversationCardTypography.body,
+        style: ConversationCardTypography.body.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
         child: child,
       ),
     ),

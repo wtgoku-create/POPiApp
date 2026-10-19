@@ -29,9 +29,11 @@ import '../conversation_error_text.dart';
 import 'conversation_role_card.dart';
 import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
+import 'conversation_style.dart';
 import 'conversation_card_content.dart';
 import 'conversation_generation_card.dart';
 import 'conversation_task_card.dart';
+import 'conversation_progress.dart';
 
 const _conversationMessageSpacing = 30.0;
 const _conversationCardSpacing = 10.0;
@@ -261,7 +263,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
             controller: controller,
           ),
         );
-      } else if (block.type == 'text' && block.text.isNotEmpty) {
+      } else if (block.type == 'text' && block.text.trim().isNotEmpty) {
         final text = MarkdownMessage(text: block.text, emphasized: isSentByMe);
         children.add(
           isSentByMe && _hasFullWidthObjects(message)
@@ -274,7 +276,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                       ),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
+                          color: ConversationStyle.userBubbleColor(context),
                           borderRadius: _userBubbleRadius,
                         ),
                         child: Padding(
@@ -525,11 +527,12 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
               (context, message, index, {required isSentByMe, groupStatus}) {
                 final item =
                     message.metadata!['conversation'] as ConversationMessage;
-                final colors = Theme.of(context).colorScheme;
                 final userBubble = isSentByMe && !_hasFullWidthObjects(item);
                 return DecoratedBox(
                   decoration: BoxDecoration(
-                    color: userBubble ? colors.surface : Colors.transparent,
+                    color: userBubble
+                        ? ConversationStyle.userBubbleColor(context)
+                        : Colors.transparent,
                     borderRadius: _userBubbleRadius,
                   ),
                   child: Padding(
@@ -649,10 +652,14 @@ class MarkdownMessage extends StatelessWidget {
         style ??
         (compact
                 ? ConversationCardTypography.body
-                : const TextStyle(fontSize: 18, height: 1.6))
+                : emphasized
+                ? ConversationStyle.userMessage
+                : ConversationStyle.message)
             .copyWith(
               color: colors.onSurface,
-              fontWeight: emphasized ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: emphasized || !compact
+                  ? FontWeight.w600
+                  : FontWeight.w400,
             );
     final heading = compact
         ? ConversationCardTypography.title.copyWith(color: body.color)
@@ -726,26 +733,28 @@ class _ConversationProgressHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const AppSvgIcon.asset('chat_thinking', size: 25),
-        const SizedBox(width: 8),
+        const SizedBox(width: 5),
         Flexible(
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 18,
-              height: 1.4,
-              fontWeight: FontWeight.w600,
+            style: ConversationStyle.progressTitle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
         if (onToggle != null)
-          IconButton(
-            tooltip: expanded
-                ? AppLocalizations.of(context)!.chatCollapseProgress
-                : AppLocalizations.of(context)!.chatExpandProgress,
-            onPressed: onToggle,
-            icon: Icon(
-              expanded ? Icons.expand_more : Icons.chevron_right,
-              size: 20,
+          SizedBox.square(
+            dimension: 25,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: expanded
+                  ? AppLocalizations.of(context)!.chatCollapseProgress
+                  : AppLocalizations.of(context)!.chatExpandProgress,
+              onPressed: onToggle,
+              icon: Icon(
+                expanded ? Icons.expand_more : Icons.chevron_right,
+                size: 20,
+              ),
             ),
           ),
       ],
@@ -1208,10 +1217,10 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
     if (block.kind == 'progress') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: _conversationCardSpacing,
+        spacing: 8,
         children: [
           _ConversationProgressHeader(
-            label: _progressRunning(block) ? l10n.chatThinking : statusLabel,
+            label: conversationProgressTitle(block, l10n),
             running: _progressRunning(block),
             expanded: _progressExpanded,
             onToggle: () =>
@@ -1219,67 +1228,21 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
           ),
           if (_progressExpanded)
             Container(
+              width: 238,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.light
-                    ? Colors.white.withValues(alpha: .5)
-                    : colors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(26),
+                color: ConversationStyle.cardColor(context),
+                borderRadius: BorderRadius.circular(
+                  ConversationStyle.cardRadius,
+                ),
               ),
               child: ConversationCardContent(
                 storageId:
                     'progress:${block.data['runId'] ?? block.id}:${block.data['attempt'] ?? 1}',
                 maxViewportHeight: 360,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Render only backend-provided steps; never manufacture progress.
-                    for (final (key, state) in block.progressSteps)
-                      Padding(
-                        key: ValueKey('conversation-progress-step-$key'),
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (['running', 'waiting'].contains(state))
-                              SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  value: MediaQuery.disableAnimationsOf(context)
-                                      ? .75
-                                      : null,
-                                ),
-                              )
-                            else
-                              Icon(
-                                state == 'completed'
-                                    ? Icons.check
-                                    : state == 'failed'
-                                    ? Icons.error_outline
-                                    : state == 'skipped'
-                                    ? Icons.remove
-                                    : Icons.circle_outlined,
-                                size: 18,
-                                color: state == 'failed'
-                                    ? colors.error
-                                    : colors.primary,
-                              ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Text(
-                                _progressLabel(key, l10n),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
+                child: ConversationProgressSteps(
+                  steps: block.progressDetails,
+                  showStatusLabels: false,
                 ),
               ),
             ),
@@ -1577,22 +1540,6 @@ String _detailLabel(String label, AppLocalizations l10n) => switch (label) {
   'positioning' => l10n.rolePositioning,
   'boundaries' => l10n.roleBoundaries,
   _ => label,
-};
-
-String _progressLabel(String key, AppLocalizations l10n) => switch (key) {
-  'script.run.preparing' => l10n.chatPreparing,
-  'script.run.generatingReply' => l10n.chatGeneratingReply,
-  'script.run.savingArtifact' => l10n.chatSavingArtifact,
-  'script.run.planningGeneration' => l10n.chatPlanningGeneration,
-  'pages.studio.progress.readRole' => l10n.chatReadRole,
-  'pages.studio.progress.readContext' => l10n.chatReadContext,
-  'pages.studio.progress.topics' => l10n.chatTopics,
-  'pages.studio.progress.prepareRole' => l10n.chatPrepareRole,
-  'pages.studio.progress.askUser' => l10n.chatAskUser,
-  'pages.studio.progress.saveRole' => l10n.chatSaveRole,
-  'pages.studio.progress.publishRole' => l10n.chatPublishRole,
-  'pages.studio.state.completed' => l10n.chatCompleted,
-  _ => l10n.chatProcessing,
 };
 
 String _statusLabel(String status, AppLocalizations l10n) =>

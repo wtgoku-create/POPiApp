@@ -1,6 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/network_api.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/providers/network_provider.dart';
+import '../../../../shared/providers/session_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
@@ -8,39 +13,56 @@ import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_player.dart';
 import '../../data/session_artifact_repository.dart';
 import '../../domain/session_artifact.dart';
+import '../../domain/conversation_snapshot.dart';
+import '../../data/session_repository.dart';
+import 'conversation_timeline.dart' show MarkdownMessage, ConversationMediaView;
 
 /// Conversation outputs and their details share one sheet navigation stack.
-class SessionArtifactsSheet extends StatefulWidget {
+class SessionArtifactsSheet extends ConsumerStatefulWidget {
   const SessionArtifactsSheet({
     this.sessionId,
-    this.repository = const SessionArtifactRepository(),
+    this.repository,
+    this.snapshot,
+    this.mediaRepository,
     super.key,
   });
 
   final String? sessionId;
-  final SessionArtifactRepository repository;
+  final SessionArtifactRepository? repository;
+  final ConversationSnapshot? snapshot;
+  final SessionRepository? mediaRepository;
 
-  static Future<void> show(BuildContext context, {String? sessionId}) =>
-      AppSheet.show<void>(
-        context: context,
-        isScrollControlled: true,
-        showDragHandle: false,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
-        ),
-        builder: (_) => SessionArtifactsSheet(sessionId: sessionId),
-      );
+  static Future<void> show(
+    BuildContext context, {
+    String? sessionId,
+    ConversationSnapshot? snapshot,
+    SessionRepository? mediaRepository,
+  }) => AppSheet.show<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: false,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+    ),
+    builder: (_) => SessionArtifactsSheet(
+      sessionId: sessionId,
+      snapshot: snapshot,
+      mediaRepository: mediaRepository,
+    ),
+  );
 
   @override
-  State<SessionArtifactsSheet> createState() => _SessionArtifactsSheetState();
+  ConsumerState<SessionArtifactsSheet> createState() =>
+      _SessionArtifactsSheetState();
 }
 
-class _SessionArtifactsSheetState extends State<SessionArtifactsSheet> {
+class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
   final _listController = ScrollController();
   List<SessionArtifact>? _items;
   SessionArtifactType? _filter;
   SessionArtifact? _selected;
+  CancelToken? _loadToken;
 
   @override
   void initState() {
@@ -48,19 +70,48 @@ class _SessionArtifactsSheetState extends State<SessionArtifactsSheet> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(SessionArtifactsSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId != widget.sessionId ||
+        oldWidget.repository != widget.repository) {
+      _selected = null;
+      _items = null;
+      _load();
+    }
+  }
+
   Future<void> _load() async {
+    _loadToken?.cancel();
+    final token = _loadToken = CancelToken();
     try {
-      final items = await widget.repository.list(widget.sessionId);
-      if (mounted) setState(() => _items = items);
+      final repository =
+          widget.repository ??
+          ApiSessionArtifactRepository(
+            NetworkApi(ref.read(dioProvider)),
+            cancelToken: token,
+          );
+      final items = await repository.list(widget.sessionId);
+      if (mounted && !token.isCancelled) {
+        setState(
+          () => _items = [
+            ...items,
+            ...SessionArtifact.mediaFromSnapshot(widget.snapshot),
+          ],
+        );
+      }
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _items = const []);
+      if (!mounted || token.isCancelled) return;
+      setState(
+        () => _items = SessionArtifact.mediaFromSnapshot(widget.snapshot),
+      );
       AppToast.error(context, AppLocalizations.of(context)!.chatRequestFailed);
     }
   }
 
   @override
   void dispose() {
+    _loadToken?.cancel();
     _listController.dispose();
     super.dispose();
   }
@@ -86,8 +137,8 @@ class _SessionArtifactsSheetState extends State<SessionArtifactsSheet> {
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
               children: [
-                SizedBox(
-                  height: 40,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 40),
                   child: selected == null
                       ? Center(
                           child: Text(
@@ -120,7 +171,11 @@ class _SessionArtifactsSheetState extends State<SessionArtifactsSheet> {
                                 ),
                               ),
                             ),
-                            const _DownloadButton(),
+                            if (selected.textKind == null &&
+                                selected.mediaId == null)
+                              const _DownloadButton()
+                            else
+                              const SizedBox(width: 40),
                           ],
                         ),
                 ),
@@ -136,6 +191,10 @@ class _SessionArtifactsSheetState extends State<SessionArtifactsSheet> {
                         _ArtifactDetail(
                           key: ValueKey(selected.id),
                           item: selected,
+                          repository: selected.mediaId == null
+                              ? null
+                              : widget.mediaRepository ??
+                                    ref.read(sessionRepositoryProvider),
                         ),
                     ],
                   ),
@@ -231,6 +290,27 @@ String _detailTitle(AppLocalizations l10n, SessionArtifactType type) =>
       SessionArtifactType.video => l10n.sessionArtifactVideoDetail,
     };
 
+String _artifactMetadata(SessionArtifact item, BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+  if (item.textKind == null) return item.metadata;
+  final kind = switch (item.textKind) {
+    'topic' => l10n.chatTextTopic,
+    'storyboard' => l10n.chatTextStoryboard,
+    _ => l10n.chatTextScript,
+  };
+  return [
+    kind,
+    if ((item.durationSeconds ?? 0) > 0)
+      l10n.roleDurationSeconds(item.durationSeconds.toString())
+    else
+      l10n.chatTextUnknownDuration,
+    if (item.createdAt != null)
+      MaterialLocalizations.of(
+        context,
+      ).formatMediumDate(item.createdAt!.toLocal()),
+  ].join(' · ');
+}
+
 class _DownloadButton extends StatelessWidget {
   const _DownloadButton({this.id});
 
@@ -308,8 +388,10 @@ class _ArtifactCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _DownloadButton(id: item.id),
-              const SizedBox(width: 8),
+              if (item.textKind == null && item.mediaId == null) ...[
+                _DownloadButton(id: item.id),
+                const SizedBox(width: 8),
+              ],
               SizedBox.square(
                 dimension: 40,
                 child: IconButton(
@@ -360,7 +442,7 @@ class _ArtifactCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      item.metadata,
+                      _artifactMetadata(item, context),
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.onSurfaceVariant.withValues(alpha: .65),
@@ -394,9 +476,10 @@ class _ArtifactImage extends StatelessWidget {
 }
 
 class _ArtifactDetail extends StatefulWidget {
-  const _ArtifactDetail({required this.item, super.key});
+  const _ArtifactDetail({required this.item, this.repository, super.key});
 
   final SessionArtifact item;
+  final SessionRepository? repository;
 
   @override
   State<_ArtifactDetail> createState() => _ArtifactDetailState();
@@ -423,21 +506,29 @@ class _ArtifactDetailState extends State<_ArtifactDetail> {
         ),
         const SizedBox(height: 5),
         Text(
-          item.metadata,
+          _artifactMetadata(item, context),
           style: TextStyle(
             fontSize: 14,
             color: colors.onSurfaceVariant.withValues(alpha: .65),
           ),
         ),
         const SizedBox(height: 20),
-        if (item.type == SessionArtifactType.image) ...[
+        if (item.mediaId != null) ...[
+          ConversationMediaView(
+            id: item.mediaId!,
+            repository: widget.repository!,
+            result: true,
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (item.mediaId == null && item.type == SessionArtifactType.image) ...[
           AspectRatio(
             aspectRatio: 1,
             child: _ArtifactImage(asset: item.previewAsset!),
           ),
           const SizedBox(height: 20),
         ],
-        if (item.type == SessionArtifactType.video) ...[
+        if (item.mediaId == null && item.type == SessionArtifactType.video) ...[
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: _playing
@@ -482,14 +573,17 @@ class _ArtifactDetailState extends State<_ArtifactDetail> {
           ),
           const SizedBox(height: 20),
         ],
-        Text(
-          item.summary,
-          style: TextStyle(
-            fontSize: item.type == SessionArtifactType.script ? 16 : 14,
-            height: 1.4,
-            color: colors.onSurfaceVariant,
+        if (item.textKind != null)
+          MarkdownMessage(text: item.summary)
+        else
+          Text(
+            item.summary,
+            style: TextStyle(
+              fontSize: item.type == SessionArtifactType.script ? 16 : 14,
+              height: 1.4,
+              color: colors.onSurfaceVariant,
+            ),
           ),
-        ),
         for (final shot in item.shots) ...[
           const SizedBox(height: 20),
           Wrap(

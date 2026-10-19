@@ -6,6 +6,7 @@ import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_progress.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
 import 'conversation_events_test.dart'
@@ -38,6 +39,88 @@ Map<String, Object?> message(List<Map<String, Object?>> steps, int revision) =>
     };
 
 void main() {
+  test(
+    'nested actions keep their parent and terminal runs settle their states',
+    () {
+      final block = progress([
+        step('root', 'pages.studio.progress.writeScript', 'running'),
+        {
+          ...step('child', 'pages.studio.progress.validateText', 'waiting'),
+          'parentId': 'root',
+        },
+        {
+          ...step('other', 'pages.studio.progress.validateText', 'completed'),
+          'parentId': 'another-root',
+        },
+      ]);
+      expect(
+        block.progressDetails.map((s) => (s.labelKey, s.parentId, s.status)),
+        [
+          ('pages.studio.progress.writeScript', null, 'running'),
+          ('pages.studio.progress.validateText', 'root', 'waiting'),
+          ('pages.studio.progress.validateText', 'another-root', 'completed'),
+        ],
+      );
+      expect(
+        progress([
+          step('root', reading, 'running'),
+        ], state: 'cancelled').progressSteps,
+        [(reading, 'skipped')],
+      );
+    },
+  );
+
+  testWidgets(
+    'specific actions, waiting states and nested details fit narrow large text',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final block = progress([
+        step('root', 'pages.studio.progress.writeScript', 'completed'),
+        {
+          ...step('child', 'pages.studio.progress.validateText', 'waiting'),
+          'parentId': 'root',
+        },
+      ]);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark,
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(2)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  expect(conversationProgressTitle(block, l10n), '校验正文、时长与结构');
+                  return ConversationProgressSteps(
+                    steps: block.progressDetails,
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('编写剧本'), findsOneWidget);
+      expect(find.text('校验正文、时长与结构'), findsOneWidget);
+      expect(find.text('等待中'), findsOneWidget);
+      expect(find.byIcon(Icons.schedule), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
   test(
     'old snapshots merge repeated phases and keep concurrent active calls',
     () {
@@ -206,7 +289,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('正在处理你的需求'), findsOneWidget);
+        expect(find.text('正在处理你的需求'), findsNWidgets(2));
         final content = find.byType(ConversationCardContent);
         expect(
           tester.getSize(content).height,

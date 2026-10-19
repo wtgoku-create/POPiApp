@@ -12,6 +12,7 @@ import 'conversation_card.dart';
 import 'conversation_card_content.dart';
 import 'conversation_generation_configuration.dart';
 import 'conversation_role_card.dart';
+import 'conversation_progress.dart';
 import 'conversation_timeline.dart' show ConversationMediaView, MarkdownMessage;
 
 /// A single generation task owns its loading surface, outputs and saved plan.
@@ -33,6 +34,7 @@ class _ConversationGenerationTaskCardState
     extends State<ConversationGenerationTaskCard> {
   bool _expanded = true;
   bool _planExpanded = false;
+  bool _progressExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +44,22 @@ class _ConversationGenerationTaskCardState
       widget.block,
       widget.controller.snapshot,
     );
+    final activity = conversationProgressTitle(
+      widget.block,
+      l10n,
+      fallback: switch (view.state) {
+        'queued' => l10n.chatProgressQueuedGeneration,
+        'saving' => l10n.chatProgressSaveMedia,
+        'sync_error' => l10n.chatProgressSyncResult,
+        _ => switch (widget.block.mediaType) {
+          'video' => l10n.chatProgressGenerateVideo,
+          'audio' => l10n.chatProgressGenerateAudio,
+          _ => l10n.chatProgressGenerateImage,
+        },
+      },
+    );
     final title = view.active
-        ? l10n.chatGenerationWorking
+        ? activity
         : view.completed
         ? l10n.chatGenerationTaskCompleted
         : conversationStatusLabel(view.state, l10n);
@@ -98,7 +114,7 @@ class _ConversationGenerationTaskCardState
             if (view.active || _expanded) ...[
               const SizedBox(height: 10),
               if (view.active)
-                const _GenerationPlaceholder()
+                _GenerationPlaceholder(label: activity)
               else if (view.completed)
                 if (view.mediaIds.isEmpty)
                   AppSkeleton(
@@ -166,6 +182,34 @@ class _ConversationGenerationTaskCardState
                     ),
                   ),
                 ),
+              if (widget.block.progressDetails.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                TextButton(
+                  key: Key(
+                    'conversation-generation-task-progress-${widget.block.id}',
+                  ),
+                  onPressed: () =>
+                      setState(() => _progressExpanded = !_progressExpanded),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(l10n.chatProgressDetails)),
+                      Icon(
+                        _progressExpanded
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                if (_progressExpanded)
+                  ConversationCardContent(
+                    storageId: 'generation-task:${widget.block.id}:progress',
+                    child: ConversationProgressSteps(
+                      steps: widget.block.progressDetails,
+                    ),
+                  ),
+              ],
               if (view.fixedPlan case final plan?) ...[
                 const SizedBox(height: 10),
                 TextButton(
@@ -278,7 +322,8 @@ class _SavedGenerationPlan extends StatelessWidget {
 }
 
 class _GenerationPlaceholder extends StatelessWidget {
-  const _GenerationPlaceholder();
+  const _GenerationPlaceholder({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) => AspectRatio(
@@ -313,7 +358,7 @@ class _GenerationPlaceholder extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      AppLocalizations.of(context)!.chatGenerationWorkingHint,
+                      label,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white,

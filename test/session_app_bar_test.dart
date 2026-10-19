@@ -13,6 +13,7 @@ import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
@@ -32,8 +33,35 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final dio = Dio()
+      ..interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            if (request.path.endsWith('/text-artifacts')) {
+              handler.resolve(
+                Response(
+                  requestOptions: request,
+                  data: {
+                    'status': '0000',
+                    'data': {
+                      'list': [],
+                      'pageInfo': {'pageCount': 1},
+                    },
+                  },
+                ),
+              );
+            } else {
+              handler.reject(DioException(requestOptions: request));
+            }
+          },
+        ),
+      );
+    addTearDown(() => dio.close(force: true));
     final container = ProviderContainer(
-      overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        sessionRepositoryProvider.overrideWithValue(repository),
+        dioProvider.overrideWithValue(dio),
+      ],
     );
     addTearDown(container.dispose);
     if (!guest) {
@@ -174,7 +202,7 @@ void main() {
     },
   );
 
-  testWidgets('guest can preview mock outputs without leaving the page', (
+  testWidgets('guest sees empty outputs without leaving the page', (
     tester,
   ) async {
     final repository = _SessionRepository();
@@ -188,6 +216,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Login page'), findsNothing);
     expect(find.text('当前对话产物'), findsOneWidget);
+    expect(find.text('暂无产物'), findsOneWidget);
     expect(router.state.uri.path, '/session');
     expect(repository.createCalls, 0);
     await tester.pump(const Duration(seconds: 4));

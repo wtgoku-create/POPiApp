@@ -6,6 +6,7 @@ import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_role_card.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
 import 'conversation_events_test.dart'
@@ -74,6 +75,84 @@ class _Controller extends ConversationController {
 }
 
 void main() {
+  testWidgets(
+    'cast messages retain nonblank text above grouped role cards and explicit clears',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = _Controller()
+        ..publish(
+          _snapshot([
+            {
+              ...chatMessageJson(seq: 1),
+              'id': 'cast',
+              'role': 'user',
+              'blocks': [
+                {'type': 'text', 'text': 'Use these roles'},
+                {'type': 'text', 'text': '  \n  '},
+                for (final id in [1, 2])
+                  {
+                    'type': 'object',
+                    'kind': 'role',
+                    'action': 'cast',
+                    'data': {
+                      'ref': {'kind': 'character', 'id': id},
+                      'title': 'Role $id',
+                      'profile': {},
+                    },
+                  },
+              ],
+            },
+            {
+              ...chatMessageJson(seq: 2, text: 'Clear the cast'),
+              'id': 'clear',
+              'role': 'user',
+            },
+          ]),
+        );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: ConversationTimeline(controller: controller)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final text = find.byWidgetPredicate(
+        (w) => w is MarkdownMessage && w.text == 'Use these roles',
+      );
+      expect(text, findsOneWidget);
+      final cast = find.byType(ConversationCastCard);
+      expect(
+        tester
+            .widget<ConversationCastCard>(cast)
+            .blocks
+            .map((block) => block.title),
+        ['Role 1', 'Role 2'],
+      );
+      expect(
+        tester.getBottomLeft(text).dy,
+        lessThanOrEqualTo(tester.getTopLeft(cast).dy),
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is MarkdownMessage && w.text.trim().isEmpty,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is MarkdownMessage && w.text == 'Clear the cast',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('draft bodies and references follow reply order without duplicates', () {
     final snapshot = _example();
     final source = snapshot.messages;

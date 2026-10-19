@@ -89,6 +89,7 @@ Future<StreamingSessionRepository> _pumpTopicPage(
   bool dark = false,
   double scale = 1,
   bool sentByUser = false,
+  List<Map<String, Object?>>? messages,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -97,13 +98,15 @@ Future<StreamingSessionRepository> _pumpTopicPage(
   final repository = StreamingSessionRepository()
     ..data = chatSnapshotJson(
       seq: 1,
-      messages: [
-        {
-          ...chatMessageJson(),
-          if (sentByUser) 'role': 'user',
-          'blocks': blocks,
-        },
-      ],
+      messages:
+          messages ??
+          [
+            {
+              ...chatMessageJson(),
+              if (sentByUser) 'role': 'user',
+              'blocks': blocks,
+            },
+          ],
     );
   final container = ProviderContainer(
     overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
@@ -163,6 +166,94 @@ void main() {
       await icons.load();
     }
   });
+
+  for (final (name, size, dark, scale) in [
+    ('figma', const Size(440, 956), false, 1.0),
+    ('compact', const Size(320, 844), false, 1.5),
+    ('dark', const Size(390, 844), true, 1.0),
+  ]) {
+    testWidgets('conversation reading layout at $name', (tester) async {
+      const prompt = '你需要做一个什么样的角色？';
+      const request = '我想制作一个可爱的萌宠角色';
+      const reply =
+          '收到，我会根据兜兜的人物与人设，围绕当前选题整理创作方案。'
+          '采用安静认真、反应慢但责任心强；短手够不到会尴尬，观察后愿意换方法，'
+          '用具体行动完成承诺的表达风格，陪它发现不起眼的温柔。';
+      await _pumpTopicPage(
+        tester,
+        const [],
+        size: size,
+        dark: dark,
+        scale: scale,
+        messages: [
+          {...chatMessageJson(text: prompt), 'id': 'prompt'},
+          {
+            ...chatMessageJson(seq: 2, text: request),
+            'id': 'request',
+            'role': 'user',
+          },
+          {
+            ...chatMessageJson(seq: 3),
+            'id': 'progress',
+            'blocks': [
+              {
+                'type': 'object',
+                'kind': 'progress',
+                'data': {
+                  'runId': 'run',
+                  'state': 'running',
+                  'steps': [
+                    {
+                      'id': 'prepare',
+                      'labelKey': 'script.run.preparing',
+                      'status': 'completed',
+                    },
+                    {
+                      'id': 'processing',
+                      'labelKey': 'script.run.processing',
+                      'status': 'completed',
+                    },
+                    {
+                      'id': 'reply',
+                      'labelKey': 'script.run.generatingReply',
+                      'status': 'running',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {...chatMessageJson(seq: 4, text: reply), 'id': 'reply'},
+        ],
+      );
+      final timeline = find.byType(ConversationTimeline);
+      final toggle = find.byTooltip('收起进度');
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      final header = tester.getRect(toggle);
+      expect(header.height, 25);
+      expect(header.left, greaterThanOrEqualTo(20));
+      expect(header.right, lessThanOrEqualTo(size.width - 20));
+      final progressCard = find
+          .ancestor(
+            of: find.byType(ConversationCardContent),
+            matching: find.byType(Container),
+          )
+          .first;
+      expect(tester.getSize(progressCard).width, 238);
+      expect(find.text('执行中'), findsNothing);
+      expect(find.text('已完成'), findsNothing);
+      await _capture(tester, '$name-conversation');
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('展开进度'), findsOneWidget);
+      await tester.drag(timeline, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('收到，我会根据兜兜'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 
   for (final (name, size, locale, dark, scale) in [
     ('mobile', const Size(390, 844), const Locale('zh'), false, 1.0),
@@ -820,13 +911,7 @@ void main() {
             ),
             home: Scaffold(
               body: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFEDE9FD), Colors.white],
-                  ),
-                ),
+                decoration: const BoxDecoration(color: Color(0xFFF5F4FA)),
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [

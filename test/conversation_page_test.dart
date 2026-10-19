@@ -109,7 +109,10 @@ void main() {
           (widget) =>
               widget is ConversationObjectView && widget.block.status == state,
         );
-        expect(find.text(l10n.chatThinking), findsOneWidget);
+        final currentTitle = find
+            .descendant(of: current, matching: find.text(l10n.chatProcessing))
+            .first;
+        expect(currentTitle, findsOneWidget);
         expect(loading, findsOneWidget);
         expect(find.descendant(of: current, matching: loading), findsOneWidget);
         final toggle = find.descendant(
@@ -117,8 +120,7 @@ void main() {
           matching: find.byTooltip(l10n.chatCollapseProgress),
         );
         expect(
-          tester.getTopLeft(toggle).dx -
-              tester.getTopRight(find.text(l10n.chatThinking)).dx,
+          tester.getTopLeft(toggle).dx - tester.getTopRight(currentTitle).dx,
           inInclusiveRange(0, 8),
         );
         expect(tester.takeException(), isNull);

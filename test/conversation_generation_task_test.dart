@@ -367,6 +367,7 @@ void main() {
     'saving',
     'resuming',
     'pause_requested',
+    'sync_error',
   ]) {
     test('generation state $state stays active', () {
       expect(
@@ -405,7 +406,7 @@ void main() {
           scale: scale,
           capture: capture,
         );
-        expect(find.text('任务正在生成...'), findsOneWidget);
+        expect(find.text('正在生成图片'), findsNWidgets(2));
         expect(
           find.byKey(const Key('conversation-generation-placeholder')),
           findsOneWidget,

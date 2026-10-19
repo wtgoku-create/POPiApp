@@ -217,32 +217,43 @@ class ConversationBlock {
       ? const []
       : conversationMaps(conversationMap(data['plan'])['items']);
 
-  /// Old snapshots keep individual calls; display each phase only once.
-  List<(String, String)> get progressSteps {
-    final phases = <String, Map<String, String>>{};
-    for (final step in conversationMaps(data['steps'])) {
+  List<(String, String)> get progressSteps => [
+    for (final step in progressDetails) (step.labelKey, step.status),
+  ];
+
+  /// Group repeated legacy calls within their parent, preserving nested actions.
+  List<ConversationProgressStep> get progressDetails {
+    final phases = <(String?, String), Map<String, String>>{};
+    for (final step in conversationMaps(
+      kind == 'task' && action == 'generation'
+          ? data['progress']
+          : data['steps'],
+    )) {
       final label = step['labelKey'];
       if (label is! String || label.isEmpty) continue;
+      final parent = step['parentId']?.toString();
       var state = step['status'] as String? ?? 'pending';
       if (['pending', 'running', 'waiting'].contains(state)) {
         state = switch (status) {
           'completed' => 'completed',
-          'canceled' || 'aborted' => 'skipped',
+          'canceled' || 'cancelled' || 'aborted' => 'skipped',
           'failed' || 'interrupted' => 'failed',
           _ => state,
         };
       }
       final stepId = step['id']?.toString();
-      (phases[label] ??= {})[stepId == null || stepId.isEmpty
+      (phases[(parent, label)] ??= {})[stepId == null || stepId.isEmpty
               ? label
               : stepId] =
           state;
     }
     return [
       for (final phase in phases.entries)
-        (
-          phase.key,
-          const [
+        ConversationProgressStep(
+          labelKey: phase.key.$2,
+          parentId: phase.key.$1,
+          status:
+              const [
                 'running',
                 'waiting',
                 'pending',
@@ -282,6 +293,18 @@ class ConversationBlock {
             ),
     ];
   }
+}
+
+class ConversationProgressStep {
+  const ConversationProgressStep({
+    required this.labelKey,
+    required this.status,
+    this.parentId,
+  });
+
+  final String labelKey;
+  final String status;
+  final String? parentId;
 }
 
 class ConversationQuestionField {

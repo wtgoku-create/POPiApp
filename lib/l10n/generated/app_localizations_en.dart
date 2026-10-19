@@ -2953,7 +2953,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionArtifactRoles => 'Roles';
 
   @override
-  String get sessionArtifactScripts => 'Scripts';
+  String get sessionArtifactScripts => 'Text';
 
   @override
   String get sessionArtifactVideos => 'Videos';
@@ -3013,6 +3013,155 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatCompleted => 'Completed';
+
+  @override
+  String get chatTextTopic => 'Story idea';
+
+  @override
+  String get chatTextScript => 'Script';
+
+  @override
+  String get chatTextStoryboard => 'Storyboard prompt';
+
+  @override
+  String get chatTextUnknownDuration => 'Duration not recorded';
+
+  @override
+  String get chatProgressDetails => 'Progress';
+
+  @override
+  String get chatProgressPending => 'Pending';
+
+  @override
+  String get chatProgressRunning => 'In progress';
+
+  @override
+  String get chatProgressWaiting => 'Waiting';
+
+  @override
+  String get chatProgressFailed => 'Failed';
+
+  @override
+  String get chatProgressAnalyze => 'Analyzing your request';
+
+  @override
+  String get chatProgressExecuteTool => 'Performing operation';
+
+  @override
+  String get chatProgressLoadSkill => 'Loading creative guidance';
+
+  @override
+  String get chatProgressSkillTopics => 'Loading story guidance';
+
+  @override
+  String get chatProgressSkillScript => 'Loading script guidance';
+
+  @override
+  String get chatProgressSkillStoryboard => 'Loading storyboard guidance';
+
+  @override
+  String get chatProgressSkillThreeView => 'Loading character sheet guidance';
+
+  @override
+  String get chatProgressWriteScript => 'Writing script';
+
+  @override
+  String get chatProgressWriteStoryboard =>
+      'Writing storyboard and video prompt';
+
+  @override
+  String get chatProgressReadTextSources =>
+      'Reading source text and requirements';
+
+  @override
+  String get chatProgressValidateText =>
+      'Checking content, duration and structure';
+
+  @override
+  String get chatProgressReadText => 'Reading written content';
+
+  @override
+  String get chatProgressSearchRoles => 'Finding characters';
+
+  @override
+  String get chatProgressCreateRole => 'Creating character';
+
+  @override
+  String get chatProgressCopyRole => 'Preparing personal character copy';
+
+  @override
+  String get chatProgressAdoptRoleImage => 'Saving selected character image';
+
+  @override
+  String get chatProgressReadAccount => 'Reading account profile';
+
+  @override
+  String get chatProgressSearchAccounts => 'Finding accounts';
+
+  @override
+  String get chatProgressSelectAccount => 'Loading selected account';
+
+  @override
+  String get chatProgressUpdateAccount => 'Updating account preferences';
+
+  @override
+  String get chatProgressUpdateMemory => 'Updating account memory';
+
+  @override
+  String get chatProgressSearchCreations => 'Finding previous creations';
+
+  @override
+  String get chatProgressReadCreation => 'Reading previous creation';
+
+  @override
+  String get chatProgressReadTemplates => 'Reading style templates';
+
+  @override
+  String get chatProgressReadReferences => 'Preparing references';
+
+  @override
+  String get chatProgressValidatePlan =>
+      'Checking model capabilities and parameters';
+
+  @override
+  String get chatProgressEstimate => 'Estimating credits';
+
+  @override
+  String get chatProgressVerifyResult => 'Verifying operation result';
+
+  @override
+  String get chatProgressCompilePrompt => 'Writing image prompt';
+
+  @override
+  String get chatProgressValidatePrompt => 'Checking image prompt';
+
+  @override
+  String get chatProgressSavePrompt => 'Saving image prompt';
+
+  @override
+  String get chatProgressRetryPrompt =>
+      'Prompt compilation interrupted; awaiting retry';
+
+  @override
+  String get chatProgressSubmitGeneration => 'Submitting generation task';
+
+  @override
+  String get chatProgressQueuedGeneration => 'Queued for generation';
+
+  @override
+  String get chatProgressGenerateImage => 'Generating image';
+
+  @override
+  String get chatProgressGenerateVideo => 'Generating video';
+
+  @override
+  String get chatProgressGenerateAudio => 'Generating audio';
+
+  @override
+  String get chatProgressSaveMedia => 'Saving generated result';
+
+  @override
+  String get chatProgressSyncResult => 'Retrying result synchronization';
 
   @override
   String get chatExpired => 'Expired';
