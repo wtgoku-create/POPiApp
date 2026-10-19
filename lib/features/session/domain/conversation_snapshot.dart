@@ -377,20 +377,23 @@ class ConversationMessage {
       .where((block) => block.type == 'text')
       .map((block) => block.text)
       .join('\n\n');
-  ConversationMessage withBlocks(List<ConversationBlock> value, int version) =>
-      ConversationMessage(
-        id: id,
-        sessionId: sessionId,
-        role: role,
-        seq: seq,
-        revision: version,
-        createdAt: createdAt,
-        runId: runId,
-        transient: transient,
-        attempt: attempt,
-        presentation: presentation,
-        blocks: value,
-      );
+  ConversationMessage withBlocks(
+    List<ConversationBlock> value,
+    int version, {
+    String? presentationId,
+  }) => ConversationMessage(
+    id: presentationId ?? id,
+    sessionId: sessionId,
+    role: role,
+    seq: seq,
+    revision: version,
+    createdAt: createdAt,
+    runId: runId,
+    transient: transient,
+    attempt: attempt,
+    presentation: presentation,
+    blocks: value,
+  );
   ConversationMessage anchoredTo(ConversationMessage previous) =>
       ConversationMessage(
         id: id,
@@ -496,6 +499,7 @@ class ConversationSnapshot {
   );
 
   List<ConversationMessage> _embedTextDrafts() {
+    final source = _groupReplyDrafts();
     final drafts =
         <(String?, String), List<(ConversationMessage, ConversationBlock)>>{};
     for (final message in messages.where((item) => item.role != 'user')) {
@@ -513,10 +517,39 @@ class ConversationSnapshot {
 
     final embedded = <ConversationBlock>{};
     final expansions = <ConversationBlock, List<ConversationBlock>>{};
-    for (final message in messages.where((item) => item.role != 'user')) {
-      for (final block in message.blocks.where((item) => item.type == 'text')) {
+    final anchors = <String, String>{};
+    final claimedAnchors = <String>{};
+    for (var messageIndex = 0; messageIndex < source.length; messageIndex++) {
+      final message = source[messageIndex];
+      if (message.role == 'user') continue;
+      final streaming =
+          message.transient ||
+          runs.any((run) => run.id == message.runId && run.running);
+      final preceding = messageIndex > 0 ? source[messageIndex - 1] : null;
+      final pendingOwner =
+          streaming &&
+              message.presentation == 'reply' &&
+              message.runId != null &&
+              preceding?.runId == message.runId &&
+              preceding?.attempt == message.attempt &&
+              preceding!.blocks.isNotEmpty &&
+              preceding.blocks.every(_isReplyDraft)
+          ? preceding
+          : null;
+      final textBlocks = message.blocks
+          .where((item) => item.type == 'text')
+          .toList();
+      final pendingBlock =
+          textBlocks
+              .where((block) => _textDraftReference.hasMatch(block.text))
+              .lastOrNull ??
+          textBlocks.lastOrNull;
+      for (final block in textBlocks) {
         final matches = _textDraftReference.allMatches(block.text).toList();
-        if (matches.isEmpty) continue;
+        if (matches.isEmpty &&
+            (pendingOwner == null || !identical(block, pendingBlock))) {
+          continue;
+        }
         final blocks = <ConversationBlock>[];
         var cursor = 0;
         void addText(String value) {
@@ -547,13 +580,55 @@ class ConversationSnapshot {
         }
         // Unresolved and incomplete references remain hidden until SSE fills them.
         addText(block.text.substring(cursor));
+        final owners = source
+            .where(
+              (owner) =>
+                  owner.blocks.every(_isReplyDraft) &&
+                  (owner.blocks.any(blocks.contains) ||
+                      identical(block, pendingBlock) &&
+                          identical(owner, pendingOwner) &&
+                          owner.blocks.any(
+                            (draft) => !embedded.contains(draft),
+                          )),
+            )
+            .toList();
+        // A streaming reply may reference only the first of its available drafts.
+        // Keep the remaining candidates in the same card until references arrive.
+        if (streaming && identical(block, pendingBlock)) {
+          for (final owner in owners) {
+            final pending = owner.blocks
+                .where((draft) => !embedded.contains(draft))
+                .toList();
+            if (pending.isEmpty) continue;
+            final last = blocks.lastIndexWhere(owner.blocks.contains);
+            blocks.insertAll(last < 0 ? blocks.length : last + 1, pending);
+            embedded.addAll(pending);
+          }
+        }
         expansions[block] = blocks;
       }
+      final expandedBlocks = message.blocks
+          .expand((block) => expansions[block] ?? [block])
+          .toSet();
+      final completeOwner = source
+          .where(
+            (owner) =>
+                owner.blocks.isNotEmpty &&
+                owner.blocks.every(_isReplyDraft) &&
+                owner.blocks.every(expandedBlocks.contains) &&
+                owner.id != message.id,
+          )
+          .firstOrNull;
+      if (completeOwner != null &&
+          completeOwner.seq <= message.seq &&
+          claimedAnchors.add(completeOwner.id)) {
+        anchors[message.id] = completeOwner.id;
+      }
     }
-    if (expansions.isEmpty) return messages;
+    if (expansions.isEmpty) return source;
 
     return [
-      for (final message in messages)
+      for (final message in source)
         if (message.role == 'user')
           message
         else if ([
@@ -561,8 +636,69 @@ class ConversationSnapshot {
                 if (!embedded.contains(block)) ...expansions[block] ?? [block],
             ]
             case final blocks when blocks.isNotEmpty)
-          message.withBlocks(blocks, message.revision),
+          message.withBlocks(
+            blocks,
+            message.revision,
+            presentationId: anchors[message.id],
+          ),
     ];
+  }
+
+  static bool _isReplyDraft(ConversationBlock block) =>
+      block.type == 'object' &&
+      block.kind == 'text_draft' &&
+      block.id.isNotEmpty &&
+      block.data['delivery'] == 'reply';
+
+  /// Drafts arrive as separate protocol messages before their inline references.
+  List<ConversationMessage> _groupReplyDrafts() {
+    final grouped = <ConversationMessage>[];
+    for (final message in messages) {
+      var previousIndex = grouped.length - 1;
+      while (previousIndex >= 0) {
+        final between = grouped[previousIndex];
+        if (between.role != 'user' &&
+            between.runId == message.runId &&
+            between.attempt == message.attempt &&
+            between.blocks.every((block) => block.type == 'text') &&
+            (between.transient ||
+                runs.any((run) => run.id == between.runId && run.running))) {
+          previousIndex--;
+        } else {
+          break;
+        }
+      }
+      final previous = previousIndex < 0 ? null : grouped[previousIndex];
+      final first = message.blocks.firstOrNull;
+      final last = previous?.blocks.lastOrNull;
+      if (previous != null &&
+          message.role != 'user' &&
+          previous.role == message.role &&
+          message.runId != null &&
+          previous.runId == message.runId &&
+          previous.attempt == message.attempt &&
+          message.blocks.isNotEmpty &&
+          previous.blocks.isNotEmpty &&
+          message.blocks.every(_isReplyDraft) &&
+          previous.blocks.every(_isReplyDraft) &&
+          !message.blocks.any(
+            (next) => previous.blocks.any((old) => old.id == next.id),
+          ) &&
+          first!.objectKind == last!.objectKind &&
+          first.action == last.action &&
+          first.scopeId == last.scopeId &&
+          first.scopeKind == last.scopeKind) {
+        grouped[previousIndex] = previous.withBlocks(
+          [...previous.blocks, ...message.blocks],
+          message.revision > previous.revision
+              ? message.revision
+              : previous.revision,
+        );
+      } else {
+        grouped.add(message);
+      }
+    }
+    return grouped;
   }
 
   static bool _generationOutput(

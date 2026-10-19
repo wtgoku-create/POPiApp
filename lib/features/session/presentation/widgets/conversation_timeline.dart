@@ -1025,7 +1025,15 @@ class _ConversationTopicsState extends State<_ConversationTopics>
                     topic.referenceId &&
                 topic.referenceId.isNotEmpty);
     return ConversationObjectView(
-      key: ValueKey((topic.referenceId, _index)),
+      key: ValueKey(
+        topic.referenceId.isNotEmpty &&
+                widget.topics
+                        .where((item) => item.referenceId == topic.referenceId)
+                        .length ==
+                    1
+            ? topic.referenceId
+            : _index,
+      ),
       block: topic,
       controller: widget.controller,
       headerTrailing: widget.topics.length > 1
