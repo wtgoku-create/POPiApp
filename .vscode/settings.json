@@ -1,0 +1,7 @@
+{
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+  {
+    "text": "始终使用简体中文生成 Git 提交消息。保留 feat、fix、refactor 等英文类型前缀，标题和正文使用中文，代码标识符保持原样。"
+  }
+]
+}
