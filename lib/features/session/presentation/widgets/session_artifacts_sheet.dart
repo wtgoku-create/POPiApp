@@ -121,7 +121,6 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final colors = Theme.of(context).colorScheme;
     final selected = _selected;
     return PopScope<void>(
       canPop: selected == null,
@@ -155,10 +154,9 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
                               key: const Key('session-artifact-back'),
                               tooltip: l10n.back,
                               onPressed: _back,
-                              icon: AppSvgIcon.asset(
-                                'activity_back',
-                                size: 22,
-                                color: colors.onSurface,
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new,
+                                size: 21,
                               ),
                             ),
                             Expanded(
