@@ -4039,6 +4039,12 @@ abstract class AppLocalizations {
   /// **'Delete account'**
   String get confirmCancelAccount;
 
+  /// No description provided for @cancelAccountSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted successfully'**
+  String get cancelAccountSucceeded;
+
   /// No description provided for @cancelAccountFailed.
   ///
   /// In en, this message translates to:
@@ -5418,6 +5424,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to load categories. Tap to retry'**
   String get teachingCategoriesFailed;
+
+  /// No description provided for @sessionArtifactsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Outputs'**
+  String get sessionArtifactsTitle;
+
+  /// No description provided for @sessionArtifactAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get sessionArtifactAll;
+
+  /// No description provided for @sessionArtifactRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Roles'**
+  String get sessionArtifactRoles;
+
+  /// No description provided for @sessionArtifactScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts'**
+  String get sessionArtifactScripts;
+
+  /// No description provided for @sessionArtifactVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get sessionArtifactVideos;
+
+  /// No description provided for @sessionArtifactImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Details'**
+  String get sessionArtifactImageDetail;
+
+  /// No description provided for @sessionArtifactScriptDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Script Details'**
+  String get sessionArtifactScriptDetail;
+
+  /// No description provided for @sessionArtifactVideoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Details'**
+  String get sessionArtifactVideoDetail;
+
+  /// No description provided for @sessionArtifactsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No outputs yet'**
+  String get sessionArtifactsEmpty;
 
   /// No description provided for @chatAskUser.
   ///

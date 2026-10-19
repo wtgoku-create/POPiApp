@@ -2088,6 +2088,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get confirmCancelAccount => '确认注销';
 
   @override
+  String get cancelAccountSucceeded => '注销成功';
+
+  @override
   String get cancelAccountFailed => '注销失败，请稍后重试';
 
   @override
@@ -2803,6 +2806,33 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get teachingCategoriesFailed => '分类加载失败，点击重试';
+
+  @override
+  String get sessionArtifactsTitle => '当前对话产物';
+
+  @override
+  String get sessionArtifactAll => '全部';
+
+  @override
+  String get sessionArtifactRoles => '角色';
+
+  @override
+  String get sessionArtifactScripts => '脚本';
+
+  @override
+  String get sessionArtifactVideos => '视频';
+
+  @override
+  String get sessionArtifactImageDetail => '图片详情';
+
+  @override
+  String get sessionArtifactScriptDetail => '脚本详情';
+
+  @override
+  String get sessionArtifactVideoDetail => '视频详情';
+
+  @override
+  String get sessionArtifactsEmpty => '暂无产物';
 
   @override
   String get chatAskUser => '等待补充信息';

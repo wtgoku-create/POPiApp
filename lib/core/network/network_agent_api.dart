@@ -194,10 +194,12 @@ class NetworkAgentApi {
 
   Future<Map<String, dynamic>> archiveSession(
     String id, {
+    String? clientRequestId,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}',
     method: 'DELETE',
+    data: {if (clientRequestId != null) 'clientRequestId': clientRequestId},
     cancelToken: cancelToken,
   );
 
@@ -210,7 +212,11 @@ class NetworkAgentApi {
     CancelToken? cancelToken,
   }) async {
     if (archived == true && title == null && pinned == null) {
-      await archiveSession(id, cancelToken: cancelToken);
+      await archiveSession(
+        id,
+        clientRequestId: clientRequestId,
+        cancelToken: cancelToken,
+      );
       return;
     }
     await updateSession(

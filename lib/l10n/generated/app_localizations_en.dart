@@ -2183,6 +2183,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get confirmCancelAccount => 'Delete account';
 
   @override
+  String get cancelAccountSucceeded => 'Account deleted successfully';
+
+  @override
   String get cancelAccountFailed =>
       'Unable to delete your account. Try again later';
 
@@ -2939,6 +2942,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get teachingCategoriesFailed =>
       'Unable to load categories. Tap to retry';
+
+  @override
+  String get sessionArtifactsTitle => 'Conversation Outputs';
+
+  @override
+  String get sessionArtifactAll => 'All';
+
+  @override
+  String get sessionArtifactRoles => 'Roles';
+
+  @override
+  String get sessionArtifactScripts => 'Scripts';
+
+  @override
+  String get sessionArtifactVideos => 'Videos';
+
+  @override
+  String get sessionArtifactImageDetail => 'Image Details';
+
+  @override
+  String get sessionArtifactScriptDetail => 'Script Details';
+
+  @override
+  String get sessionArtifactVideoDetail => 'Video Details';
+
+  @override
+  String get sessionArtifactsEmpty => 'No outputs yet';
 
   @override
   String get chatAskUser => 'Waiting for more details';

@@ -357,7 +357,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     setState(() => _cancelingAccount = true);
     try {
       await ref.read(userProvider.notifier).cancelAccount();
-      if (mounted) context.go('/login');
+      if (mounted) {
+        AppToast.success(context, l10n.cancelAccountSucceeded);
+        context.go('/login');
+      }
     } catch (error) {
       if (mounted) {
         final message = error is ApiException ? error.message : null;

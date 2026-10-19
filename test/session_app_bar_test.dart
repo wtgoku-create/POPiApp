@@ -95,7 +95,7 @@ void main() {
             theme: dark ? AppTheme.dark : AppTheme.light,
           );
           expect(newButton, findsOneWidget);
-          expect(find.byTooltip('功能待开发'), findsOneWidget);
+          expect(find.byTooltip('当前对话产物'), findsOneWidget);
           expect(find.byKey(const Key('home-membership-entry')), findsNothing);
           expect(find.byKey(const Key('popi-open-activity')), findsNothing);
           expect(find.text('12345'), findsNothing);
@@ -116,7 +116,7 @@ void main() {
     }
   }
 
-  testWidgets('pending action preserves the current conversation and draft', (
+  testWidgets('outputs preserve the current conversation and draft', (
     tester,
   ) async {
     final repository = _SessionRepository();
@@ -130,7 +130,12 @@ void main() {
     expect(router.state.uri.queryParameters, {'sessionId': chatId});
     expect(tester.widget<ExtendedTextField>(input).controller!.text, '当前草稿');
     expect(find.text('已有会话内容'), findsOneWidget);
-    expect(find.text('功能待开发'), findsOneWidget);
+    expect(find.text('当前对话产物'), findsOneWidget);
+    expect(find.byKey(const Key('session-artifacts-sheet')), findsOneWidget);
+    await tester.tapAt(const Offset(160, 30));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('session-artifacts-sheet')), findsNothing);
+    expect(tester.widget<ExtendedTextField>(input).controller!.text, '当前草稿');
     expect(repository.snapshotIds, [chatId]);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
@@ -169,7 +174,7 @@ void main() {
     },
   );
 
-  testWidgets('guest pending action shows a notice without leaving the page', (
+  testWidgets('guest can preview mock outputs without leaving the page', (
     tester,
   ) async {
     final repository = _SessionRepository();
@@ -182,7 +187,7 @@ void main() {
     await tester.tap(newButton);
     await tester.pumpAndSettle();
     expect(find.text('Login page'), findsNothing);
-    expect(find.text('功能待开发'), findsOneWidget);
+    expect(find.text('当前对话产物'), findsOneWidget);
     expect(router.state.uri.path, '/session');
     expect(repository.createCalls, 0);
     await tester.pump(const Duration(seconds: 4));

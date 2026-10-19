@@ -207,8 +207,14 @@ void main() {
         expect(state.container.read(userProvider), isNull);
         expect(state.container.read(userPointsProvider).valueOrNull, isNull);
         expect(find.text('Login screen'), findsOneWidget);
+        expect(
+          find.text(english ? 'Account deleted successfully' : '注销成功'),
+          findsOneWidget,
+        );
         expect(state.router.canPop(), isFalse);
         expect(tester.takeException(), isNull);
+        toastification.dismissAll(delayForAnimation: false);
+        await tester.pumpAndSettle();
       },
     );
   }
@@ -244,6 +250,7 @@ void main() {
       pending.complete({'status': '5000', 'message': '网关暂时不可用'});
       await tester.pumpAndSettle();
       expect(find.text('网关暂时不可用'), findsOneWidget);
+      expect(find.text('注销成功'), findsNothing);
       expect(state.container.read(userProvider), _user);
       expect(
         state.container
@@ -263,7 +270,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(fixture.cancellations, hasLength(2));
       expect(find.text('Login screen'), findsOneWidget);
+      expect(find.text('注销成功'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      toastification.dismissAll(delayForAnimation: false);
+      await tester.pumpAndSettle();
     },
   );
 }

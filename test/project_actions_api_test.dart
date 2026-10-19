@@ -260,13 +260,16 @@ void main() {
             deletion ? 'DELETE' : 'PATCH',
           ]);
           expect(requests.last.path, path);
-          if (deletion) {
+          if (deletion && project) {
             expect(requests.last.data, isNull);
             return;
           }
           final body = requests.last.data as Map<String, dynamic>;
           expect(body['clientRequestId'], matches(studioRequestId));
-          expect(body, {'clientRequestId': body['clientRequestId'], ...change});
+          expect(body, {
+            'clientRequestId': body['clientRequestId'],
+            if (!deletion) ...change,
+          });
         },
       );
     }
@@ -312,7 +315,13 @@ void main() {
                   NetworkAgentApi(dio),
                 ).deleteSession('1'));
           expect(requests.map((request) => request.method), ['DELETE']);
-          expect(requests.single.data, isNull);
+          if (project) {
+            expect(requests.single.data, isNull);
+          } else {
+            expect(requests.single.data, {
+              'clientRequestId': matches(studioRequestId),
+            });
+          }
         },
       );
     }
