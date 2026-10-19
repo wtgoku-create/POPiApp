@@ -281,7 +281,11 @@ class ApiSessionRepository extends SessionRepository {
       input['archived'] == true &&
               input['title'] == null &&
               input['pinned'] == null
-          ? await agent.archiveSession(id, cancelToken: cancelToken)
+          ? await agent.archiveSession(
+              id,
+              clientRequestId: input['clientRequestId'] as String,
+              cancelToken: cancelToken,
+            )
           : await agent.updateSession(
               id,
               clientRequestId: input['clientRequestId'] as String,

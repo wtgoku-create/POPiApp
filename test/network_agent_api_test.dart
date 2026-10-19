@@ -140,6 +140,55 @@ void main() {
     ).updateProjectSession('s1', clientRequestId: 'key', title: 'Renamed');
   });
 
+  test(
+    'session deletion sends valid JSON through the configured Dio client',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final requests =
+          <({String method, String path, String? contentType, String body})>[];
+      final subscription = server.listen((request) async {
+        requests.add((
+          method: request.method,
+          path: request.uri.path,
+          contentType: request.headers.contentType?.mimeType,
+          body: await utf8.decoder.bind(request).join(),
+        ));
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'id': 's1', 'archived': true}));
+        await request.response.close();
+      });
+      addTearDown(subscription.cancel);
+      final dio = DioClient(
+        secureStorage: _Tokens(),
+        baseUrl: 'http://127.0.0.1:${server.port}',
+      ).dio;
+      addTearDown(() => dio.close(force: true));
+      final api = NetworkAgentApi(dio);
+      await api.archiveSession('s1');
+      await api.updateProjectSession(
+        's1',
+        clientRequestId: 'delete-request',
+        archived: true,
+      );
+      expect(requests, hasLength(2));
+      for (final request in requests) {
+        expect(request.method, 'DELETE');
+        expect(request.path, '/api_agent/v2/sessions/s1');
+        expect(request.contentType, 'application/json');
+        expect(
+          request.body,
+          isNotEmpty,
+          reason: 'Fastify rejects an empty JSON request body',
+        );
+      }
+      expect(jsonDecode(requests[0].body), <String, Object?>{});
+      expect(jsonDecode(requests[1].body), {
+        'clientRequestId': 'delete-request',
+      });
+    },
+  );
+
   for (final nested in [false, true]) {
     test(
       'preserves ${nested ? 'nested' : 'direct'} Agent HTTP errors',

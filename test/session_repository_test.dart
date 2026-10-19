@@ -427,6 +427,59 @@ void main() {
   );
 
   test(
+    'deletion retries reuse the persisted request ID after a timeout',
+    () async {
+      final commands = <Map<String, Object?>>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.method, 'DELETE');
+            expect(options.path, '/api_agent/v2/sessions/$chatId');
+            commands.add(Map<String, Object?>.from(options.data as Map));
+            if (commands.length == 1) {
+              handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.receiveTimeout,
+                ),
+              );
+              return;
+            }
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                data: {
+                  'id': chatId,
+                  'title': 'Archived',
+                  'archived': true,
+                  'revision': 2,
+                  'updatedAt': chatDate,
+                },
+              ),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        repository().update('a', chatId, archived: true),
+        throwsA(isA<DioException>()),
+      );
+      expect(storage.preferences.getKeys(), isNotEmpty);
+      final session = await repository().update('a', chatId, archived: true);
+      expect(session.archived, isTrue);
+      expect(commands[0].keys, ['clientRequestId']);
+      expect(commands[0]['clientRequestId'], isA<String>());
+      expect(commands[1], commands[0]);
+      expect(storage.preferences.getKeys(), isEmpty);
+      await repository().update('a', chatId, archived: true);
+      expect(
+        commands[2]['clientRequestId'],
+        isNot(commands[0]['clientRequestId']),
+      );
+    },
+  );
+
+  test(
     'commands are account scoped and definite failures clear recovery',
     () async {
       final ids = <String>[];
