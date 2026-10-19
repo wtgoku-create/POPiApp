@@ -2607,6 +2607,60 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCollapseProgress => '收起进度';
 
   @override
+  String get chatThoughtProcess => '思考过程';
+
+  @override
+  String get chatStepPrepare => '准备';
+
+  @override
+  String get chatStepProcess => '处理需求';
+
+  @override
+  String get chatStepReply => '生成回复';
+
+  @override
+  String get chatStepSaveText => '保存内容';
+
+  @override
+  String get chatStepPreparePlan => '整理生成方案';
+
+  @override
+  String get chatStepAnalyze => '分析创作要求';
+
+  @override
+  String get chatStepReadRole => '读取角色档案';
+
+  @override
+  String get chatStepReadContext => '理解创作背景';
+
+  @override
+  String get chatStepTopics => '推荐选题';
+
+  @override
+  String get chatStepPrepareRole => '整理角色方案';
+
+  @override
+  String get chatStepSaveRole => '保存角色草案';
+
+  @override
+  String get chatStepPublishRole => '发布角色';
+
+  @override
+  String get chatStepVerifyResult => '核实执行结果';
+
+  @override
+  String get chatStepGenerateImage => '生成图片';
+
+  @override
+  String get chatStepGenerateVideo => '生成视频';
+
+  @override
+  String get chatStepGenerateAudio => '生成音频';
+
+  @override
+  String get chatStepSyncResult => '同步生成结果';
+
+  @override
   String get chatPreparing => '正在准备';
 
   @override

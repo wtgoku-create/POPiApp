@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/session/data/conversation_events.dart';
@@ -233,6 +234,7 @@ void main() {
     'pages.studio.progress.askUser',
     'pages.studio.progress.saveRole',
     'pages.studio.progress.publishRole',
+    'pages.studio.progress.retryPrompt',
     'pages.studio.state.completed',
   ];
   for (final (size, dark, scale) in [
@@ -290,6 +292,12 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('正在处理你的需求'), findsNWidgets(2));
+        final longLabel = tester.renderObject<RenderParagraph>(
+          find.text('提示词编译中断，等待重试'),
+        );
+        expect(longLabel.maxLines, 1);
+        expect(longLabel.overflow, TextOverflow.ellipsis);
+        expect(longLabel.didExceedMaxLines, isTrue);
         final content = find.byType(ConversationCardContent);
         expect(
           tester.getSize(content).height,
@@ -310,7 +318,8 @@ void main() {
         ]);
         await tester.pumpAndSettle();
         expect(position.pixels, offset);
-        expect(find.text('正在处理你的需求'), findsOneWidget);
+        expect(find.text('正在处理你的需求'), findsNothing);
+        expect(find.text('处理需求'), findsOneWidget);
         expect(find.byType(CircularProgressIndicator), findsNothing);
         await tester.tap(find.byTooltip('收起进度'));
         await tester.pumpAndSettle();

@@ -859,13 +859,28 @@ void main() {
           'steps': [
             {'labelKey': 'script.run.preparing', 'status': 'completed'},
             {
-              'labelKey': 'pages.studio.progress.readRole',
+              'labelKey': 'pages.studio.progress.analyze',
               'status': 'completed',
             },
+            {
+              'id': 'topics',
+              'labelKey': 'pages.studio.progress.topics',
+              'status': 'completed',
+            },
+            for (final label in [
+              'pages.studio.progress.readTextSources',
+              'pages.studio.progress.skillTopics',
+              'pages.studio.progress.topics',
+              'pages.studio.progress.validateText',
+              'pages.studio.progress.saveText',
+            ])
+              {'parentId': 'topics', 'labelKey': label, 'status': 'completed'},
             {'labelKey': 'script.run.generatingReply', 'status': 'running'},
           ],
         },
       });
+      final currentProgress = ValueNotifier(progress);
+      addTearDown(currentProgress.dispose);
       final plan = ConversationBlock.fromJson({
         'type': 'object',
         'kind': 'plan',
@@ -916,9 +931,13 @@ void main() {
                   padding: const EdgeInsets.all(20),
                   children: [
                     const SizedBox(height: 40),
-                    ConversationObjectView(
-                      block: progress,
-                      controller: controller,
+                    ValueListenableBuilder<ConversationBlock>(
+                      valueListenable: currentProgress,
+                      builder: (_, block, _) => ConversationObjectView(
+                        key: const ValueKey('captured-progress'),
+                        block: block,
+                        controller: controller,
+                      ),
                     ),
                     ConversationObjectView(block: plan, controller: controller),
                   ],
@@ -930,13 +949,34 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('正在读取角色档案'), findsOneWidget);
+      expect(find.text('推荐选题'), findsNWidgets(2));
       await _capture(tester, 'mobile-progress-plan');
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pump();
-      expect(find.text('正在读取角色档案'), findsNothing);
+      expect(find.text('推荐选题'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await _capture(tester, 'mobile-progress-collapsed');
+      await tester.tap(find.byTooltip('展开进度'));
+      currentProgress.value = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'progress',
+        'data': {...progress.data, 'state': 'completed'},
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('思考过程'), findsOneWidget);
+      expect(
+        find.byKey(const Key('conversation-progress-details')),
+        findsNothing,
+      );
+      await _capture(tester, 'mobile-progress-completed');
+      await tester.tap(find.byTooltip('展开进度'));
+      await tester.pumpAndSettle();
+      expect(find.text('生成回复'), findsOneWidget);
+      expect(find.text('正在生成回复'), findsNothing);
+      expect(find.text('已完成'), findsNothing);
+      await _capture(tester, 'mobile-progress-completed-expanded');
+      await tester.tap(find.byTooltip('收起进度'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('确认生成'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsOneWidget);

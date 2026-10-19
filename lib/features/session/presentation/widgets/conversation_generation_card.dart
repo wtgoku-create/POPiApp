@@ -355,32 +355,37 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: _expanded
-                    ? l10n.chatCollapseProfile
-                    : l10n.roleGuideViewMore,
-                onPressed: () => setState(() => _expanded = !_expanded),
-                icon: Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: colors.primary.withValues(alpha: .6),
+              SizedBox.square(
+                dimension: 32,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  tooltip: _expanded
+                      ? l10n.chatCollapseProfile
+                      : l10n.roleGuideViewMore,
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  icon: Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 20,
+                    color: colors.primary.withValues(alpha: .6),
+                  ),
                 ),
               ),
             ],
           ),
           if (card.status != 'ready')
-            Text(
-              conversationStatusLabel(card.status, l10n),
-              style: ConversationCardTypography.caption.copyWith(
-                color: colors.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                conversationStatusLabel(card.status, l10n),
+                style: ConversationCardTypography.caption.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ),
           if (_expanded) ...[
+            const SizedBox(height: 12),
             if (card.previewRole case final role?)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: ConversationRoleCard(block: role, compact: true),
-              ),
+              ConversationRoleCard(block: role, compact: true),
             ConversationCardContent(
               storageId: 'generation:${card.id}',
               child: Column(
@@ -388,7 +393,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                 children: [
                   if (_view.prompt.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      padding: const EdgeInsets.only(top: 12),
                       child: MarkdownMessage(
                         text: _view.prompt,
                         compact: true,

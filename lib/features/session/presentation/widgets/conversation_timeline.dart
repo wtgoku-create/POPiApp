@@ -1159,10 +1159,24 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
   @override
   void initState() {
     super.initState();
+    _progressExpanded = widget.block.status != 'completed';
     if (widget.block.expiresAt != null) {
       _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(ConversationObjectView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final block = widget.block;
+    if (block.data['runId'] != oldWidget.block.data['runId'] ||
+        block.data['attempt'] != oldWidget.block.data['attempt']) {
+      _progressExpanded = block.status != 'completed';
+    } else if (block.status == 'completed' &&
+        oldWidget.block.status != 'completed') {
+      _progressExpanded = false;
     }
   }
 
@@ -1228,6 +1242,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
           ),
           if (_progressExpanded)
             Container(
+              key: const Key('conversation-progress-details'),
               width: 238,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
@@ -1243,6 +1258,7 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 child: ConversationProgressSteps(
                   steps: block.progressDetails,
                   showStatusLabels: false,
+                  singleLine: true,
                 ),
               ),
             ),

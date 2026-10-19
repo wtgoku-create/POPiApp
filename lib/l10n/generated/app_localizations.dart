@@ -5035,6 +5035,114 @@ abstract class AppLocalizations {
   /// **'Collapse progress'**
   String get chatCollapseProgress;
 
+  /// No description provided for @chatThoughtProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Thought process'**
+  String get chatThoughtProcess;
+
+  /// No description provided for @chatStepPrepare.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare'**
+  String get chatStepPrepare;
+
+  /// No description provided for @chatStepProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Process request'**
+  String get chatStepProcess;
+
+  /// No description provided for @chatStepReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate reply'**
+  String get chatStepReply;
+
+  /// No description provided for @chatStepSaveText.
+  ///
+  /// In en, this message translates to:
+  /// **'Save content'**
+  String get chatStepSaveText;
+
+  /// No description provided for @chatStepPreparePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare generation plan'**
+  String get chatStepPreparePlan;
+
+  /// No description provided for @chatStepAnalyze.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze creative requirements'**
+  String get chatStepAnalyze;
+
+  /// No description provided for @chatStepReadRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Read character profiles'**
+  String get chatStepReadRole;
+
+  /// No description provided for @chatStepReadContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Review creative context'**
+  String get chatStepReadContext;
+
+  /// No description provided for @chatStepTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggest topics'**
+  String get chatStepTopics;
+
+  /// No description provided for @chatStepPrepareRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare character plan'**
+  String get chatStepPrepareRole;
+
+  /// No description provided for @chatStepSaveRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Save character draft'**
+  String get chatStepSaveRole;
+
+  /// No description provided for @chatStepPublishRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish character'**
+  String get chatStepPublishRole;
+
+  /// No description provided for @chatStepVerifyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify results'**
+  String get chatStepVerifyResult;
+
+  /// No description provided for @chatStepGenerateImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate image'**
+  String get chatStepGenerateImage;
+
+  /// No description provided for @chatStepGenerateVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video'**
+  String get chatStepGenerateVideo;
+
+  /// No description provided for @chatStepGenerateAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate audio'**
+  String get chatStepGenerateAudio;
+
+  /// No description provided for @chatStepSyncResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync results'**
+  String get chatStepSyncResult;
+
   /// No description provided for @chatPreparing.
   ///
   /// In en, this message translates to:

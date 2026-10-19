@@ -20,6 +20,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:toastification/toastification.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_style.dart';
 
 import 'conversation_events_test.dart' show chatId;
 import 'support/session_fixtures.dart';
@@ -280,6 +281,9 @@ Future<void> _pump(
         child: RepaintBoundary(
           key: capture,
           child: Scaffold(
+            backgroundColor: dark
+                ? theme.colorScheme.surface
+                : ConversationStyle.background,
             body: Align(
               alignment: Alignment.topCenter,
               child: SizedBox(
@@ -316,6 +320,56 @@ void main() {
     const Size(390, 844),
     const Size(1280, 900),
   ]) {
+    testWidgets('saved role plan has a compact readable layout at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ConversationController(_CardRepository(), 'a')
+        ..sessionId = chatId;
+      addTearDown(controller.dispose);
+      final capture = GlobalKey();
+      await _pump(
+        tester,
+        ConversationGenerationCard(
+          block: ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': 'plan',
+            'data': {
+              ..._roleImageGeneration().data,
+              'title': '确认生成',
+              'status': 'completed',
+              'estimatedPoints': 17,
+              'configuration': '模型：Popi Image 2\n清晰度：1K\n比例：16:9\n画质：中画质',
+            },
+          }),
+          controller: controller,
+        ),
+        capture: capture,
+        locale: const Locale('zh'),
+        textScale: size.width == 320 ? 1.5 : 1,
+      );
+      expect(find.text('17 积分'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(tester.takeException(), isNull);
+      if (const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+        await tester.runAsync(() async {
+          final boundary =
+              capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          final pixels = await boundary.toImage();
+          final bytes = await pixels.toByteData(format: ui.ImageByteFormat.png);
+          await File(
+            '/tmp/conversation-saved-role-plan-${size.width.toInt()}.png',
+          ).writeAsBytes(bytes!.buffer.asUint8List());
+          pixels.dispose();
+        });
+      }
+    });
+
     for (final dark in [false, true]) {
       testWidgets('production plan matches Web at $size dark=$dark', (
         tester,

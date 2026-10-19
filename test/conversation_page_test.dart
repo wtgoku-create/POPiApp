@@ -32,7 +32,11 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      Map<String, Object?> progress(String state, int revision) => {
+      Map<String, Object?> progress(
+        String state,
+        int revision, {
+        int attempt = 1,
+      }) => {
         ...chatMessageJson(seq: 3, revision: revision),
         'id': 'current-progress',
         'blocks': [
@@ -41,6 +45,7 @@ void main() {
             'kind': 'progress',
             'data': {
               'runId': 'run',
+              'attempt': attempt,
               'state': state,
               'steps': [
                 {'labelKey': 'script.run.preparing', 'status': 'completed'},
@@ -115,6 +120,19 @@ void main() {
         expect(currentTitle, findsOneWidget);
         expect(loading, findsOneWidget);
         expect(find.descendant(of: current, matching: loading), findsOneWidget);
+        expect(
+          tester
+              .getSize(
+                find.descendant(
+                  of: current,
+                  matching: find.byKey(
+                    const Key('conversation-progress-details'),
+                  ),
+                ),
+              )
+              .width,
+          238,
+        );
         final toggle = find.descendant(
           of: current,
           matching: find.byTooltip(l10n.chatCollapseProgress),
@@ -128,7 +146,10 @@ void main() {
       await tester.tap(find.byTooltip(l10n.chatCollapseProgress).last);
       await tester.pumpAndSettle();
       expect(loading, findsNothing);
-      expect(find.byTooltip(l10n.chatExpandProgress), findsOneWidget);
+      expect(find.byTooltip(l10n.chatExpandProgress), findsNWidgets(2));
+      await tester.tap(find.byTooltip(l10n.chatExpandProgress).last);
+      await tester.pumpAndSettle();
+      expect(loading, findsOneWidget);
       repository.streams.single.add(
         chatEvent(++seq, 'run.completed', {
           'runId': 'run',
@@ -138,8 +159,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(loading, findsNothing);
       expect(find.text(l10n.chatThinking), findsNothing);
-      expect(find.text(l10n.chatCompleted), findsNWidgets(2));
-      expect(find.byTooltip(l10n.chatExpandProgress), findsOneWidget);
+      expect(find.text(l10n.chatCompleted), findsNothing);
+      expect(find.text(l10n.chatThoughtProcess), findsNWidgets(2));
+      expect(find.byTooltip(l10n.chatExpandProgress), findsNWidgets(2));
+      await tester.tap(find.byTooltip(l10n.chatExpandProgress).last);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.chatStepPrepare), findsOneWidget);
+      expect(find.text(l10n.chatStepProcess), findsOneWidget);
+      expect(find.text(l10n.chatPreparing), findsNothing);
+      repository.streams.single.add(
+        chatEvent(++seq, 'message.updated', {
+          'timelineUpdates': [progress('completed', ++revision)],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.chatStepPrepare), findsOneWidget);
+      await tester.tap(find.byTooltip(l10n.chatCollapseProgress));
+      await tester.pumpAndSettle();
+      repository.streams.single.add(
+        chatEvent(++seq, 'message.updated', {
+          'timelineUpdates': [progress('running', ++revision, attempt: 2)],
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byTooltip(l10n.chatCollapseProgress), findsOneWidget);
+      expect(loading, findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     });

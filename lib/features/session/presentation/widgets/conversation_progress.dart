@@ -17,7 +17,7 @@ String conversationProgressTitle(
   if (block.status == 'completed') {
     return block.data['awaitingConfirmation'] == true
         ? l10n.chatAwaitingConfirmation
-        : l10n.chatCompleted;
+        : l10n.chatThoughtProcess;
   }
   final current = block.progressDetails.reversed
       .where((step) => ['running', 'waiting', 'pending'].contains(step.status))
@@ -91,16 +91,46 @@ String conversationProgressLabel(
   _ => l10n.chatProcessing,
 };
 
+String _finishedProgressLabel(String key, AppLocalizations l10n) =>
+    switch (key) {
+      'script.run.preparing' ||
+      'pages.studio.progress.prepare' => l10n.chatStepPrepare,
+      'script.run.generatingReply' ||
+      'pages.studio.progress.reply' => l10n.chatStepReply,
+      'script.run.savingArtifact' ||
+      'pages.studio.progress.saveText' => l10n.chatStepSaveText,
+      'script.run.planningGeneration' ||
+      'pages.studio.progress.preparePlan' => l10n.chatStepPreparePlan,
+      'pages.studio.progress.analyze' => l10n.chatStepAnalyze,
+      'pages.studio.progress.readRole' => l10n.chatStepReadRole,
+      'pages.studio.progress.readContext' => l10n.chatStepReadContext,
+      'pages.studio.progress.topics' => l10n.chatStepTopics,
+      'pages.studio.progress.prepareRole' => l10n.chatStepPrepareRole,
+      'pages.studio.progress.saveRole' ||
+      'pages.studio.progress.updateRole' => l10n.chatStepSaveRole,
+      'pages.studio.progress.publishRole' => l10n.chatStepPublishRole,
+      'pages.studio.progress.verifyResult' => l10n.chatStepVerifyResult,
+      'pages.studio.progress.generateImage' => l10n.chatStepGenerateImage,
+      'pages.studio.progress.generateVideo' => l10n.chatStepGenerateVideo,
+      'pages.studio.progress.generateAudio' => l10n.chatStepGenerateAudio,
+      'pages.studio.progress.syncResult' => l10n.chatStepSyncResult,
+      'pages.studio.state.completed' => l10n.chatThoughtProcess,
+      'script.run.processing' => l10n.chatStepProcess,
+      _ => conversationProgressLabel(key, l10n),
+    };
+
 /// Shared by conversation progress and the details of a generation task.
 class ConversationProgressSteps extends StatelessWidget {
   const ConversationProgressSteps({
     required this.steps,
     this.showStatusLabels = true,
+    this.singleLine = false,
     super.key,
   });
 
   final List<ConversationProgressStep> steps;
   final bool showStatusLabels;
+  final bool singleLine;
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +178,11 @@ class ConversationProgressSteps extends StatelessWidget {
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    conversationProgressLabel(step.labelKey, l10n),
+                    ['completed', 'failed', 'skipped'].contains(step.status)
+                        ? _finishedProgressLabel(step.labelKey, l10n)
+                        : conversationProgressLabel(step.labelKey, l10n),
+                    maxLines: singleLine ? 1 : null,
+                    overflow: singleLine ? TextOverflow.ellipsis : null,
                     style: const TextStyle(fontSize: 14, height: 20 / 14),
                   ),
                 ),

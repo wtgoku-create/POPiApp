@@ -2732,6 +2732,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatCollapseProgress => 'Collapse progress';
 
   @override
+  String get chatThoughtProcess => 'Thought process';
+
+  @override
+  String get chatStepPrepare => 'Prepare';
+
+  @override
+  String get chatStepProcess => 'Process request';
+
+  @override
+  String get chatStepReply => 'Generate reply';
+
+  @override
+  String get chatStepSaveText => 'Save content';
+
+  @override
+  String get chatStepPreparePlan => 'Prepare generation plan';
+
+  @override
+  String get chatStepAnalyze => 'Analyze creative requirements';
+
+  @override
+  String get chatStepReadRole => 'Read character profiles';
+
+  @override
+  String get chatStepReadContext => 'Review creative context';
+
+  @override
+  String get chatStepTopics => 'Suggest topics';
+
+  @override
+  String get chatStepPrepareRole => 'Prepare character plan';
+
+  @override
+  String get chatStepSaveRole => 'Save character draft';
+
+  @override
+  String get chatStepPublishRole => 'Publish character';
+
+  @override
+  String get chatStepVerifyResult => 'Verify results';
+
+  @override
+  String get chatStepGenerateImage => 'Generate image';
+
+  @override
+  String get chatStepGenerateVideo => 'Generate video';
+
+  @override
+  String get chatStepGenerateAudio => 'Generate audio';
+
+  @override
+  String get chatStepSyncResult => 'Sync results';
+
+  @override
   String get chatPreparing => 'Preparing';
 
   @override

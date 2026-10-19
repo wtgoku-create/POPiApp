@@ -134,6 +134,16 @@ void main() {
       }
 
       checkGaps();
+      await tester.tap(find.byTooltip('展开进度'));
+      await tester.pumpAndSettle();
+      final progressDetails = tester.getRect(
+        find.byKey(const Key('conversation-progress-details')),
+      );
+      final resultCard = tester.getRect(result('result-1'));
+      expect(progressDetails.left, resultCard.left);
+      expect(progressDetails.width, 238);
+      expect(progressDetails.right, lessThan(resultCard.right));
+      checkGaps();
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pumpAndSettle();
       checkGaps();
