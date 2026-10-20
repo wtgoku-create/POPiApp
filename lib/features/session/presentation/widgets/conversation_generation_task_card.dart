@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
 import '../conversation_error_text.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
-import 'conversation_generation_configuration.dart';
-import 'conversation_role_card.dart';
-import 'conversation_timeline.dart' show ConversationMediaView, MarkdownMessage;
+import 'conversation_generation_card.dart';
+import 'conversation_progress.dart';
+import 'conversation_timeline.dart' show ConversationMediaView;
 
 /// A single generation task owns its loading surface, outputs and saved plan.
 class ConversationGenerationTaskCard extends StatefulWidget {
@@ -42,8 +41,22 @@ class _ConversationGenerationTaskCardState
       widget.block,
       widget.controller.snapshot,
     );
+    final activity = conversationProgressTitle(
+      widget.block,
+      l10n,
+      fallback: switch (view.state) {
+        'queued' => l10n.chatProgressQueuedGeneration,
+        'saving' => l10n.chatProgressSaveMedia,
+        'sync_error' => l10n.chatProgressSyncResult,
+        _ => switch (widget.block.mediaType) {
+          'video' => l10n.chatProgressGenerateVideo,
+          'audio' => l10n.chatProgressGenerateAudio,
+          _ => l10n.chatProgressGenerateImage,
+        },
+      },
+    );
     final title = view.active
-        ? l10n.chatGenerationWorking
+        ? activity
         : view.completed
         ? l10n.chatGenerationTaskCompleted
         : conversationStatusLabel(view.state, l10n);
@@ -98,7 +111,7 @@ class _ConversationGenerationTaskCardState
             if (view.active || _expanded) ...[
               const SizedBox(height: 10),
               if (view.active)
-                const _GenerationPlaceholder()
+                _GenerationPlaceholder(label: activity)
               else if (view.completed)
                 if (view.mediaIds.isEmpty)
                   AppSkeleton(
@@ -196,12 +209,11 @@ class _ConversationGenerationTaskCardState
                   ),
                 ),
                 if (_planExpanded)
-                  ConversationCardContent(
-                    storageId: 'generation-task:${widget.block.id}:plan',
-                    child: _SavedGenerationPlan(
-                      block: plan,
-                      controller: widget.controller,
-                    ),
+                  ConversationGenerationCard(
+                    block: plan,
+                    controller: widget.controller,
+                    readOnly: true,
+                    embedded: true,
                   ),
               ],
             ],
@@ -212,73 +224,9 @@ class _ConversationGenerationTaskCardState
   }
 }
 
-class _SavedGenerationPlan extends StatelessWidget {
-  const _SavedGenerationPlan({required this.block, required this.controller});
-  final ConversationBlock block;
-  final ConversationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final view = ConversationGenerationView(block);
-    final l10n = AppLocalizations.of(context)!;
-    final savedPrompts = block.planPrompts
-        .where((item) => item.isNotEmpty)
-        .join('\n\n');
-    final prompt = savedPrompts.isNotEmpty ? savedPrompts : view.prompt;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (block.previewRole case final role?)
-          ConversationRoleCard(block: role, compact: true),
-        if (view.templateTitle.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              '${l10n.chatImageStyle}：${view.templateTitle}',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-        for (final id in view.referenceIds(
-          view.referenceMediaId,
-          view.template['mediaId']?.toString(),
-        ))
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ConversationMediaView(
-              id: id,
-              repository: controller.repository,
-              thumbnailSize: 80,
-            ),
-          ),
-        if (view.requirements.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: MarkdownMessage(text: view.requirements, compact: true),
-          ),
-        if (prompt.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: MarkdownMessage(
-              text: prompt,
-              compact: true,
-              style: ConversationCardTypography.body.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ConversationGenerationConfiguration(
-          config: view.config,
-          model: null,
-          points: block.estimatedPoints,
-          savedConfiguration: view.configurationLines,
-        ),
-      ],
-    );
-  }
-}
-
 class _GenerationPlaceholder extends StatelessWidget {
-  const _GenerationPlaceholder();
+  const _GenerationPlaceholder({required this.label});
+  final String label;
 
   @override
   Widget build(BuildContext context) => AspectRatio(
@@ -313,7 +261,7 @@ class _GenerationPlaceholder extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      AppLocalizations.of(context)!.chatGenerationWorkingHint,
+                      label,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white,

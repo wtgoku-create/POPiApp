@@ -772,6 +772,18 @@ class ApiSessionRepository extends SessionRepository {
         : ConversationGenerationSelection.fromJson(
             conversationMap(jsonDecode(saved)),
           );
+    // 制作模式属于已准备的方案，不能被会话偏好覆盖或清除。
+    final generationMode = conversationMap(
+      card.planItems.firstOrNull?['params'],
+    )['generationMode'];
+    final config = HomeConfig(
+      modelId: fixed.config.modelId,
+      params: {
+        ...fixed.config.params,
+        if (generationMode is String && generationMode.isNotEmpty)
+          'generationMode': generationMode,
+      },
+    );
     await storage().setString(key, jsonEncode(fixed.toJson()));
     var configurationCompleted = false;
     var authorizationCompleted = false;
@@ -828,7 +840,7 @@ class ApiSessionRepository extends SessionRepository {
               ...generation,
               'item': {
                 ...item,
-                ...fixed.config.toJson(),
+                ...config.toJson(),
                 if (legacyThreeView)
                   'references': [
                     for (final ref in conversationMaps(item['references']))
@@ -852,7 +864,7 @@ class ApiSessionRepository extends SessionRepository {
             revision: card.revision,
             action: 'confirm',
             generationConfig: {
-              ...fixed.config.toJson(),
+              ...config.toJson(),
               if (legacyThreeView) ...{
                 'referenceMediaId': fixed.referenceMediaId,
                 'roleTemplateId': fixed.roleTemplateId,

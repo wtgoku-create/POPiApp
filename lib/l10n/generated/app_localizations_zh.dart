@@ -45,6 +45,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleTaskPaused => '创作已暂停';
 
   @override
+  String get roleStatusPausing => '正在暂停';
+
+  @override
+  String get roleTaskPausing => '任务正在暂停...';
+
+  @override
+  String get roleTaskCanceling => '任务正在取消...';
+
+  @override
+  String get roleStatusPaused => '已暂停';
+
+  @override
+  String get roleStatusCanceling => '正在取消';
+
+  @override
+  String get roleGenerationPausedDescription => '当前方案已保留，可以继续创作';
+
+  @override
+  String get chatTaskCanceling => '取消中，等待当前阶段完成';
+
+  @override
   String get rolePauseProduction => '暂停创作';
 
   @override
@@ -2003,6 +2024,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download => '下载';
 
   @override
+  String get sessionArtifactExported => '文档已导出';
+
+  @override
+  String get sessionArtifactExportFailed => '文档导出失败，请稍后重试';
+
+  @override
   String get imageSavedToPhotos => '图片已保存到相册';
 
   @override
@@ -2086,6 +2113,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get confirmCancelAccount => '确认注销';
+
+  @override
+  String get cancelAccountSucceeded => '注销成功';
 
   @override
   String get cancelAccountFailed => '注销失败，请稍后重试';
@@ -2604,31 +2634,85 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCollapseProgress => '收起进度';
 
   @override
-  String get chatPreparing => '正在准备';
+  String get chatThoughtProcess => '思考过程';
+
+  @override
+  String get chatStepPrepare => '准备';
+
+  @override
+  String get chatStepProcess => '处理需求';
+
+  @override
+  String get chatStepReply => '生成回复';
+
+  @override
+  String get chatStepSaveText => '保存内容';
+
+  @override
+  String get chatStepPreparePlan => '整理生成方案';
+
+  @override
+  String get chatStepAnalyze => '分析创作要求';
+
+  @override
+  String get chatStepReadRole => '读取角色档案';
+
+  @override
+  String get chatStepReadContext => '理解创作背景';
+
+  @override
+  String get chatStepTopics => '推荐选题';
+
+  @override
+  String get chatStepPrepareRole => '整理角色方案';
+
+  @override
+  String get chatStepSaveRole => '保存角色草案';
+
+  @override
+  String get chatStepPublishRole => '发布角色';
+
+  @override
+  String get chatStepVerifyResult => '核实执行结果';
+
+  @override
+  String get chatStepGenerateImage => '生成图片';
+
+  @override
+  String get chatStepGenerateVideo => '生成视频';
+
+  @override
+  String get chatStepGenerateAudio => '生成音频';
+
+  @override
+  String get chatStepSyncResult => '同步生成结果';
+
+  @override
+  String get chatPreparing => '正在准备…';
 
   @override
   String get chatProcessing => '正在处理你的需求';
 
   @override
-  String get chatGeneratingReply => '正在生成回复';
+  String get chatGeneratingReply => '正在生成回复…';
 
   @override
-  String get chatSavingArtifact => '正在保存内容';
+  String get chatSavingArtifact => '正在保存产物…';
 
   @override
-  String get chatPlanningGeneration => '正在整理生成方案';
+  String get chatPlanningGeneration => '正在整理生成方案…';
 
   @override
-  String get chatReadRole => '正在读取角色档案';
+  String get chatReadRole => '读取角色资料';
 
   @override
-  String get chatReadContext => '正在理解创作背景';
+  String get chatReadContext => '读取创作上下文';
 
   @override
-  String get chatTopics => '正在推荐选题';
+  String get chatTopics => '创作选题故事';
 
   @override
-  String get chatPrepareRole => '正在整理角色方案';
+  String get chatPrepareRole => '准备角色创建';
 
   @override
   String get redemptionCenter => '邀请好友';
@@ -2805,13 +2889,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get teachingCategoriesFailed => '分类加载失败，点击重试';
 
   @override
-  String get chatAskUser => '等待补充信息';
+  String get sessionArtifactsTitle => '当前对话产物';
 
   @override
-  String get chatSaveRole => '正在保存角色草案';
+  String get sessionArtifactAll => '全部';
 
   @override
-  String get chatPublishRole => '正在发布角色';
+  String get sessionArtifactRoles => '角色';
+
+  @override
+  String get sessionArtifactScripts => '文本';
+
+  @override
+  String get sessionArtifactVideos => '视频';
+
+  @override
+  String get sessionArtifactAudioDetail => '音频详情';
+
+  @override
+  String get sessionArtifactImageDetail => '图片详情';
+
+  @override
+  String get sessionArtifactScriptDetail => '脚本详情';
+
+  @override
+  String get sessionArtifactVideoDetail => '视频详情';
+
+  @override
+  String get sessionArtifactsEmpty => '暂无产物';
+
+  @override
+  String get chatAskUser => '整理待确认信息';
+
+  @override
+  String get chatSaveRole => '保存角色档案';
+
+  @override
+  String get chatPublishRole => '准备角色发布';
 
   @override
   String get chatPreviewImage => '预览图片';
@@ -2825,6 +2939,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get generationCreditNotice =>
       '温馨提示：点击「确认生成」后将扣除相应积分，已消耗积分不予退还。请在提交前仔细核对素材、提示词及生成参数';
+
+  @override
+  String get generationCreditNoticeNonRefundable => '已消耗积分不予退还';
 
   @override
   String get chatRoleName => '名称';
@@ -2846,6 +2963,201 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatCompleted => '已完成';
+
+  @override
+  String get chatTextTopic => '选题故事';
+
+  @override
+  String get chatTextScript => '剧本';
+
+  @override
+  String get chatTextStoryboard => '分镜视频提示词';
+
+  @override
+  String get chatTextUnknownDuration => '未记录时长';
+
+  @override
+  String get chatProgressDetails => '执行进度';
+
+  @override
+  String get chatProgressPending => '待执行';
+
+  @override
+  String get chatProgressRunning => '执行中';
+
+  @override
+  String get chatProgressWaiting => '等待中';
+
+  @override
+  String get chatProgressFailed => '未完成';
+
+  @override
+  String get chatProgressCompleted => '已完成';
+
+  @override
+  String get chatProgressRunFailed => '执行失败';
+
+  @override
+  String get chatProgressStopped => '已停止回复';
+
+  @override
+  String get chatProgressPrepare => '准备创作上下文';
+
+  @override
+  String get chatProgressReply => '整理回复';
+
+  @override
+  String get chatProgressSaveText => '保存创作稿件';
+
+  @override
+  String get chatProgressPreparePlan => '准备生成方案';
+
+  @override
+  String get chatProgressUpdateRole => '更新角色资料';
+
+  @override
+  String get chatProgressProcessing => '正在处理…';
+
+  @override
+  String get chatProgressUnderstanding => '正在理解你的需求…';
+
+  @override
+  String get chatProgressSelectingSkill => '正在选择创作能力…';
+
+  @override
+  String get chatProgressReadingRules => '正在读取创作规则…';
+
+  @override
+  String get chatProgressComposing => '正在构思…';
+
+  @override
+  String get chatProgressPreparingGeneration => '正在准备生成任务…';
+
+  @override
+  String get chatProgressGeneratingArtifact => '正在生成正文…';
+
+  @override
+  String get chatProgressCompletingDelivery => '产物已生成，正在完成交付…';
+
+  @override
+  String get chatProgressWaitingInput => '等待你补充或确认…';
+
+  @override
+  String get chatProgressAnalyze => '正在分析创作要求';
+
+  @override
+  String get chatProgressExecuteTool => '执行业务操作';
+
+  @override
+  String get chatProgressLoadSkill => '加载创作方法';
+
+  @override
+  String get chatProgressSkillTopics => '加载选题创作方法';
+
+  @override
+  String get chatProgressSkillScript => '加载剧本创作方法';
+
+  @override
+  String get chatProgressSkillStoryboard => '加载分镜创作方法';
+
+  @override
+  String get chatProgressSkillThreeView => '加载三视图创作方法';
+
+  @override
+  String get chatProgressWriteScript => '编写剧本';
+
+  @override
+  String get chatProgressWriteStoryboard => '编写分镜与视频提示词';
+
+  @override
+  String get chatProgressReadTextSources => '读取采用的原稿和要求';
+
+  @override
+  String get chatProgressValidateText => '校验正文、时长与结构';
+
+  @override
+  String get chatProgressReadText => '读取创作稿件';
+
+  @override
+  String get chatProgressSearchRoles => '查找角色';
+
+  @override
+  String get chatProgressCreateRole => '创建角色';
+
+  @override
+  String get chatProgressCopyRole => '准备个人角色副本';
+
+  @override
+  String get chatProgressAdoptRoleImage => '保存采用的角色图片';
+
+  @override
+  String get chatProgressReadAccount => '读取账号资料';
+
+  @override
+  String get chatProgressSearchAccounts => '查找账号';
+
+  @override
+  String get chatProgressSelectAccount => '加载目标账号';
+
+  @override
+  String get chatProgressUpdateAccount => '更新账号偏好';
+
+  @override
+  String get chatProgressUpdateMemory => '整理账号记忆';
+
+  @override
+  String get chatProgressSearchCreations => '查找历史创作';
+
+  @override
+  String get chatProgressReadCreation => '读取历史创作';
+
+  @override
+  String get chatProgressReadTemplates => '读取画风模板';
+
+  @override
+  String get chatProgressReadReferences => '整理参考素材';
+
+  @override
+  String get chatProgressValidatePlan => '校验模型能力和生成参数';
+
+  @override
+  String get chatProgressEstimate => '预估生成积分';
+
+  @override
+  String get chatProgressVerifyResult => '正在核实执行结果';
+
+  @override
+  String get chatProgressCompilePrompt => '编写生图提示词';
+
+  @override
+  String get chatProgressValidatePrompt => '校验生图提示词';
+
+  @override
+  String get chatProgressSavePrompt => '保存生图提示词';
+
+  @override
+  String get chatProgressRetryPrompt => '提示词编译中断，等待重试';
+
+  @override
+  String get chatProgressSubmitGeneration => '提交生成任务';
+
+  @override
+  String get chatProgressQueuedGeneration => '等待生成';
+
+  @override
+  String get chatProgressGenerateImage => '正在生成图片';
+
+  @override
+  String get chatProgressGenerateVideo => '正在生成视频';
+
+  @override
+  String get chatProgressGenerateAudio => '正在生成音频';
+
+  @override
+  String get chatProgressSaveMedia => '保存生成结果';
+
+  @override
+  String get chatProgressSyncResult => '同步生成结果，正在重试';
 
   @override
   String get chatExpired => '已过期';

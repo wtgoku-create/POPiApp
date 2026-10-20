@@ -965,6 +965,18 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
         l10n.roleProductionDescription,
       ),
       RoleGuideStep.generation => switch (_progress?.status) {
+        RoleGenerationStatus.pausing => (
+          l10n.roleStatusPausing,
+          l10n.chatTaskPausing,
+        ),
+        RoleGenerationStatus.paused => (
+          l10n.roleTaskPaused,
+          l10n.roleGenerationPausedDescription,
+        ),
+        RoleGenerationStatus.canceling => (
+          l10n.roleStatusCanceling,
+          l10n.chatTaskCanceling,
+        ),
         RoleGenerationStatus.completed => (
           l10n.roleGeneratedTitle,
           l10n.roleGeneratedDescription,
@@ -1553,9 +1565,7 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
                   mediaId: task.videoMediaId!,
                   repository: _repository,
                 ),
-          statusLabel: task.state == 'paused'
-              ? l10n.roleTaskPaused
-              : task.state == 'awaiting_confirmation'
+          statusLabel: task.state == 'awaiting_confirmation'
               ? l10n.chatAwaitingConfirmation
               : null,
           actionLabel: switch (action) {

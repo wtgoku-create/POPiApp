@@ -54,6 +54,7 @@ void main() {
     Locale locale = const Locale('zh'),
     bool signedIn = true,
     bool expandNavigation = true,
+    String initialLocation = '/session?prompt=旧草稿',
     FixtureSessionRepository? repository,
   }) async {
     tester.view.physicalSize = size;
@@ -85,7 +86,7 @@ void main() {
     }
     final router = container.read(routerProvider(false));
     addTearDown(router.dispose);
-    router.go('/session?prompt=旧草稿');
+    router.go(initialLocation);
     final drawerTheme = theme ?? AppTheme.light;
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -117,6 +118,32 @@ void main() {
     }
     return container;
   }
+
+  testWidgets('teaching navigation starts collapsed on direct entry', (
+    tester,
+  ) async {
+    await pumpDrawer(
+      tester,
+      initialLocation: '/teaching',
+      expandNavigation: false,
+    );
+    expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+    expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
+    await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('drawer-nav-teaching')), findsOneWidget);
+  });
+
+  testWidgets('closing the drawer resets expanded navigation', (tester) async {
+    await pumpDrawer(tester);
+    expect(find.byKey(const Key('drawer-nav-teaching')), findsOneWidget);
+    tester.state<ScaffoldState>(find.byType(Scaffold).first).closeDrawer();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+    expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
+  });
 
   for (final dark in [false, true]) {
     for (final size in [const Size(390, 844), const Size(320, 568)]) {
@@ -185,6 +212,7 @@ void main() {
         expect(find.byKey(const Key('drawer-nav-role')), findsOneWidget);
         expect(find.byKey(const Key('drawer-nav-ip-accounts')), findsOneWidget);
         expect(find.byKey(const Key('drawer-nav-assets')), findsOneWidget);
+        expect(find.text('收起'), findsNothing);
       });
     }
   }
@@ -513,6 +541,8 @@ void main() {
     expect(find.text('官方角色'), findsOneWidget);
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+    await tester.pumpAndSettle();
     final role = find.byKey(const Key('drawer-nav-role'));
     final works = find.byKey(const Key('drawer-nav-assets'));
     Color? itemColor(Finder item) => tester
@@ -529,6 +559,8 @@ void main() {
     expect(find.text('官方角色'), findsNothing);
     expect(container.read(routerProvider(false)).canPop(), isTrue);
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
     await tester.pumpAndSettle();
     expect(itemColor(role), AppColors.surface);
     expect(itemColor(works), isNot(AppColors.surface));
@@ -971,10 +1003,17 @@ void main() {
         expect(find.byType(TeachingPage), findsOneWidget);
         await tester.tap(find.byKey(const Key('popi-open-navigation')));
         await tester.pumpAndSettle();
+        expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+        expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
+        expect(find.text('收起'), findsNothing);
         await tester.tap(find.byKey(const Key('drawer-nav-home')));
         await tester.pumpAndSettle();
         expect(router.state.uri.path, '/');
         expect(find.byType(HomePage), findsOneWidget);
+        await tester.tap(find.byKey(const Key('popi-open-navigation')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+        expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );

@@ -248,6 +248,7 @@ class HomeTask {
   HomeTask.fromJson(Map<String, Object?> json)
     : id = homeId(json['id'] ?? json['taskId']),
       state = homeId(json['state'] ?? json['initialState']),
+      intent = (json['intent'] ?? json['controlIntent'] ?? 'run').toString(),
       revision = (json['revision'] ?? json['stateVersion'] ?? 0) as int,
       lock = json['lock']?.toString(),
       allowedActions = (json['allowedActions'] as List? ?? const [])
@@ -257,6 +258,7 @@ class HomeTask {
       steps = homeObjects(json['steps'] ?? json['stages']);
   final String id;
   final String state;
+  final String intent;
   final int revision;
   final String? lock;
   final List<String> allowedActions;
@@ -291,6 +293,11 @@ class HomeTask {
       'completed' => RoleGenerationStatus.completed,
       'failed' => RoleGenerationStatus.failed,
       'canceled' => RoleGenerationStatus.canceled,
+      'paused' => RoleGenerationStatus.paused,
+      'queued' ||
+      'running' when intent == 'pause' => RoleGenerationStatus.pausing,
+      'queued' ||
+      'running' when intent == 'cancel' => RoleGenerationStatus.canceling,
       _ => RoleGenerationStatus.running,
     },
     stage: state == 'completed'

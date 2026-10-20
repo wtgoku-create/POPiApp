@@ -15,11 +15,11 @@ class ConversationGenerationView {
           : const {},
       referenceMediaId =
           card.roleImage?['referenceMediaId']?.toString() ??
-          conversationMaps(card.planItems.firstOrNull?['references'])
+          _planReferences(card)
               .where((ref) => ref['purpose'] != 'style')
               .firstOrNull?['mediaId']
               ?.toString(),
-      references = conversationMaps(card.planItems.firstOrNull?['references']),
+      references = _planReferences(card),
       config = card.planItems.firstOrNull?['modelId'] == null
           ? null
           : HomeConfig.fromJson(card.planItems.first),
@@ -61,6 +61,18 @@ class ConversationGenerationView {
   final String storyHook;
   String? get templateId => template['id']?.toString();
   String get templateTitle => template['title'] as String? ?? '';
+
+  /// Saved plans show every material once, with style images first as on Web.
+  List<String> get savedReferenceIds => {
+    if (template['mediaId'] != null) template['mediaId'].toString(),
+    for (final ref in references)
+      if (ref['purpose'] == 'style' && ref['mediaId'] != null)
+        ref['mediaId'].toString(),
+    if (referenceMediaId != null) referenceMediaId!,
+    for (final ref in references)
+      if (ref['mediaId'] != null) ref['mediaId'].toString(),
+  }.where((id) => id.trim().isNotEmpty).toList();
+
   List<String> referenceIds(
     String? selectedReference,
     String? templateMediaId,
@@ -74,6 +86,10 @@ class ConversationGenerationView {
     ],
   }.toList();
 }
+
+List<Map<String, Object?>> _planReferences(ConversationBlock card) => [
+  for (final item in card.planItems) ...conversationMaps(item['references']),
+];
 
 bool _hasInput(Object? value) => value is String
     ? value.trim().isNotEmpty

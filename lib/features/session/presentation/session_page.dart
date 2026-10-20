@@ -34,7 +34,9 @@ import 'widgets/popi_message_composer.dart';
 import 'conversation_controller.dart';
 import 'composer_image_upload_controller.dart';
 import 'widgets/conversation_timeline.dart';
+import 'widgets/conversation_style.dart';
 import 'widgets/session_welcome.dart';
+import 'widgets/session_artifacts_sheet.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 
 /// Creation session with a prompt composer and attachment selection.
@@ -172,9 +174,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
             !(_conversation?.pending ?? false));
 
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: isDark ? colorScheme.surface : const Color(0xFFF5F4FA),
-      ),
+      decoration: BoxDecoration(color: ConversationStyle.pageColor(context)),
       child: GestureDetector(
         key: const Key('popi-home-dismiss-keyboard'),
         behavior: HitTestBehavior.translucent,
@@ -253,11 +253,13 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                           dimension: 40,
                           child: IconButton(
                             key: const Key('session-new-conversation'),
-                            tooltip: l10n.attachmentFeaturePending,
+                            tooltip: l10n.sessionArtifactsTitle,
                             padding: const EdgeInsets.all(4),
-                            onPressed: () => AppToast.info(
+                            onPressed: () => SessionArtifactsSheet.show(
                               context,
-                              l10n.attachmentFeaturePending,
+                              sessionId: _activeSessionId,
+                              snapshot: _conversation?.snapshot,
+                              mediaRepository: _conversation?.repository,
                             ),
                             icon: SizedBox(
                               width: 30,

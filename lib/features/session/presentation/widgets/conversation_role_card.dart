@@ -100,7 +100,7 @@ class ConversationRoleCard extends StatelessWidget {
               ? colors.primary.withValues(alpha: .05)
               : Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.card),
+            borderRadius: BorderRadius.circular(compact ? 16 : AppRadii.card),
           ),
         ),
         child: Row(

@@ -85,6 +85,53 @@ class NetworkApi {
     cancelToken,
   );
 
+  Future<Map<String, Object?>> sessionTextArtifactsPage(
+    String sessionId, {
+    int page = 1,
+    int pageSize = 100,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await dio.get<Object?>(
+        '/api_client/agent/v2/sessions/${Uri.encodeComponent(sessionId)}/text-artifacts',
+        queryParameters: {'page': page, 'pageSize': pageSize},
+        cancelToken: cancelToken,
+      );
+      final data = _workBody(response.data)['data'];
+      if (data is! Map) throw const ApiException();
+      return Map<String, Object?>.from(data);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  Future<Map<String, Object?>> sessionArtifactsPage(
+    String sessionId, {
+    int page = 1,
+    int pageSize = 20,
+    String keyword = '',
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await dio.get<Object?>(
+        '/api_client/agent/v2/sessions/${Uri.encodeComponent(sessionId)}/artifacts',
+        queryParameters: {
+          'page': page,
+          'pageSize': pageSize,
+          if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+        },
+        cancelToken: cancelToken,
+      );
+      final data = _workBody(response.data)['data'];
+      if (data is! Map) throw const ApiException();
+      return Map<String, Object?>.from(data);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
   /// Signed storage requests must not inherit the application's Bearer token.
   Future<void> uploadStudioBytes(
     String url,

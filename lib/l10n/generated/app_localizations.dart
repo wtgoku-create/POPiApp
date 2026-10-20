@@ -170,6 +170,48 @@ abstract class AppLocalizations {
   /// **'Creation paused'**
   String get roleTaskPaused;
 
+  /// No description provided for @roleStatusPausing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pausing'**
+  String get roleStatusPausing;
+
+  /// No description provided for @roleTaskPausing.
+  ///
+  /// In en, this message translates to:
+  /// **'Pausing creation...'**
+  String get roleTaskPausing;
+
+  /// No description provided for @roleTaskCanceling.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceling creation...'**
+  String get roleTaskCanceling;
+
+  /// No description provided for @roleStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get roleStatusPaused;
+
+  /// No description provided for @roleStatusCanceling.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceling'**
+  String get roleStatusCanceling;
+
+  /// No description provided for @roleGenerationPausedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current plan is saved. You can resume creation.'**
+  String get roleGenerationPausedDescription;
+
+  /// No description provided for @chatTaskCanceling.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceling after the current stage'**
+  String get chatTaskCanceling;
+
   /// No description provided for @rolePauseProduction.
   ///
   /// In en, this message translates to:
@@ -3871,6 +3913,18 @@ abstract class AppLocalizations {
   /// **'Download'**
   String get download;
 
+  /// No description provided for @sessionArtifactExported.
+  ///
+  /// In en, this message translates to:
+  /// **'Document exported'**
+  String get sessionArtifactExported;
+
+  /// No description provided for @sessionArtifactExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export the document. Try again later.'**
+  String get sessionArtifactExportFailed;
+
   /// No description provided for @imageSavedToPhotos.
   ///
   /// In en, this message translates to:
@@ -4038,6 +4092,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete account'**
   String get confirmCancelAccount;
+
+  /// No description provided for @cancelAccountSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted successfully'**
+  String get cancelAccountSucceeded;
 
   /// No description provided for @cancelAccountFailed.
   ///
@@ -5029,10 +5089,118 @@ abstract class AppLocalizations {
   /// **'Collapse progress'**
   String get chatCollapseProgress;
 
+  /// No description provided for @chatThoughtProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Thought process'**
+  String get chatThoughtProcess;
+
+  /// No description provided for @chatStepPrepare.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare'**
+  String get chatStepPrepare;
+
+  /// No description provided for @chatStepProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'Process request'**
+  String get chatStepProcess;
+
+  /// No description provided for @chatStepReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate reply'**
+  String get chatStepReply;
+
+  /// No description provided for @chatStepSaveText.
+  ///
+  /// In en, this message translates to:
+  /// **'Save content'**
+  String get chatStepSaveText;
+
+  /// No description provided for @chatStepPreparePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare generation plan'**
+  String get chatStepPreparePlan;
+
+  /// No description provided for @chatStepAnalyze.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze creative requirements'**
+  String get chatStepAnalyze;
+
+  /// No description provided for @chatStepReadRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Read character profiles'**
+  String get chatStepReadRole;
+
+  /// No description provided for @chatStepReadContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Review creative context'**
+  String get chatStepReadContext;
+
+  /// No description provided for @chatStepTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggest topics'**
+  String get chatStepTopics;
+
+  /// No description provided for @chatStepPrepareRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare character plan'**
+  String get chatStepPrepareRole;
+
+  /// No description provided for @chatStepSaveRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Save character draft'**
+  String get chatStepSaveRole;
+
+  /// No description provided for @chatStepPublishRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish character'**
+  String get chatStepPublishRole;
+
+  /// No description provided for @chatStepVerifyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify results'**
+  String get chatStepVerifyResult;
+
+  /// No description provided for @chatStepGenerateImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate image'**
+  String get chatStepGenerateImage;
+
+  /// No description provided for @chatStepGenerateVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate video'**
+  String get chatStepGenerateVideo;
+
+  /// No description provided for @chatStepGenerateAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate audio'**
+  String get chatStepGenerateAudio;
+
+  /// No description provided for @chatStepSyncResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync results'**
+  String get chatStepSyncResult;
+
   /// No description provided for @chatPreparing.
   ///
   /// In en, this message translates to:
-  /// **'Preparing'**
+  /// **'Preparing…'**
   String get chatPreparing;
 
   /// No description provided for @chatProcessing.
@@ -5044,19 +5212,19 @@ abstract class AppLocalizations {
   /// No description provided for @chatGeneratingReply.
   ///
   /// In en, this message translates to:
-  /// **'Generating a reply'**
+  /// **'Generating response…'**
   String get chatGeneratingReply;
 
   /// No description provided for @chatSavingArtifact.
   ///
   /// In en, this message translates to:
-  /// **'Saving content'**
+  /// **'Saving output…'**
   String get chatSavingArtifact;
 
   /// No description provided for @chatPlanningGeneration.
   ///
   /// In en, this message translates to:
-  /// **'Preparing a generation plan'**
+  /// **'Preparing the generation plan…'**
   String get chatPlanningGeneration;
 
   /// No description provided for @chatReadRole.
@@ -5068,19 +5236,19 @@ abstract class AppLocalizations {
   /// No description provided for @chatReadContext.
   ///
   /// In en, this message translates to:
-  /// **'Reading the creative context'**
+  /// **'Reading creation context'**
   String get chatReadContext;
 
   /// No description provided for @chatTopics.
   ///
   /// In en, this message translates to:
-  /// **'Suggesting topics'**
+  /// **'Writing story ideas'**
   String get chatTopics;
 
   /// No description provided for @chatPrepareRole.
   ///
   /// In en, this message translates to:
-  /// **'Preparing a character plan'**
+  /// **'Preparing character creation'**
   String get chatPrepareRole;
 
   /// No description provided for @redemptionCenter.
@@ -5419,22 +5587,82 @@ abstract class AppLocalizations {
   /// **'Unable to load categories. Tap to retry'**
   String get teachingCategoriesFailed;
 
+  /// No description provided for @sessionArtifactsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation Outputs'**
+  String get sessionArtifactsTitle;
+
+  /// No description provided for @sessionArtifactAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get sessionArtifactAll;
+
+  /// No description provided for @sessionArtifactRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Roles'**
+  String get sessionArtifactRoles;
+
+  /// No description provided for @sessionArtifactScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get sessionArtifactScripts;
+
+  /// No description provided for @sessionArtifactVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get sessionArtifactVideos;
+
+  /// No description provided for @sessionArtifactAudioDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Details'**
+  String get sessionArtifactAudioDetail;
+
+  /// No description provided for @sessionArtifactImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Details'**
+  String get sessionArtifactImageDetail;
+
+  /// No description provided for @sessionArtifactScriptDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Script Details'**
+  String get sessionArtifactScriptDetail;
+
+  /// No description provided for @sessionArtifactVideoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Video Details'**
+  String get sessionArtifactVideoDetail;
+
+  /// No description provided for @sessionArtifactsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No outputs yet'**
+  String get sessionArtifactsEmpty;
+
   /// No description provided for @chatAskUser.
   ///
   /// In en, this message translates to:
-  /// **'Waiting for more details'**
+  /// **'Preparing questions'**
   String get chatAskUser;
 
   /// No description provided for @chatSaveRole.
   ///
   /// In en, this message translates to:
-  /// **'Saving the character draft'**
+  /// **'Saving character profile'**
   String get chatSaveRole;
 
   /// No description provided for @chatPublishRole.
   ///
   /// In en, this message translates to:
-  /// **'Publishing the character'**
+  /// **'Preparing character publication'**
   String get chatPublishRole;
 
   /// No description provided for @chatPreviewImage.
@@ -5460,6 +5688,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please note: Clicking \"Generate\" will deduct the corresponding points. Points already consumed are non-refundable. Please carefully review your materials, prompts, and generation settings before submitting.'**
   String get generationCreditNotice;
+
+  /// No description provided for @generationCreditNoticeNonRefundable.
+  ///
+  /// In en, this message translates to:
+  /// **'Points already consumed are non-refundable'**
+  String get generationCreditNoticeNonRefundable;
 
   /// No description provided for @chatRoleName.
   ///
@@ -5502,6 +5736,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Completed'**
   String get chatCompleted;
+
+  /// No description provided for @chatTextTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Story idea'**
+  String get chatTextTopic;
+
+  /// No description provided for @chatTextScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Script'**
+  String get chatTextScript;
+
+  /// No description provided for @chatTextStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard prompt'**
+  String get chatTextStoryboard;
+
+  /// No description provided for @chatTextUnknownDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration not recorded'**
+  String get chatTextUnknownDuration;
+
+  /// No description provided for @chatProgressDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get chatProgressDetails;
+
+  /// No description provided for @chatProgressPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get chatProgressPending;
+
+  /// No description provided for @chatProgressRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get chatProgressRunning;
+
+  /// No description provided for @chatProgressWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get chatProgressWaiting;
+
+  /// No description provided for @chatProgressFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get chatProgressFailed;
+
+  /// No description provided for @chatProgressCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get chatProgressCompleted;
+
+  /// No description provided for @chatProgressRunFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get chatProgressRunFailed;
+
+  /// No description provided for @chatProgressStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply stopped'**
+  String get chatProgressStopped;
+
+  /// No description provided for @chatProgressPrepare.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing context'**
+  String get chatProgressPrepare;
+
+  /// No description provided for @chatProgressReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Composing reply'**
+  String get chatProgressReply;
+
+  /// No description provided for @chatProgressSaveText.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving written content'**
+  String get chatProgressSaveText;
+
+  /// No description provided for @chatProgressPreparePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing generation plan'**
+  String get chatProgressPreparePlan;
+
+  /// No description provided for @chatProgressUpdateRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating character'**
+  String get chatProgressUpdateRole;
+
+  /// No description provided for @chatProgressProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing…'**
+  String get chatProgressProcessing;
+
+  /// No description provided for @chatProgressUnderstanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Understanding your request…'**
+  String get chatProgressUnderstanding;
+
+  /// No description provided for @chatProgressSelectingSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Selecting a creative skill…'**
+  String get chatProgressSelectingSkill;
+
+  /// No description provided for @chatProgressReadingRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading creative guidelines…'**
+  String get chatProgressReadingRules;
+
+  /// No description provided for @chatProgressComposing.
+  ///
+  /// In en, this message translates to:
+  /// **'Planning the response…'**
+  String get chatProgressComposing;
+
+  /// No description provided for @chatProgressPreparingGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing the generation task…'**
+  String get chatProgressPreparingGeneration;
+
+  /// No description provided for @chatProgressGeneratingArtifact.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating content…'**
+  String get chatProgressGeneratingArtifact;
+
+  /// No description provided for @chatProgressCompletingDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Output generated. Finishing delivery…'**
+  String get chatProgressCompletingDelivery;
+
+  /// No description provided for @chatProgressWaitingInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your input…'**
+  String get chatProgressWaitingInput;
+
+  /// No description provided for @chatProgressAnalyze.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your request'**
+  String get chatProgressAnalyze;
+
+  /// No description provided for @chatProgressExecuteTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Performing operation'**
+  String get chatProgressExecuteTool;
+
+  /// No description provided for @chatProgressLoadSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading creative guidance'**
+  String get chatProgressLoadSkill;
+
+  /// No description provided for @chatProgressSkillTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading story guidance'**
+  String get chatProgressSkillTopics;
+
+  /// No description provided for @chatProgressSkillScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading script guidance'**
+  String get chatProgressSkillScript;
+
+  /// No description provided for @chatProgressSkillStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading storyboard guidance'**
+  String get chatProgressSkillStoryboard;
+
+  /// No description provided for @chatProgressSkillThreeView.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading character sheet guidance'**
+  String get chatProgressSkillThreeView;
+
+  /// No description provided for @chatProgressWriteScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing script'**
+  String get chatProgressWriteScript;
+
+  /// No description provided for @chatProgressWriteStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing storyboard and video prompt'**
+  String get chatProgressWriteStoryboard;
+
+  /// No description provided for @chatProgressReadTextSources.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading source text and requirements'**
+  String get chatProgressReadTextSources;
+
+  /// No description provided for @chatProgressValidateText.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking content, duration and structure'**
+  String get chatProgressValidateText;
+
+  /// No description provided for @chatProgressReadText.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading written content'**
+  String get chatProgressReadText;
+
+  /// No description provided for @chatProgressSearchRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding characters'**
+  String get chatProgressSearchRoles;
+
+  /// No description provided for @chatProgressCreateRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating character'**
+  String get chatProgressCreateRole;
+
+  /// No description provided for @chatProgressCopyRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing personal character copy'**
+  String get chatProgressCopyRole;
+
+  /// No description provided for @chatProgressAdoptRoleImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving selected character image'**
+  String get chatProgressAdoptRoleImage;
+
+  /// No description provided for @chatProgressReadAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading account profile'**
+  String get chatProgressReadAccount;
+
+  /// No description provided for @chatProgressSearchAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding accounts'**
+  String get chatProgressSearchAccounts;
+
+  /// No description provided for @chatProgressSelectAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading selected account'**
+  String get chatProgressSelectAccount;
+
+  /// No description provided for @chatProgressUpdateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating account preferences'**
+  String get chatProgressUpdateAccount;
+
+  /// No description provided for @chatProgressUpdateMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating account memory'**
+  String get chatProgressUpdateMemory;
+
+  /// No description provided for @chatProgressSearchCreations.
+  ///
+  /// In en, this message translates to:
+  /// **'Finding previous creations'**
+  String get chatProgressSearchCreations;
+
+  /// No description provided for @chatProgressReadCreation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading previous creation'**
+  String get chatProgressReadCreation;
+
+  /// No description provided for @chatProgressReadTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading style templates'**
+  String get chatProgressReadTemplates;
+
+  /// No description provided for @chatProgressReadReferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing references'**
+  String get chatProgressReadReferences;
+
+  /// No description provided for @chatProgressValidatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking model capabilities and parameters'**
+  String get chatProgressValidatePlan;
+
+  /// No description provided for @chatProgressEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimating credits'**
+  String get chatProgressEstimate;
+
+  /// No description provided for @chatProgressVerifyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying operation result'**
+  String get chatProgressVerifyResult;
+
+  /// No description provided for @chatProgressCompilePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing image prompt'**
+  String get chatProgressCompilePrompt;
+
+  /// No description provided for @chatProgressValidatePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking image prompt'**
+  String get chatProgressValidatePrompt;
+
+  /// No description provided for @chatProgressSavePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving image prompt'**
+  String get chatProgressSavePrompt;
+
+  /// No description provided for @chatProgressRetryPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt compilation interrupted; awaiting retry'**
+  String get chatProgressRetryPrompt;
+
+  /// No description provided for @chatProgressSubmitGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting generation task'**
+  String get chatProgressSubmitGeneration;
+
+  /// No description provided for @chatProgressQueuedGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued for generation'**
+  String get chatProgressQueuedGeneration;
+
+  /// No description provided for @chatProgressGenerateImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating image'**
+  String get chatProgressGenerateImage;
+
+  /// No description provided for @chatProgressGenerateVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating video'**
+  String get chatProgressGenerateVideo;
+
+  /// No description provided for @chatProgressGenerateAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating audio'**
+  String get chatProgressGenerateAudio;
+
+  /// No description provided for @chatProgressSaveMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving generated result'**
+  String get chatProgressSaveMedia;
+
+  /// No description provided for @chatProgressSyncResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrying result synchronization'**
+  String get chatProgressSyncResult;
 
   /// No description provided for @chatExpired.
   ///

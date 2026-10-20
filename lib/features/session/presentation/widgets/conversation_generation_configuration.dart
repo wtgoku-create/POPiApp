@@ -73,32 +73,25 @@ class ConversationGenerationConfiguration extends StatelessWidget {
           ),
       ],
     );
-    return ColoredBox(
+    return LayoutBuilder(
       key: const Key('conversation-plan-configuration'),
-      color: colors.surface.withValues(alpha: .55),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth /
-                    MediaQuery.textScalerOf(context).scale(1) <
-                440) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [configuration, const SizedBox(height: 16), estimate],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: configuration),
-                const SizedBox(width: 20),
-                SizedBox(width: 130, child: estimate),
-              ],
-            );
-          },
-        ),
-      ),
+      builder: (context, constraints) {
+        if (constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
+            440) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [configuration, const SizedBox(height: 16), estimate],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: configuration),
+            const SizedBox(width: 20),
+            SizedBox(width: 130, child: estimate),
+          ],
+        );
+      },
     );
   }
 

@@ -25,6 +25,7 @@ class ConversationHomePlanCard extends StatelessWidget {
     required this.model,
     required this.points,
     required this.actions,
+    this.embedded = false,
     this.validationMessage,
     super.key,
   });
@@ -40,6 +41,7 @@ class ConversationHomePlanCard extends StatelessWidget {
   final HomeModel? model;
   final num? points;
   final Widget actions;
+  final bool embedded;
   final String? validationMessage;
 
   @override
@@ -53,31 +55,33 @@ class ConversationHomePlanCard extends StatelessWidget {
       color: colors.onSurfaceVariant,
     );
     return ConversationCard(
+      framed: !embedded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.chatProductionPlan,
-                  style: heading.copyWith(color: colors.primary),
+          if (!embedded)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.chatProductionPlan,
+                    style: heading.copyWith(color: colors.primary),
+                  ),
                 ),
-              ),
-              IconButton(
-                tooltip: expanded
-                    ? l10n.chatCollapseProfile
-                    : l10n.roleGuideViewMore,
-                onPressed: onToggle,
-                icon: Icon(
-                  expanded ? Icons.expand_less : Icons.expand_more,
-                  color: colors.primary.withValues(alpha: .6),
-                  size: 20,
+                IconButton(
+                  tooltip: expanded
+                      ? l10n.chatCollapseProfile
+                      : l10n.roleGuideViewMore,
+                  onPressed: onToggle,
+                  icon: Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: colors.primary.withValues(alpha: .6),
+                    size: 20,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (expanded) ...[
+              ],
+            ),
+          if (embedded || expanded) ...[
             Text(l10n.chatPlanCast, style: heading),
             const SizedBox(height: 8),
             for (final role in block.homeCast)

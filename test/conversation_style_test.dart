@@ -89,6 +89,7 @@ Future<StreamingSessionRepository> _pumpTopicPage(
   bool dark = false,
   double scale = 1,
   bool sentByUser = false,
+  List<Map<String, Object?>>? messages,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -97,13 +98,15 @@ Future<StreamingSessionRepository> _pumpTopicPage(
   final repository = StreamingSessionRepository()
     ..data = chatSnapshotJson(
       seq: 1,
-      messages: [
-        {
-          ...chatMessageJson(),
-          if (sentByUser) 'role': 'user',
-          'blocks': blocks,
-        },
-      ],
+      messages:
+          messages ??
+          [
+            {
+              ...chatMessageJson(),
+              if (sentByUser) 'role': 'user',
+              'blocks': blocks,
+            },
+          ],
     );
   final container = ProviderContainer(
     overrides: [sessionRepositoryProvider.overrideWithValue(repository)],
@@ -163,6 +166,94 @@ void main() {
       await icons.load();
     }
   });
+
+  for (final (name, size, dark, scale) in [
+    ('figma', const Size(440, 956), false, 1.0),
+    ('compact', const Size(320, 844), false, 1.5),
+    ('dark', const Size(390, 844), true, 1.0),
+  ]) {
+    testWidgets('conversation reading layout at $name', (tester) async {
+      const prompt = '你需要做一个什么样的角色？';
+      const request = '我想制作一个可爱的萌宠角色';
+      const reply =
+          '收到，我会根据兜兜的人物与人设，围绕当前选题整理创作方案。'
+          '采用安静认真、反应慢但责任心强；短手够不到会尴尬，观察后愿意换方法，'
+          '用具体行动完成承诺的表达风格，陪它发现不起眼的温柔。';
+      await _pumpTopicPage(
+        tester,
+        const [],
+        size: size,
+        dark: dark,
+        scale: scale,
+        messages: [
+          {...chatMessageJson(text: prompt), 'id': 'prompt'},
+          {
+            ...chatMessageJson(seq: 2, text: request),
+            'id': 'request',
+            'role': 'user',
+          },
+          {
+            ...chatMessageJson(seq: 3),
+            'id': 'progress',
+            'blocks': [
+              {
+                'type': 'object',
+                'kind': 'progress',
+                'data': {
+                  'runId': 'run',
+                  'state': 'running',
+                  'steps': [
+                    {
+                      'id': 'prepare',
+                      'labelKey': 'script.run.preparing',
+                      'status': 'completed',
+                    },
+                    {
+                      'id': 'processing',
+                      'labelKey': 'script.run.processing',
+                      'status': 'completed',
+                    },
+                    {
+                      'id': 'reply',
+                      'labelKey': 'script.run.generatingReply',
+                      'status': 'running',
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {...chatMessageJson(seq: 4, text: reply), 'id': 'reply'},
+        ],
+      );
+      final timeline = find.byType(ConversationTimeline);
+      final toggle = find.byTooltip('收起进度');
+      await tester.ensureVisible(toggle);
+      await tester.pumpAndSettle();
+      final header = tester.getRect(toggle);
+      expect(header.height, 25);
+      expect(header.left, greaterThanOrEqualTo(20));
+      expect(header.right, lessThanOrEqualTo(size.width - 20));
+      final progressCard = find
+          .ancestor(
+            of: find.byType(ConversationCardContent),
+            matching: find.byType(Container),
+          )
+          .first;
+      expect(tester.getSize(progressCard).width, 238);
+      expect(find.text('执行中'), findsNothing);
+      expect(find.text('已完成'), findsNothing);
+      await _capture(tester, '$name-conversation');
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('展开进度'), findsOneWidget);
+      await tester.drag(timeline, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('收到，我会根据兜兜'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
 
   for (final (name, size, locale, dark, scale) in [
     ('mobile', const Size(390, 844), const Locale('zh'), false, 1.0),
@@ -240,6 +331,11 @@ void main() {
       expect(content, findsNothing);
       expect(find.text(title), findsOneWidget);
       expect(find.byTooltip(l10n.chatExpandStory), findsOneWidget);
+      expect(
+        tester.getBottomLeft(card).dy -
+            tester.getBottomLeft(find.text(title)).dy,
+        closeTo(20, .01),
+      );
       await _capture(tester, '$name-confirmed-topic-collapsed');
       repository.streams.single.add(
         chatEvent(2, 'message.updated', {
@@ -768,13 +864,28 @@ void main() {
           'steps': [
             {'labelKey': 'script.run.preparing', 'status': 'completed'},
             {
-              'labelKey': 'pages.studio.progress.readRole',
+              'labelKey': 'pages.studio.progress.analyze',
               'status': 'completed',
             },
+            {
+              'id': 'topics',
+              'labelKey': 'pages.studio.progress.topics',
+              'status': 'completed',
+            },
+            for (final label in [
+              'pages.studio.progress.readTextSources',
+              'pages.studio.progress.skillTopics',
+              'pages.studio.progress.topics',
+              'pages.studio.progress.validateText',
+              'pages.studio.progress.saveText',
+            ])
+              {'parentId': 'topics', 'labelKey': label, 'status': 'completed'},
             {'labelKey': 'script.run.generatingReply', 'status': 'running'},
           ],
         },
       });
+      final currentProgress = ValueNotifier(progress);
+      addTearDown(currentProgress.dispose);
       final plan = ConversationBlock.fromJson({
         'type': 'object',
         'kind': 'plan',
@@ -820,20 +931,18 @@ void main() {
             ),
             home: Scaffold(
               body: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFEDE9FD), Colors.white],
-                  ),
-                ),
+                decoration: const BoxDecoration(color: Color(0xFFF5F4FA)),
                 child: ListView(
                   padding: const EdgeInsets.all(20),
                   children: [
                     const SizedBox(height: 40),
-                    ConversationObjectView(
-                      block: progress,
-                      controller: controller,
+                    ValueListenableBuilder<ConversationBlock>(
+                      valueListenable: currentProgress,
+                      builder: (_, block, _) => ConversationObjectView(
+                        key: const ValueKey('captured-progress'),
+                        block: block,
+                        controller: controller,
+                      ),
                     ),
                     ConversationObjectView(block: plan, controller: controller),
                   ],
@@ -845,13 +954,33 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('正在读取角色档案'), findsOneWidget);
+      expect(find.text('创作选题故事'), findsNWidgets(2));
       await _capture(tester, 'mobile-progress-plan');
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pump();
-      expect(find.text('正在读取角色档案'), findsNothing);
+      expect(find.text('创作选题故事'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await _capture(tester, 'mobile-progress-collapsed');
+      await tester.tap(find.byTooltip('展开进度'));
+      currentProgress.value = ConversationBlock.fromJson({
+        'type': 'object',
+        'kind': 'progress',
+        'data': {...progress.data, 'state': 'completed'},
+      });
+      await tester.pumpAndSettle();
+      expect(find.text('已完成'), findsOneWidget);
+      expect(
+        find.byKey(const Key('conversation-progress-details')),
+        findsNothing,
+      );
+      await _capture(tester, 'mobile-progress-completed');
+      await tester.tap(find.byTooltip('展开进度'));
+      await tester.pumpAndSettle();
+      expect(find.text('正在生成回复…'), findsOneWidget);
+      expect(find.text('已完成'), findsOneWidget);
+      await _capture(tester, 'mobile-progress-completed-expanded');
+      await tester.tap(find.byTooltip('收起进度'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('确认生成'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsOneWidget);

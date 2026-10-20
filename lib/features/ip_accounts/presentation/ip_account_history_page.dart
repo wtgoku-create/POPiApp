@@ -11,10 +11,11 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/type/list_page.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
-import '../domain/account_preferences.dart';
-import '../domain/ip_account_home.dart';
-import 'account_archives_page.dart';
+import '../../session/domain/session_artifact.dart';
+import '../../session/presentation/widgets/session_artifacts_sheet.dart';
 import 'widgets/ip_account_history.dart';
 
 /// Searchable account history with local loading and refresh state.
@@ -32,11 +33,10 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
   final _search = TextEditingController();
   CancelToken? _token;
   Timer? _debounce;
-  final _creations = <IpAccountCreation>[];
-  AccountArchivePage? _page;
+  final _creations = <SessionArtifact>[];
+  ListPage<SessionArtifact>? _page;
   String _query = '';
   bool _loading = true;
-  bool _failed = false;
 
   @override
   void initState() {
@@ -51,6 +51,8 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
       _debounce?.cancel();
       _search.clear();
       _query = '';
+      _creations.clear();
+      _page = null;
       unawaited(_load());
     }
   }
@@ -70,11 +72,6 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
     final token = _token = CancelToken();
     setState(() {
       _loading = true;
-      _failed = false;
-      if (!more) {
-        _creations.clear();
-        _page = null;
-      }
     });
     if (ref.read(userProvider) == null) {
       setState(() => _loading = false);
@@ -83,7 +80,7 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
     try {
       final page = await ref
           .read(ipAccountRepositoryProvider)
-          .archives(
+          .creationHistory(
             widget.accountId,
             keyword: _query.trim(),
             page: more ? (_page?.page ?? 0) + 1 : 1,
@@ -91,11 +88,23 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
           );
       if (!mounted || token.isCancelled) return;
       setState(() {
-        _creations.addAll(page.items);
+        final items = <String, SessionArtifact>{
+          if (more)
+            for (final item in _creations) item.id: item,
+          for (final item in page.items) item.id: item,
+        };
+        _creations
+          ..clear()
+          ..addAll(items.values);
         _page = page;
       });
     } catch (_) {
-      if (mounted && !token.isCancelled) setState(() => _failed = true);
+      if (mounted && !token.isCancelled) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.creationHistoryLoadFailed,
+        );
+      }
     } finally {
       if (mounted && !token.isCancelled) setState(() => _loading = false);
     }
@@ -109,21 +118,16 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
       _creations.clear();
       _page = null;
       _loading = true;
-      _failed = false;
     });
     _debounce = Timer(const Duration(milliseconds: 350), () => _load());
   }
 
-  Future<void> _open(IpAccountCreation creation) async {
+  Future<void> _open(SessionArtifact creation) async {
     final token = _token;
     FocusScope.of(context).unfocus();
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => AccountArchiveDetailPage(
-          accountId: widget.accountId,
-          creationId: creation.id,
-          versionId: creation.versionId,
-        ),
+        builder: (_) => SessionArtifactDetailPage(item: creation),
       ),
     );
     if (mounted && token != null && !token.isCancelled) await _load();
@@ -306,35 +310,13 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
                       ),
                       itemCount: _creations.isEmpty
                           ? 1
-                          : _creations.length +
-                                ((_loading || _failed || hasMore) ? 1 : 0),
+                          : _creations.length + ((_loading || hasMore) ? 1 : 0),
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         if (_loading && index == _creations.length) {
                           return const Padding(
                             padding: EdgeInsets.all(40),
                             child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
-                        if (_failed && index == _creations.length) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Column(
-                              children: [
-                                Text(
-                                  l10n.creationHistoryLoadFailed,
-                                  textAlign: TextAlign.center,
-                                ),
-                                TextButton(
-                                  key: const Key(
-                                    'ip-account-history-page-retry',
-                                  ),
-                                  onPressed: () =>
-                                      _load(more: _creations.isNotEmpty),
-                                  child: Text(l10n.retry),
-                                ),
-                              ],
-                            ),
                           );
                         }
                         if (_creations.isEmpty) {
@@ -361,6 +343,7 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
                         }
                         final creation = _creations[index];
                         return Material(
+                          key: ValueKey(creation.id),
                           color: colors.brightness == Brightness.light
                               ? Colors.white.withValues(alpha: .5)
                               : colors.surfaceContainerLow,

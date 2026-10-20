@@ -42,14 +42,24 @@ class RoleGenerationPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
     final completed = progress.status == RoleGenerationStatus.completed;
+    final generating =
+        progress.status == RoleGenerationStatus.running && statusLabel == null;
     final status =
         statusLabel ??
         switch (progress.status) {
           RoleGenerationStatus.running => l10n.roleTaskRunning,
+          RoleGenerationStatus.pausing => l10n.roleTaskPausing,
+          RoleGenerationStatus.paused => l10n.roleTaskPaused,
+          RoleGenerationStatus.canceling => l10n.roleTaskCanceling,
           RoleGenerationStatus.completed => l10n.roleTaskCompleted,
           RoleGenerationStatus.canceled => l10n.roleTaskCanceled,
           RoleGenerationStatus.failed => l10n.roleTaskFailed,
         };
+    final message = switch (progress.status) {
+      RoleGenerationStatus.pausing => l10n.chatTaskPausing,
+      RoleGenerationStatus.canceling => l10n.chatTaskCanceling,
+      _ => statusLabel ?? (generating ? l10n.roleWorkGenerating : status),
+    };
     final stages = [
       l10n.roleStageCharacters,
       l10n.roleStageScript,
@@ -86,6 +96,10 @@ class RoleGenerationPanel extends StatelessWidget {
                     child: Text(
                       switch (progress.status) {
                         RoleGenerationStatus.running => l10n.roleTaskExecuting,
+                        RoleGenerationStatus.pausing => l10n.roleStatusPausing,
+                        RoleGenerationStatus.paused => l10n.roleStatusPaused,
+                        RoleGenerationStatus.canceling =>
+                          l10n.roleStatusCanceling,
                         RoleGenerationStatus.completed =>
                           l10n.roleStatusCompleted,
                         RoleGenerationStatus.failed => l10n.roleStatusFailed,
@@ -257,7 +271,7 @@ class RoleGenerationPanel extends StatelessWidget {
                       )
                     : DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: progress.running
+                          gradient: generating
                               ? const LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -268,21 +282,22 @@ class RoleGenerationPanel extends StatelessWidget {
                                   ],
                                 )
                               : null,
-                          color: progress.running
-                              ? null
-                              : roleGuideTint(context),
+                          color: generating ? null : roleGuideTint(context),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (progress.running)
-                                const RotatedBox(
+                              if (progress.running ||
+                                  progress.status ==
+                                      RoleGenerationStatus.paused)
+                                RotatedBox(
                                   quarterTurns: 2,
                                   child: AppSvgIcon.asset(
                                     'role_guide_generating',
                                     size: 60,
+                                    color: generating ? null : AppColors.brand,
                                   ),
                                 )
                               else
@@ -295,15 +310,12 @@ class RoleGenerationPanel extends StatelessWidget {
                                 ),
                               const SizedBox(height: 12),
                               Text(
-                                statusLabel ??
-                                    (progress.running
-                                        ? l10n.roleWorkGenerating
-                                        : status),
+                                message,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: progress.running
+                                  color: generating
                                       ? Colors.white
                                       : colors.onSurface,
                                 ),

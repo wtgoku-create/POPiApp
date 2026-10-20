@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/utils/app_url.dart';
+import 'conversation_presentation.dart';
 import 'conversation_session.dart';
 
 Map<String, Object?> conversationMap(Object? value) {
@@ -217,42 +218,41 @@ class ConversationBlock {
       ? const []
       : conversationMaps(conversationMap(data['plan'])['items']);
 
-  /// Old snapshots keep individual calls; display each phase only once.
-  List<(String, String)> get progressSteps {
-    final phases = <String, Map<String, String>>{};
-    for (final step in conversationMaps(data['steps'])) {
+  List<(String, String)> get progressSteps => [
+    for (final step in progressDetails) (step.labelKey, step.status),
+  ];
+
+  /// Preserve server order: equal labels can represent separate executions.
+  List<ConversationProgressStep> get progressDetails {
+    final details = <ConversationProgressStep>[];
+    for (final (index, step) in conversationMaps(
+      kind == 'task' && action == 'generation'
+          ? data['progress']
+          : data['steps'],
+    ).indexed) {
       final label = step['labelKey'];
       if (label is! String || label.isEmpty) continue;
+      final parent = step['parentId']?.toString();
       var state = step['status'] as String? ?? 'pending';
       if (['pending', 'running', 'waiting'].contains(state)) {
         state = switch (status) {
           'completed' => 'completed',
-          'canceled' || 'aborted' => 'skipped',
+          'canceled' || 'cancelled' || 'aborted' => 'skipped',
           'failed' || 'interrupted' => 'failed',
           _ => state,
         };
       }
       final stepId = step['id']?.toString();
-      (phases[label] ??= {})[stepId == null || stepId.isEmpty
-              ? label
-              : stepId] =
-          state;
-    }
-    return [
-      for (final phase in phases.entries)
-        (
-          phase.key,
-          const [
-                'running',
-                'waiting',
-                'pending',
-                'failed',
-                'completed',
-                'skipped',
-              ].where(phase.value.values.contains).firstOrNull ??
-              phase.value.values.last,
+      details.add(
+        ConversationProgressStep(
+          id: stepId == null || stepId.isEmpty ? 'legacy-step:$index' : stepId,
+          labelKey: label,
+          parentId: parent,
+          status: state,
         ),
-    ];
+      );
+    }
+    return details;
   }
 
   Map<String, Object?>? get request =>
@@ -282,6 +282,20 @@ class ConversationBlock {
             ),
     ];
   }
+}
+
+class ConversationProgressStep {
+  const ConversationProgressStep({
+    required this.id,
+    required this.labelKey,
+    required this.status,
+    this.parentId,
+  });
+
+  final String id;
+  final String labelKey;
+  final String status;
+  final String? parentId;
 }
 
 class ConversationQuestionField {
@@ -354,20 +368,23 @@ class ConversationMessage {
       .where((block) => block.type == 'text')
       .map((block) => block.text)
       .join('\n\n');
-  ConversationMessage withBlocks(List<ConversationBlock> value, int version) =>
-      ConversationMessage(
-        id: id,
-        sessionId: sessionId,
-        role: role,
-        seq: seq,
-        revision: version,
-        createdAt: createdAt,
-        runId: runId,
-        transient: transient,
-        attempt: attempt,
-        presentation: presentation,
-        blocks: value,
-      );
+  ConversationMessage withBlocks(
+    List<ConversationBlock> value,
+    int version, {
+    String? presentationId,
+  }) => ConversationMessage(
+    id: presentationId ?? id,
+    sessionId: sessionId,
+    role: role,
+    seq: seq,
+    revision: version,
+    createdAt: createdAt,
+    runId: runId,
+    transient: transient,
+    attempt: attempt,
+    presentation: presentation,
+    blocks: value,
+  );
   ConversationMessage anchoredTo(ConversationMessage previous) =>
       ConversationMessage(
         id: id,
@@ -443,117 +460,8 @@ class ConversationSnapshot {
   late final List<ConversationRun> runs;
   bool get running => runs.any((run) => run.running);
 
-  /// Embedded objects stay in the protocol and render at their referenced location.
-  late final List<ConversationMessage> presentationMessages =
-      _presentMessages();
-
-  List<ConversationMessage> _presentMessages() {
-    final outputs = [
-      for (final message in messages)
-        for (final block in message.blocks)
-          if (block.kind == 'task' && block.action == 'generation')
-            ...conversationMaps(block.data['outputs']),
-    ];
-    return [
-      for (final message in _embedTextDrafts())
-        if (message.role == 'user')
-          message
-        else if (message.blocks
-                .where((block) => !_generationOutput(block, outputs))
-                .toList()
-            case final blocks when blocks.isNotEmpty)
-          blocks.length == message.blocks.length
-              ? message
-              : message.withBlocks(blocks, message.revision),
-    ];
-  }
-
-  static final _textDraftReference = RegExp(
-    r'\[\[text_draft:([^\]\r\n]+)\]\]|\[\[text_draft:[^\]\r\n]*\]?$',
-  );
-
-  List<ConversationMessage> _embedTextDrafts() {
-    final drafts =
-        <(String?, String), List<(ConversationMessage, ConversationBlock)>>{};
-    for (final message in messages.where((item) => item.role != 'user')) {
-      for (final block in message.blocks) {
-        if (block.type == 'object' &&
-            block.kind == 'text_draft' &&
-            block.id.isNotEmpty) {
-          drafts.putIfAbsent((message.runId, block.id), () => []).add((
-            message,
-            block,
-          ));
-        }
-      }
-    }
-
-    final embedded = <ConversationBlock>{};
-    final expansions = <ConversationBlock, List<ConversationBlock>>{};
-    for (final message in messages.where((item) => item.role != 'user')) {
-      for (final block in message.blocks.where((item) => item.type == 'text')) {
-        final matches = _textDraftReference.allMatches(block.text).toList();
-        if (matches.isEmpty) continue;
-        final blocks = <ConversationBlock>[];
-        var cursor = 0;
-        void addText(String value) {
-          if (value.trim().isNotEmpty) {
-            blocks.add(ConversationBlock.text(value.trim()));
-          }
-        }
-
-        for (final match in matches) {
-          addText(block.text.substring(cursor, match.start));
-          final candidates = drafts[(message.runId, match.group(1))]?.where(
-            (entry) =>
-                message.attempt == null ||
-                entry.$1.attempt == null ||
-                entry.$1.attempt == message.attempt,
-          );
-          // Reused IDs belong to their run; retain the version at this reply.
-          final draft =
-              candidates
-                  ?.where((entry) => entry.$1.seq <= message.seq)
-                  .lastOrNull ??
-              candidates?.firstOrNull;
-          if (draft != null) {
-            blocks.add(draft.$2);
-            embedded.add(draft.$2);
-          }
-          cursor = match.end;
-        }
-        // Unresolved and incomplete references remain hidden until SSE fills them.
-        addText(block.text.substring(cursor));
-        expansions[block] = blocks;
-      }
-    }
-    if (expansions.isEmpty) return messages;
-
-    return [
-      for (final message in messages)
-        if (message.role == 'user')
-          message
-        else if ([
-              for (final block in message.blocks)
-                if (!embedded.contains(block)) ...expansions[block] ?? [block],
-            ]
-            case final blocks when blocks.isNotEmpty)
-          message.withBlocks(blocks, message.revision),
-    ];
-  }
-
-  static bool _generationOutput(
-    ConversationBlock block,
-    List<Map<String, Object?>> outputs,
-  ) =>
-      block.kind == 'content' &&
-      block.action == 'generated' &&
-      outputs.any(
-        (ref) =>
-            conversationReferenceMatches(ref, block.reference) ||
-            ref['kind'] == 'media' &&
-                block.mediaIds.contains(ref['id']?.toString()),
-      );
+  late final presentation = ConversationPresentation(this);
+  List<ConversationMessage> get presentationMessages => presentation.messages;
 
   List<ConversationBlock> get contents => [
     for (final item in conversationMaps(source['contents']))

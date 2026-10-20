@@ -29,10 +29,18 @@ class ConversationGenerationCard extends StatefulWidget {
   const ConversationGenerationCard({
     required this.block,
     required this.controller,
+    this.readOnly = false,
+    this.embedded = false,
     super.key,
   });
   final ConversationBlock block;
   final ConversationController controller;
+
+  /// Saved plans never load live preferences or expose editing actions.
+  final bool readOnly;
+
+  /// Shares the parent card's frame and expand/collapse control.
+  final bool embedded;
   @override
   State<ConversationGenerationCard> createState() =>
       _ConversationGenerationCardState();
@@ -64,6 +72,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
   @override
   bool get wantKeepAlive => true;
   bool get _editable =>
+      !widget.readOnly &&
       !_submitted &&
       (widget.block.isHomePlan
           ? widget.block.status == 'ready'
@@ -335,6 +344,7 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
         model: _model,
         points: _points,
         actions: _actions(l10n),
+        embedded: widget.embedded,
         validationMessage:
             !_loading && _config != null && !_valid && _attempted == null
             ? l10n.chatInvalidGeneration
@@ -342,64 +352,77 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
       );
     }
     return ConversationCard(
+      framed: !widget.embedded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  card.title,
-                  style: ConversationCardTypography.title.copyWith(
-                    color: colors.primary,
+          if (!widget.embedded)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    card.title,
+                    style: ConversationCardTypography.title.copyWith(
+                      color: colors.primary,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: _expanded
-                    ? l10n.chatCollapseProfile
-                    : l10n.roleGuideViewMore,
-                onPressed: () => setState(() => _expanded = !_expanded),
-                icon: Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: colors.primary.withValues(alpha: .6),
+                SizedBox.square(
+                  dimension: 32,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    tooltip: _expanded
+                        ? l10n.chatCollapseProfile
+                        : l10n.roleGuideViewMore,
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 20,
+                      color: colors.primary.withValues(alpha: .6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (!widget.embedded && card.status != 'ready')
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                conversationStatusLabel(card.status, l10n),
+                style: ConversationCardTypography.caption.copyWith(
+                  color: colors.onSurfaceVariant,
                 ),
               ),
-            ],
-          ),
-          if (card.status != 'ready')
-            Text(
-              conversationStatusLabel(card.status, l10n),
-              style: ConversationCardTypography.caption.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
             ),
-          if (_expanded) ...[
+          if (widget.embedded || _expanded) ...[
+            if (!widget.embedded) const SizedBox(height: 12),
             if (card.previewRole case final role?)
+              ConversationRoleCard(block: role, compact: true),
+            if ((!_editable || !_view.threeView) &&
+                _view.savedReferenceIds.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: ConversationRoleCard(block: role, compact: true),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Wrap(
+                  key: const Key('conversation-generation-references'),
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final id in _view.savedReferenceIds)
+                      ConversationMediaView(
+                        key: ValueKey('conversation-generation-reference-$id'),
+                        id: id,
+                        repository: widget.controller.repository,
+                        thumbnailSize: 80,
+                      ),
+                  ],
+                ),
               ),
             ConversationCardContent(
               storageId: 'generation:${card.id}',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_view.prompt.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: MarkdownMessage(
-                        text: _view.prompt,
-                        compact: true,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  if (_editable && !_loading && _view.threeView) ...[
+                  if (_editable && !_loading && _view.threeView)
                     ConversationRoleImageSetup(
                       reference: _reference == null
                           ? null
@@ -419,6 +442,20 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                             },
                       onChooseStyle: locked ? null : _chooseTemplate,
                     ),
+                  if (_view.prompt.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: MarkdownMessage(
+                        text: _view.prompt,
+                        compact: true,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  if (_editable && !_loading && _view.threeView) ...[
                     if (card.roleImage != null)
                       TextField(
                         controller: _requirements,
@@ -463,13 +500,22 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
                         },
                       ),
                   ] else if (!_editable) ...[
-                    for (final ref in _view.referenceIds(
-                      _view.referenceMediaId,
-                      _view.template['mediaId']?.toString(),
-                    ))
-                      ConversationMediaView(
-                        id: ref,
-                        repository: widget.controller.repository,
+                    if (_view.templateTitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          '${l10n.chatImageStyle}：${_view.templateTitle}',
+                          style: ConversationCardTypography.caption,
+                        ),
+                      ),
+                    if (_view.requirements.isNotEmpty &&
+                        _view.requirements != _view.prompt)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: MarkdownMessage(
+                          text: _view.requirements,
+                          compact: true,
+                        ),
                       ),
                   ],
                 ],

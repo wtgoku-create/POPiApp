@@ -120,6 +120,8 @@ void main() {
       },
     );
     expect(result.tests, ['test/a_test.dart', 'test/b_test.dart']);
+    expect(result.full, isTrue);
+    expect(result.deferredTests, isEmpty);
   });
 
   test('config, assets, native code and hook changes require full checks', () {
@@ -129,7 +131,6 @@ void main() {
       'analysis_options.yaml',
       'l10n.yaml',
       'dart_test.yaml',
-      'lib/l10n/app_zh.arb',
       'assets/icons/a.svg',
       'config/env/development.json',
       'ios/Runner/AppDelegate.swift',
@@ -142,9 +143,70 @@ void main() {
         {'lib/model.dart': '', 'test/a_test.dart': ''},
       );
       expect(result.full, isTrue, reason: path);
-      expect(result.commands.first, ['flutter', 'pub', 'get']);
+      expect(result.commands.first.take(2), ['dart', 'format']);
+      expect(
+        result.resolveDependencies,
+        {'pubspec.yaml', 'pubspec.lock'}.contains(path),
+        reason: path,
+      );
       expect(result.commands.last, ['flutter', 'test', '--no-pub']);
     }
+  });
+
+  test('ARB-only changes follow generated localization dependencies', () {
+    final result = plan(
+      {'lib/l10n/app_zh.arb'},
+      {
+        'lib/l10n/generated/app_localizations.dart':
+            "import 'app_localizations_zh.dart';",
+        'lib/l10n/generated/app_localizations_zh.dart': '',
+        'lib/page.dart': "import 'l10n/generated/app_localizations.dart';",
+        'test/page_test.dart': "import '../lib/page.dart';",
+        'test/service_test.dart': 'void main() {}',
+      },
+    );
+    expect(result.full, isFalse);
+    expect(result.resolveDependencies, isFalse);
+    expect(result.tests, ['test/page_test.dart']);
+    expect(result.analyze, contains('lib/page.dart'));
+  });
+
+  test('missing localization output falls back to full checks', () {
+    final result = plan({'lib/l10n/app_en.arb'}, {'test/a_test.dart': ''});
+    expect(result.full, isTrue);
+    expect(result.reason, contains('Localization output missing'));
+  });
+
+  test('broad impact defers tests to CI but retains format and analysis', () {
+    final sources = {
+      'lib/shared.dart': '',
+      for (var index = 0; index <= maxLocalTestFiles; index++)
+        'test/page_${index}_test.dart': "import '../lib/shared.dart';",
+    };
+    final result = plan({'lib/shared.dart'}, sources);
+    expect(result.tests, hasLength(maxLocalTestFiles + 1));
+    expect(result.deferredTests, result.tests);
+    expect(result.commands.map((command) => command.take(2)), [
+      ['dart', 'format'],
+      ['flutter', 'analyze'],
+    ]);
+    expect(result.toJson()['deferredTests'], result.tests);
+
+    final full = planChecks(
+      changed: {'lib/shared.dart'},
+      sources: sources,
+      packageName: 'example',
+      full: true,
+    );
+    expect(full.deferredTests, isEmpty);
+    expect(full.resolveDependencies, isTrue);
+    expect(full.commands.last, ['flutter', 'test', '--no-pub']);
+
+    sources.remove('test/page_0_test.dart');
+    final limited = plan({'lib/shared.dart'}, sources);
+    expect(limited.tests, hasLength(maxLocalTestFiles));
+    expect(limited.deferredTests, isEmpty);
+    expect(limited.commands.last.take(2), ['flutter', 'test']);
   });
 
   test('empty staging and documentation changes skip all checks', () {
@@ -296,8 +358,26 @@ void main() {
       );
       expect(failed.exitCode, 23, reason: failed.stderr.toString());
       expect(failed.stdout, contains('> dart format'));
+      expect(failed.stderr, contains('Check failed'));
+      expect(
+        failed.stderr,
+        contains("dart format 'lib/model with spaces.dart'"),
+      );
+      expect(failed.stderr, contains('stage the formatted files'));
       expect(failed.stdout, isNot(contains('> flutter analyze')));
       expect(failed.stdout, isNot(contains('> flutter test')));
     }
+
+    await write('lib/l10n/app_en.arb', '{invalid JSON');
+    await git(['add', '--', 'lib/l10n/app_en.arb']);
+    final invalidArb = await Process.run(
+      dart,
+      [...scriptArgs, '--dry-run'],
+      workingDirectory: sandbox.path,
+      environment: environment,
+      includeParentEnvironment: false,
+    );
+    expect(invalidArb.exitCode, 1);
+    expect(invalidArb.stderr, contains('Invalid ARB file lib/l10n/app_en.arb'));
   });
 }

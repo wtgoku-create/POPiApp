@@ -3,25 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../domain/ip_account_home.dart';
+import '../../../session/domain/session_artifact.dart';
 
-/// Account creation archives shared by the overview and history page.
+/// Session outputs shared by the account overview and history page.
 class IpAccountHistory extends StatelessWidget {
   const IpAccountHistory({
     required this.creations,
     required this.loading,
-    required this.failed,
-    required this.onRetry,
     required this.onOpen,
     required this.onOpenAll,
     super.key,
   });
 
-  final List<IpAccountCreation> creations;
+  final List<SessionArtifact> creations;
   final bool loading;
-  final bool failed;
-  final VoidCallback onRetry;
-  final ValueChanged<IpAccountCreation> onOpen;
+  final ValueChanged<SessionArtifact> onOpen;
   final VoidCallback onOpenAll;
 
   @override
@@ -79,18 +75,6 @@ class IpAccountHistory extends StatelessWidget {
                 ),
               ),
             )
-          else if (failed)
-            Row(
-              children: [
-                Expanded(child: Text(l10n.creationHistoryLoadFailed)),
-                IconButton(
-                  key: const Key('ip-account-history-retry'),
-                  tooltip: l10n.retry,
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            )
           else if (creations.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -111,7 +95,7 @@ class IpAccountHistory extends StatelessWidget {
   }
 }
 
-/// Shared archive title and summary row for the overview and history page.
+/// Shared output title and summary row for the overview and history page.
 class IpAccountHistoryRow extends StatelessWidget {
   const IpAccountHistoryRow({
     required this.creation,
@@ -120,7 +104,7 @@ class IpAccountHistoryRow extends StatelessWidget {
     super.key,
   });
 
-  final IpAccountCreation creation;
+  final SessionArtifact creation;
   final VoidCallback onTap;
   final Color? arrowColor;
 

@@ -5,6 +5,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 
 Future<void> main(List<String> args) async {
+  final total = Stopwatch()..start();
   if (args.any((arg) => !['--full', '--dry-run'].contains(arg))) {
     stderr.writeln('Usage: dart run tool/pre_commit.dart [--full] [--dry-run]');
     exitCode = 64;
@@ -17,6 +18,18 @@ Future<void> main(List<String> args) async {
     final changed = _paths(
       await _git(['diff', '--cached', '--name-only', '--no-renames', '-z']),
     );
+    for (final path in changed.where((path) => path.endsWith('.arb'))) {
+      final file = File(path);
+      if (await file.exists()) {
+        try {
+          if (jsonDecode(await file.readAsString()) is! Map) {
+            throw const FormatException('Expected a JSON object');
+          }
+        } on FormatException catch (error) {
+          throw FormatException('Invalid ARB file $path: $error');
+        }
+      }
+    }
     final files = _paths(
       await _git([
         'ls-files',
@@ -51,8 +64,20 @@ Future<void> main(List<String> args) async {
       return;
     }
     stdout.writeln(plan.reason);
-    for (final command in plan.commands) {
-      stdout.writeln('> ${command.join(' ')}');
+    if (plan.deferredTests.isNotEmpty) {
+      stdout.writeln(
+        '${plan.deferredTests.length} affected test files exceed the local '
+        'limit of $maxLocalTestFiles; the full suite will run in CI.\n'
+        'Run dart run tool/pre_commit.dart --full to check everything locally.',
+      );
+    }
+    final commands = plan.commands;
+    for (var index = 0; index < commands.length; index++) {
+      final command = commands[index];
+      stdout.writeln(
+        '[${index + 1}/${commands.length}] > ${command.join(' ')}',
+      );
+      final elapsed = Stopwatch()..start();
       final process = await Process.start(
         command.first,
         command.skip(1).toList(),
@@ -60,10 +85,23 @@ Future<void> main(List<String> args) async {
       );
       final code = await process.exitCode;
       if (code != 0) {
+        stderr.writeln(
+          'Check failed after ${elapsed.elapsed.inSeconds}s '
+          '(exit $code): ${command.take(2).join(' ')}',
+        );
+        if (command.first == 'dart' && command[1] == 'format') {
+          stderr.writeln(
+            'The format check does not modify files. Run:\n'
+            '  dart format ${plan.format.map(_shellQuote).join(' ')}\n'
+            'Then review and stage the formatted files before committing again.',
+          );
+        }
         exitCode = code < 0 ? 128 - code : code;
         return;
       }
+      stdout.writeln('Passed in ${elapsed.elapsed.inSeconds}s.');
     }
+    stdout.writeln('Pre-commit checks passed in ${total.elapsed.inSeconds}s.');
   } catch (error) {
     stderr.writeln('Pre-commit checks failed: $error');
     exitCode = 1;
@@ -79,6 +117,11 @@ Future<String> _git(List<String> args) async {
 Set<String> _paths(String output) =>
     output.split('\x00').where((path) => path.isNotEmpty).toSet();
 
+String _shellQuote(String value) => "'${value.replaceAll("'", "'\\''")}'";
+
+/// Broad changes are checked in CI instead of blocking every local commit.
+const maxLocalTestFiles = 20;
+
 /// A deterministic check plan, also used by dry-run and dependency graph tests.
 class CheckPlan {
   const CheckPlan({
@@ -87,6 +130,7 @@ class CheckPlan {
     required this.analyze,
     required this.tests,
     this.full = false,
+    this.resolveDependencies = false,
   });
 
   final String reason;
@@ -94,22 +138,28 @@ class CheckPlan {
   final List<String> analyze;
   final List<String> tests;
   final bool full;
+  final bool resolveDependencies;
+
+  List<String> get deferredTests =>
+      !full && tests.length > maxLocalTestFiles ? tests : const [];
 
   List<List<String>> get commands => [
-    if (full) ['flutter', 'pub', 'get'],
     if (format.isNotEmpty)
       ['dart', 'format', '--output=none', '--set-exit-if-changed', ...format],
+    if (resolveDependencies) ['flutter', 'pub', 'get'],
     if (analyze.isNotEmpty) ['flutter', 'analyze', '--no-pub', ...analyze],
-    if (full || tests.isNotEmpty)
+    if (full || (tests.isNotEmpty && deferredTests.isEmpty))
       ['flutter', 'test', '--no-pub', if (!full) ...tests],
   ];
 
   Map<String, Object> toJson() => {
     'full': full,
+    'resolveDependencies': resolveDependencies,
     'reason': reason,
     'format': format,
     'analyze': analyze,
     'tests': tests,
+    'deferredTests': deferredTests,
     'commands': commands,
   };
 }
@@ -136,6 +186,9 @@ CheckPlan planChecks({
     analyze: const ['.'],
     tests: sources.keys.where(_isTest).toList()..sort(),
     full: true,
+    resolveDependencies:
+        full ||
+        changed.any((path) => {'pubspec.yaml', 'pubspec.lock'}.contains(path)),
   );
 
   if (full) return all('Full checks requested.');
@@ -143,6 +196,16 @@ CheckPlan planChecks({
     return all('Shared configuration, assets or check tooling changed.');
   }
   final seeds = changed.where((path) => path.endsWith('.dart')).toSet();
+  if (changed.any((path) => path.endsWith('.arb'))) {
+    // ARB files are inputs to generated Dart, not importable dependencies.
+    final localizations = sources.keys.where(
+      (path) => path.startsWith('lib/l10n/') && path.endsWith('.dart'),
+    );
+    if (localizations.isEmpty) {
+      return all('Localization output missing; using full checks.');
+    }
+    seeds.addAll(localizations);
+  }
   if (seeds.isEmpty) {
     return const CheckPlan(
       reason:
@@ -194,13 +257,13 @@ CheckPlan planChecks({
   final testConfigChanged = affected.any(
     (path) => path.split('/').last == 'flutter_test_config.dart',
   );
+  if (testConfigChanged) {
+    return all('Flutter test configuration or its dependencies changed.');
+  }
   final analyze = affected.where(sources.containsKey).toList()..sort();
   final tests =
       sources.keys
-          .where(
-            (path) =>
-                _isTest(path) && (testConfigChanged || affected.contains(path)),
-          )
+          .where((path) => _isTest(path) && affected.contains(path))
           .toList()
         ..sort();
   return CheckPlan(
@@ -234,18 +297,17 @@ bool _requiresFullChecks(String path) {
     return true;
   }
   return [
-            'assets/',
-            'config/',
-            'android/',
-            'ios/',
-            'macos/',
-            'linux/',
-            'windows/',
-            'web/',
-            '.github/workflows/',
-          ].any(path.startsWith) &&
-          !path.endsWith('.md') ||
-      path.endsWith('.arb');
+        'assets/',
+        'config/',
+        'android/',
+        'ios/',
+        'macos/',
+        'linux/',
+        'windows/',
+        'web/',
+        '.github/workflows/',
+      ].any(path.startsWith) &&
+      !path.endsWith('.md');
 }
 
 String? _dependency(String importer, String value, String packageName) {

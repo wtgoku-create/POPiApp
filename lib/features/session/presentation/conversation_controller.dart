@@ -80,17 +80,21 @@ class ConversationController extends ChangeNotifier {
     final id = sessionId;
     if (id == null || _disposed) return;
     _cancelEvents();
-    snapshot = null;
     loading = true;
     _connectionErrorReported = false;
     notifyListeners();
-    unawaited(_connect(id, _epoch));
+    unawaited(_connect(id, _epoch, reloadSnapshot: true));
   }
 
-  Future<void> _connect(String id, int epoch) async {
+  Future<void> _connect(
+    String id,
+    int epoch, {
+    bool reloadSnapshot = false,
+  }) async {
     final token = CancelToken();
     _eventsToken = token;
     var attempts = 0;
+    var needsSnapshot = reloadSnapshot || snapshot == null;
     bool current() => !_disposed && epoch == _epoch && !token.isCancelled;
     while (current()) {
       try {
@@ -98,10 +102,15 @@ class ConversationController extends ChangeNotifier {
             ? ConversationConnection.connecting
             : ConversationConnection.reconnecting;
         notifyListeners();
-        if (snapshot == null) {
+        if (needsSnapshot) {
           final data = await repository.snapshot(id, cancelToken: token);
           if (!current()) return;
+          if (data.session.id != id ||
+              data.lastSeq < (snapshot?.lastSeq ?? 0)) {
+            throw const FormatException('Outdated conversation snapshot');
+          }
           snapshot = data;
+          needsSnapshot = false;
           _awaitingRun = false;
           loading = false;
           onSessionChanged?.call(data.session);
@@ -134,10 +143,13 @@ class ConversationController extends ChangeNotifier {
         if (!current()) return;
         if (cause is AgentApiException && cause.code == 'SNAPSHOT_REQUIRED') {
           // 游标过期或事件缺号时先同步权威快照，再从 lastSeq 继续订阅。
-          snapshot = null;
+          needsSnapshot = true;
+          loading = true;
           continue;
         }
-        if (cause is FormatException || cause is TypeError) snapshot = null;
+        if (cause is FormatException || cause is TypeError) {
+          needsSnapshot = true;
+        }
         error = cause;
         // A failed reconnect episode should not produce a toast on every attempt.
         if (!_connectionErrorReported) {
@@ -154,7 +166,7 @@ class ConversationController extends ChangeNotifier {
       }
       if (!current()) return;
       connection = ConversationConnection.reconnecting;
-      loading = false;
+      loading = needsSnapshot && snapshot != null;
       notifyListeners();
       final delay = Completer<void>();
       _delay = delay;

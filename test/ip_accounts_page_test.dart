@@ -130,6 +130,10 @@ void main() {
       if (signedIn) {
         await tester.tap(find.byKey(const Key('popi-open-navigation')));
         await tester.pumpAndSettle();
+        expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+        expect(find.byKey(const Key('drawer-nav-ip-accounts')), findsNothing);
+        await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+        await tester.pumpAndSettle();
         expect(
           find.byKey(const Key('drawer-nav-ip-accounts')).hitTestable(),
           findsOneWidget,

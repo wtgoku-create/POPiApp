@@ -188,6 +188,7 @@ class ConversationGenerationTaskView {
     'saving',
     'resuming',
     'pause_requested',
+    'sync_error',
   ].contains(state);
   bool get completed => state == 'completed';
 }
