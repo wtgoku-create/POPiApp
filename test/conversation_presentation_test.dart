@@ -182,6 +182,23 @@ void main() {
     },
   );
 
+  test(
+    'running topics remain visible before their reply references arrive',
+    () {
+      final draft = _draft();
+      final blocks = draft['blocks']! as List<Map<String, Object?>>;
+      final data = blocks.single['data']! as Map<String, Object?>;
+      data['kind'] = 'topic';
+      final snapshot = _snapshot([draft], state: 'running');
+      expect(snapshot.presentationMessages.single.id, 'draft-1');
+      expect(
+        snapshot.presentationMessages.single.blocks.single.body,
+        'Saved script',
+      );
+      expect(snapshot.messages.single.blocks.single.data['kind'], 'topic');
+    },
+  );
+
   test('reply delivery waits for references and expands each draft once', () {
     final draft = _draft();
     expect(_snapshot([draft], state: 'running').presentationMessages, isEmpty);
