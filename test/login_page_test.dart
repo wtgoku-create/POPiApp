@@ -512,6 +512,34 @@ void main() {
     );
   }
 
+  testWidgets(
+    'extends the header background above the design on tall screens',
+    (tester) async {
+      await pumpLoginPage(tester, size: const Size(432, 960));
+      final illustration = find.byKey(const Key('login-welcome-illustration'));
+      expect(tester.getTopLeft(illustration).dy, greaterThan(0));
+      final background = tester.widget<DecoratedBox>(
+        find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).gradient
+                      is LinearGradient,
+            )
+            .first,
+      );
+      final gradient = (background.decoration as BoxDecoration).gradient!;
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.backgroundColor, gradient.colors.first);
+      expect(
+        scaffold.backgroundColor,
+        isNot(AppTheme.light.colorScheme.surface),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('supports dark mode and compact screens', (tester) async {
     await pumpLoginPage(
       tester,

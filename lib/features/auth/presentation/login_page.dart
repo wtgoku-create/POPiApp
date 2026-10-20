@@ -40,6 +40,8 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  static const _backgroundTopColor = Color(0xFFEDE9FD);
+
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -115,7 +117,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     return PopScope(
       canPop: true,
       child: Scaffold(
-        backgroundColor: colorScheme.surface,
+        // The bottom-aligned design leaves extra space above it on tall screens.
+        backgroundColor: colorScheme.brightness == Brightness.light
+            ? _backgroundTopColor
+            : colorScheme.surface,
         resizeToAvoidBottomInset: false,
         body: GestureDetector(
           key: const Key('login-keyboard-dismiss-area'),
@@ -136,7 +141,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
-                                    Color(0xFFEDE9FD),
+                                    _backgroundTopColor,
                                     Color(0xFFF8F8F8),
                                   ],
                                 )
