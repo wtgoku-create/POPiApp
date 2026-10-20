@@ -1325,9 +1325,15 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
                 ),
               ),
               child: ConversationCardContent(
+                key: ValueKey((
+                  'progress-content',
+                  block.data['runId'] ?? block.id,
+                  block.data['attempt'] ?? 1,
+                )),
                 storageId:
                     'progress:${block.data['runId'] ?? block.id}:${block.data['attempt'] ?? 1}',
                 maxViewportHeight: 360,
+                followTail: true,
                 child: ConversationProgressSteps(
                   steps: block.progressDetails,
                   showStatusLabels: false,

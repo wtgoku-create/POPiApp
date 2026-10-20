@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 /// Bounds card documents without adding another viewport to embedded cards.
 class ConversationCardContent extends StatefulWidget {
@@ -6,6 +7,7 @@ class ConversationCardContent extends StatefulWidget {
     required this.storageId,
     required this.child,
     this.maxViewportHeight = maxHeight,
+    this.followTail = false,
     super.key,
   }) : assert(maxViewportHeight >= 160);
 
@@ -13,6 +15,7 @@ class ConversationCardContent extends StatefulWidget {
   final String storageId;
   final Widget child;
   final double maxViewportHeight;
+  final bool followTail;
 
   @override
   State<ConversationCardContent> createState() =>
@@ -22,6 +25,11 @@ class ConversationCardContent extends StatefulWidget {
 class _ConversationCardContentState extends State<ConversationCardContent> {
   ScrollController? _scroll;
   PageStorageBucket? _storage;
+  bool _followTail = false;
+  bool _tailScrollScheduled = false;
+  bool _adjustingTail = false;
+
+  String get _followStorageId => '${widget.storageId}:follow-tail';
 
   @override
   void didChangeDependencies() {
@@ -29,6 +37,9 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
     _storage = PageStorage.maybeOf(context);
     if (_scroll != null) return;
     final saved = _storage?.readState(context, identifier: widget.storageId);
+    _followTail =
+        widget.followTail &&
+        _storage?.readState(context, identifier: _followStorageId) != false;
     _scroll = ScrollController(
       initialScrollOffset: saved is double ? saved : 0,
       keepScrollOffset: false,
@@ -42,6 +53,48 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
       _scroll!.offset,
       identifier: widget.storageId,
     );
+    if (widget.followTail) {
+      _storage?.writeState(context, _followTail, identifier: _followStorageId);
+    }
+  }
+
+  void _scheduleTailScroll() {
+    if (!_followTail || _tailScrollScheduled) return;
+    _tailScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tailScrollScheduled = false;
+      if (!mounted || !_followTail || _scroll?.hasClients != true) return;
+      final position = _scroll!.position;
+      if (position.isScrollingNotifier.value) return;
+      if ((position.maxScrollExtent - position.pixels).abs() > 1) {
+        _adjustingTail = true;
+        try {
+          _scroll!.jumpTo(position.maxScrollExtent);
+        } finally {
+          _adjustingTail = false;
+        }
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  bool _handleScroll(ScrollNotification notification) {
+    if (!widget.followTail || notification.depth != 0) return false;
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.forward) {
+      _followTail = false;
+    } else if (notification is ScrollUpdateNotification ||
+        notification is ScrollEndNotification) {
+      if (notification is ScrollUpdateNotification &&
+          !_adjustingTail &&
+          (notification.scrollDelta ?? 0) < 0) {
+        _followTail = false;
+      }
+      if (notification.metrics.extentAfter <= 1) _followTail = true;
+      if (notification is ScrollEndNotification) _scheduleTailScroll();
+    }
+    _saveOffset();
+    return false;
   }
 
   @override
@@ -60,6 +113,7 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
       160.0,
       widget.maxViewportHeight,
     );
+    _scheduleTailScroll();
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: height),
       child: ScrollConfiguration(
@@ -77,13 +131,22 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
           notificationPredicate: (notification) =>
               notification.depth == 0 &&
               notification.metrics.axis == Axis.vertical,
-          child: SingleChildScrollView(
-            key: PageStorageKey(widget.storageId),
-            controller: _scroll,
-            primary: false,
-            physics: const ClampingScrollPhysics(),
-            padding: const EdgeInsets.only(right: 12),
-            child: _CardContentScope(child: widget.child),
+          child: NotificationListener<ScrollMetricsNotification>(
+            onNotification: (notification) {
+              if (notification.depth == 0) _scheduleTailScroll();
+              return false;
+            },
+            child: NotificationListener<ScrollNotification>(
+              onNotification: _handleScroll,
+              child: SingleChildScrollView(
+                key: PageStorageKey(widget.storageId),
+                controller: _scroll,
+                primary: false,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.only(right: 12),
+                child: _CardContentScope(child: widget.child),
+              ),
+            ),
           ),
         ),
       ),

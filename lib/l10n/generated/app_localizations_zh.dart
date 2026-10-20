@@ -2030,6 +2030,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionArtifactExportFailed => '文档导出失败，请稍后重试';
 
   @override
+  String get sessionArtifactSaved => '文件已保存';
+
+  @override
+  String get sessionArtifactSaveFailed => '文件保存失败，请稍后重试';
+
+  @override
   String get imageSavedToPhotos => '图片已保存到相册';
 
   @override

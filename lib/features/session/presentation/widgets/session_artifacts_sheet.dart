@@ -1,8 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 
 import '../../../../core/network/network_api.dart';
+import '../../../../core/storage/gallery_image_storage.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/network_provider.dart';
 import '../../../../shared/providers/session_provider.dart';
@@ -15,7 +17,6 @@ import '../../../../shared/widgets/app_video_player.dart';
 import '../../data/session_artifact_exporter.dart';
 import '../../data/session_artifact_repository.dart';
 import '../../domain/session_artifact.dart';
-import '../../domain/conversation_snapshot.dart';
 import '../../data/session_repository.dart';
 import 'conversation_timeline.dart' show MarkdownMessage, ConversationMediaView;
 
@@ -24,20 +25,17 @@ class SessionArtifactsSheet extends ConsumerStatefulWidget {
   const SessionArtifactsSheet({
     this.sessionId,
     this.repository,
-    this.snapshot,
     this.mediaRepository,
     super.key,
   });
 
   final String? sessionId;
   final SessionArtifactRepository? repository;
-  final ConversationSnapshot? snapshot;
   final SessionRepository? mediaRepository;
 
   static Future<void> show(
     BuildContext context, {
     String? sessionId,
-    ConversationSnapshot? snapshot,
     SessionRepository? mediaRepository,
   }) => AppSheet.show<void>(
     context: context,
@@ -49,7 +47,6 @@ class SessionArtifactsSheet extends ConsumerStatefulWidget {
     ),
     builder: (_) => SessionArtifactsSheet(
       sessionId: sessionId,
-      snapshot: snapshot,
       mediaRepository: mediaRepository,
     ),
   );
@@ -95,18 +92,11 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
           );
       final items = await repository.list(widget.sessionId);
       if (mounted && !token.isCancelled) {
-        setState(
-          () => _items = [
-            ...items,
-            ...SessionArtifact.mediaFromSnapshot(widget.snapshot),
-          ],
-        );
+        setState(() => _items = items);
       }
     } catch (_) {
       if (!mounted || token.isCancelled) return;
-      setState(
-        () => _items = SessionArtifact.mediaFromSnapshot(widget.snapshot),
-      );
+      setState(() => _items ??= const []);
       AppToast.error(context, AppLocalizations.of(context)!.chatRequestFailed);
     }
   }
@@ -171,10 +161,11 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
                                 ),
                               ),
                             ),
-                            if (SessionArtifactExporter.supports(selected) ||
-                                (selected.textKind == null &&
-                                    selected.mediaId == null))
-                              _DownloadButton(item: selected)
+                            if (SessionArtifactExporter.supports(selected))
+                              _DownloadButton(
+                                item: selected,
+                                repository: widget.mediaRepository,
+                              )
                             else
                               const SizedBox(width: 40),
                           ],
@@ -275,6 +266,7 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
                   itemBuilder: (context, index) => _ArtifactCard(
                     key: ValueKey(items[index].id),
                     item: items[index],
+                    repository: widget.mediaRepository,
                     onOpen: () => setState(() => _selected = items[index]),
                   ),
                 ),
@@ -313,18 +305,24 @@ String _artifactMetadata(SessionArtifact item, BuildContext context) {
   ].join(' · ');
 }
 
-class _DownloadButton extends StatefulWidget {
-  const _DownloadButton({required this.item, this.inList = false});
+class _DownloadButton extends ConsumerStatefulWidget {
+  const _DownloadButton({
+    required this.item,
+    this.inList = false,
+    this.repository,
+  });
 
   final SessionArtifact item;
   final bool inList;
+  final SessionRepository? repository;
 
   @override
-  State<_DownloadButton> createState() => _DownloadButtonState();
+  ConsumerState<_DownloadButton> createState() => _DownloadButtonState();
 }
 
-class _DownloadButtonState extends State<_DownloadButton> {
+class _DownloadButtonState extends ConsumerState<_DownloadButton> {
   bool _saving = false;
+  CancelToken? _downloadToken;
 
   Future<void> _download() async {
     if (_saving) return;
@@ -335,20 +333,52 @@ class _DownloadButtonState extends State<_DownloadButton> {
     }
     final box = context.findRenderObject()! as RenderBox;
     final origin = box.localToGlobal(Offset.zero) & box.size;
+    final token = _downloadToken = CancelToken();
+    final isDocument = widget.item.type == SessionArtifactType.script;
     setState(() => _saving = true);
     try {
       final saved = await SessionArtifactExporter.save(
         widget.item,
         sharePositionOrigin: origin,
+        repository: widget.item.mediaId == null
+            ? null
+            : widget.repository ?? ref.read(sessionRepositoryProvider),
+        imageConfiguration: createLocalImageConfiguration(context),
+        cancelToken: token,
       );
-      if (mounted && saved) {
-        AppToast.success(context, l10n.sessionArtifactExported);
+      if (mounted && !token.isCancelled && saved) {
+        AppToast.success(
+          context,
+          isDocument ? l10n.sessionArtifactExported : l10n.sessionArtifactSaved,
+        );
       }
-    } catch (_) {
-      if (mounted) AppToast.error(context, l10n.sessionArtifactExportFailed);
+    } catch (error) {
+      if (mounted && !token.isCancelled) {
+        final denied =
+            error is GalleryAccessDenied ||
+            error is GalException &&
+                error.type == GalExceptionType.accessDenied;
+        AppToast.error(
+          context,
+          denied
+              ? (widget.item.type == SessionArtifactType.video
+                    ? l10n.videoSaveAccessDenied
+                    : l10n.imageSaveAccessDenied)
+              : isDocument
+              ? l10n.sessionArtifactExportFailed
+              : l10n.sessionArtifactSaveFailed,
+        );
+      }
     } finally {
+      _downloadToken = null;
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _downloadToken?.cancel();
+    super.dispose();
   }
 
   @override
@@ -390,10 +420,16 @@ class _DownloadButtonState extends State<_DownloadButton> {
 }
 
 class _ArtifactCard extends StatelessWidget {
-  const _ArtifactCard({required this.item, required this.onOpen, super.key});
+  const _ArtifactCard({
+    required this.item,
+    required this.onOpen,
+    this.repository,
+    super.key,
+  });
 
   final SessionArtifact item;
   final VoidCallback onOpen;
+  final SessionRepository? repository;
 
   @override
   Widget build(BuildContext context) {
@@ -440,9 +476,12 @@ class _ArtifactCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (SessionArtifactExporter.supports(item) ||
-                  (item.textKind == null && item.mediaId == null)) ...[
-                _DownloadButton(item: item, inList: true),
+              if (SessionArtifactExporter.supports(item)) ...[
+                _DownloadButton(
+                  item: item,
+                  inList: true,
+                  repository: repository,
+                ),
                 const SizedBox(width: 8),
               ],
               SizedBox.square(

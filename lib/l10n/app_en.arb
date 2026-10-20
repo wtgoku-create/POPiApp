@@ -685,6 +685,8 @@
   "download": "Download",
   "sessionArtifactExported": "Document exported",
   "sessionArtifactExportFailed": "Could not export the document. Try again later.",
+  "sessionArtifactSaved": "File saved",
+  "sessionArtifactSaveFailed": "Could not save the file. Try again later.",
   "imageSavedToPhotos": "Image saved to Photos",
   "imageSaveFailed": "Could not save the image. Try again later.",
   "imageSaveAccessDenied": "Allow adding photos in system settings to save images.",

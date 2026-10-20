@@ -258,7 +258,6 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                             onPressed: () => SessionArtifactsSheet.show(
                               context,
                               sessionId: _activeSessionId,
-                              snapshot: _conversation?.snapshot,
                               mediaRepository: _conversation?.repository,
                             ),
                             icon: SizedBox(

@@ -685,6 +685,8 @@
   "download": "下载",
   "sessionArtifactExported": "文档已导出",
   "sessionArtifactExportFailed": "文档导出失败，请稍后重试",
+  "sessionArtifactSaved": "文件已保存",
+  "sessionArtifactSaveFailed": "文件保存失败，请稍后重试",
   "imageSavedToPhotos": "图片已保存到相册",
   "imageSaveFailed": "图片保存失败，请稍后重试",
   "imageSaveAccessDenied": "无法保存图片，请在系统设置中允许添加照片",

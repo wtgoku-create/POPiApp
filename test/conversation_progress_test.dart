@@ -572,13 +572,28 @@ void main() {
           matching: find.byType(Scrollable),
         );
         final position = tester.state<ScrollableState>(scrollable).position;
-        await tester.drag(content, const Offset(0, -180));
-        await tester.pumpAndSettle();
-        final offset = position.pixels;
-        expect(offset, greaterThan(0));
+        expect(position.extentAfter, lessThanOrEqualTo(1));
         current.value = progress([
           ...steps,
           step('duplicate', processing, 'completed'),
+          step('latest', reading, 'running'),
+        ]);
+        await tester.pumpAndSettle();
+        expect(position.extentAfter, lessThanOrEqualTo(1));
+        expect(
+          find.byKey(const ValueKey(('latest', 0))).hitTestable(),
+          findsOneWidget,
+        );
+        await tester.drag(content, const Offset(0, 40));
+        await tester.pumpAndSettle();
+        final offset = position.pixels;
+        expect(offset, greaterThan(0));
+        expect(position.extentAfter, greaterThan(1));
+        current.value = progress([
+          ...steps,
+          step('duplicate', processing, 'completed'),
+          step('latest', reading, 'completed'),
+          step('next', reading, 'completed'),
         ]);
         await tester.pumpAndSettle();
         expect(position.pixels, offset);
@@ -592,6 +607,28 @@ void main() {
         expect(
           tester.state<ScrollableState>(scrollable).position.pixels,
           offset,
+        );
+        await tester.drag(content, const Offset(0, -2000));
+        await tester.pumpAndSettle();
+        final restored = tester.state<ScrollableState>(scrollable).position;
+        expect(restored.extentAfter, lessThanOrEqualTo(1));
+        current.value = progress([
+          ...steps,
+          step('duplicate', processing, 'completed'),
+          step('latest', reading, 'completed'),
+          step('next', reading, 'completed'),
+          step('resumed', reading, 'running'),
+        ]);
+        await tester.pumpAndSettle();
+        expect(restored.extentAfter, lessThanOrEqualTo(1));
+        current.value = progress([
+          for (var index = 0; index < 30; index++)
+            step('retry-$index', reading, 'completed'),
+        ], attempt: 2);
+        await tester.pumpAndSettle();
+        expect(
+          tester.state<ScrollableState>(scrollable).position.extentAfter,
+          lessThanOrEqualTo(1),
         );
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());

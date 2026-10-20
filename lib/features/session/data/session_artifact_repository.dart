@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/network_api.dart';
 import '../../../shared/type/list_page.dart';
-import '../domain/conversation_snapshot.dart';
 import '../domain/session_artifact.dart';
 
 abstract class SessionArtifactRepository {
@@ -11,7 +10,7 @@ abstract class SessionArtifactRepository {
   Future<List<SessionArtifact>> list(String? sessionId);
 }
 
-/// Text outputs are paged independently of the messages loaded in the timeline.
+/// All saved outputs are paged independently of the conversation timeline.
 class ApiSessionArtifactRepository extends SessionArtifactRepository {
   const ApiSessionArtifactRepository(this.api, {this.cancelToken});
 
@@ -42,18 +41,11 @@ class ApiSessionArtifactRepository extends SessionArtifactRepository {
     final items = <String, SessionArtifact>{};
     for (var page = 1; ; page++) {
       if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;
-      final result = await api.sessionTextArtifactsPage(
-        sessionId,
-        page: page,
-        cancelToken: cancelToken,
-      );
-      final rows = conversationMaps(result['list']);
-      for (final row in rows) {
-        final artifact = SessionArtifact.fromTextDraft(row);
+      final result = await this.page(sessionId, page: page);
+      for (final artifact in result.items) {
         items[artifact.id] = artifact;
       }
-      final pageCount = conversationMap(result['pageInfo'])['pageCount'] as int;
-      if (rows.isEmpty || page >= pageCount) break;
+      if (result.items.isEmpty || !result.hasMore) break;
     }
     return List.unmodifiable(items.values);
   }

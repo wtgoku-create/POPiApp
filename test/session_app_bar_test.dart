@@ -37,7 +37,7 @@ void main() {
       ..interceptors.add(
         InterceptorsWrapper(
           onRequest: (request, handler) {
-            if (request.path.endsWith('/text-artifacts')) {
+            if (request.path.endsWith('/artifacts')) {
               handler.resolve(
                 Response(
                   requestOptions: request,
@@ -45,7 +45,11 @@ void main() {
                     'status': '0000',
                     'data': {
                       'list': [],
-                      'pageInfo': {'pageCount': 1},
+                      'pageInfo': {
+                        'page': request.queryParameters['page'],
+                        'pageSize': request.queryParameters['pageSize'],
+                        'pageCount': 1,
+                      },
                     },
                   },
                 ),
@@ -160,6 +164,7 @@ void main() {
     expect(find.text('已有会话内容'), findsOneWidget);
     expect(find.text('当前对话产物'), findsOneWidget);
     expect(find.byKey(const Key('session-artifacts-sheet')), findsOneWidget);
+    expect(find.text('请求失败，请稍后重试'), findsNothing);
     await tester.tapAt(const Offset(160, 30));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('session-artifacts-sheet')), findsNothing);

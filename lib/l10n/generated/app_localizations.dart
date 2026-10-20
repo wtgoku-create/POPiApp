@@ -3925,6 +3925,18 @@ abstract class AppLocalizations {
   /// **'Could not export the document. Try again later.'**
   String get sessionArtifactExportFailed;
 
+  /// No description provided for @sessionArtifactSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'File saved'**
+  String get sessionArtifactSaved;
+
+  /// No description provided for @sessionArtifactSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the file. Try again later.'**
+  String get sessionArtifactSaveFailed;
+
   /// No description provided for @imageSavedToPhotos.
   ///
   /// In en, this message translates to:

@@ -1,12 +1,17 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/features/session/data/session_artifact_repository.dart';
+import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/session_artifact.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -15,8 +20,17 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 
 import 'support/fake_video_player.dart';
 import 'support/session_artifact_fixtures.dart';
+import 'support/session_fixtures.dart';
 
 void main() {
+  setUpAll(() async {
+    const path = String.fromEnvironment('SESSION_ARTIFACT_CAPTURE_FONT');
+    if (path.isEmpty) return;
+    await (FontLoader(
+      'ArtifactCapture',
+    )..addFont(File(path).readAsBytes().then(ByteData.sublistView))).load();
+  });
+
   Future<void> pumpSheet(
     WidgetTester tester, {
     Size size = const Size(440, 956),
@@ -24,15 +38,24 @@ void main() {
     double textScale = 1,
     SessionArtifactRepository repository =
         const FixtureSessionArtifactRepository(),
+    SessionRepository? mediaRepository,
+    GlobalKey? capture,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    final baseTheme = dark ? AppTheme.dark : AppTheme.light;
+    final theme =
+        const String.fromEnvironment('SESSION_ARTIFACT_CAPTURE_FONT').isEmpty
+        ? baseTheme
+        : baseTheme.copyWith(
+            textTheme: baseTheme.textTheme.apply(fontFamily: 'ArtifactCapture'),
+          );
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
-          theme: dark ? AppTheme.dark : AppTheme.light,
+          theme: theme,
           locale: const Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -49,7 +72,17 @@ void main() {
                   onPressed: () => Navigator.of(context).push<void>(
                     MaterialPageRoute(
                       builder: (_) => Scaffold(
-                        body: SessionArtifactsSheet(repository: repository),
+                        body: RepaintBoundary(
+                          key: capture,
+                          child: Material(
+                            color: theme.colorScheme.surface,
+                            child: SessionArtifactsSheet(
+                              sessionId: 'session/id',
+                              repository: repository,
+                              mediaRepository: mediaRepository,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -299,6 +332,122 @@ void main() {
   );
 
   testWidgets(
+    'unified video title and download are available in list and detail at 320px',
+    (tester) async {
+      final dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      final requests = <RequestOptions>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            requests.add(request);
+            handler.resolve(
+              Response(
+                requestOptions: request,
+                data: {
+                  'status': '0000',
+                  'data': {
+                    'list': [
+                      {
+                        'id': 'media:movie',
+                        'category': 'media',
+                        'type': 'video',
+                        'title': '天台黄昏：来福的笑点急救（15秒短片）',
+                        'media': {'id': 'movie', 'kind': 'video'},
+                      },
+                    ],
+                    'pageInfo': {'page': 1, 'pageSize': 20, 'pageCount': 1},
+                  },
+                },
+              ),
+            );
+          },
+        ),
+      );
+      final original = VideoPlayerPlatform.instance;
+      final platform = FakeVideoPlayer();
+      VideoPlayerPlatform.instance = platform;
+      addTearDown(() => VideoPlayerPlatform.instance = original);
+      const galleryChannel = MethodChannel('gal');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(galleryChannel, null),
+      );
+      var attempts = 0;
+      messenger.setMockMethodCallHandler(galleryChannel, (_) async {
+        attempts++;
+        return false;
+      });
+      final media = _MediaRepository();
+      final capture = GlobalKey();
+      await pumpSheet(
+        tester,
+        size: const Size(320, 568),
+        textScale: 1.5,
+        repository: ApiSessionArtifactRepository(NetworkApi(dio)),
+        mediaRepository: media,
+        capture: capture,
+      );
+      expect(
+        requests.single.path,
+        '/api_client/agent/v2/sessions/session%2Fid/artifacts',
+      );
+      expect(find.text('天台黄昏：来福的笑点急救（15秒短片）'), findsOneWidget);
+      expect(find.text('生成结果'), findsNothing);
+      expect(media.requests, isEmpty);
+      final listDownload = find.byKey(
+        const ValueKey('session-artifact-download-media:movie'),
+      );
+      expect(listDownload, findsOneWidget);
+      if (const bool.fromEnvironment('CAPTURE_SESSION_ARTIFACTS')) {
+        await tester.runAsync(() async {
+          final boundary =
+              capture.currentContext!.findRenderObject()!
+                  as RenderRepaintBoundary;
+          final pixels = await boundary.toImage();
+          final bytes = await pixels.toByteData(format: ui.ImageByteFormat.png);
+          await File(
+            '/tmp/session-artifact-unified-video-320.png',
+          ).writeAsBytes(bytes!.buffer.asUint8List());
+          pixels.dispose();
+        });
+      }
+      media.failNext = true;
+      await tester.tap(listDownload);
+      await tester.pumpAndSettle();
+      expect(media.requests, ['movie']);
+      expect(find.text('文件保存失败，请稍后重试'), findsOneWidget);
+      expect(attempts, 0);
+      expect(tester.widget<IconButton>(listDownload).onPressed, isNotNull);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.tap(listDownload);
+      await tester.pumpAndSettle();
+      expect(attempts, 2);
+      expect(find.text('无法保存视频，请在系统设置中允许添加照片'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tap(tester, 'session-artifact-open-media:movie');
+      expect(find.byType(AppVideoPlayer), findsOneWidget);
+      final detailDownload = find.byKey(
+        const ValueKey('session-artifact-download-detail'),
+      );
+      expect(detailDownload, findsOneWidget);
+      await tester.tap(detailDownload);
+      await tester.pumpAndSettle();
+      expect(attempts, 4);
+      expect(tester.widget<IconButton>(detailDownload).onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
+
+  testWidgets(
     'late responses from the previous session cannot replace current outputs',
     (tester) async {
       final repository = _DeferredRepository();
@@ -344,6 +493,25 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+}
+
+class _MediaRepository extends FixtureSessionRepository {
+  final requests = <String>[];
+  bool failNext = false;
+
+  @override
+  Future<ConversationMedia> media(String id, {CancelToken? cancelToken}) async {
+    requests.add(id);
+    if (failNext) {
+      failNext = false;
+      throw StateError('unavailable');
+    }
+    return ConversationMedia(
+      id: id,
+      kind: 'video',
+      url: 'https://example.com/video.mp4',
+    );
+  }
 }
 
 class _DeferredRepository extends SessionArtifactRepository {

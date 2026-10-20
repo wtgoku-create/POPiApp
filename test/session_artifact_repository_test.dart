@@ -56,7 +56,7 @@ void main() {
   );
 
   test(
-    'reads all text pages independently and deduplicates draft IDs',
+    'reads unified pages with saved titles and deduplicates namespaced IDs',
     () async {
       final requests = <RequestOptions>[];
       dio.interceptors.add(
@@ -72,20 +72,34 @@ void main() {
                   'data': {
                     'list': [
                       {
-                        'id': 'shared',
+                        'id': 'text:shared',
+                        'category': 'text',
+                        'type': 'script',
                         'title': 'Version $page',
-                        'kind': 'script',
-                        'content': '## Body $page',
+                        'text': {'id': 'shared', 'content': '## Body $page'},
                       },
+                      if (page == 1)
+                        {
+                          'id': 'media:shared',
+                          'category': 'media',
+                          'type': 'video',
+                          'title': 'Saved video title',
+                          'media': {'id': 'shared', 'kind': 'video'},
+                        },
                       if (page == 2)
                         {
-                          'id': 'second',
-                          'kind': 'storyboard',
-                          'content': 'Final storyboard',
-                          'durationSeconds': 12,
+                          'id': 'text:second',
+                          'category': 'text',
+                          'type': 'storyboard',
+                          'title': 'Saved storyboard',
+                          'text': {
+                            'id': 'second',
+                            'content': 'Final storyboard',
+                            'durationSeconds': 12,
+                          },
                         },
                     ],
-                    'pageInfo': {'pageCount': 2},
+                    'pageInfo': {'page': page, 'pageSize': 20, 'pageCount': 2},
                   },
                 },
               ),
@@ -99,13 +113,21 @@ void main() {
       expect(requests, hasLength(2));
       expect(
         requests.first.path,
-        '/api_client/agent/v2/sessions/a%2Fb/text-artifacts',
+        '/api_client/agent/v2/sessions/a%2Fb/artifacts',
       );
       expect(requests.map((r) => r.queryParameters['page']), [1, 2]);
-      expect(items.map((item) => item.id), ['shared', 'second']);
+      expect(requests.first.queryParameters['pageSize'], 20);
+      expect(items.map((item) => item.id), [
+        'text:shared',
+        'media:shared',
+        'text:second',
+      ]);
       expect(items.first.title, 'Version 2');
       expect(items.first.summary, '## Body 2');
       expect(items.first.durationSeconds, isNull);
+      expect(items[1].title, 'Saved video title');
+      expect(items[1].mediaId, 'shared');
+      expect(items[1].type, SessionArtifactType.video);
       expect(items.last.textKind, 'storyboard');
       expect(items.last.durationSeconds, 12);
     },
@@ -126,7 +148,7 @@ void main() {
                   'status': '0000',
                   'data': {
                     'list': [],
-                    'pageInfo': {'pageCount': 10},
+                    'pageInfo': {'page': 1, 'pageCount': 10},
                   },
                 },
               ),
@@ -179,9 +201,15 @@ void main() {
                 'status': '0000',
                 'data': {
                   'list': [
-                    {'id': 'first', 'content': 'First'},
+                    {
+                      'id': 'text:first',
+                      'category': 'text',
+                      'type': 'script',
+                      'title': 'First',
+                      'text': {'id': 'first', 'content': 'First'},
+                    },
                   ],
-                  'pageInfo': {'pageCount': 2},
+                  'pageInfo': {'page': 1, 'pageCount': 2},
                 },
               },
             ),

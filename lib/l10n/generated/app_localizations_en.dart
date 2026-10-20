@@ -2123,6 +2123,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not export the document. Try again later.';
 
   @override
+  String get sessionArtifactSaved => 'File saved';
+
+  @override
+  String get sessionArtifactSaveFailed =>
+      'Could not save the file. Try again later.';
+
+  @override
   String get imageSavedToPhotos => 'Image saved to Photos';
 
   @override
