@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../core/network/network_api.dart';
+import '../../../shared/type/list_page.dart';
 import '../domain/conversation_snapshot.dart';
 import '../domain/session_artifact.dart';
 
@@ -16,6 +17,24 @@ class ApiSessionArtifactRepository extends SessionArtifactRepository {
 
   final NetworkApi api;
   final CancelToken? cancelToken;
+
+  Future<ListPage<SessionArtifact>> page(
+    String sessionId, {
+    int page = 1,
+    int pageSize = 20,
+    String keyword = '',
+  }) async => ListPage.fromJson(
+    await api.sessionArtifactsPage(
+      sessionId,
+      page: page,
+      pageSize: pageSize,
+      keyword: keyword,
+      cancelToken: cancelToken,
+    ),
+    page: page,
+    pageSize: pageSize,
+    parse: SessionArtifact.fromJson,
+  );
 
   @override
   Future<List<SessionArtifact>> list(String? sessionId) async {

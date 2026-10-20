@@ -10,10 +10,16 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/session/data/session_repository.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
+import 'package:popi_ai_app/features/session/domain/conversation_generation_view.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_task.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_generation_card.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_generation_configuration.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_progress.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_task_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -45,6 +51,18 @@ Map<String, Object?> _task({
         ],
     'configuration': '模型：saved-model\n比例：16:9',
     'estimatedPoints': 12,
+    'progress': [
+      {
+        'id': 'compile',
+        'labelKey': 'pages.studio.progress.compilePrompt',
+        'status': 'completed',
+      },
+      {
+        'id': 'generate',
+        'labelKey': 'pages.studio.progress.generateImage',
+        'status': 'completed',
+      },
+    ],
     'plan': {
       'items': [
         {
@@ -117,6 +135,24 @@ class _Images extends Fake implements BaseCacheManager {
 
 class _Repository extends FixtureSessionRepository {
   String kind = 'image';
+  int generationOptionsCalls = 0;
+
+  @override
+  Future<ConversationGenerationOptions> generationOptions(
+    String userId,
+    String sessionId,
+    ConversationBlock card, {
+    CancelToken? cancelToken,
+  }) {
+    generationOptionsCalls++;
+    return super.generationOptions(
+      userId,
+      sessionId,
+      card,
+      cancelToken: cancelToken,
+    );
+  }
+
   @override
   Future<ConversationMedia> media(
     String id, {
@@ -205,6 +241,177 @@ void main() {
       AppImageCache.debugCacheManager = null;
     });
   });
+
+  test(
+    'generation references include every plan item and deduplicate materials',
+    () {
+      final view = ConversationGenerationView(
+        ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'plan',
+          'data': {
+            'roleTemplate': {'mediaId': 'style'},
+            'plan': {
+              'items': [
+                {
+                  'references': [
+                    {'mediaId': 'character', 'purpose': 'identity'},
+                    {'mediaId': 'style', 'purpose': 'style'},
+                  ],
+                },
+                {
+                  'references': [
+                    {'mediaId': 'character', 'purpose': 'identity'},
+                    {'mediaId': 'second-character', 'purpose': 'identity'},
+                    {'mediaId': ''},
+                  ],
+                },
+              ],
+            },
+          },
+        }),
+      );
+      expect(view.savedReferenceIds, [
+        'style',
+        'character',
+        'second-character',
+      ]);
+    },
+  );
+
+  for (final width in [320.0, 390.0]) {
+    for (final mode in ['ready', 'completed', 'embedded']) {
+      testWidgets(
+        'reference thumbnails stay above the prompt: $mode at $width',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final repository = _Repository();
+          final controller = ConversationController(repository, 'user')
+            ..sessionId = 'session';
+          addTearDown(controller.dispose);
+          final capture = GlobalKey();
+          await _pump(tester, const SizedBox());
+          await tester.runAsync(() async {
+            final context = tester.element(find.byType(Scaffold));
+            for (final id in ['character', 'second-character']) {
+              await precacheImage(
+                AppImageCache.provider('https://example.com/$id.png'),
+                context,
+              );
+            }
+          });
+          await _pump(
+            tester,
+            ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                ConversationGenerationCard(
+                  block: ConversationBlock.fromJson({
+                    'type': 'object',
+                    'kind': 'plan',
+                    'data': {
+                      'id': 'references-plan',
+                      'title': '确认生成',
+                      'status': mode == 'completed' ? 'completed' : 'ready',
+                      'allowedActions': ['confirm', 'cancel'],
+                      'configuration': '模型：Seedance 2.0\n比例：9:16',
+                      'plan': {
+                        'items': [
+                          {
+                            'key': 'video',
+                            'mediaType': 'video',
+                            'modelId': 'saved-model',
+                            'params': {'ratio': '9:16'},
+                            'prompt': List.filled(
+                              30,
+                              '9:16竖屏，总时长15秒。保持角色形象和服装一致。\n\n',
+                            ).join(),
+                            'references': [
+                              {'mediaId': 'character', 'purpose': 'identity'},
+                            ],
+                          },
+                          {
+                            'references': [
+                              {'mediaId': 'character', 'purpose': 'identity'},
+                              {
+                                'mediaId': 'second-character',
+                                'purpose': 'identity',
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  }),
+                  controller: controller,
+                  embedded: mode == 'embedded',
+                  readOnly: mode == 'embedded',
+                ),
+              ],
+            ),
+            dark: width == 320,
+            scale: width == 320 ? 1.5 : 1,
+            capture: capture,
+          );
+          final references = find.byKey(
+            const Key('conversation-generation-references'),
+          );
+          final images = find.descendant(
+            of: references,
+            matching: find.byType(ConversationMediaView),
+          );
+          final content = find.byType(ConversationCardContent);
+          expect(images, findsNWidgets(2));
+          expect(
+            tester
+                .widgetList<ConversationMediaView>(images)
+                .map((image) => image.id),
+            ['character', 'second-character'],
+          );
+          expect(tester.getSize(images.first), const Size(80, 80));
+          final pixels = find.descendant(
+            of: references,
+            matching: find.byType(RawImage),
+          );
+          expect(pixels, findsNWidgets(2));
+          expect(
+            tester
+                .widgetList<RawImage>(pixels)
+                .every((image) => image.image != null),
+            isTrue,
+          );
+          expect(
+            tester.getBottomLeft(references).dy,
+            lessThan(tester.getTopLeft(content).dy),
+          );
+          expect(
+            find.descendant(of: content, matching: references),
+            findsNothing,
+          );
+          final position = tester.getTopLeft(references);
+          await _capture(tester, capture, 'references-$mode-${width.toInt()}');
+          await tester.drag(content, const Offset(0, -180));
+          await tester.pumpAndSettle();
+          expect(tester.getTopLeft(references), position);
+          expect(tester.takeException(), isNull);
+          if (mode == 'completed' && width == 390) {
+            await tester.tap(images.first);
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const Key('asset-preview-image')),
+              findsOneWidget,
+            );
+            await tester.tap(find.byKey(const Key('asset-preview-close')));
+            await tester.pumpAndSettle();
+            expect(find.byKey(const Key('asset-preview-image')), findsNothing);
+          }
+        },
+      );
+    }
+  }
 
   test(
     'generated result is rendered only in its task while source stays intact',
@@ -453,16 +660,30 @@ void main() {
       findsNothing,
     );
     expect(find.text('Final saved prompt'), findsNothing);
+    expect(find.text('执行进度'), findsNothing);
+    expect(find.byType(ConversationProgressSteps), findsNothing);
     await _capture(tester, capture, 'completed-390');
     await tester.tap(
       find.byKey(const Key('conversation-generation-task-plan-generation')),
     );
     await tester.pumpAndSettle();
     expect(find.text('Final saved prompt'), findsOneWidget);
+    final planCard = tester.widget<ConversationGenerationCard>(
+      find.byType(ConversationGenerationCard),
+    );
+    expect(planCard.readOnly, isTrue);
+    expect(planCard.embedded, isTrue);
+    expect(find.byType(ConversationGenerationConfiguration), findsOneWidget);
+    expect(find.text('模型：saved-model'), findsOneWidget);
+    expect(find.text('12 积分'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(repository.generationOptionsCalls, 0);
     final content = find.byWidgetPredicate(
       (widget) =>
           widget is ConversationCardContent &&
-          widget.storageId == 'generation-task:generation:plan',
+          widget.storageId == 'generation:confirmation',
     );
     expect(tester.getSize(content).height, lessThanOrEqualTo(320));
     await tester.tap(
@@ -470,6 +691,150 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(ConversationMediaView), findsNothing);
+    final toggle = find.byKey(
+      const Key('conversation-generation-task-toggle-generation'),
+    );
+    final header = find.ancestor(of: toggle, matching: find.byType(Row)).first;
+    expect(
+      tester.getSize(find.byType(ConversationCard)).height,
+      tester.getSize(header).height + 40,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final (width, scale) in [(320.0, 1.5), (390.0, 1.0), (1024.0, 1.0)]) {
+    testWidgets('saved task plan reuses a read-only confirmation at $width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repository = _Repository();
+      final controller = ConversationController(repository, 'user');
+      addTearDown(controller.dispose);
+      final capture = GlobalKey();
+      await _pump(tester, const Text('Precache'));
+      await tester.runAsync(
+        () => precacheImage(
+          AppImageCache.provider('https://example.com/output.png'),
+          tester.element(find.text('Precache')),
+        ),
+      );
+      await _pump(
+        tester,
+        ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            ConversationTaskCard(
+              block: ConversationBlock.fromJson(_task()),
+              controller: controller,
+            ),
+          ],
+        ),
+        scale: scale,
+        capture: capture,
+      );
+      await tester.tap(
+        find.byKey(const Key('conversation-generation-task-plan-generation')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ConversationGenerationCard), findsOneWidget);
+      expect(find.byType(ConversationGenerationConfiguration), findsOneWidget);
+      expect(find.text('Final saved prompt'), findsOneWidget);
+      expect(find.byType(ConversationProgressSteps), findsNothing);
+      expect(find.text('执行进度'), findsNothing);
+      expect(find.byTooltip('收起档案'), findsNothing);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+      expect(repository.generationOptionsCalls, 0);
+      expect(tester.takeException(), isNull);
+      await _capture(tester, capture, 'saved-plan-${width.toInt()}');
+    });
+  }
+
+  testWidgets('read-only plan never loads or exposes ready-plan actions', (
+    tester,
+  ) async {
+    final repository = _Repository();
+    final controller = ConversationController(repository, 'user')
+      ..sessionId = 'session';
+    addTearDown(controller.dispose);
+    final task = ConversationBlock.fromJson(_task());
+    final saved = ConversationGenerationTaskView(task, null).fixedPlan!;
+    await _pump(
+      tester,
+      ConversationGenerationCard(
+        block: ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'plan',
+          'data': {
+            ...saved.data,
+            'roleTemplate': {'title': 'Saved style'},
+            'roleImage': {'requirements': 'Keep the original outfit'},
+            'status': 'ready',
+            'allowedActions': ['confirm', 'cancel'],
+          },
+        }),
+        controller: controller,
+        readOnly: true,
+        embedded: true,
+      ),
+    );
+    expect(find.text('Final saved prompt'), findsOneWidget);
+    expect(find.text('画风：Saved style'), findsOneWidget);
+    expect(find.text('Keep the original outfit'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(repository.generationOptionsCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('embedded home plan keeps production sections without actions', (
+    tester,
+  ) async {
+    final repository = _Repository();
+    final controller = ConversationController(repository, 'user')
+      ..sessionId = 'session';
+    addTearDown(controller.dispose);
+    final task = ConversationBlock.fromJson(_task());
+    final saved = ConversationGenerationTaskView(task, null).fixedPlan!;
+    await _pump(
+      tester,
+      ListView(
+        children: [
+          ConversationGenerationCard(
+            block: ConversationBlock.fromJson({
+              'type': 'object',
+              'kind': 'plan',
+              'data': {
+                ...saved.data,
+                'status': 'ready',
+                'homePlan': {
+                  'cast': [],
+                  'topic': {'title': 'Saved story', 'body': 'Saved synopsis'},
+                },
+              },
+            }),
+            controller: controller,
+            readOnly: true,
+            embedded: true,
+          ),
+        ],
+      ),
+    );
+    expect(find.text('Saved story'), findsOneWidget);
+    expect(find.text('Saved synopsis'), findsOneWidget);
+    expect(find.text('出场角色'), findsOneWidget);
+    expect(find.text('模型配置'), findsOneWidget);
+    expect(find.text('12 积分'), findsOneWidget);
+    expect(find.text('生产方案'), findsNothing);
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(repository.generationOptionsCalls, 0);
     expect(tester.takeException(), isNull);
   });
 

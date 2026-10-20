@@ -158,10 +158,11 @@ class GenerationOptions extends StatelessWidget {
       final colors = Theme.of(context).colorScheme;
       const spacing = 8.0;
       const minWidth = 88.0;
-      final columns = math.max(
+      var columns = math.max(
         1,
         ((constraints.maxWidth + spacing) / (minWidth + spacing)).floor(),
       );
+      if (options.length == 4 && columns == 3) columns = 2;
       double optionWidth(int index) {
         final rowStart = index ~/ columns * columns;
         final count = math.min(columns, options.length - rowStart);
@@ -340,6 +341,21 @@ class GenerationDurationControl extends StatelessWidget {
     final divisions = values.isNotEmpty
         ? values.length - 1
         : ((max - min) / step).floor();
+    if (divisions <= 0) {
+      return Padding(
+        key: Key('$keyPrefix-fixed'),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          l10n.roleDurationSeconds(
+            (values.isNotEmpty ? values.first : min).toString(),
+          ),
+          style: TextStyle(
+            fontSize: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
     final numeric = value ?? customValue;
     final selectedIndex = values.indexOf(numeric);
     final position = values.isNotEmpty
@@ -382,16 +398,14 @@ class GenerationDurationControl extends StatelessWidget {
                 child: Slider(
                   key: Key('$keyPrefix-slider'),
                   min: 0,
-                  max: math.max(1, divisions).toDouble(),
-                  divisions: divisions > 0 ? divisions : null,
+                  max: divisions.toDouble(),
+                  divisions: divisions,
                   value: position,
-                  onChanged: divisions <= 0
-                      ? null
-                      : (position) => onChanged(
-                          values.isNotEmpty
-                              ? values[position.round()]
-                              : min + position.round() * step,
-                        ),
+                  onChanged: (position) => onChanged(
+                    values.isNotEmpty
+                        ? values[position.round()]
+                        : min + position.round() * step,
+                  ),
                 ),
               ),
             ),

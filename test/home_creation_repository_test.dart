@@ -3,10 +3,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/features/assets/domain/library_role.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
+import 'package:popi_ai_app/features/role_guide/domain/role_generation.dart';
 
 import 'support/home_creation_fixtures.dart';
 
 void main() {
+  for (final (state, intent, expected) in [
+    ('running', 'run', RoleGenerationStatus.running),
+    ('queued', 'pause', RoleGenerationStatus.pausing),
+    ('running', 'pause', RoleGenerationStatus.pausing),
+    ('paused', 'pause', RoleGenerationStatus.paused),
+    ('running', 'cancel', RoleGenerationStatus.canceling),
+    ('completed', 'pause', RoleGenerationStatus.completed),
+    ('failed', 'pause', RoleGenerationStatus.failed),
+    ('canceled', 'cancel', RoleGenerationStatus.canceled),
+  ]) {
+    test('home task projects $state with $intent intent', () {
+      for (final field in ['intent', 'controlIntent']) {
+        final task = HomeTask.fromJson({
+          ...HomeCreationFixture().taskValue(state),
+          field: intent,
+        });
+        expect(task.intent, intent);
+        expect(task.progress.status, expected);
+        if (expected == RoleGenerationStatus.pausing) {
+          expect(task.needsPolling, isTrue);
+        } else if (expected == RoleGenerationStatus.paused) {
+          expect(task.progress.running, isFalse);
+          expect(task.needsPolling, isFalse);
+        }
+      }
+    });
+  }
+
   test(
     'account topics enter home before requesting missing recommendations',
     () async {

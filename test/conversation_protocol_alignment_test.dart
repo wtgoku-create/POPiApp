@@ -518,6 +518,106 @@ void main() {
     );
   }
 
+  for (final preferredMode in [null, 'text_to_video']) {
+    test(
+      'generation confirmation retains the prepared mode over $preferredMode',
+      () async {
+        const preparedMode = 'reference_to_video';
+        final plan = {
+          'key': 'video',
+          'mediaType': 'video',
+          'modelId': 'video-model',
+          'prompt': 'Animate the character',
+          'params': {'duration': 5, 'generationMode': preparedMode},
+          'references': [
+            {'mediaId': '91', 'purpose': 'reference'},
+          ],
+        };
+        final generation = {'creatorInputId': 'fixed-input', 'item': plan};
+        final body = {
+          'clientRequestId': 'business-confirmation',
+          'input': generation,
+        };
+        final card = ConversationBlock.fromJson({
+          'type': 'object',
+          'kind': 'plan',
+          'data': {
+            'id': 'confirmation',
+            'kind': 'generation',
+            'status': 'ready',
+            'revision': 1,
+            'allowedActions': ['confirm', 'cancel'],
+            'plan': {
+              'items': [plan],
+            },
+            'request': {
+              'method': 'POST',
+              'path': '/api_client/agent/v2/generation/confirmations',
+              'body': body,
+            },
+          },
+        });
+        final selection = ConversationGenerationSelection(
+          config: HomeConfig(
+            modelId: 'selected-video-model',
+            params: {
+              'duration': 10,
+              if (preferredMode != null) 'generationMode': preferredMode,
+            },
+          ),
+          estimatedPoints: 8,
+          mediaPreferencesRevision: 2,
+        );
+        final expectedConfig = {
+          'modelId': 'selected-video-model',
+          'params': {'duration': 10, 'generationMode': preparedMode},
+        };
+        final paths = <String>[];
+        dio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              paths.add(options.path);
+              final data = options.data as Map;
+              if (options.path.endsWith('/generation/confirmations')) {
+                expect(data['clientRequestId'], body['clientRequestId']);
+                expect(data['maxEstimatedPoints'], 8);
+                expect(data['mediaPreferencesRevision'], 2);
+                expect(data['input'], {
+                  ...generation,
+                  'item': {...plan, ...expectedConfig},
+                });
+              } else {
+                expect(options.path.endsWith('/respond'), isTrue);
+                expect(data['generationConfig'], expectedConfig);
+                expect(data['revision'], 1);
+                expect(data['action'], 'confirm');
+              }
+              handler.resolve(
+                Response(
+                  requestOptions: options,
+                  statusCode: 200,
+                  data: options.path.endsWith('/respond')
+                      ? <String, Object?>{}
+                      : {'data': <String, Object?>{}},
+                ),
+              );
+            },
+          ),
+        );
+
+        await repository().confirmGeneration('a', chatId, card, selection);
+
+        expect(paths, [
+          '/api_client/agent/v2/generation/confirmations',
+          '/api_agent/v2/sessions/$chatId/confirmations/confirmation/respond',
+        ]);
+        expect(storage.preferences.getKeys(), isEmpty);
+        expect(card.request!['body'], body);
+        expect(selection.config.params['generationMode'], preferredMode);
+      },
+    );
+  }
+
   test('cancel discards persisted uncertain generation inputs', () async {
     var canceling = false;
     dio.interceptors.add(

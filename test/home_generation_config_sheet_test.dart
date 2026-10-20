@@ -235,6 +235,45 @@ void main() {
     });
   }
 
+  testWidgets('four resolution options form two equal rows on narrow panels', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 344,
+              child: GenerationOptions(
+                options: const [
+                  (label: '480p', value: '480p'),
+                  (label: '720p', value: '720p'),
+                  (label: '1080p', value: '1080p'),
+                  (label: '4K', value: '4k'),
+                ],
+                value: '480p',
+                onSelected: (_) {},
+                keyPrefix: 'resolution-layout',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final rects = [
+      for (final value in ['480p', '720p', '1080p', '4k'])
+        tester.getRect(find.byKey(Key('resolution-layout-$value'))),
+    ];
+    expect(rects[0].top, rects[1].top);
+    expect(rects[2].top, rects[3].top);
+    expect(rects[2].top, greaterThan(rects[0].bottom));
+    for (final rect in rects) {
+      expect(rect.width, closeTo(168, .01));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   for (final mediaType in ['video', 'image']) {
     testWidgets(
       '$mediaType quality options select and save through pill buttons',
@@ -504,6 +543,33 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final fixedOptions in [true, false]) {
+    testWidgets(
+      'fixed duration saves without a slider: options=$fixedOptions',
+      (tester) async {
+        final fixture = configFixture();
+        final parameters =
+            fixture.modelCatalogs['video']!.first['parameters'] as List;
+        final duration = parameters.last as Map;
+        duration['default'] = 15;
+        duration['min'] = 15;
+        duration['max'] = 15;
+        if (fixedOptions) duration['options'] = [15];
+        (fixture.videoPreference['params'] as Map)['duration'] = 15;
+        await pumpConfig(tester, fixture);
+        await configVisible(tester, 'home-config-duration-fixed');
+        expect(
+          find.byKey(const Key('home-config-duration-slider')),
+          findsNothing,
+        );
+        expect(find.text('15s'), findsOneWidget);
+        await configTap(tester, 'home-config-confirm');
+        expect((fixture.videoPreference['params'] as Map)['duration'], 15);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   for (final legacy in [null, 'auto', 'automatic']) {
     testWidgets('legacy duration $legacy uses a numeric catalog option', (

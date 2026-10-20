@@ -1,6 +1,6 @@
 import 'conversation_snapshot.dart';
 
-enum SessionArtifactType { image, script, video }
+enum SessionArtifactType { image, script, video, audio }
 
 /// A generated output belonging to a conversation.
 class SessionArtifact {
@@ -30,6 +30,50 @@ class SessionArtifact {
         durationSeconds: (json['durationSeconds'] as num?)?.toInt(),
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
       );
+
+  /// Unified outputs retain the saved text version and resolve media on demand.
+  factory SessionArtifact.fromJson(Map<String, dynamic> json) {
+    final category = json['category'];
+    final type = json['type'];
+    final text = category == 'text'
+        ? conversationMap(json['text'])
+        : const <String, Object?>{};
+    final media = category == 'text'
+        ? const <String, Object?>{}
+        : conversationMap(json['media']);
+    final artifactType = switch ((category, type)) {
+      ('text', 'topic' || 'script' || 'storyboard') =>
+        SessionArtifactType.script,
+      ('media', 'image') ||
+      ('role_image', 'three_view') => SessionArtifactType.image,
+      ('media', 'video') => SessionArtifactType.video,
+      ('media', 'audio') => SessionArtifactType.audio,
+      _ => throw const FormatException('Invalid artifact type'),
+    };
+    final id = json['id'];
+    final sourceId = artifactType == SessionArtifactType.script
+        ? text['id']
+        : media['id'];
+    if (id is! String ||
+        sourceId is! String ||
+        sourceId.isEmpty ||
+        id != '${category == 'text' ? 'text' : 'media'}:$sourceId' ||
+        json['title'] is! String ||
+        (category == 'text' && text['content'] is! String)) {
+      throw const FormatException('Invalid artifact');
+    }
+    return SessionArtifact(
+      id: id,
+      type: artifactType,
+      title: json['title'] as String,
+      summary: text['content'] as String? ?? '',
+      metadata: '',
+      textKind: category == 'text' ? type as String : null,
+      durationSeconds: (text['durationSeconds'] as num?)?.toInt(),
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
+      mediaId: category == 'text' ? null : sourceId,
+    );
+  }
 
   static List<SessionArtifact> mediaFromSnapshot(
     ConversationSnapshot? snapshot,

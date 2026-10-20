@@ -47,6 +47,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roleTaskPaused => 'Creation paused';
 
   @override
+  String get roleStatusPausing => 'Pausing';
+
+  @override
+  String get roleTaskPausing => 'Pausing creation...';
+
+  @override
+  String get roleTaskCanceling => 'Canceling creation...';
+
+  @override
+  String get roleStatusPaused => 'Paused';
+
+  @override
+  String get roleStatusCanceling => 'Canceling';
+
+  @override
+  String get roleGenerationPausedDescription =>
+      'Your current plan is saved. You can resume creation.';
+
+  @override
+  String get chatTaskCanceling => 'Canceling after the current stage';
+
+  @override
   String get rolePauseProduction => 'Pause creation';
 
   @override
@@ -2094,6 +2116,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get download => 'Download';
 
   @override
+  String get sessionArtifactExported => 'Document exported';
+
+  @override
+  String get sessionArtifactExportFailed =>
+      'Could not export the document. Try again later.';
+
+  @override
   String get imageSavedToPhotos => 'Image saved to Photos';
 
   @override
@@ -2786,31 +2815,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatStepSyncResult => 'Sync results';
 
   @override
-  String get chatPreparing => 'Preparing';
+  String get chatPreparing => 'Preparing…';
 
   @override
   String get chatProcessing => 'Processing your request';
 
   @override
-  String get chatGeneratingReply => 'Generating a reply';
+  String get chatGeneratingReply => 'Generating response…';
 
   @override
-  String get chatSavingArtifact => 'Saving content';
+  String get chatSavingArtifact => 'Saving output…';
 
   @override
-  String get chatPlanningGeneration => 'Preparing a generation plan';
+  String get chatPlanningGeneration => 'Preparing the generation plan…';
 
   @override
   String get chatReadRole => 'Reading character profiles';
 
   @override
-  String get chatReadContext => 'Reading the creative context';
+  String get chatReadContext => 'Reading creation context';
 
   @override
-  String get chatTopics => 'Suggesting topics';
+  String get chatTopics => 'Writing story ideas';
 
   @override
-  String get chatPrepareRole => 'Preparing a character plan';
+  String get chatPrepareRole => 'Preparing character creation';
 
   @override
   String get redemptionCenter => 'Invite Friends';
@@ -3013,6 +3042,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionArtifactVideos => 'Videos';
 
   @override
+  String get sessionArtifactAudioDetail => 'Audio Details';
+
+  @override
   String get sessionArtifactImageDetail => 'Image Details';
 
   @override
@@ -3025,13 +3057,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionArtifactsEmpty => 'No outputs yet';
 
   @override
-  String get chatAskUser => 'Waiting for more details';
+  String get chatAskUser => 'Preparing questions';
 
   @override
-  String get chatSaveRole => 'Saving the character draft';
+  String get chatSaveRole => 'Saving character profile';
 
   @override
-  String get chatPublishRole => 'Publishing the character';
+  String get chatPublishRole => 'Preparing character publication';
 
   @override
   String get chatPreviewImage => 'Preview image';
@@ -3045,6 +3077,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get generationCreditNotice =>
       'Please note: Clicking \"Generate\" will deduct the corresponding points. Points already consumed are non-refundable. Please carefully review your materials, prompts, and generation settings before submitting.';
+
+  @override
+  String get generationCreditNoticeNonRefundable =>
+      'Points already consumed are non-refundable';
 
   @override
   String get chatRoleName => 'Name';
@@ -3094,6 +3130,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatProgressFailed => 'Failed';
+
+  @override
+  String get chatProgressCompleted => 'Done';
+
+  @override
+  String get chatProgressRunFailed => 'Failed';
+
+  @override
+  String get chatProgressStopped => 'Reply stopped';
+
+  @override
+  String get chatProgressPrepare => 'Preparing context';
+
+  @override
+  String get chatProgressReply => 'Composing reply';
+
+  @override
+  String get chatProgressSaveText => 'Saving written content';
+
+  @override
+  String get chatProgressPreparePlan => 'Preparing generation plan';
+
+  @override
+  String get chatProgressUpdateRole => 'Updating character';
+
+  @override
+  String get chatProgressProcessing => 'Processing…';
+
+  @override
+  String get chatProgressUnderstanding => 'Understanding your request…';
+
+  @override
+  String get chatProgressSelectingSkill => 'Selecting a creative skill…';
+
+  @override
+  String get chatProgressReadingRules => 'Reading creative guidelines…';
+
+  @override
+  String get chatProgressComposing => 'Planning the response…';
+
+  @override
+  String get chatProgressPreparingGeneration =>
+      'Preparing the generation task…';
+
+  @override
+  String get chatProgressGeneratingArtifact => 'Generating content…';
+
+  @override
+  String get chatProgressCompletingDelivery =>
+      'Output generated. Finishing delivery…';
+
+  @override
+  String get chatProgressWaitingInput => 'Waiting for your input…';
 
   @override
   String get chatProgressAnalyze => 'Analyzing your request';

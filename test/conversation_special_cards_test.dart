@@ -11,6 +11,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
 import 'package:popi_ai_app/features/role_guide/domain/session_media_preferences.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
+import 'package:popi_ai_app/features/session/data/session_repository.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_snapshot.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_generation_card.dart';
@@ -18,12 +19,14 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_t
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:toastification/toastification.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_style.dart';
 
 import 'conversation_events_test.dart' show chatId;
 import 'support/session_fixtures.dart';
+import 'support/fake_video_player.dart';
 
 class _CardRepository extends FixtureSessionRepository {
   int estimates = 0;
@@ -32,6 +35,19 @@ class _CardRepository extends FixtureSessionRepository {
   ConversationGenerationOptions? generationOverride;
   ConversationGenerationSelection? submitted;
   final controls = <String>[];
+
+  @override
+  Future<ConversationMedia> media(
+    String id, {
+    CancelToken? cancelToken,
+  }) async => id == 'home-task-video'
+      ? ConversationMedia(
+          id: id,
+          kind: 'video',
+          url: 'https://example.com/result.mp4',
+        )
+      : await super.media(id, cancelToken: cancelToken);
+
   @override
   Future<ListPage<ConversationRoleTemplate>> roleTemplates({
     int page = 1,
@@ -443,6 +459,18 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('生产方案'), findsOneWidget);
         expect(find.text('选题故事'), findsNothing);
+        final header = find
+            .ancestor(
+              of: find.byTooltip(
+                lookupAppLocalizations(const Locale('zh')).roleGuideViewMore,
+              ),
+              matching: find.byType(Row),
+            )
+            .first;
+        expect(
+          tester.getSize(find.byType(ConversationCard)).height,
+          tester.getSize(header).height + 40,
+        );
       });
     }
   }
@@ -635,6 +663,69 @@ void main() {
         expect(find.text('视频生成进度'), findsOneWidget);
         expect(find.text('分镜脚本已完成，待确认生成视频'), findsOneWidget);
         expect(find.text('来财'), findsOneWidget);
+        expect(find.text('出场角色'), findsOneWidget);
+        final role = find.byKey(const Key('conversation-role-view-profile'));
+        final colors = Theme.of(tester.element(role)).colorScheme;
+        expect(
+          tester.widget<TextButton>(role).style!.backgroundColor!.resolve({}),
+          colors.primary.withValues(alpha: .05),
+        );
+        expect(
+          tester.getTopLeft(role).dy -
+              tester.getBottomLeft(find.text('出场角色')).dy,
+          8,
+        );
+        final cast = find.byKey(const Key('conversation-home-task-cast'));
+        final scriptStep = find.byKey(const ValueKey('home-task-step:script'));
+        final storyboardStep = find.byKey(
+          const ValueKey('home-task-step:storyboard'),
+        );
+        expect(
+          tester.getTopLeft(scriptStep).dy - tester.getBottomLeft(cast).dy,
+          16,
+        );
+        expect(
+          tester.getTopLeft(storyboardStep).dy -
+              tester.getBottomLeft(scriptStep).dy,
+          8,
+        );
+        final scriptToggle = find.byKey(
+          const Key('conversation-task-section-script'),
+        );
+        final storyboardToggle = find.byKey(
+          const Key('conversation-task-section-storyboard'),
+        );
+        await tester.tap(scriptToggle);
+        await tester.pumpAndSettle();
+        expect(
+          tester.getTopLeft(storyboardStep).dy -
+              tester.getBottomLeft(scriptStep).dy,
+          0,
+        );
+        expect(tester.getSize(scriptToggle).height, 44);
+        expect(tester.getSize(storyboardToggle).height, 44);
+        expect(
+          tester.getCenter(storyboardToggle).dy -
+              tester.getCenter(scriptToggle).dy,
+          44,
+        );
+        if (const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+          await tester.runAsync(() async {
+            final boundary =
+                capture.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary;
+            final pixels = await boundary.toImage();
+            final bytes = await pixels.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '/tmp/conversation-home-task-collapsed-${size.width.toInt()}.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            pixels.dispose();
+          });
+        }
+        await tester.tap(scriptToggle);
+        await tester.pumpAndSettle();
         expect(find.textContaining('场景：午后的阳台'), findsOneWidget);
         expect(find.textContaining('镜头缓缓拉近'), findsNothing);
         final stages = ['撰写剧本', '编排分镜', '生成视频', '检测结果'];
@@ -701,6 +792,132 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.textContaining('镜头缓缓拉近'), findsOneWidget);
         expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
+
+  for (final embedded in [true, false]) {
+    testWidgets(
+      'home result keeps media with its stage and consistent gaps embedded=$embedded',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final original = VideoPlayerPlatform.instance;
+        VideoPlayerPlatform.instance = FakeVideoPlayer();
+        addTearDown(() => VideoPlayerPlatform.instance = original);
+        final controller = ConversationController(_CardRepository(), 'a')
+          ..sessionId = chatId;
+        addTearDown(controller.dispose);
+        final capture = GlobalKey();
+        await _pump(
+          tester,
+          ConversationTaskCard(
+            block: ConversationBlock.fromJson({
+              'type': 'object',
+              'kind': 'task',
+              'action': 'home',
+              'data': {
+                ..._task(home: true).data,
+                'state': 'completed',
+                'confirmationPending': false,
+                'allowedActions': <String>[],
+                'steps': [
+                  {
+                    'key': 'script',
+                    'state': 'completed',
+                    'output': {'kind': 'script', 'body': '剧本内容正文。'},
+                  },
+                  {
+                    'key': 'storyboard',
+                    'state': 'completed',
+                    'output': {'kind': 'storyboard', 'body': '分镜正文。'},
+                  },
+                  {
+                    'key': 'video',
+                    'state': 'completed',
+                    'output': embedded
+                        ? {
+                            'title': '视频结果',
+                            'body': '视频生成完成',
+                            'mediaIds': ['home-task-video'],
+                          }
+                        : [
+                            {'kind': 'media', 'id': 'home-task-video'},
+                          ],
+                  },
+                  {
+                    'key': 'review',
+                    'state': 'completed',
+                    'output': {'title': '视频结果检查', 'body': '检查完成'},
+                  },
+                ],
+              },
+            }),
+            controller: controller,
+          ),
+          capture: capture,
+          locale: const Locale('zh'),
+        );
+        expect(find.text('出场角色'), findsNothing);
+        final script = find.byKey(const ValueKey('home-task-step:script'));
+        final storyboard = find.byKey(
+          const ValueKey('home-task-step:storyboard'),
+        );
+        final video = find.byKey(const ValueKey('home-task-step:video'));
+        final review = find.byKey(const ValueKey('home-task-step:review'));
+        for (final (before, after, gap) in [
+          (script, storyboard, 8),
+          (storyboard, video, 8),
+          (video, review, 20),
+        ]) {
+          expect(
+            tester.getTopLeft(after).dy - tester.getBottomLeft(before).dy,
+            closeTo(gap, .01),
+          );
+        }
+        final media = find.byType(ConversationMediaView);
+        expect(find.descendant(of: video, matching: media), findsOneWidget);
+        if (embedded) {
+          expect(
+            tester.getTopLeft(media).dy -
+                tester.getBottomLeft(find.text('视频生成完成')).dy,
+            closeTo(16, .01),
+          );
+        }
+        final scriptBody = find.byWidgetPredicate(
+          (widget) =>
+              widget is ConversationCardContent &&
+              widget.storageId == 'home-task:task:script',
+        );
+        expect(
+          tester.getTopLeft(scriptBody).dy -
+              tester
+                  .getBottomLeft(
+                    find.byKey(const Key('conversation-task-section-script')),
+                  )
+                  .dy,
+          8,
+        );
+        expect(tester.takeException(), isNull);
+        if (embedded &&
+            const bool.fromEnvironment('CAPTURE_CONVERSATION_CARDS')) {
+          await tester.runAsync(() async {
+            final boundary =
+                capture.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary;
+            final pixels = await boundary.toImage();
+            final bytes = await pixels.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            await File(
+              '/tmp/conversation-home-task-result.png',
+            ).writeAsBytes(bytes!.buffer.asUint8List());
+            pixels.dispose();
+          });
+        }
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );

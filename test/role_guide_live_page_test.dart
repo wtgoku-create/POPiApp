@@ -10,6 +10,7 @@ import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/role_guide_page.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_generation_panel.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
@@ -95,6 +96,79 @@ Future<void> tapLive(
 }
 
 void main() {
+  testWidgets('remote pause intent reaches the panel before the stage stops', (
+    tester,
+  ) async {
+    final fixture = HomeCreationFixture();
+    fixture.task = fixture.taskValue('paused');
+    await pumpLive(tester, fixture, route: '/role-guide?accountId=101');
+    final panel = find.byType(RoleGenerationPanel);
+    Finder panelText(String text) =>
+        find.descendant(of: panel, matching: find.text(text));
+    expect(panelText('已暂停'), findsOneWidget);
+    expect(panelText('执行中'), findsNothing);
+    expect(panelText('作品努力生成中...'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tapLive(tester, 'role-guide-generation-action', running: true);
+    expect(panelText('作品努力生成中...'), findsOneWidget);
+
+    fixture.task = {
+      ...fixture.taskValue('running', version: 3),
+      'intent': 'pause',
+      'allowedActions': ['resume', 'cancel'],
+      'steps': [
+        for (final key in [
+          'persona',
+          'script',
+          'storyboard',
+          'video',
+          'review',
+        ])
+          {
+            'key': key,
+            'state': key == 'video'
+                ? 'running'
+                : key == 'review'
+                ? 'pending'
+                : 'completed',
+          },
+      ],
+    };
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(panelText('暂停中，等待当前阶段完成'), findsOneWidget);
+    expect(panelText('正在暂停'), findsOneWidget);
+    expect(panelText('执行中'), findsNothing);
+    expect(panelText('作品努力生成中...'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    fixture.task = fixture.taskValue('paused', version: 4);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(panelText('已暂停'), findsOneWidget);
+    expect(panelText('正在暂停'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    final polls = fixture.requests
+        .where(
+          (request) =>
+              request.method == 'GET' && request.path.contains('/home-tasks/'),
+        )
+        .length;
+    await tester.pump(const Duration(seconds: 6));
+    expect(
+      fixture.requests.where(
+        (request) =>
+            request.method == 'GET' && request.path.contains('/home-tasks/'),
+      ),
+      hasLength(polls),
+    );
+    await tapLive(tester, 'role-guide-generation-action', running: true);
+    expect(fixture.task!['state'], 'running');
+    expect(panelText('执行中'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('project summary uses account detail independently of the cast', (
     tester,
   ) async {

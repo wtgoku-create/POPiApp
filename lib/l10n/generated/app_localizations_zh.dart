@@ -45,6 +45,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get roleTaskPaused => '创作已暂停';
 
   @override
+  String get roleStatusPausing => '正在暂停';
+
+  @override
+  String get roleTaskPausing => '任务正在暂停...';
+
+  @override
+  String get roleTaskCanceling => '任务正在取消...';
+
+  @override
+  String get roleStatusPaused => '已暂停';
+
+  @override
+  String get roleStatusCanceling => '正在取消';
+
+  @override
+  String get roleGenerationPausedDescription => '当前方案已保留，可以继续创作';
+
+  @override
+  String get chatTaskCanceling => '取消中，等待当前阶段完成';
+
+  @override
   String get rolePauseProduction => '暂停创作';
 
   @override
@@ -2003,6 +2024,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get download => '下载';
 
   @override
+  String get sessionArtifactExported => '文档已导出';
+
+  @override
+  String get sessionArtifactExportFailed => '文档导出失败，请稍后重试';
+
+  @override
   String get imageSavedToPhotos => '图片已保存到相册';
 
   @override
@@ -2661,31 +2688,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatStepSyncResult => '同步生成结果';
 
   @override
-  String get chatPreparing => '正在准备';
+  String get chatPreparing => '正在准备…';
 
   @override
   String get chatProcessing => '正在处理你的需求';
 
   @override
-  String get chatGeneratingReply => '正在生成回复';
+  String get chatGeneratingReply => '正在生成回复…';
 
   @override
-  String get chatSavingArtifact => '正在保存内容';
+  String get chatSavingArtifact => '正在保存产物…';
 
   @override
-  String get chatPlanningGeneration => '正在整理生成方案';
+  String get chatPlanningGeneration => '正在整理生成方案…';
 
   @override
-  String get chatReadRole => '正在读取角色档案';
+  String get chatReadRole => '读取角色资料';
 
   @override
-  String get chatReadContext => '正在理解创作背景';
+  String get chatReadContext => '读取创作上下文';
 
   @override
-  String get chatTopics => '正在推荐选题';
+  String get chatTopics => '创作选题故事';
 
   @override
-  String get chatPrepareRole => '正在整理角色方案';
+  String get chatPrepareRole => '准备角色创建';
 
   @override
   String get redemptionCenter => '邀请好友';
@@ -2877,6 +2904,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionArtifactVideos => '视频';
 
   @override
+  String get sessionArtifactAudioDetail => '音频详情';
+
+  @override
   String get sessionArtifactImageDetail => '图片详情';
 
   @override
@@ -2889,13 +2919,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionArtifactsEmpty => '暂无产物';
 
   @override
-  String get chatAskUser => '等待补充信息';
+  String get chatAskUser => '整理待确认信息';
 
   @override
-  String get chatSaveRole => '正在保存角色草案';
+  String get chatSaveRole => '保存角色档案';
 
   @override
-  String get chatPublishRole => '正在发布角色';
+  String get chatPublishRole => '准备角色发布';
 
   @override
   String get chatPreviewImage => '预览图片';
@@ -2909,6 +2939,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get generationCreditNotice =>
       '温馨提示：点击「确认生成」后将扣除相应积分，已消耗积分不予退还。请在提交前仔细核对素材、提示词及生成参数';
+
+  @override
+  String get generationCreditNoticeNonRefundable => '已消耗积分不予退还';
 
   @override
   String get chatRoleName => '名称';
@@ -2957,6 +2990,57 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatProgressFailed => '未完成';
+
+  @override
+  String get chatProgressCompleted => '已完成';
+
+  @override
+  String get chatProgressRunFailed => '执行失败';
+
+  @override
+  String get chatProgressStopped => '已停止回复';
+
+  @override
+  String get chatProgressPrepare => '准备创作上下文';
+
+  @override
+  String get chatProgressReply => '整理回复';
+
+  @override
+  String get chatProgressSaveText => '保存创作稿件';
+
+  @override
+  String get chatProgressPreparePlan => '准备生成方案';
+
+  @override
+  String get chatProgressUpdateRole => '更新角色资料';
+
+  @override
+  String get chatProgressProcessing => '正在处理…';
+
+  @override
+  String get chatProgressUnderstanding => '正在理解你的需求…';
+
+  @override
+  String get chatProgressSelectingSkill => '正在选择创作能力…';
+
+  @override
+  String get chatProgressReadingRules => '正在读取创作规则…';
+
+  @override
+  String get chatProgressComposing => '正在构思…';
+
+  @override
+  String get chatProgressPreparingGeneration => '正在准备生成任务…';
+
+  @override
+  String get chatProgressGeneratingArtifact => '正在生成正文…';
+
+  @override
+  String get chatProgressCompletingDelivery => '产物已生成，正在完成交付…';
+
+  @override
+  String get chatProgressWaitingInput => '等待你补充或确认…';
 
   @override
   String get chatProgressAnalyze => '正在分析创作要求';

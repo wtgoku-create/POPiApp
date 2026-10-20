@@ -205,9 +205,8 @@ void main() {
       _draft('2'),
       _reply(text: '[[text_draft:1]]'),
     ]).presentationMessages;
-    expect(referenced, hasLength(2));
-    expect(referenced.first.blocks.single.id, '2');
-    expect(referenced.last.blocks.single.id, '1');
+    expect(referenced, hasLength(1));
+    expect(referenced.single.blocks.map((block) => block.id), ['1', '2']);
   });
 
   test('local draft IDs resolve within their run and attempt', () {

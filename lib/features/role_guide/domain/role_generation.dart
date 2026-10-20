@@ -1,4 +1,12 @@
-enum RoleGenerationStatus { running, completed, canceled, failed }
+enum RoleGenerationStatus {
+  running,
+  pausing,
+  paused,
+  canceling,
+  completed,
+  canceled,
+  failed,
+}
 
 /// A task snapshot that can later be supplied by a remote generation repository.
 class RoleGenerationProgress {
@@ -13,5 +21,9 @@ class RoleGenerationProgress {
   final int stage;
   final Uri? videoUrl;
   final String? cover;
-  bool get running => status == RoleGenerationStatus.running;
+  bool get running => const [
+    RoleGenerationStatus.running,
+    RoleGenerationStatus.pausing,
+    RoleGenerationStatus.canceling,
+  ].contains(status);
 }

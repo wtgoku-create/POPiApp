@@ -286,6 +286,94 @@ void main() {
   });
 
   test(
+    'refresh retains history until an authoritative replacement arrives',
+    () async {
+      controller.open(chatId);
+      await flushConversation();
+      final previous = controller.snapshot;
+      final result = Completer<ConversationSnapshot>();
+      repository.delayedSnapshot = result;
+      controller.refresh();
+      expect(controller.snapshot, same(previous));
+      expect(controller.loading, isTrue);
+      result.complete(
+        ConversationSnapshot.fromJson(chatSnapshotJson(seq: 2, messages: [])),
+      );
+      await flushConversation();
+      expect(controller.snapshot!.messages, isEmpty);
+      expect(controller.snapshot!.lastSeq, 2);
+      expect(controller.loading, isFalse);
+      expect(repository.cursors, [1, 2]);
+    },
+  );
+
+  test(
+    'failed and stale refreshes retain newer text and cursor until recovery',
+    () async {
+      controller.open(chatId);
+      await flushConversation();
+      repository.streams.first.add(
+        chatEvent(2, 'message.delta', {
+          'messageId': 'assistant',
+          'delta': 'Keep this output',
+        }),
+      );
+      await flushConversation();
+      repository.failSnapshot = true;
+      controller.refresh();
+      await flushConversation();
+      expect(controller.snapshot!.messages.single.text, 'Keep this output');
+      repository.failSnapshot = false;
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      expect(controller.snapshot!.lastSeq, 2);
+      expect(repository.cursors, [1]);
+      repository.data = chatSnapshotJson(
+        seq: 3,
+        messages: [chatMessageJson(text: 'Authoritative', revision: 3)],
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 45));
+      expect(controller.snapshot!.messages.single.text, 'Authoritative');
+      expect(repository.cursors.last, 3);
+      expect(controller.loading, isFalse);
+    },
+  );
+
+  test(
+    'a newer refresh supersedes an older response within the same session',
+    () async {
+      controller.open(chatId);
+      await flushConversation();
+      final first = Completer<ConversationSnapshot>();
+      repository.delayedSnapshot = first;
+      controller.refresh();
+      await flushConversation();
+      final second = Completer<ConversationSnapshot>();
+      repository.delayedSnapshot = second;
+      controller.refresh();
+      second.complete(
+        ConversationSnapshot.fromJson(
+          chatSnapshotJson(
+            seq: 3,
+            messages: [chatMessageJson(text: 'Newer', revision: 3)],
+          ),
+        ),
+      );
+      await flushConversation();
+      first.complete(
+        ConversationSnapshot.fromJson(
+          chatSnapshotJson(
+            seq: 2,
+            messages: [chatMessageJson(text: 'Older', revision: 2)],
+          ),
+        ),
+      );
+      await flushConversation();
+      expect(controller.snapshot!.lastSeq, 3);
+      expect(controller.snapshot!.messages.single.text, 'Newer');
+    },
+  );
+
+  test(
     'switching sessions cancels the old stream and ignores late replies',
     () async {
       controller.open(chatId);
@@ -332,10 +420,13 @@ void main() {
       expect(controller.running, isTrue);
       expect(await controller.send('second', [], 'New', 'Images'), isFalse);
       expect(repository.sends, 0);
+      repository.data = chatSnapshotJson(seq: 3, messages: [chatMessageJson()]);
       expect(await controller.stop(), isTrue);
       await flushConversation();
       expect(repository.stops, 1);
       expect(controller.snapshot, isNotNull);
+      expect(controller.loading, isFalse);
+      expect(controller.running, isFalse);
     },
   );
 

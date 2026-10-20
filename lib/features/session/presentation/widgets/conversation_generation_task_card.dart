@@ -3,17 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../domain/conversation_generation_view.dart';
 import '../../domain/conversation_snapshot.dart';
 import '../../domain/conversation_task.dart';
 import '../conversation_controller.dart';
 import '../conversation_error_text.dart';
 import 'conversation_card.dart';
 import 'conversation_card_content.dart';
-import 'conversation_generation_configuration.dart';
-import 'conversation_role_card.dart';
+import 'conversation_generation_card.dart';
 import 'conversation_progress.dart';
-import 'conversation_timeline.dart' show ConversationMediaView, MarkdownMessage;
+import 'conversation_timeline.dart' show ConversationMediaView;
 
 /// A single generation task owns its loading surface, outputs and saved plan.
 class ConversationGenerationTaskCard extends StatefulWidget {
@@ -34,7 +32,6 @@ class _ConversationGenerationTaskCardState
     extends State<ConversationGenerationTaskCard> {
   bool _expanded = true;
   bool _planExpanded = false;
-  bool _progressExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -182,34 +179,6 @@ class _ConversationGenerationTaskCardState
                     ),
                   ),
                 ),
-              if (widget.block.progressDetails.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                TextButton(
-                  key: Key(
-                    'conversation-generation-task-progress-${widget.block.id}',
-                  ),
-                  onPressed: () =>
-                      setState(() => _progressExpanded = !_progressExpanded),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(l10n.chatProgressDetails)),
-                      Icon(
-                        _progressExpanded
-                            ? Icons.expand_less
-                            : Icons.expand_more,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-                if (_progressExpanded)
-                  ConversationCardContent(
-                    storageId: 'generation-task:${widget.block.id}:progress',
-                    child: ConversationProgressSteps(
-                      steps: widget.block.progressDetails,
-                    ),
-                  ),
-              ],
               if (view.fixedPlan case final plan?) ...[
                 const SizedBox(height: 10),
                 TextButton(
@@ -240,83 +209,17 @@ class _ConversationGenerationTaskCardState
                   ),
                 ),
                 if (_planExpanded)
-                  ConversationCardContent(
-                    storageId: 'generation-task:${widget.block.id}:plan',
-                    child: _SavedGenerationPlan(
-                      block: plan,
-                      controller: widget.controller,
-                    ),
+                  ConversationGenerationCard(
+                    block: plan,
+                    controller: widget.controller,
+                    readOnly: true,
+                    embedded: true,
                   ),
               ],
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SavedGenerationPlan extends StatelessWidget {
-  const _SavedGenerationPlan({required this.block, required this.controller});
-  final ConversationBlock block;
-  final ConversationController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final view = ConversationGenerationView(block);
-    final l10n = AppLocalizations.of(context)!;
-    final savedPrompts = block.planPrompts
-        .where((item) => item.isNotEmpty)
-        .join('\n\n');
-    final prompt = savedPrompts.isNotEmpty ? savedPrompts : view.prompt;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (block.previewRole case final role?)
-          ConversationRoleCard(block: role, compact: true),
-        if (view.templateTitle.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              '${l10n.chatImageStyle}：${view.templateTitle}',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-        for (final id in view.referenceIds(
-          view.referenceMediaId,
-          view.template['mediaId']?.toString(),
-        ))
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ConversationMediaView(
-              id: id,
-              repository: controller.repository,
-              thumbnailSize: 80,
-            ),
-          ),
-        if (view.requirements.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: MarkdownMessage(text: view.requirements, compact: true),
-          ),
-        if (prompt.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: MarkdownMessage(
-              text: prompt,
-              compact: true,
-              style: ConversationCardTypography.body.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ConversationGenerationConfiguration(
-          config: view.config,
-          model: null,
-          points: block.estimatedPoints,
-          savedConfiguration: view.configurationLines,
-        ),
-      ],
     );
   }
 }

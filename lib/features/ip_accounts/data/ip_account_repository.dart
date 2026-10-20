@@ -2,17 +2,23 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
+import '../../../core/network/network_agent_api.dart';
+import '../../../core/network/agent_api_exception.dart';
 import '../../../core/utils/app_url.dart';
 import '../../../shared/type/list_page.dart';
 import '../../assets/domain/library_role.dart';
+import '../../session/data/session_artifact_repository.dart';
+import '../../session/domain/session_artifact.dart';
 import '../domain/ip_account.dart';
 import '../domain/ip_account_home.dart';
 import '../domain/account_preferences.dart';
 
-/// Account management and generated archives through the business API.
+/// Account management, archives and bound-session creation history.
 class IpAccountRepository {
-  const IpAccountRepository(this._api);
+  const IpAccountRepository(this._api, {NetworkAgentApi? agentApi})
+    : _agentApi = agentApi;
   final NetworkApi _api;
+  final NetworkAgentApi? _agentApi;
 
   Future<T> _request<T>(Future<T> Function() action) async {
     try {
@@ -142,6 +148,33 @@ class IpAccountRepository {
           cancelToken: cancelToken,
         );
       });
+
+  /// Account history comes from its bound session, including every output type.
+  Future<ListPage<SessionArtifact>> creationHistory(
+    String id, {
+    String keyword = '',
+    int page = 1,
+    CancelToken? cancelToken,
+  }) => _request(() async {
+    final agentApi = _agentApi;
+    if (agentApi == null) throw const ApiException();
+    Map<String, dynamic> session;
+    try {
+      session = await agentApi.sessionByAccount(id, cancelToken: cancelToken);
+    } on AgentApiException catch (error) {
+      if (error.statusCode == 404 &&
+          error.code == 'ACCOUNT_SESSION_NOT_FOUND') {
+        return ListPage(items: const [], page: page, pageCount: 0);
+      }
+      rethrow;
+    }
+    final sessionId = _id(session['id']);
+    final repository = ApiSessionArtifactRepository(
+      _api,
+      cancelToken: cancelToken,
+    );
+    return repository.page(sessionId, page: page, keyword: keyword);
+  });
 
   Future<AccountArchivePage> archives(
     String id, {

@@ -331,6 +331,11 @@ void main() {
       expect(content, findsNothing);
       expect(find.text(title), findsOneWidget);
       expect(find.byTooltip(l10n.chatExpandStory), findsOneWidget);
+      expect(
+        tester.getBottomLeft(card).dy -
+            tester.getBottomLeft(find.text(title)).dy,
+        closeTo(20, .01),
+      );
       await _capture(tester, '$name-confirmed-topic-collapsed');
       repository.streams.single.add(
         chatEvent(2, 'message.updated', {
@@ -949,11 +954,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.text('推荐选题'), findsNWidgets(2));
+      expect(find.text('创作选题故事'), findsNWidgets(2));
       await _capture(tester, 'mobile-progress-plan');
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pump();
-      expect(find.text('推荐选题'), findsNothing);
+      expect(find.text('创作选题故事'), findsNothing);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await _capture(tester, 'mobile-progress-collapsed');
       await tester.tap(find.byTooltip('展开进度'));
@@ -963,7 +968,7 @@ void main() {
         'data': {...progress.data, 'state': 'completed'},
       });
       await tester.pumpAndSettle();
-      expect(find.text('思考过程'), findsOneWidget);
+      expect(find.text('已完成'), findsOneWidget);
       expect(
         find.byKey(const Key('conversation-progress-details')),
         findsNothing,
@@ -971,9 +976,8 @@ void main() {
       await _capture(tester, 'mobile-progress-completed');
       await tester.tap(find.byTooltip('展开进度'));
       await tester.pumpAndSettle();
-      expect(find.text('生成回复'), findsOneWidget);
-      expect(find.text('正在生成回复'), findsNothing);
-      expect(find.text('已完成'), findsNothing);
+      expect(find.text('正在生成回复…'), findsOneWidget);
+      expect(find.text('已完成'), findsOneWidget);
       await _capture(tester, 'mobile-progress-completed-expanded');
       await tester.tap(find.byTooltip('收起进度'));
       await tester.pumpAndSettle();

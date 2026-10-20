@@ -16,6 +16,7 @@ import 'package:popi_ai_app/features/ip_accounts/presentation/ip_accounts_live_p
 import 'package:popi_ai_app/features/ip_accounts/presentation/widgets/account_preferences_sheet.dart';
 import 'package:popi_ai_app/features/ip_accounts/presentation/account_archives_page.dart';
 import 'package:popi_ai_app/features/projects/domain/project.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/ip_account_provider.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
@@ -885,7 +886,7 @@ void main() {
     },
   );
 
-  testWidgets('history shows three archives in API order and opens detail', (
+  testWidgets('history shows three outputs in API order and opens saved text', (
     tester,
   ) async {
     repository.creations = [
@@ -918,8 +919,9 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Creation 3')).dy),
     );
     await tap(tester, 'ip-account-history-history-3');
-    expect(find.byType(AccountArchiveDetailPage), findsOneWidget);
-    expect(repository.detailRequests, [('42', 'history-3', 'version-3')]);
+    expect(find.byType(SessionArtifactDetailPage), findsOneWidget);
+    expect(find.text('Summary 3'), findsOneWidget);
+    expect(repository.detailRequests, isEmpty);
     expect(projects.accountIds, isEmpty);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -951,8 +953,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(first);
     await tester.pumpAndSettle();
-    expect(find.byType(AccountArchiveDetailPage), findsOneWidget);
-    expect(repository.detailRequests, [('42', 'history-1', null)]);
+    expect(find.byType(SessionArtifactDetailPage), findsOneWidget);
+    expect(repository.detailRequests, isEmpty);
     expect(find.byKey(const Key('ip-account-history-list')), findsNothing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -961,7 +963,7 @@ void main() {
     expect(find.byType(IpAccountHomePage), findsOneWidget);
   });
 
-  testWidgets('history searches the API, clears, and shows no matches', (
+  testWidgets('history searches outputs, clears, and shows no matches', (
     tester,
   ) async {
     repository.creations = [
@@ -1003,7 +1005,11 @@ void main() {
     expect(find.text('创作历史加载失败'), findsOneWidget);
     repository.failHistory = false;
     repository.creations = [const IpAccountCreation(id: '1', title: '校园野餐')];
-    await tap(tester, 'ip-account-history-page-retry');
+    await tester.drag(
+      find.byKey(const Key('ip-account-history-list')),
+      const Offset(0, 300),
+    );
+    await tester.pumpAndSettle();
     final search = find.byKey(const Key('ip-account-history-search'));
     await tester.enterText(search, '校园');
     await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -1017,6 +1023,8 @@ void main() {
     expect(find.text('校园日常'), findsOneWidget);
     expect(find.text('校园野餐'), findsNothing);
     expect(tester.widget<TextField>(search).controller!.text, '校园');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -1034,9 +1042,16 @@ void main() {
       await tap(tester, 'ip-account-history-load-more');
       expect(find.text('Archive 1'), findsOneWidget);
       expect(find.text('Archive 2'), findsOneWidget);
-      expect(find.text('创作历史加载失败'), findsOneWidget);
+      expect(
+        find.byKey(const Key('ip-account-history-load-more')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('ip-account-history-page-retry')),
+        findsNothing,
+      );
       repository.failHistory = false;
-      await tap(tester, 'ip-account-history-page-retry');
+      await tap(tester, 'ip-account-history-load-more');
       expect(repository.historyPages, [1, 1, 2, 2]);
       expect(
         find.byKey(const Key('ip-account-history-load-more')),
@@ -1121,7 +1136,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('history failure retries without blocking account editing', (
+  testWidgets('history failure can recover by opening all history', (
     tester,
   ) async {
     repository.failHistory = true;
@@ -1132,7 +1147,7 @@ void main() {
     );
     repository.failHistory = false;
     repository.creations = [];
-    await tap(tester, 'ip-account-history-retry');
+    await tap(tester, 'ip-account-history-all');
     expect(find.text('暂无历史'), findsOneWidget);
     expect(find.byKey(const Key('ip-account-history-retry')), findsNothing);
     expect(repository.historyAccountIds, ['42', '42']);

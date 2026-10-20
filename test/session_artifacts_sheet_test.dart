@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/session/data/session_artifact_repository.dart';
@@ -181,14 +183,14 @@ void main() {
       expect(find.textContaining('未记录时长'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('session-artifact-download-text')),
-        findsNothing,
+        findsOneWidget,
       );
       await tap(tester, 'session-artifact-open-text');
       expect(find.text('故事正文'), findsOneWidget);
       expect(find.text('第二段正文'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('session-artifact-download-detail')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(find.text('采用'), findsNothing);
       expect(find.text('修改'), findsNothing);
@@ -196,6 +198,104 @@ void main() {
       expect(find.text('真实稿件'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
+  );
+
+  testWidgets(
+    'list and detail export the complete saved text, not the preview',
+    (tester) async {
+      final directory = Directory.systemTemp.createTempSync(
+        'popi-text-export-',
+      );
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+      const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+      addTearDown(() => messenger.setMockMethodCallHandler(shareChannel, null));
+      addTearDown(() => messenger.setMockMethodCallHandler(pathChannel, null));
+      messenger.setMockMethodCallHandler(
+        pathChannel,
+        (_) async => directory.path,
+      );
+      var exports = 0;
+      late Completer<Map> shared;
+      messenger.setMockMethodCallHandler(shareChannel, (call) async {
+        exports++;
+        shared.complete(call.arguments as Map);
+        return '';
+      });
+      await pumpSheet(tester, repository: const _TextRepository());
+      for (final key in [
+        'session-artifact-download-text',
+        'session-artifact-download-detail',
+      ]) {
+        if (key.endsWith('detail')) {
+          await tap(tester, 'session-artifact-open-text');
+        }
+        await tester.runAsync(() async {
+          shared = Completer<Map>();
+          tester.widget<IconButton>(find.byKey(ValueKey(key))).onPressed!();
+          final args = await shared.future.timeout(const Duration(seconds: 5));
+          final path = (args['paths'] as List).single as String;
+          expect(path.endsWith('/真实稿件.md'), isTrue);
+          expect(await File(path).readAsString(), '## 故事正文\n\n第二段正文');
+          expect(args['originWidth'], greaterThan(0));
+        });
+        await tester.pumpAndSettle();
+        expect(find.text('文档已导出'), findsNothing);
+        expect(find.text('文档导出失败，请稍后重试'), findsNothing);
+        expect(
+          tester.widget<IconButton>(find.byKey(ValueKey(key))).onPressed,
+          isNotNull,
+        );
+      }
+      expect(exports, 2);
+      expect(find.text('故事正文'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'export failure keeps the document and original download action',
+    (tester) async {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const channel = MethodChannel('plugins.flutter.io/file_selector');
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final response = Completer<String?>();
+      var attempts = 0;
+      messenger.setMockMethodCallHandler(channel, (_) async {
+        attempts++;
+        if (attempts == 1) return response.future;
+        return null;
+      });
+      await pumpSheet(tester, repository: const _TextRepository());
+      await tap(tester, 'session-artifact-open-text');
+      final download = find.byKey(
+        const ValueKey('session-artifact-download-detail'),
+      );
+      await tester.tap(download);
+      await tester.pump();
+      expect(tester.widget<IconButton>(download).onPressed, isNull);
+      await tester.tap(download);
+      await tester.pump();
+      expect(attempts, 1);
+      response.completeError(PlatformException(code: 'save_failed'));
+      await tester.pumpAndSettle();
+      expect(find.text('文档导出失败，请稍后重试'), findsOneWidget);
+      expect(find.text('第二段正文'), findsOneWidget);
+      expect(tester.widget<IconButton>(download).onPressed, isNotNull);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.tap(download);
+      await tester.pumpAndSettle();
+      expect(attempts, 2);
+      expect(find.text('文档导出失败，请稍后重试'), findsNothing);
+      expect(find.text('文档已导出'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 
   testWidgets(

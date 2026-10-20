@@ -9,21 +9,22 @@ String conversationProgressTitle(
   String? fallback,
 }) {
   if (['canceled', 'cancelled', 'aborted'].contains(block.status)) {
-    return l10n.chatStopped;
+    return l10n.chatProgressStopped;
   }
   if (['failed', 'interrupted'].contains(block.status)) {
-    return l10n.chatRunFailed;
+    return l10n.chatProgressRunFailed;
   }
   if (block.status == 'completed') {
-    return block.data['awaitingConfirmation'] == true
+    return (block.data['waitingConfirmations'] as List?)?.isNotEmpty == true ||
+            block.data['awaitingConfirmation'] == true
         ? l10n.chatAwaitingConfirmation
-        : l10n.chatThoughtProcess;
+        : l10n.chatCompleted;
   }
   final current = block.progressDetails.reversed
       .where((step) => ['running', 'waiting', 'pending'].contains(step.status))
       .firstOrNull;
   return current == null
-      ? fallback ?? l10n.chatThinking
+      ? fallback ?? l10n.chatProgressAnalyze
       : conversationProgressLabel(current.labelKey, l10n);
 }
 
@@ -31,14 +32,23 @@ String conversationProgressLabel(
   String key,
   AppLocalizations l10n,
 ) => switch (key) {
-  'script.run.preparing' ||
-  'pages.studio.progress.prepare' => l10n.chatPreparing,
-  'script.run.generatingReply' ||
-  'pages.studio.progress.reply' => l10n.chatGeneratingReply,
-  'script.run.savingArtifact' ||
-  'pages.studio.progress.saveText' => l10n.chatSavingArtifact,
-  'script.run.planningGeneration' ||
-  'pages.studio.progress.preparePlan' => l10n.chatPlanningGeneration,
+  'script.run.preparing' => l10n.chatPreparing,
+  'script.run.understanding' => l10n.chatProgressUnderstanding,
+  'script.run.selectingSkill' => l10n.chatProgressSelectingSkill,
+  'script.run.readingRules' => l10n.chatProgressReadingRules,
+  'script.run.composing' => l10n.chatProgressComposing,
+  'script.run.generatingReply' => l10n.chatGeneratingReply,
+  'script.run.planningGeneration' => l10n.chatPlanningGeneration,
+  'script.run.preparingGeneration' => l10n.chatProgressPreparingGeneration,
+  'script.run.generatingArtifact' => l10n.chatProgressGeneratingArtifact,
+  'script.run.savingArtifact' => l10n.chatSavingArtifact,
+  'script.run.completingDelivery' => l10n.chatProgressCompletingDelivery,
+  'script.run.waiting' => l10n.chatProgressWaitingInput,
+  'script.run.processing' => l10n.chatProgressProcessing,
+  'pages.studio.progress.prepare' => l10n.chatProgressPrepare,
+  'pages.studio.progress.reply' => l10n.chatProgressReply,
+  'pages.studio.progress.saveText' => l10n.chatProgressSaveText,
+  'pages.studio.progress.preparePlan' => l10n.chatProgressPreparePlan,
   'pages.studio.progress.analyze' => l10n.chatProgressAnalyze,
   'pages.studio.progress.executeTool' => l10n.chatProgressExecuteTool,
   'pages.studio.progress.loadSkill' => l10n.chatProgressLoadSkill,
@@ -51,8 +61,8 @@ String conversationProgressLabel(
   'pages.studio.progress.topics' => l10n.chatTopics,
   'pages.studio.progress.prepareRole' => l10n.chatPrepareRole,
   'pages.studio.progress.askUser' => l10n.chatAskUser,
-  'pages.studio.progress.saveRole' ||
-  'pages.studio.progress.updateRole' => l10n.chatSaveRole,
+  'pages.studio.progress.saveRole' => l10n.chatSaveRole,
+  'pages.studio.progress.updateRole' => l10n.chatProgressUpdateRole,
   'pages.studio.progress.publishRole' => l10n.chatPublishRole,
   'pages.studio.progress.writeScript' => l10n.chatProgressWriteScript,
   'pages.studio.progress.writeStoryboard' => l10n.chatProgressWriteStoryboard,
@@ -88,38 +98,10 @@ String conversationProgressLabel(
   'pages.studio.progress.saveMedia' => l10n.chatProgressSaveMedia,
   'pages.studio.progress.syncResult' => l10n.chatProgressSyncResult,
   'pages.studio.state.completed' => l10n.chatCompleted,
-  _ => l10n.chatProcessing,
+  _ => l10n.chatProgressProcessing,
 };
 
-String _finishedProgressLabel(String key, AppLocalizations l10n) =>
-    switch (key) {
-      'script.run.preparing' ||
-      'pages.studio.progress.prepare' => l10n.chatStepPrepare,
-      'script.run.generatingReply' ||
-      'pages.studio.progress.reply' => l10n.chatStepReply,
-      'script.run.savingArtifact' ||
-      'pages.studio.progress.saveText' => l10n.chatStepSaveText,
-      'script.run.planningGeneration' ||
-      'pages.studio.progress.preparePlan' => l10n.chatStepPreparePlan,
-      'pages.studio.progress.analyze' => l10n.chatStepAnalyze,
-      'pages.studio.progress.readRole' => l10n.chatStepReadRole,
-      'pages.studio.progress.readContext' => l10n.chatStepReadContext,
-      'pages.studio.progress.topics' => l10n.chatStepTopics,
-      'pages.studio.progress.prepareRole' => l10n.chatStepPrepareRole,
-      'pages.studio.progress.saveRole' ||
-      'pages.studio.progress.updateRole' => l10n.chatStepSaveRole,
-      'pages.studio.progress.publishRole' => l10n.chatStepPublishRole,
-      'pages.studio.progress.verifyResult' => l10n.chatStepVerifyResult,
-      'pages.studio.progress.generateImage' => l10n.chatStepGenerateImage,
-      'pages.studio.progress.generateVideo' => l10n.chatStepGenerateVideo,
-      'pages.studio.progress.generateAudio' => l10n.chatStepGenerateAudio,
-      'pages.studio.progress.syncResult' => l10n.chatStepSyncResult,
-      'pages.studio.state.completed' => l10n.chatThoughtProcess,
-      'script.run.processing' => l10n.chatStepProcess,
-      _ => conversationProgressLabel(key, l10n),
-    };
-
-/// Shared by conversation progress and the details of a generation task.
+/// Structured execution steps shown in a conversation's progress panel.
 class ConversationProgressSteps extends StatelessWidget {
   const ConversationProgressSteps({
     required this.steps,
@@ -136,13 +118,21 @@ class ConversationProgressSteps extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
+    final occurrences = <String, int>{};
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final step in steps)
           Padding(
-            key: ValueKey((step.parentId, step.labelKey)),
+            key: ValueKey((
+              step.id,
+              occurrences.update(
+                step.id,
+                (count) => count + 1,
+                ifAbsent: () => 0,
+              ),
+            )),
             padding: EdgeInsets.fromLTRB(
               step.parentId == null ? 0 : 16,
               5,
@@ -178,9 +168,7 @@ class ConversationProgressSteps extends StatelessWidget {
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    ['completed', 'failed', 'skipped'].contains(step.status)
-                        ? _finishedProgressLabel(step.labelKey, l10n)
-                        : conversationProgressLabel(step.labelKey, l10n),
+                    conversationProgressLabel(step.labelKey, l10n),
                     maxLines: singleLine ? 1 : null,
                     overflow: singleLine ? TextOverflow.ellipsis : null,
                     style: const TextStyle(fontSize: 14, height: 20 / 14),
@@ -194,7 +182,7 @@ class ConversationProgressSteps extends StatelessWidget {
                         'running' => l10n.chatProgressRunning,
                         'pending' => l10n.chatProgressPending,
                         'waiting' => l10n.chatProgressWaiting,
-                        'completed' => l10n.chatCompleted,
+                        'completed' => l10n.chatProgressCompleted,
                         'skipped' => l10n.chatStopped,
                         _ => l10n.chatProgressFailed,
                       },

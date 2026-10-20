@@ -7,6 +7,7 @@ import 'package:popi_ai_app/features/ip_accounts/data/ip_account_repository.dart
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/ip_account_home.dart';
 import 'package:popi_ai_app/features/ip_accounts/domain/account_preferences.dart';
+import 'package:popi_ai_app/features/session/domain/session_artifact.dart';
 import 'list_page_fixtures.dart';
 export 'list_page_fixtures.dart';
 
@@ -142,6 +143,36 @@ class FixtureIpAccountRepository extends IpAccountRepository {
     if (title != null) this.title = title;
     this.preferences = {...this.preferences, ...?preferences};
     if (userPrompt != null) profile['positioning'] = userPrompt;
+  }
+
+  @override
+  Future<ListPage<SessionArtifact>> creationHistory(
+    String id, {
+    String keyword = '',
+    int page = 1,
+    CancelToken? cancelToken,
+  }) async {
+    final result = await archives(
+      id,
+      keyword: keyword,
+      page: page,
+      cancelToken: cancelToken,
+    );
+    return ListPage(
+      items: [
+        for (final item in result.items)
+          SessionArtifact(
+            id: item.id,
+            type: SessionArtifactType.script,
+            title: item.title,
+            summary: item.summary,
+            metadata: '',
+            textKind: 'script',
+          ),
+      ],
+      page: result.page,
+      pageCount: result.pageCount,
+    );
   }
 
   @override

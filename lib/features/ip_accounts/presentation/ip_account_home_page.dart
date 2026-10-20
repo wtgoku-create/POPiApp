@@ -22,8 +22,9 @@ import '../../../shared/widgets/app_account_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../projects/data/project_repository.dart';
 import '../../projects/domain/project.dart';
+import '../../session/domain/session_artifact.dart';
+import '../../session/presentation/widgets/session_artifacts_sheet.dart';
 import '../domain/ip_account_home.dart';
-import 'account_archives_page.dart';
 import 'widgets/account_preferences_sheet.dart';
 import 'widgets/ip_account_history.dart';
 
@@ -51,9 +52,8 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   ProjectSession? _boundSession;
   bool _bindingLoading = false;
   bool _bindingFailed = false;
-  List<IpAccountCreation> _history = const [];
+  List<SessionArtifact> _history = const [];
   bool _historyLoading = false;
-  bool _historyFailed = false;
 
   @override
   void initState() {
@@ -102,7 +102,6 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       _renaming = false;
       _history = const [];
       _historyLoading = false;
-      _historyFailed = false;
     });
     if (ref.read(userProvider) == null) {
       setState(() => _loading = false);
@@ -159,18 +158,19 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
   Future<void> _loadHistory(IpAccountHome account, CancelToken token) async {
     setState(() {
       _historyLoading = true;
-      _historyFailed = false;
-      _history = const [];
     });
     try {
       final page = await ref
           .read(ipAccountRepositoryProvider)
-          .archives(account.id, cancelToken: token);
+          .creationHistory(account.id, cancelToken: token);
       if (!mounted || token.isCancelled) return;
       setState(() => _history = page.items);
     } catch (_) {
       if (mounted && !token.isCancelled) {
-        setState(() => _historyFailed = true);
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.creationHistoryLoadFailed,
+        );
       }
     } finally {
       if (mounted && !token.isCancelled) {
@@ -179,17 +179,13 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
     }
   }
 
-  Future<void> _openHistory(IpAccountCreation creation) async {
+  Future<void> _openHistory(SessionArtifact creation) async {
     final token = _token;
     final account = _account;
     if (account == null || token == null || token.isCancelled) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => AccountArchiveDetailPage(
-          accountId: account.id,
-          creationId: creation.id,
-          versionId: creation.versionId,
-        ),
+        builder: (_) => SessionArtifactDetailPage(item: creation),
       ),
     );
     if (mounted && !token.isCancelled) {
@@ -528,8 +524,6 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
                           IpAccountHistory(
                             creations: _history,
                             loading: _historyLoading,
-                            failed: _historyFailed,
-                            onRetry: () => _loadHistory(account, _token!),
                             onOpen: _openHistory,
                             onOpenAll: _showHistory,
                           ),

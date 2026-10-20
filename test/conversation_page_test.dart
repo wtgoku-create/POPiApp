@@ -115,7 +115,10 @@ void main() {
               widget is ConversationObjectView && widget.block.status == state,
         );
         final currentTitle = find
-            .descendant(of: current, matching: find.text(l10n.chatProcessing))
+            .descendant(
+              of: current,
+              matching: find.text(l10n.chatProgressProcessing),
+            )
             .first;
         expect(currentTitle, findsOneWidget);
         expect(loading, findsOneWidget);
@@ -159,21 +162,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(loading, findsNothing);
       expect(find.text(l10n.chatThinking), findsNothing);
-      expect(find.text(l10n.chatCompleted), findsNothing);
-      expect(find.text(l10n.chatThoughtProcess), findsNWidgets(2));
+      expect(find.text(l10n.chatCompleted), findsNWidgets(2));
       expect(find.byTooltip(l10n.chatExpandProgress), findsNWidgets(2));
       await tester.tap(find.byTooltip(l10n.chatExpandProgress).last);
       await tester.pumpAndSettle();
-      expect(find.text(l10n.chatStepPrepare), findsOneWidget);
-      expect(find.text(l10n.chatStepProcess), findsOneWidget);
-      expect(find.text(l10n.chatPreparing), findsNothing);
+      expect(find.text(l10n.chatPreparing), findsOneWidget);
+      expect(find.text(l10n.chatProgressProcessing), findsOneWidget);
       repository.streams.single.add(
         chatEvent(++seq, 'message.updated', {
           'timelineUpdates': [progress('completed', ++revision)],
         }),
       );
       await tester.pumpAndSettle();
-      expect(find.text(l10n.chatStepPrepare), findsOneWidget);
+      expect(find.text(l10n.chatPreparing), findsOneWidget);
       await tester.tap(find.byTooltip(l10n.chatCollapseProgress));
       await tester.pumpAndSettle();
       repository.streams.single.add(
@@ -480,10 +481,15 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pump(const Duration(milliseconds: 300));
         expect(find.byTooltip('停止回复'), findsOneWidget);
+        repository.data = chatSnapshotJson(
+          seq: 4,
+          messages: [chatMessageJson(text: '**回复内容**', revision: 4)],
+        );
         await tester.tap(find.byTooltip('停止回复'));
         await tester.pumpAndSettle();
         expect(repository.stops, 1);
-        final message = chatMessageJson(revision: 2);
+        expect(find.textContaining('回复内容', findRichText: true), findsOneWidget);
+        final message = chatMessageJson(revision: 5);
         message['blocks'] = [
           {
             'type': 'object',
@@ -506,7 +512,7 @@ void main() {
           },
         ];
         repository.streams.last.add(
-          chatEvent(2, 'message.updated', {
+          chatEvent(5, 'message.updated', {
             'timelineUpdates': [message],
           }),
         );

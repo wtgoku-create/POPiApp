@@ -117,6 +117,9 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
   bool _initialHistoryPending = false;
   bool _initialScrollScheduled = false;
   bool _latestMessageBuilt = false;
+  bool _followTail = true;
+  bool _tailScrollScheduled = false;
+  bool _adjustingTail = false;
 
   @override
   void initState() {
@@ -134,6 +137,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
       _lastSnapshot = null;
       _initialHistoryPending = false;
       _latestMessageBuilt = false;
+      _followTail = true;
       _sync();
     }
   }
@@ -141,9 +145,15 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
   void _sync() {
     final snapshot = widget.controller.snapshot;
     if (snapshot == null || identical(snapshot, _lastSnapshot)) return;
+    final previousIds = _chat.messages.map((message) => message.id).toSet();
     if (_lastSnapshot?.session.id != snapshot.session.id) {
       _initialHistoryPending = snapshot.presentationMessages.isNotEmpty;
       _latestMessageBuilt = false;
+      _followTail = true;
+    } else if (snapshot.presentationMessages.any(
+      (message) => message.role == 'user' && !previousIds.contains(message.id),
+    )) {
+      _followTail = true;
     }
     final messages = [
       for (final message in snapshot.presentationMessages)
@@ -183,6 +193,53 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     }
     _lastSnapshot = snapshot;
     _scheduleInitialScroll();
+    _scheduleTailScroll();
+  }
+
+  void _scheduleTailScroll() {
+    if (!_followTail || _initialHistoryPending || _tailScrollScheduled) return;
+    _tailScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tailScrollScheduled = false;
+      if (!mounted ||
+          !_followTail ||
+          _initialHistoryPending ||
+          !_scroll.hasClients) {
+        return;
+      }
+      final position = _scroll.position;
+      if (position.isScrollingNotifier.value) return;
+      if ((position.maxScrollExtent - position.pixels).abs() > 1) {
+        _adjustingTail = true;
+        try {
+          _scroll.jumpTo(position.maxScrollExtent);
+        } finally {
+          _adjustingTail = false;
+        }
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  bool _handleScroll(ScrollNotification notification) {
+    if (notification.depth != 0) return false;
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.forward) {
+      _initialHistoryPending = false;
+      _followTail = false;
+    } else if (notification is ScrollUpdateNotification ||
+        notification is ScrollEndNotification) {
+      if (notification is ScrollUpdateNotification &&
+          !_adjustingTail &&
+          !_initialHistoryPending &&
+          (notification.scrollDelta ?? 0) < 0) {
+        // Focus and ensureVisible can reveal history without a drag gesture.
+        _followTail = false;
+      }
+      if (notification.metrics.extentAfter <= 1) _followTail = true;
+      if (notification is ScrollEndNotification) _scheduleTailScroll();
+    }
+    return false;
   }
 
   void _scheduleInitialScroll() {
@@ -333,7 +390,9 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
     builder: (context, _) {
       final l10n = AppLocalizations.of(context)!;
       final controller = widget.controller;
-      final positioning = controller.loading || _initialHistoryPending;
+      final positioning =
+          controller.loading && controller.snapshot == null ||
+          _initialHistoryPending;
       final legacyObjects = controller.snapshot?.legacyObjects ?? [];
       final showThinking =
           controller.running &&
@@ -382,87 +441,91 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
           composerBuilder: (_) => const SizedBox.shrink(),
           emptyChatListBuilder: (_) => const SizedBox.shrink(),
           chatAnimatedListBuilder: (context, itemBuilder) =>
-              NotificationListener<UserScrollNotification>(
+              NotificationListener<ScrollMetricsNotification>(
                 onNotification: (notification) {
-                  if (notification.direction != ScrollDirection.idle) {
-                    _initialHistoryPending = false;
-                  }
+                  // Streaming, media loads and composer resizing change extents
+                  // without inserting a message into the chat controller.
+                  if (notification.depth == 0) _scheduleTailScroll();
                   return false;
                 },
-                child: ChatAnimatedList(
-                  // Short conversations start at the top; long histories open at the end.
-                  scrollController: _scroll,
-                  initialScrollToEndMode: InitialScrollToEndMode.none,
-                  shouldScrollToEndWhenAtBottom: !positioning,
-                  shouldScrollToEndWhenSendingMessage: !positioning,
-                  itemBuilder: itemBuilder,
-                  handleSafeArea: false,
-                  topPadding: 10,
-                  bottomPadding: 32,
-                  scrollToBottomAppearanceThreshold: 120,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  bottomSliver: SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(20, footerSpacing, 20, 0),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 640),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            spacing: _conversationCardSpacing,
-                            children: [
-                              for (final block in legacyObjects)
-                                ConversationObjectView(
-                                  block: block,
-                                  controller: controller,
-                                ),
-                              if (showThinking)
-                                _ConversationProgressHeader(
-                                  label: l10n.chatThinking,
-                                  running: true,
-                                ),
-                              if (reconnecting)
-                                Text(
-                                  l10n.chatReconnecting,
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleScroll,
+                  child: ChatAnimatedList(
+                    // Short conversations start at the top; long histories open at the end.
+                    scrollController: _scroll,
+                    initialScrollToEndMode: InitialScrollToEndMode.none,
+                    shouldScrollToEndWhenAtBottom: false,
+                    shouldScrollToEndWhenSendingMessage: false,
+                    scrollToEndAnimationDuration: Duration.zero,
+                    itemBuilder: itemBuilder,
+                    handleSafeArea: false,
+                    topPadding: 10,
+                    bottomPadding: 32,
+                    scrollToBottomAppearanceThreshold: 120,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    bottomSliver: SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(20, footerSpacing, 20, 0),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 640),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              spacing: _conversationCardSpacing,
+                              children: [
+                                for (final block in legacyObjects)
+                                  ConversationObjectView(
+                                    block: block,
+                                    controller: controller,
                                   ),
-                                ),
-                              for (final run in failedRuns)
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        conversationTaskErrorText(
-                                          l10n,
-                                          code: run.errorCode,
-                                          message: run.error,
-                                          fallback: run.state == 'failed'
-                                              ? l10n.chatRunFailed
-                                              : l10n.chatStopped,
+                                if (showThinking)
+                                  _ConversationProgressHeader(
+                                    label: l10n.chatThinking,
+                                    running: true,
+                                  ),
+                                if (reconnecting)
+                                  Text(
+                                    l10n.chatReconnecting,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                for (final run in failedRuns)
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          conversationTaskErrorText(
+                                            l10n,
+                                            code: run.errorCode,
+                                            message: run.error,
+                                            fallback: run.state == 'failed'
+                                                ? l10n.chatRunFailed
+                                                : l10n.chatStopped,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    if (run.retryable &&
-                                        [
-                                          'failed',
-                                          'interrupted',
-                                        ].contains(run.state))
-                                      IconButton(
-                                        tooltip: l10n.retry,
-                                        onPressed:
-                                            controller.pending ||
-                                                controller.running
-                                            ? null
-                                            : () => controller.retry(run.id),
-                                        icon: const Icon(Icons.refresh),
-                                      ),
-                                  ],
-                                ),
-                            ],
+                                      if (run.retryable &&
+                                          [
+                                            'failed',
+                                            'interrupted',
+                                          ].contains(run.state))
+                                        IconButton(
+                                          tooltip: l10n.retry,
+                                          onPressed:
+                                              controller.pending ||
+                                                  controller.running
+                                              ? null
+                                              : () => controller.retry(run.id),
+                                          icon: const Icon(Icons.refresh),
+                                        ),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1142,6 +1205,7 @@ class ConversationObjectView extends StatefulWidget {
     required this.block,
     required this.controller,
     this.framed = true,
+    this.mediaSpacing = 0,
     this.headerTrailing,
     this.footer,
     this.onRevise,
@@ -1150,6 +1214,7 @@ class ConversationObjectView extends StatefulWidget {
   final ConversationBlock block;
   final ConversationController controller;
   final bool framed;
+  final double mediaSpacing;
   final Widget? headerTrailing;
   final Widget? footer;
   final ValueChanged<ConversationBlock>? onRevise;
@@ -1452,7 +1517,13 @@ class _ConversationObjectViewState extends State<ConversationObjectView>
               framed: false,
             ),
           for (final id in block.mediaIds)
-            ConversationMediaView(id: id, repository: controller.repository),
+            Padding(
+              padding: EdgeInsets.only(top: widget.mediaSpacing),
+              child: ConversationMediaView(
+                id: id,
+                repository: controller.repository,
+              ),
+            ),
           if (block.estimatedPoints != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),

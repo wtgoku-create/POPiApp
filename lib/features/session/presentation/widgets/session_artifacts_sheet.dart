@@ -6,11 +6,13 @@ import '../../../../core/network/network_api.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/network_provider.dart';
 import '../../../../shared/providers/session_provider.dart';
+import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_video_player.dart';
+import '../../data/session_artifact_exporter.dart';
 import '../../data/session_artifact_repository.dart';
 import '../../domain/session_artifact.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -169,9 +171,10 @@ class _SessionArtifactsSheetState extends ConsumerState<SessionArtifactsSheet> {
                                 ),
                               ),
                             ),
-                            if (selected.textKind == null &&
-                                selected.mediaId == null)
-                              const _DownloadButton()
+                            if (SessionArtifactExporter.supports(selected) ||
+                                (selected.textKind == null &&
+                                    selected.mediaId == null))
+                              _DownloadButton(item: selected)
                             else
                               const SizedBox(width: 40),
                           ],
@@ -286,6 +289,7 @@ String _detailTitle(AppLocalizations l10n, SessionArtifactType type) =>
       SessionArtifactType.image => l10n.sessionArtifactImageDetail,
       SessionArtifactType.script => l10n.sessionArtifactScriptDetail,
       SessionArtifactType.video => l10n.sessionArtifactVideoDetail,
+      SessionArtifactType.audio => l10n.sessionArtifactAudioDetail,
     };
 
 String _artifactMetadata(SessionArtifact item, BuildContext context) {
@@ -309,21 +313,55 @@ String _artifactMetadata(SessionArtifact item, BuildContext context) {
   ].join(' · ');
 }
 
-class _DownloadButton extends StatelessWidget {
-  const _DownloadButton({this.id});
+class _DownloadButton extends StatefulWidget {
+  const _DownloadButton({required this.item, this.inList = false});
 
-  final String? id;
+  final SessionArtifact item;
+  final bool inList;
+
+  @override
+  State<_DownloadButton> createState() => _DownloadButtonState();
+}
+
+class _DownloadButtonState extends State<_DownloadButton> {
+  bool _saving = false;
+
+  Future<void> _download() async {
+    if (_saving) return;
+    final l10n = AppLocalizations.of(context)!;
+    if (!SessionArtifactExporter.supports(widget.item)) {
+      AppToast.info(context, l10n.assetDownloadUnavailable);
+      return;
+    }
+    final box = context.findRenderObject()! as RenderBox;
+    final origin = box.localToGlobal(Offset.zero) & box.size;
+    setState(() => _saving = true);
+    try {
+      final saved = await SessionArtifactExporter.save(
+        widget.item,
+        sharePositionOrigin: origin,
+      );
+      if (mounted && saved) {
+        AppToast.success(context, l10n.sessionArtifactExported);
+      }
+    } catch (_) {
+      if (mounted) AppToast.error(context, l10n.sessionArtifactExportFailed);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    final filled = id == null;
+    final filled = !widget.inList;
     return SizedBox.square(
       dimension: 40,
       child: IconButton(
-        key: ValueKey('session-artifact-download-${id ?? 'detail'}'),
-        tooltip: l10n.download,
+        key: ValueKey(
+          'session-artifact-download-${widget.inList ? widget.item.id : 'detail'}',
+        ),
+        tooltip: AppLocalizations.of(context)!.download,
         style: IconButton.styleFrom(
           backgroundColor: filled
               ? colors.primary
@@ -332,12 +370,20 @@ class _DownloadButton extends StatelessWidget {
               ? const CircleBorder()
               : RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        onPressed: () => AppToast.info(context, l10n.assetDownloadUnavailable),
-        icon: AppSvgIcon.asset(
-          'session_artifact_download',
-          size: 18,
-          color: filled ? colors.onPrimary : colors.primary,
-        ),
+        onPressed: _saving ? null : _download,
+        icon: _saving
+            ? SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: filled ? colors.onPrimary : colors.primary,
+                ),
+              )
+            : AppSvgIcon.asset(
+                'session_artifact_download',
+                size: 18,
+                color: filled ? colors.onPrimary : colors.primary,
+              ),
       ),
     );
   }
@@ -356,6 +402,7 @@ class _ArtifactCard extends StatelessWidget {
       SessionArtifactType.image => 'session_artifact_image',
       SessionArtifactType.script => 'session_artifact_script',
       SessionArtifactType.video => 'session_artifact_video',
+      SessionArtifactType.audio => null,
     };
     return Container(
       key: ValueKey('session-artifact-${item.id}'),
@@ -371,7 +418,14 @@ class _ArtifactCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              AppSvgIcon.asset(icon, size: 20, color: colors.onSurface),
+              if (icon == null)
+                Icon(
+                  Icons.audiotrack_outlined,
+                  size: 20,
+                  color: colors.onSurface,
+                )
+              else
+                AppSvgIcon.asset(icon, size: 20, color: colors.onSurface),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -386,8 +440,9 @@ class _ArtifactCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (item.textKind == null && item.mediaId == null) ...[
-                _DownloadButton(id: item.id),
+              if (SessionArtifactExporter.supports(item) ||
+                  (item.textKind == null && item.mediaId == null)) ...[
+                _DownloadButton(item: item, inList: true),
                 const SizedBox(width: 8),
               ],
               SizedBox.square(
@@ -471,6 +526,43 @@ class _ArtifactImage extends StatelessWidget {
       child: Image.asset(asset, fit: BoxFit.contain),
     ),
   );
+}
+
+/// Opens the exact saved output without looking up a creation archive.
+class SessionArtifactDetailPage extends ConsumerWidget {
+  const SessionArtifactDetailPage({required this.item, super.key});
+
+  final SessionArtifact item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(userProvider.select((user) => user?.id), (_, _) {
+      if (context.mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    });
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_detailTitle(AppLocalizations.of(context)!, item.type)),
+        actions: [
+          if (SessionArtifactExporter.supports(item))
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _DownloadButton(item: item),
+            ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: _ArtifactDetail(
+          item: item,
+          repository: item.mediaId == null
+              ? null
+              : ref.read(sessionRepositoryProvider),
+        ),
+      ),
+    );
+  }
 }
 
 class _ArtifactDetail extends StatefulWidget {
