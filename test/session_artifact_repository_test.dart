@@ -84,7 +84,13 @@ void main() {
                           'category': 'media',
                           'type': 'video',
                           'title': 'Saved video title',
-                          'media': {'id': 'shared', 'kind': 'video'},
+                          'createdAt': '2026-10-20T03:04:00Z',
+                          'media': {
+                            'id': 'shared',
+                            'kind': 'video',
+                            'mime': 'video/mp4',
+                            'size': 13107200,
+                          },
                         },
                       if (page == 2)
                         {
@@ -125,9 +131,12 @@ void main() {
       expect(items.first.title, 'Version 2');
       expect(items.first.summary, '## Body 2');
       expect(items.first.durationSeconds, isNull);
+      expect(items.first.sizeBytes, isNull);
       expect(items[1].title, 'Saved video title');
       expect(items[1].mediaId, 'shared');
       expect(items[1].type, SessionArtifactType.video);
+      expect(items[1].sizeBytes, 13107200);
+      expect(items[1].createdAt, DateTime.utc(2026, 10, 20, 3, 4));
       expect(items.last.textKind, 'storyboard');
       expect(items.last.durationSeconds, 12);
     },

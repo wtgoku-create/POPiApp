@@ -17,6 +17,7 @@ class SessionArtifact {
     this.durationSeconds,
     this.createdAt,
     this.mediaId,
+    this.sizeBytes,
   });
 
   factory SessionArtifact.fromTextDraft(Map<String, Object?> json) =>
@@ -72,6 +73,7 @@ class SessionArtifact {
       durationSeconds: (text['durationSeconds'] as num?)?.toInt(),
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
       mediaId: category == 'text' ? null : sourceId,
+      sizeBytes: (media['size'] as num?)?.toInt(),
     );
   }
 
@@ -113,6 +115,7 @@ class SessionArtifact {
   final int? durationSeconds;
   final DateTime? createdAt;
   final String? mediaId;
+  final int? sizeBytes;
 }
 
 class SessionArtifactShot {

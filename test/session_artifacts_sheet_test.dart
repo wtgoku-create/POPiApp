@@ -184,7 +184,30 @@ void main() {
       for (final type in ['image', 'script', 'video']) {
         await tap(tester, 'session-artifact-filter-$type');
         final id = type == 'image' ? 'role' : type;
-        await tap(tester, 'session-artifact-open-mock-$id');
+        final card = find.byKey(ValueKey('session-artifact-mock-$id'));
+        if (type != 'script') {
+          expect(
+            find.descendant(
+              of: card,
+              matching: find.text(type == 'image' ? '图片' : '视频'),
+            ),
+            findsOneWidget,
+          );
+        }
+        for (final text in tester.widgetList<Text>(
+          find.descendant(of: card, matching: find.byType(Text)),
+        )) {
+          expect(text.maxLines, 1);
+          expect(text.overflow, TextOverflow.ellipsis);
+        }
+        await tester.tapAt(
+          tester.getTopLeft(card) + Offset(4, tester.getSize(card).height / 2),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(ValueKey('session-artifact-detail-mock-$id')),
+          findsOneWidget,
+        );
         expect(tester.takeException(), isNull);
         await tap(tester, 'session-artifact-back');
       }
@@ -353,7 +376,20 @@ void main() {
                         'category': 'media',
                         'type': 'video',
                         'title': '天台黄昏：来福的笑点急救（15秒短片）',
-                        'media': {'id': 'movie', 'kind': 'video'},
+                        'createdAt': '2026-10-20T03:04:00Z',
+                        'media': {
+                          'id': 'movie',
+                          'kind': 'video',
+                          'mime': 'video/mp4',
+                          'size': 13107200,
+                        },
+                      },
+                      {
+                        'id': 'media:movie-2',
+                        'category': 'media',
+                        'type': 'video',
+                        'title': '电梯口·人快猫慢分镜视频提示词（15秒）',
+                        'media': {'id': 'movie-2', 'kind': 'video'},
                       },
                     ],
                     'pageInfo': {'page': 1, 'pageSize': 20, 'pageCount': 1},
@@ -396,6 +432,28 @@ void main() {
       expect(find.text('天台黄昏：来福的笑点急救（15秒短片）'), findsOneWidget);
       expect(find.text('生成结果'), findsNothing);
       expect(media.requests, isEmpty);
+      final metadata = find.textContaining('视频 · 12.5 MB · ');
+      expect(metadata, findsOneWidget);
+      final metadataContext = tester.element(metadata);
+      final material = MaterialLocalizations.of(metadataContext);
+      final createdAt = DateTime.utc(2026, 10, 20, 3, 4).toLocal();
+      expect(
+        tester.widget<Text>(metadata).data,
+        contains(
+          '${material.formatCompactDate(createdAt)} '
+          '${material.formatTimeOfDay(TimeOfDay.fromDateTime(createdAt), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(metadataContext))}',
+        ),
+      );
+      expect(tester.widget<Text>(metadata).maxLines, 1);
+      expect(tester.widget<Text>(metadata).overflow, TextOverflow.ellipsis);
+      for (final id in ['movie', 'movie-2']) {
+        final card = find.byKey(ValueKey('session-artifact-media:$id'));
+        expect(tester.getSize(card).height, lessThanOrEqualTo(108));
+        expect(
+          find.descendant(of: card, matching: find.text('')),
+          findsNothing,
+        );
+      }
       final listDownload = find.byKey(
         const ValueKey('session-artifact-download-media:movie'),
       );
@@ -417,6 +475,7 @@ void main() {
       await tester.tap(listDownload);
       await tester.pumpAndSettle();
       expect(media.requests, ['movie']);
+      expect(find.text('视频详情'), findsNothing);
       expect(find.text('文件保存失败，请稍后重试'), findsOneWidget);
       expect(attempts, 0);
       expect(tester.widget<IconButton>(listDownload).onPressed, isNotNull);
@@ -430,6 +489,7 @@ void main() {
       await tester.pumpAndSettle();
       await tap(tester, 'session-artifact-open-media:movie');
       expect(find.byType(AppVideoPlayer), findsOneWidget);
+      expect(find.textContaining('视频 · 12.5 MB · '), findsOneWidget);
       final detailDownload = find.byKey(
         const ValueKey('session-artifact-download-detail'),
       );

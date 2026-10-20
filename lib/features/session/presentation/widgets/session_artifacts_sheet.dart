@@ -286,23 +286,42 @@ String _detailTitle(AppLocalizations l10n, SessionArtifactType type) =>
 
 String _artifactMetadata(SessionArtifact item, BuildContext context) {
   final l10n = AppLocalizations.of(context)!;
-  if (item.textKind == null) return item.metadata;
-  final kind = switch (item.textKind) {
-    'topic' => l10n.chatTextTopic,
-    'storyboard' => l10n.chatTextStoryboard,
-    _ => l10n.chatTextScript,
-  };
+  final material = MaterialLocalizations.of(context);
+  final createdAt = item.createdAt?.toLocal();
   return [
-    kind,
-    if ((item.durationSeconds ?? 0) > 0)
-      l10n.roleDurationSeconds(item.durationSeconds.toString())
-    else
-      l10n.chatTextUnknownDuration,
-    if (item.createdAt != null)
-      MaterialLocalizations.of(
-        context,
-      ).formatMediumDate(item.createdAt!.toLocal()),
+    if (item.textKind != null) ...[
+      switch (item.textKind) {
+        'topic' => l10n.chatTextTopic,
+        'storyboard' => l10n.chatTextStoryboard,
+        _ => l10n.chatTextScript,
+      },
+      if ((item.durationSeconds ?? 0) > 0)
+        l10n.roleDurationSeconds(item.durationSeconds.toString())
+      else
+        l10n.chatTextUnknownDuration,
+    ] else ...[
+      if (item.type == SessionArtifactType.image)
+        l10n.images
+      else if (item.type == SessionArtifactType.video)
+        l10n.videos
+      else if (item.metadata.trim().isNotEmpty)
+        item.metadata.trim(),
+      if ((item.sizeBytes ?? 0) > 0) _artifactFileSize(item.sizeBytes!),
+    ],
+    if (createdAt != null)
+      '${material.formatCompactDate(createdAt)} ${material.formatTimeOfDay(TimeOfDay.fromDateTime(createdAt), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context))}',
   ].join(' · ');
+}
+
+String _artifactFileSize(int bytes) {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  var size = bytes.toDouble();
+  var unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit++;
+  }
+  return '${size.toStringAsFixed(unit == 0 ? 0 : 1)} ${units[unit]}';
 }
 
 class _DownloadButton extends ConsumerStatefulWidget {
@@ -434,118 +453,138 @@ class _ArtifactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final summary = item.summary.trim();
+    final metadata = _artifactMetadata(item, context).trim();
     final icon = switch (item.type) {
       SessionArtifactType.image => 'session_artifact_image',
       SessionArtifactType.script => 'session_artifact_script',
       SessionArtifactType.video => 'session_artifact_video',
       SessionArtifactType.audio => null,
     };
-    return Container(
+    return Material(
       key: ValueKey('session-artifact-${item.id}'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.brightness == Brightness.dark
-            ? colors.surfaceContainerLow
-            : Colors.white.withValues(alpha: .5),
+      color: colors.brightness == Brightness.dark
+          ? colors.surfaceContainerLow
+          : Colors.white.withValues(alpha: .5),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onOpen,
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (icon == null)
-                Icon(
-                  Icons.audiotrack_outlined,
-                  size: 20,
-                  color: colors.onSurface,
-                )
-              else
-                AppSvgIcon.asset(icon, size: 20, color: colors.onSurface),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    height: 1.45,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (SessionArtifactExporter.supports(item)) ...[
-                _DownloadButton(
-                  item: item,
-                  inList: true,
-                  repository: repository,
-                ),
-                const SizedBox(width: 8),
-              ],
-              SizedBox.square(
-                dimension: 40,
-                child: IconButton(
-                  key: ValueKey('session-artifact-open-${item.id}'),
-                  tooltip: _detailTitle(
-                    AppLocalizations.of(context)!,
-                    item.type,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: colors.primary.withValues(alpha: .05),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: onOpen,
-                  icon: AppSvgIcon.asset(
-                    'session_artifact_open',
-                    size: 18,
-                    color: colors.primary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              if (item.previewAsset != null) ...[
-                SizedBox.square(
-                  dimension: 58,
-                  child: _ArtifactImage(asset: item.previewAsset!, radius: 10),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.summary,
-                      maxLines: 2,
+              Row(
+                children: [
+                  if (icon == null)
+                    Icon(
+                      Icons.audiotrack_outlined,
+                      size: 20,
+                      color: colors.onSurface,
+                    )
+                  else
+                    AppSvgIcon.asset(icon, size: 20, color: colors.onSurface),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        height: 1.3,
-                        color: colors.onSurfaceVariant,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        height: 1.45,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      _artifactMetadata(item, context),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant.withValues(alpha: .65),
+                  ),
+                  const SizedBox(width: 8),
+                  if (SessionArtifactExporter.supports(item)) ...[
+                    _DownloadButton(
+                      item: item,
+                      inList: true,
+                      repository: repository,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  SizedBox.square(
+                    dimension: 40,
+                    child: IconButton(
+                      key: ValueKey('session-artifact-open-${item.id}'),
+                      tooltip: _detailTitle(
+                        AppLocalizations.of(context)!,
+                        item.type,
+                      ),
+                      style: IconButton.styleFrom(
+                        backgroundColor: colors.primary.withValues(alpha: .05),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: onOpen,
+                      icon: AppSvgIcon.asset(
+                        'session_artifact_open',
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (item.previewAsset != null ||
+                  summary.isNotEmpty ||
+                  metadata.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (item.previewAsset != null) ...[
+                      SizedBox.square(
+                        dimension: 58,
+                        child: _ArtifactImage(
+                          asset: item.previewAsset!,
+                          radius: 10,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (summary.isNotEmpty)
+                            Text(
+                              summary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.3,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          if (summary.isNotEmpty && metadata.isNotEmpty)
+                            const SizedBox(height: 5),
+                          if (metadata.isNotEmpty)
+                            Text(
+                              metadata,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant.withValues(
+                                  alpha: .65,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ],
           ),
-        ],
+        ),
       ),
     );
   }
