@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_generation_indicator.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/conversation_snapshot.dart';
@@ -41,6 +42,10 @@ class _ConversationGenerationTaskCardState
       widget.block,
       widget.controller.snapshot,
     );
+    final animating =
+        view.active &&
+        view.state != 'pause_requested' &&
+        !['pause', 'cancel'].contains(widget.block.data['intent']);
     final activity = conversationProgressTitle(
       widget.block,
       l10n,
@@ -90,7 +95,7 @@ class _ConversationGenerationTaskCardState
                   ),
                 ),
                 if (view.active)
-                  const _GenerationSpinner()
+                  _GenerationSpinner(animated: animating)
                 else
                   IconButton(
                     key: Key(
@@ -111,7 +116,7 @@ class _ConversationGenerationTaskCardState
             if (view.active || _expanded) ...[
               const SizedBox(height: 10),
               if (view.active)
-                _GenerationPlaceholder(label: activity)
+                _GenerationPlaceholder(label: activity, animated: animating)
               else if (view.completed)
                 if (view.mediaIds.isEmpty)
                   AppSkeleton(
@@ -156,11 +161,25 @@ class _ConversationGenerationTaskCardState
                                 mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 32,
-                                    color: colors.onSurfaceVariant,
-                                  ),
+                                  if ([
+                                    'pausing',
+                                    'paused',
+                                    'canceling',
+                                    'canceled',
+                                    'cancel_requested',
+                                    'stopped',
+                                  ].contains(view.state))
+                                    AppGenerationIndicator(
+                                      animated: false,
+                                      size: 81,
+                                      color: colors.primary,
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.error_outline,
+                                      size: 32,
+                                      color: colors.onSurfaceVariant,
+                                    ),
                                   const SizedBox(height: 10),
                                   Text(
                                     failure,
@@ -225,8 +244,9 @@ class _ConversationGenerationTaskCardState
 }
 
 class _GenerationPlaceholder extends StatelessWidget {
-  const _GenerationPlaceholder({required this.label});
+  const _GenerationPlaceholder({required this.label, required this.animated});
   final String label;
+  final bool animated;
 
   @override
   Widget build(BuildContext context) => AspectRatio(
@@ -253,13 +273,7 @@ class _GenerationPlaceholder extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const RotatedBox(
-                      quarterTurns: 2,
-                      child: AppSvgIcon.asset(
-                        'chat_generation_loading',
-                        size: 81,
-                      ),
-                    ),
+                    AppGenerationIndicator(animated: animated, size: 81),
                     Text(
                       label,
                       textAlign: TextAlign.center,
@@ -282,7 +296,8 @@ class _GenerationPlaceholder extends StatelessWidget {
 }
 
 class _GenerationSpinner extends StatefulWidget {
-  const _GenerationSpinner();
+  const _GenerationSpinner({required this.animated});
+  final bool animated;
   @override
   State<_GenerationSpinner> createState() => _GenerationSpinnerState();
 }
@@ -297,10 +312,20 @@ class _GenerationSpinnerState extends State<_GenerationSpinner>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
+    _syncAnimation();
+  }
+
+  @override
+  void didUpdateWidget(_GenerationSpinner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (!widget.animated || MediaQuery.disableAnimationsOf(context)) {
       _spin.stop();
       _spin.value = 0;
-    } else {
+    } else if (!_spin.isAnimating) {
       _spin.repeat();
     }
   }

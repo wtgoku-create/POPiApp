@@ -15,6 +15,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_generation_indicator.dart';
 import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
@@ -140,7 +141,18 @@ void main() {
     expect(panelText('正在暂停'), findsOneWidget);
     expect(panelText('执行中'), findsNothing);
     expect(panelText('作品努力生成中...'), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+      tester
+          .widget<AppGenerationIndicator>(
+            find.descendant(
+              of: panel,
+              matching: find.byType(AppGenerationIndicator),
+            ),
+          )
+          .animated,
+      isFalse,
+    );
 
     fixture.task = fixture.taskValue('paused', version: 4);
     await tester.pump(const Duration(seconds: 2));

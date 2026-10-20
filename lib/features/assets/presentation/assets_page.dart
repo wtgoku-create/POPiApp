@@ -638,11 +638,9 @@ class _SectionFilters extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: active
-                          ? section == AssetLibrarySection.roles
-                                ? Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: 0.05)
-                                : AppColors.surfaceTint
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.05)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pill),
                     ),
@@ -650,9 +648,7 @@ class _SectionFilters extends StatelessWidget {
                       labels[index],
                       style: TextStyle(
                         color: active
-                            ? section == AssetLibrarySection.roles
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Colors.black
+                            ? Theme.of(context).colorScheme.onSurface
                             : AppColors.textTertiary,
                         fontSize: section == AssetLibrarySection.roles
                             ? 14

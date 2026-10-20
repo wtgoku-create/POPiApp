@@ -14,6 +14,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
+import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 import 'conversation_controller_test.dart' show StreamingSessionRepository;
 import 'conversation_events_test.dart'
@@ -98,7 +99,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       final l10n = lookupAppLocalizations(locale);
-      final loading = find.byType(CircularProgressIndicator);
+      final loading = find.byWidgetPredicate(
+        (widget) =>
+            widget is AppSvgIcon && widget.assetName == 'chat_progress_running',
+      );
       expect(find.text(l10n.chatThinking), findsOneWidget);
       expect(loading, findsNothing);
       var seq = 1;

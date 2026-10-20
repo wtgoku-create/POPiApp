@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/conversation_snapshot.dart';
 
 String conversationProgressTitle(
@@ -143,14 +144,9 @@ class ConversationProgressSteps extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (step.status == 'running')
-                  SizedBox.square(
+                  const SizedBox.square(
                     dimension: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      value: MediaQuery.disableAnimationsOf(context)
-                          ? .75
-                          : null,
-                    ),
+                    child: Center(child: _ProgressSpinner()),
                   )
                 else
                   Icon(
@@ -201,4 +197,47 @@ class ConversationProgressSteps extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Matches Web's Arco loading glyph and one-second linear rotation.
+class _ProgressSpinner extends StatefulWidget {
+  const _ProgressSpinner();
+
+  @override
+  State<_ProgressSpinner> createState() => _ProgressSpinnerState();
+}
+
+class _ProgressSpinnerState extends State<_ProgressSpinner>
+    with SingleTickerProviderStateMixin {
+  late final _spin = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 1),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _spin.stop();
+      _spin.value = 0;
+    } else {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RotationTransition(
+    turns: _spin,
+    child: AppSvgIcon.asset(
+      'chat_progress_running',
+      size: 16,
+      color: Theme.of(context).colorScheme.primary,
+    ),
+  );
 }

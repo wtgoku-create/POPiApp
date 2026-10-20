@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   static const brand = Color(0xFF6F47F5);
   static const pageBackground = Color(0xFFF8F8F8);
+  static const profileBackground = Color(0xFFF5F4FA);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceTint = Color(0xFFFBF0FF);
   static const surfaceTintStrong = Color(0xFFF1EEFA);

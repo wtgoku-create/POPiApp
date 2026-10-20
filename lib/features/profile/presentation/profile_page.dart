@@ -79,6 +79,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           };
 
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? AppColors.profileBackground
+          : colorScheme.surface,
       drawer: const PopiNavigationDrawer(),
       body: Column(
         children: [

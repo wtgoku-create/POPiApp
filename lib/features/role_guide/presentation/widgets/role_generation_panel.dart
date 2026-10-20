@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/widgets/app_generation_indicator.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
-import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_video_preview.dart';
 import '../../domain/role_generation.dart';
 import 'role_guide_controls.dart';
@@ -145,9 +145,7 @@ class RoleGenerationPanel extends StatelessWidget {
                                   color: AppColors.brand,
                                   size: 20,
                                 )
-                              : progress.running &&
-                                    statusLabel == null &&
-                                    i == progress.stage
+                              : generating && i == progress.stage
                               ? const Padding(
                                   padding: EdgeInsets.all(4),
                                   child: CircularProgressIndicator(
@@ -289,16 +287,13 @@ class RoleGenerationPanel extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (progress.running ||
-                                  progress.status ==
-                                      RoleGenerationStatus.paused)
-                                RotatedBox(
-                                  quarterTurns: 2,
-                                  child: AppSvgIcon.asset(
-                                    'role_guide_generating',
-                                    size: 60,
-                                    color: generating ? null : AppColors.brand,
-                                  ),
+                              if (!completed &&
+                                  progress.status !=
+                                      RoleGenerationStatus.failed)
+                                AppGenerationIndicator(
+                                  animated: generating,
+                                  size: 60,
+                                  color: generating ? null : AppColors.brand,
                                 )
                               else
                                 Icon(

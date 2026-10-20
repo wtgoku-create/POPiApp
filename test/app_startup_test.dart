@@ -91,7 +91,7 @@ void main() {
     expect(find.byType(LoginPage), findsNothing);
     expect(find.byKey(const Key('home-membership-entry')), findsOneWidget);
     expect(find.byKey(const Key('home-membership-points')), findsNothing);
-    expect(find.byKey(const Key('home-login-entry-icon')), findsOneWidget);
+    expect(find.byKey(const Key('home-login-entry-icon')), findsNothing);
     expect(find.byKey(const Key('home-login-entry-chevron')), findsOneWidget);
 
     const protectedDrawerEntries = [

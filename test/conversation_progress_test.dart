@@ -9,6 +9,7 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_c
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_progress.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 import 'conversation_events_test.dart'
     show chatEvent, chatMessageJson, chatSnapshotJson, chatId;
@@ -186,6 +187,72 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('running steps use Web rotation and respect reduced motion', (
+    tester,
+  ) async {
+    Future<void> pumpProgress({
+      bool reducedMotion = false,
+      String status = 'running',
+    }) => tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: reducedMotion),
+          child: child!,
+        ),
+        home: Scaffold(
+          body: ConversationProgressSteps(
+            steps: [
+              ConversationProgressStep(
+                id: 'execute',
+                labelKey: processing,
+                status: status,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await pumpProgress();
+    await tester.pump();
+    final glyph = find.byWidgetPredicate(
+      (widget) =>
+          widget is AppSvgIcon && widget.assetName == 'chat_progress_running',
+    );
+    expect(glyph, findsOneWidget);
+    expect(tester.getSize(glyph), const Size(16, 16));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    final rotation = tester.widget<RotationTransition>(
+      find.ancestor(of: glyph, matching: find.byType(RotationTransition)),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(rotation.turns.value, closeTo(.25, .01));
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(rotation.turns.value, closeTo(.5, .01));
+
+    await pumpProgress(reducedMotion: true);
+    await tester.pumpAndSettle();
+    expect(rotation.turns.value, 0);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(rotation.turns.value, 0);
+
+    await pumpProgress();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(rotation.turns.value, closeTo(.25, .01));
+    await pumpProgress(status: 'completed');
+    await tester.pumpAndSettle();
+    expect(glyph, findsNothing);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   test('script retry retains all 14 steps in chronological order', () {
     final block = progress(scriptRetrySteps, state: 'completed');

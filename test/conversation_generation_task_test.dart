@@ -23,6 +23,7 @@ import 'package:popi_ai_app/features/session/presentation/widgets/conversation_p
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_task_card.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/widgets/app_generation_indicator.dart';
 import 'package:popi_ai_app/shared/widgets/app_network_image.dart';
 import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -619,10 +620,59 @@ void main() {
           findsOneWidget,
         );
         expect(find.byType(ConversationMediaView), findsNothing);
+        expect(
+          tester
+              .widget<AppGenerationIndicator>(
+                find.byType(AppGenerationIndicator),
+              )
+              .animated,
+          isTrue,
+        );
         expect(tester.takeException(), isNull);
         await _capture(tester, capture, 'loading-${width.toInt()}-$scale');
       });
     }
+  }
+
+  for (final (state, intent, animated) in [
+    ('running', null, true),
+    ('running', 'pause', false),
+    ('running', 'cancel', false),
+    ('pause_requested', null, false),
+    ('pausing', null, false),
+    ('paused', null, false),
+    ('canceling', null, false),
+    ('canceled', null, false),
+    ('cancelled', null, false),
+  ]) {
+    testWidgets('generation glyph animation for $state with intent $intent', (
+      tester,
+    ) async {
+      final controller = ConversationController(_Repository(), 'user');
+      addTearDown(controller.dispose);
+      final json = _task(state: state);
+      if (intent != null) {
+        (json['data']! as Map<String, Object?>)['intent'] = intent;
+      }
+      await _pump(
+        tester,
+        ListView(
+          children: [
+            ConversationTaskCard(
+              block: ConversationBlock.fromJson(json),
+              controller: controller,
+            ),
+          ],
+        ),
+      );
+      expect(
+        tester
+            .widget<AppGenerationIndicator>(find.byType(AppGenerationIndicator))
+            .animated,
+        animated,
+      );
+      expect(tester.takeException(), isNull);
+    });
   }
 
   testWidgets('history shows one output card and folded saved plan', (

@@ -280,6 +280,9 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     );
 
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? AppColors.profileBackground
+          : Theme.of(context).colorScheme.surface,
       body: _sheetOpen
           ? ImageFiltered(
               imageFilter: ImageFilter.blur(sigmaX: 6.5, sigmaY: 6.5),

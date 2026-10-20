@@ -179,7 +179,15 @@ void main() {
       ),
     );
     final decoration = filter.decoration! as BoxDecoration;
-    expect(decoration.color, AppColors.surfaceTint);
+    expect(decoration.color, AppColors.brand.withValues(alpha: 0.05));
+    expect(
+      tester.widget<Text>(find.text('视频')).style!.color,
+      AppColors.textPrimary,
+    );
+    expect(
+      tester.widget<Text>(find.text('全部')).style!.color,
+      AppColors.textTertiary,
+    );
   });
 
   testWidgets('renders populated asset center and selection controls', (

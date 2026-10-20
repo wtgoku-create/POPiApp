@@ -39,13 +39,19 @@ class PopiMembershipEntry extends StatelessWidget {
           child: Ink(
             key: const Key('home-membership-surface'),
             height: height,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: showPoints
+                ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
+                : const EdgeInsets.fromLTRB(13, 8, 8, 8),
             decoration: BoxDecoration(
-              color: isDark
+              color: !showPoints
+                  ? AppColors.textPrimary
+                  : isDark
                   ? colorScheme.surfaceContainerHighest
                   : Colors.white.withValues(alpha: .5),
               borderRadius: BorderRadius.circular(AppRadii.pill),
-              border: isDark
+              border: !showPoints
+                  ? null
+                  : isDark
                   ? Border.all(color: colorScheme.outlineVariant)
                   : Border.all(color: Colors.white),
             ),
@@ -88,14 +94,6 @@ class PopiMembershipEntry extends StatelessWidget {
                         child: ColoredBox(color: colorScheme.outline),
                       ),
                       const SizedBox(width: 7),
-                    ] else ...[
-                      const Icon(
-                        Icons.login_rounded,
-                        key: Key('home-login-entry-icon'),
-                        size: 16,
-                        color: AppColors.brand,
-                      ),
-                      const SizedBox(width: 5),
                     ],
                     Text(
                       label,
@@ -103,9 +101,11 @@ class PopiMembershipEntry extends StatelessWidget {
                       style: TextStyle(
                         color: showPoints
                             ? colorScheme.onSurface
-                            : AppColors.brand,
+                            : Colors.white,
                         fontSize: fontSize,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: showPoints
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         height: 1,
                       ),
                     ),
@@ -115,7 +115,7 @@ class PopiMembershipEntry extends StatelessWidget {
                         Icons.chevron_right_rounded,
                         key: Key('home-login-entry-chevron'),
                         size: 17,
-                        color: AppColors.brand,
+                        color: Colors.white,
                       ),
                     ],
                   ],

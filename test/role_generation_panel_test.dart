@@ -9,6 +9,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/role_guide/domain/role_generation.dart';
 import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_generation_panel.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/widgets/app_generation_indicator.dart';
 
 void main() {
   const capture = bool.fromEnvironment('CAPTURE_HOME_TASK_STATES');
@@ -34,6 +35,7 @@ void main() {
       RoleGenerationStatus.pausing,
       RoleGenerationStatus.paused,
       RoleGenerationStatus.canceling,
+      RoleGenerationStatus.canceled,
     ]) {
       testWidgets('${state.name} panel stays consistent at $size', (
         tester,
@@ -103,13 +105,19 @@ void main() {
           find.text(switch (state) {
             RoleGenerationStatus.pausing => l10n.roleStatusPausing,
             RoleGenerationStatus.paused => l10n.roleStatusPaused,
+            RoleGenerationStatus.canceled => l10n.roleStatusCanceled,
             _ => l10n.roleStatusCanceling,
           }),
           findsOneWidget,
         );
+        expect(find.byType(CircularProgressIndicator), findsNothing);
         expect(
-          find.byType(CircularProgressIndicator),
-          state == RoleGenerationStatus.paused ? findsNothing : findsOneWidget,
+          tester
+              .widget<AppGenerationIndicator>(
+                find.byType(AppGenerationIndicator),
+              )
+              .animated,
+          isFalse,
         );
         expect(
           find.byWidgetPredicate(
