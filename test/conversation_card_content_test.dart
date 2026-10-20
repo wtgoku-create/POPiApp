@@ -3,6 +3,96 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_card_content.dart';
 
 void main() {
+  testWidgets('tail following survives content growth and boundary flings', (
+    tester,
+  ) async {
+    final outer = ScrollController();
+    addTearDown(outer.dispose);
+    Future<void> pumpContent(double height) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              controller: outer,
+              children: [
+                ConversationCardContent(
+                  storageId: 'following',
+                  followTail: true,
+                  child: SizedBox(height: height),
+                ),
+                const SizedBox(height: 3000),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpContent(1000);
+    final card = find.byType(ConversationCardContent);
+    final inner = tester
+        .state<ScrollableState>(
+          find.descendant(of: card, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    expect(inner.pixels, inner.maxScrollExtent);
+    await pumpContent(1200);
+    expect(inner.pixels, inner.maxScrollExtent);
+    await tester.drag(card, const Offset(0, 100));
+    await tester.pumpAndSettle();
+    final readingOffset = inner.pixels;
+    expect(readingOffset, lessThan(inner.maxScrollExtent));
+    await pumpContent(1400);
+    expect(inner.pixels, readingOffset);
+    inner.jumpTo(inner.maxScrollExtent);
+    await tester.pumpAndSettle();
+    await pumpContent(1600);
+    expect(inner.pixels, inner.maxScrollExtent);
+    await tester.fling(card, const Offset(0, -80), 1200);
+    final releasedOffset = outer.offset;
+    await tester.pumpAndSettle();
+    expect(outer.offset, greaterThan(releasedOffset + 30));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a fling at the card boundary continues in the conversation', (
+    tester,
+  ) async {
+    final outer = ScrollController();
+    addTearDown(outer.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            controller: outer,
+            children: const [
+              ConversationCardContent(
+                storageId: 'fling',
+                child: SizedBox(height: 1000),
+              ),
+              SizedBox(height: 3000),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final card = find.byType(ConversationCardContent);
+    final inner = tester
+        .state<ScrollableState>(
+          find.descendant(of: card, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    inner.jumpTo(inner.maxScrollExtent);
+    await tester.fling(card, const Offset(0, -80), 1200);
+    final releasedOffset = outer.offset;
+    await tester.pumpAndSettle();
+    expect(outer.offset, greaterThan(releasedOffset + 30));
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   for (final size in [
     const Size(320, 568),
     const Size(390, 844),
@@ -71,6 +161,25 @@ void main() {
         position.jumpTo(position.maxScrollExtent);
         await tester.pump();
         expect(find.text('Paragraph 29').hitTestable(), findsOneWidget);
+        await tester.drag(content, const Offset(0, -80));
+        await tester.pumpAndSettle();
+        expect(outer.offset, greaterThan(0));
+        expect(position.pixels, position.maxScrollExtent);
+
+        outer.jumpTo(80);
+        position.jumpTo(20);
+        await tester.pump();
+        // A single drag consumes the remaining card content, then the list.
+        await tester.drag(content, const Offset(0, 70));
+        await tester.pumpAndSettle();
+        expect(position.pixels, 0);
+        expect(outer.offset, lessThan(80));
+
+        outer.jumpTo(80);
+        await tester.pump();
+        await tester.drag(content, const Offset(0, 60));
+        await tester.pumpAndSettle();
+        expect(outer.offset, lessThan(80));
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },

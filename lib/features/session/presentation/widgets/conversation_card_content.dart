@@ -40,10 +40,18 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
     _followTail =
         widget.followTail &&
         _storage?.readState(context, identifier: _followStorageId) != false;
-    _scroll = ScrollController(
+    _scroll = _CardScrollController(
+      onBoundaryFling: _forwardVelocity,
       initialScrollOffset: saved is double ? saved : 0,
-      keepScrollOffset: false,
     )..addListener(_saveOffset);
+  }
+
+  void _forwardVelocity(double velocity) {
+    final parent = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
+    if (parent is! ScrollPositionWithSingleContext) return;
+    final sameDirection =
+        parent.axisDirection == _scroll!.position.axisDirection;
+    parent.goBallistic(velocity * (sameDirection ? 1 : -1));
   }
 
   void _saveOffset() {
@@ -97,6 +105,26 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
     return false;
   }
 
+  bool _forwardOverscroll(OverscrollNotification notification) {
+    if (notification.depth != 0 || notification.overscroll == 0) return false;
+    final parent = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
+    if (parent == null || !parent.hasContentDimensions) return false;
+    final sameDirection =
+        parent.axisDirection == notification.metrics.axisDirection;
+    final delta = notification.overscroll * (sameDirection ? 1 : -1);
+    final target = (parent.pixels + delta).clamp(
+      parent.minScrollExtent,
+      parent.maxScrollExtent,
+    );
+    if (target == parent.pixels) return false;
+    // Forward only the distance the card could not consume at its boundary.
+    parent.jumpTo(target);
+    if (notification.dragDetails == null && notification.velocity != 0) {
+      _forwardVelocity(notification.velocity);
+    }
+    return true;
+  }
+
   @override
   void dispose() {
     _scroll?.dispose();
@@ -138,19 +166,69 @@ class _ConversationCardContentState extends State<ConversationCardContent> {
             },
             child: NotificationListener<ScrollNotification>(
               onNotification: _handleScroll,
-              child: SingleChildScrollView(
-                key: PageStorageKey(widget.storageId),
-                controller: _scroll,
-                primary: false,
-                physics: const ClampingScrollPhysics(),
-                padding: const EdgeInsets.only(right: 12),
-                child: _CardContentScope(child: widget.child),
+              child: NotificationListener<OverscrollNotification>(
+                onNotification: _forwardOverscroll,
+                child: SingleChildScrollView(
+                  key: PageStorageKey(widget.storageId),
+                  controller: _scroll,
+                  primary: false,
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _CardContentScope(child: widget.child),
+                ),
               ),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+/// Transfers release velocity when clamping physics stops at a card edge.
+class _CardScrollController extends ScrollController {
+  _CardScrollController({
+    required this.onBoundaryFling,
+    required super.initialScrollOffset,
+  }) : super(keepScrollOffset: false);
+
+  final ValueChanged<double> onBoundaryFling;
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _CardScrollPosition(
+    physics: physics,
+    context: context,
+    initialPixels: initialScrollOffset,
+    oldPosition: oldPosition,
+    onBoundaryFling: onBoundaryFling,
+  );
+}
+
+class _CardScrollPosition extends ScrollPositionWithSingleContext {
+  _CardScrollPosition({
+    required super.physics,
+    required super.context,
+    required super.initialPixels,
+    required super.oldPosition,
+    required this.onBoundaryFling,
+  }) : super(keepScrollOffset: false);
+
+  final ValueChanged<double> onBoundaryFling;
+
+  @override
+  void goBallistic(double velocity) {
+    if (hasContentDimensions &&
+        ((velocity < 0 && pixels <= minScrollExtent) ||
+            (velocity > 0 && pixels >= maxScrollExtent))) {
+      onBoundaryFling(velocity);
+      super.goBallistic(0);
+      return;
+    }
+    super.goBallistic(velocity);
   }
 }
 
