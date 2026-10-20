@@ -44,6 +44,13 @@ class ConversationPresentation {
   }
 
   static List<ConversationMessage> _embedDrafts(ConversationSnapshot snapshot) {
+    final sourceMessages = _groupDrafts(snapshot);
+    final ownerIds = {
+      for (final message in sourceMessages)
+        for (final block in message.blocks)
+          if (message.role == 'assistant' && block.kind == 'text_draft')
+            block: message.id,
+    };
     final drafts =
         <(String?, String), List<(ConversationMessage, ConversationBlock)>>{};
     final origins = <ConversationBlock, ConversationMessage>{};
@@ -60,7 +67,7 @@ class ConversationPresentation {
     final claimed = <ConversationBlock>{};
     final occurrences = <(String, String)>{};
     final projected = <ConversationMessage>[];
-    for (final message in snapshot.messages) {
+    for (final message in sourceMessages) {
       if (message.role != 'assistant') {
         projected.add(message);
         continue;
@@ -107,6 +114,22 @@ class ConversationPresentation {
           cursor = match.end;
         }
         addText(_withoutPartialReference(block.text.substring(cursor)).trim());
+      }
+      // Keep already visible candidates alongside a partially streamed reply.
+      final preceding = projected.lastOrNull;
+      if (message.transient &&
+          message.presentation == 'reply' &&
+          preceding != null &&
+          preceding.runId == message.runId &&
+          preceding.attempt == message.attempt &&
+          preceding.blocks.isNotEmpty &&
+          preceding.blocks.every(_isTopicDraft)) {
+        final pending = preceding.blocks
+            .where((b) => !blocks.contains(b))
+            .toList();
+        final last = blocks.lastIndexWhere(preceding.blocks.contains);
+        blocks.insertAll(last < 0 ? blocks.length : last + 1, pending);
+        claimed.addAll(pending);
       }
       projected.add(message.withBlocks(blocks, message.revision));
     }
@@ -157,19 +180,87 @@ class ConversationPresentation {
         claimed.add(draft);
       }
     }
+    final anchors = <String, String>{};
+    final usedAnchors = <String>{};
+    for (final message in projected) {
+      for (final owner in sourceMessages) {
+        if (owner.id != message.id &&
+            owner.seq <= message.seq &&
+            owner.blocks.isNotEmpty &&
+            owner.blocks.every(_isTopicDraft) &&
+            owner.blocks.every(message.blocks.contains) &&
+            usedAnchors.add(owner.id)) {
+          anchors[message.id] = owner.id;
+          break;
+        }
+      }
+    }
     return [
       for (final message in projected)
         if ([
               for (final block in message.blocks)
-                if (!(origins[block]?.id == message.id &&
+                if (!(ownerIds[block] == message.id &&
                     (claimed.contains(block) ||
                         block.data['delivery'] == 'reply' &&
+                            !_isTopicDraft(block) &&
                             active(origins[block]!))))
                   block,
             ]
             case final blocks when blocks.isNotEmpty)
-          message.withBlocks(blocks, message.revision),
+          message.withBlocks(
+            blocks,
+            message.revision,
+            presentationId: anchors[message.id],
+          ),
     ];
+  }
+
+  static bool _isTopicDraft(ConversationBlock block) =>
+      block.kind == 'text_draft' &&
+      block.objectKind == 'topic' &&
+      block.id.isNotEmpty &&
+      block.data['delivery'] == 'reply';
+
+  static List<ConversationMessage> _groupDrafts(ConversationSnapshot snapshot) {
+    final grouped = <ConversationMessage>[];
+    for (final message in snapshot.messages) {
+      var index = grouped.length - 1;
+      while (index >= 0 &&
+          grouped[index].role == 'assistant' &&
+          grouped[index].runId == message.runId &&
+          grouped[index].attempt == message.attempt &&
+          grouped[index].transient &&
+          grouped[index].blocks.every((b) => b.type == 'text')) {
+        index--;
+      }
+      final previous = index < 0 ? null : grouped[index];
+      if (previous != null &&
+          message.role == 'assistant' &&
+          previous.role == message.role &&
+          message.runId != null &&
+          previous.runId == message.runId &&
+          previous.attempt == message.attempt &&
+          message.blocks.isNotEmpty &&
+          previous.blocks.isNotEmpty &&
+          message.blocks.every(_isTopicDraft) &&
+          previous.blocks.every(_isTopicDraft) &&
+          message.blocks.first.action == previous.blocks.last.action &&
+          message.blocks.first.scopeId == previous.blocks.last.scopeId &&
+          message.blocks.first.scopeKind == previous.blocks.last.scopeKind &&
+          !message.blocks.any(
+            (b) => previous.blocks.any((old) => old.id == b.id),
+          )) {
+        grouped[index] = previous.withBlocks(
+          [...previous.blocks, ...message.blocks],
+          message.revision > previous.revision
+              ? message.revision
+              : previous.revision,
+        );
+      } else {
+        grouped.add(message);
+      }
+    }
+    return grouped;
   }
 
   static bool _generationOutput(
