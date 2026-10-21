@@ -401,19 +401,35 @@ class _ConversationGenerationCardState extends State<ConversationGenerationCard>
             if ((!_editable || !_view.threeView) &&
                 _view.savedReferenceIds.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Wrap(
-                  key: const Key('conversation-generation-references'),
-                  spacing: 8,
-                  runSpacing: 8,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final id in _view.savedReferenceIds)
-                      ConversationMediaView(
-                        key: ValueKey('conversation-generation-reference-$id'),
-                        id: id,
-                        repository: widget.controller.repository,
-                        thumbnailSize: 80,
+                    Text(
+                      _view.templateTitle.isNotEmpty
+                          ? l10n.chatImageStyle
+                          : l10n.chatReferenceImage,
+                      style: ConversationCardTypography.title.copyWith(
+                        color: colors.onSurface,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      key: const Key('conversation-generation-references'),
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final id in _view.savedReferenceIds)
+                          ConversationMediaView(
+                            key: ValueKey(
+                              'conversation-generation-reference-$id',
+                            ),
+                            id: id,
+                            repository: widget.controller.repository,
+                            thumbnailSize: 80,
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
