@@ -135,11 +135,7 @@ class _ConversationHomeTaskCardState extends State<ConversationHomeTaskCard> {
                       color: colors.onSurface,
                     ),
                   ),
-                  for (final role in view.roles)
-                    ConversationRoleCard(
-                      key: ValueKey(role.referenceId),
-                      block: role,
-                    ),
+                  ConversationCastCard(blocks: view.roles),
                 ],
               ),
             if (steps.isNotEmpty)

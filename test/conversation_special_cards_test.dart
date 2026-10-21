@@ -6,8 +6,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/features/assets/presentation/role_detail_page.dart';
+import 'package:popi_ai_app/features/role_guide/presentation/widgets/role_profile_sheet.dart';
 import 'package:popi_ai_app/features/role_guide/domain/home_creation.dart';
 import 'package:popi_ai_app/features/role_guide/domain/session_media_preferences.dart';
 import 'package:popi_ai_app/features/session/domain/conversation_generation.dart';
@@ -278,6 +281,7 @@ Future<void> _pump(
   final theme = dark ? AppTheme.dark : AppTheme.light;
   await tester.pumpWidget(
     MaterialApp(
+      builder: (_, child) => ProviderScope(child: child!),
       theme: const String.fromEnvironment('CONVERSATION_CAPTURE_FONT').isEmpty
           ? theme
           : theme.copyWith(
@@ -330,6 +334,97 @@ void main() {
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
+
+  for (final task in [false, true]) {
+    for (final width in [320.0, 390.0]) {
+      testWidgets(
+        'home cast groups roles and opens saved profiles: task=$task width=$width',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 844);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final controller = ConversationController(_CardRepository(), 'a')
+            ..sessionId = chatId;
+          addTearDown(controller.dispose);
+          final roles = [
+            for (final (id, title) in [('first', '软软'), ('second', '阿栗')])
+              {
+                'id': id,
+                'roleId': id,
+                'versionId': '$id-v1',
+                'ref': {'kind': 'role', 'id': id, 'versionId': '$id-v1'},
+                'title': title,
+                'profile': {
+                  'title': title,
+                  'description': 'Saved character profile',
+                },
+                'avatar':
+                    'assets/images/role_guide_avatar_${id == 'first' ? 1 : 2}.png',
+              },
+          ];
+          final original = task ? _task(home: true) : _homePlan();
+          final block = ConversationBlock.fromJson({
+            'type': 'object',
+            'kind': task ? 'task' : 'plan',
+            if (task) 'action': 'home',
+            'data': {
+              ...original.data,
+              if (task) 'input': {'cast': roles},
+              if (!task)
+                'homePlan': {
+                  ...conversationMap(original.data['homePlan']),
+                  'cast': roles,
+                },
+            },
+          });
+          await _pump(
+            tester,
+            task
+                ? ConversationTaskCard(block: block, controller: controller)
+                : ConversationGenerationCard(
+                    block: block,
+                    controller: controller,
+                  ),
+            locale: const Locale('zh'),
+            dark: width == 320,
+            textScale: width == 320 ? 1.5 : 1,
+          );
+          expect(
+            find.byKey(const Key('conversation-cast-summary')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('conversation-role-summary')),
+            findsNothing,
+          );
+          expect(find.text('软软、阿栗'), findsOneWidget);
+          final l10n = AppLocalizations.of(tester.element(find.text('软软、阿栗')))!;
+          expect(find.text(l10n.roleCastCount(2)), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          await tester.tap(find.byKey(const Key('role-guide-view-profiles')));
+          await tester.pumpAndSettle();
+          final sheet = tester.widget<RoleProfileSheet>(
+            find.byType(RoleProfileSheet),
+          );
+          expect(sheet.useSnapshot, isTrue);
+          expect(sheet.roles.map((role) => role.id), ['first', 'second']);
+          expect(sheet.roles.map((role) => role.profileVersionId), [
+            'first-v1',
+            'second-v1',
+          ]);
+          await tester.tap(find.byTooltip(l10n.roleNextProfile));
+          await tester.pumpAndSettle();
+          expect(
+            tester.widget<RoleDetailPage>(find.byType(RoleDetailPage)).role.id,
+            'second',
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   for (final size in [
     const Size(320, 844),

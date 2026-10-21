@@ -84,8 +84,7 @@ class ConversationHomePlanCard extends StatelessWidget {
           if (embedded || expanded) ...[
             Text(l10n.chatPlanCast, style: heading),
             const SizedBox(height: 8),
-            for (final role in block.homeCast)
-              ConversationRoleCard(block: role),
+            ConversationCastCard(blocks: block.homeCast),
             if (block.homeTopic case final topic?) ...[
               const SizedBox(height: 12),
               ConversationCardContent(
