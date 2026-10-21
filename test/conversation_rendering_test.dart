@@ -35,6 +35,58 @@ class _VideoRepository extends FixtureSessionRepository {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('markdown selection spans paragraphs, lists and code blocks', (
+    tester,
+  ) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(() {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      );
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.iOS),
+        home: const Scaffold(
+          body: MarkdownMessage(
+            text:
+                'First paragraph\n\nSecond paragraph\n\n'
+                '- First item\n- Second item\n\n'
+                '```text\nCode prompt\n```\n\nLast paragraph',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final region = tester.state<SelectableRegionState>(
+      find.byType(SelectableRegion),
+    );
+    region.selectAll(SelectionChangedCause.toolbar);
+    await tester.pump();
+    region.contextMenuButtonItems
+        .firstWhere((item) => item.type == ContextMenuButtonType.copy)
+        .onPressed!();
+    await tester.pump();
+    expect(
+      copied,
+      matches(
+        RegExp(
+          r'First paragraph[\s\S]*Second paragraph[\s\S]*First item'
+          r'[\s\S]*Second item[\s\S]*Code prompt[\s\S]*Last paragraph',
+        ),
+      ),
+    );
+  });
   const captureFont = String.fromEnvironment('CONVERSATION_CAPTURE_FONT');
   const iconFont = String.fromEnvironment('CONVERSATION_CAPTURE_ICON_FONT');
   setUpAll(() async {
@@ -145,7 +197,7 @@ void main() {
         final text = find.descendant(
           of: content,
           matching: find.byWidgetPredicate(
-            (widget) => widget is SelectableText && widget.data == prompt,
+            (widget) => widget is Text && widget.data == prompt,
           ),
         );
         expect(text, findsOneWidget);

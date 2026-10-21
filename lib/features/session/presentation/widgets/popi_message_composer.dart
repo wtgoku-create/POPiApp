@@ -237,6 +237,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   late final FocusNode _focusNode;
   late final AnimationController _composerAnimationController;
   final _sizeKey = GlobalKey();
+  final _inputScroll = ScrollController();
+  late String _lastInputText;
   bool _isExpanded = false;
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
@@ -266,6 +268,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     )..addStatusListener(_handleComposerAnimationStatus);
     widget.controller.textNotifier.addListener(_handleTextChanged);
     widget.controller.textController.addListener(_syncExpansion);
+    _lastInputText = widget.controller.textController.text;
+    widget.controller.textController.addListener(_revealInsertedText);
     WidgetsBinding.instance.addPostFrameCallback((_) => _reportHeight());
   }
 
@@ -279,6 +283,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       ..dispose();
     widget.controller.textNotifier.removeListener(_handleTextChanged);
     widget.controller.textController.removeListener(_syncExpansion);
+    widget.controller.textController.removeListener(_revealInsertedText);
+    _inputScroll.dispose();
     _editorStatus.dispose();
     super.dispose();
   }
@@ -286,6 +292,18 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   @override
   void didUpdateWidget(PopiMessageComposer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.textNotifier.removeListener(_handleTextChanged);
+      oldWidget.controller.textController
+        ..removeListener(_syncExpansion)
+        ..removeListener(_revealInsertedText);
+      widget.controller.textNotifier.addListener(_handleTextChanged);
+      widget.controller.textController
+        ..addListener(_syncExpansion)
+        ..addListener(_revealInsertedText);
+      _lastInputText = '';
+      _revealInsertedText();
+    }
     _syncExpansion();
     if (oldWidget.sending != widget.sending ||
         oldWidget.running != widget.running ||
@@ -364,6 +382,28 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     } finally {
       _expandedEditorOpen = false;
     }
+  }
+
+  void _revealInsertedText() {
+    final value = widget.controller.textController.value;
+    if (value.text == _lastInputText) return;
+    _lastInputText = value.text;
+    if (value.text.isEmpty ||
+        !value.selection.isCollapsed ||
+        value.selection.extentOffset != value.text.length ||
+        _expandedEditorOpen) {
+      return;
+    }
+    // Wait for wrapping and the expand-button inset to update the scroll extent.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          _expandedEditorOpen ||
+          !_inputScroll.hasClients ||
+          widget.controller.textController.value != value) {
+        return;
+      }
+      _inputScroll.jumpTo(_inputScroll.position.maxScrollExtent);
+    });
   }
 
   void _handleTextChanged() {
@@ -783,6 +823,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
           autofocus: expandedEditor,
           onTapOutside: (_) => widget.controller.dismissKeyboard(),
           controller: widget.controller.textController,
+          scrollController: expandedEditor ? null : _inputScroll,
           enabled: !isRunning,
           readOnly: isRunning || (readOnly ?? widget.sending),
           specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,

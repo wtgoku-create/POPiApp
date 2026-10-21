@@ -30,6 +30,7 @@ import 'conversation_role_card.dart';
 import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
 import 'conversation_style.dart';
+import 'conversation_selection_scope.dart';
 import 'conversation_card_content.dart';
 import 'conversation_generation_card.dart';
 import 'conversation_task_card.dart';
@@ -465,66 +466,74 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     bottomSliver: SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(20, footerSpacing, 20, 0),
-                        child: Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 640),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              spacing: _conversationCardSpacing,
-                              children: [
-                                for (final block in legacyObjects)
-                                  ConversationObjectView(
-                                    block: block,
-                                    controller: controller,
-                                  ),
-                                if (showThinking)
-                                  _ConversationProgressHeader(
-                                    label: l10n.chatThinking,
-                                    running: true,
-                                  ),
-                                if (reconnecting)
-                                  Text(
-                                    l10n.chatReconnecting,
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
+                      child: ConversationSelectionScope(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            footerSpacing,
+                            20,
+                            0,
+                          ),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 640),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                spacing: _conversationCardSpacing,
+                                children: [
+                                  for (final block in legacyObjects)
+                                    ConversationObjectView(
+                                      block: block,
+                                      controller: controller,
                                     ),
-                                  ),
-                                for (final run in failedRuns)
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          conversationTaskErrorText(
-                                            l10n,
-                                            code: run.errorCode,
-                                            message: run.error,
-                                            fallback: run.state == 'failed'
-                                                ? l10n.chatRunFailed
-                                                : l10n.chatStopped,
+                                  if (showThinking)
+                                    _ConversationProgressHeader(
+                                      label: l10n.chatThinking,
+                                      running: true,
+                                    ),
+                                  if (reconnecting)
+                                    Text(
+                                      l10n.chatReconnecting,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  for (final run in failedRuns)
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            conversationTaskErrorText(
+                                              l10n,
+                                              code: run.errorCode,
+                                              message: run.error,
+                                              fallback: run.state == 'failed'
+                                                  ? l10n.chatRunFailed
+                                                  : l10n.chatStopped,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      if (run.retryable &&
-                                          [
-                                            'failed',
-                                            'interrupted',
-                                          ].contains(run.state))
-                                        IconButton(
-                                          tooltip: l10n.retry,
-                                          onPressed:
-                                              controller.pending ||
-                                                  controller.running
-                                              ? null
-                                              : () => controller.retry(run.id),
-                                          icon: const Icon(Icons.refresh),
-                                        ),
-                                    ],
-                                  ),
-                              ],
+                                        if (run.retryable &&
+                                            [
+                                              'failed',
+                                              'interrupted',
+                                            ].contains(run.state))
+                                          IconButton(
+                                            tooltip: l10n.retry,
+                                            onPressed:
+                                                controller.pending ||
+                                                    controller.running
+                                                ? null
+                                                : () =>
+                                                      controller.retry(run.id),
+                                            icon: const Icon(Icons.refresh),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -551,34 +560,38 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                   _latestMessageBuilt = true;
                 }
                 final userBubble = isSentByMe && !_hasFullWidthObjects(item);
-                return Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    index == 0
-                        ? 0
-                        : _messageSpacing(
-                            _chat.messages[index - 1].metadata!['conversation']
-                                as ConversationMessage,
-                            item,
-                          ),
-                    20,
-                    0,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 640),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) => Align(
-                          alignment: userBubble
-                              ? Alignment.centerRight
-                              : Alignment.centerLeft,
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: userBubble
-                                  ? constraints.maxWidth * .85
-                                  : constraints.maxWidth,
+                return ConversationSelectionScope(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      index == 0
+                          ? 0
+                          : _messageSpacing(
+                              _chat
+                                      .messages[index - 1]
+                                      .metadata!['conversation']
+                                  as ConversationMessage,
+                              item,
                             ),
-                            child: child,
+                      20,
+                      0,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 640),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) => Align(
+                            alignment: userBubble
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: userBubble
+                                    ? constraints.maxWidth * .85
+                                    : constraints.maxWidth,
+                              ),
+                              child: child,
+                            ),
                           ),
                         ),
                       ),
@@ -727,9 +740,9 @@ class MarkdownMessage extends StatelessWidget {
     final heading = compact
         ? ConversationCardTypography.title.copyWith(color: body.color)
         : body.copyWith(fontSize: 20, fontWeight: FontWeight.w600);
-    return MarkdownBody(
+    final markdown = MarkdownBody(
       data: text,
-      selectable: true,
+      selectable: false,
       softLineBreak: softLineBreak,
       builders: {'pre': _WrappedPromptBuilder(style: body)},
       styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
@@ -755,6 +768,11 @@ class MarkdownMessage extends StatelessWidget {
         if (href != null) _openUrl(href);
       },
     );
+    // Join the reply's scroll-aware selection; standalone previews still
+    // share one selection across their paragraphs, lists and fenced prompts.
+    return SelectionContainer.maybeOf(context) == null
+        ? SelectionArea(child: markdown)
+        : markdown;
   }
 }
 
@@ -768,7 +786,7 @@ class _WrappedPromptBuilder extends MarkdownElementBuilder {
   Widget visitText(md.Text text, TextStyle? preferredStyle) {
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: SelectableText(
+      child: Text(
         text.text.replaceFirst(RegExp(r'\n$'), ''),
         style: style ?? const TextStyle(fontSize: 14, height: 1.6),
       ),

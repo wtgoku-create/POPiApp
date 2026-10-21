@@ -1,5 +1,6 @@
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
@@ -45,6 +46,76 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'long inserted text reveals its end without locking manual scrolling',
+    (tester) async {
+      final controller = PopiMessageComposerController();
+      addTearDown(controller.dispose);
+      await pumpComposer(tester, controller);
+      final text = List.generate(40, (i) => 'Pasted paragraph $i').join('\n');
+      await controller.setText(text);
+      await tester.pumpAndSettle();
+      final position = tester
+          .state<ScrollableState>(
+            find.descendant(of: input, matching: find.byType(Scrollable)).first,
+          )
+          .position;
+      expect(position.maxScrollExtent, greaterThan(0));
+      expect(position.extentAfter, lessThanOrEqualTo(1));
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(position.pixels, 0);
+      await controller.setText('$text\nNew final line');
+      await tester.pumpAndSettle();
+      expect(position.extentAfter, lessThanOrEqualTo(1));
+    },
+  );
+
+  testWidgets(
+    'pasting long clipboard content shows the final lines',
+    (tester) async {
+      final controller = PopiMessageComposerController();
+      addTearDown(controller.dispose);
+      final text = List.generate(50, (i) => 'Clipboard line $i').join('\n');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.getData') return {'text': text};
+          if (call.method == 'Clipboard.hasStrings') return {'value': true};
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await pumpComposer(tester, controller, conversationMode: true);
+      await tester.tap(input);
+      await tester.pumpAndSettle();
+      await tester
+          .state<ExtendedTextFieldState>(input)
+          .editableTextKey
+          .currentState!
+          .pasteText(SelectionChangedCause.toolbar);
+      await tester.pumpAndSettle();
+      expect(controller.textController.text, text);
+      expect(controller.textController.selection.extentOffset, text.length);
+      final position = tester
+          .state<ScrollableState>(
+            find.descendant(of: input, matching: find.byType(Scrollable)).first,
+          )
+          .position;
+      expect(position.extentAfter, lessThanOrEqualTo(1));
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant({
+      TargetPlatform.iOS,
+      TargetPlatform.android,
+    }),
+  );
 
   testWidgets('collapses only when empty and unfocused', (tester) async {
     final controller = PopiMessageComposerController();
