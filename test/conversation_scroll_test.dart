@@ -8,6 +8,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/session/presentation/conversation_controller.dart';
 import 'package:popi_ai_app/features/session/presentation/session_page.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/conversation_selection_scope.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_timeline.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/conversation_task_card.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -61,19 +62,8 @@ void main() {
   testWidgets(
     'selection handles stay inside the visible timeline',
     (tester) async {
-      final repository = StreamingSessionRepository()
-        ..data = chatSnapshotJson(
-          messages: [
-            chatMessageJson(
-              text: List.generate(30, (i) => 'Selection line $i').join('\n\n'),
-            ),
-          ],
-        );
-      final controller = ConversationController(repository, 'a')..open(chatId);
-      addTearDown(() async {
-        controller.dispose();
-        await repository.close();
-      });
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
       await tester.pumpWidget(
         _app(
           Scaffold(
@@ -82,14 +72,41 @@ void main() {
               alignment: Alignment.topCenter,
               child: SizedBox(
                 height: 320,
-                child: ConversationTimeline(controller: controller),
+                child: CustomScrollView(
+                  controller: scroll,
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.all(10),
+                      sliver: SliverToBoxAdapter(
+                        child: ConversationSelectionScope(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 12,
+                            children: [
+                              for (var i = 0; i < 30; i++)
+                                // Keep Ahem's trailing caret inside its Text
+                                // container so this tests viewport clipping.
+                                Text(
+                                  'Selection line $i',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    height: 1,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      final position = _position(tester);
+      final position = scroll.position;
       position.jumpTo(0);
       await tester.pumpAndSettle();
       await tester.longPress(find.text('Selection line 0'));
@@ -331,78 +348,80 @@ void main() {
     }),
   );
 
-  testWidgets('selection ignores retained cards outside the sliver layout', (
-    tester,
-  ) async {
-    final repository = _history();
-    final messages =
-        repository.data['timelineMessages'] as List<Map<String, Object?>>;
-    messages.insert(0, {
-      ...chatMessageJson(seq: 0),
-      'id': 'retained-task',
-      'blocks': [
-        {
-          'type': 'object',
-          'kind': 'task',
-          'action': 'workflow',
-          'data': {
-            'id': 'task',
-            'title': 'Retained production',
-            'state': 'paused',
-            'allowedActions': ['resume', 'cancel'],
-            'steps': <Object>[],
+  testWidgets(
+    'selection ignores retained cards outside the sliver layout',
+    (tester) async {
+      final repository = _history();
+      final messages =
+          repository.data['timelineMessages'] as List<Map<String, Object?>>;
+      messages.insert(0, {
+        ...chatMessageJson(seq: 0),
+        'id': 'retained-task',
+        'blocks': [
+          {
+            'type': 'object',
+            'kind': 'task',
+            'action': 'workflow',
+            'data': {
+              'id': 'task',
+              'title': 'Retained production',
+              'state': 'paused',
+              'allowedActions': ['resume', 'cancel'],
+              'steps': <Object>[],
+            },
           },
-        },
-      ],
-    });
-    final controller = ConversationController(repository, 'a')..open(chatId);
-    addTearDown(() async {
-      controller.dispose();
-      await repository.close();
-    });
-    await tester.pumpWidget(
-      _app(Scaffold(body: ConversationTimeline(controller: controller))),
-    );
-    await tester.pumpAndSettle();
-    final position = _position(tester);
-    position.jumpTo(0);
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Retained production', skipOffstage: false),
-      findsOneWidget,
-    );
-    final cardState = tester.state(find.byType(ConversationTaskCard));
-    position.jumpTo(position.maxScrollExtent);
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Retained production', skipOffstage: false),
-      findsOneWidget,
-    );
-    await tester.longPress(find.text('Latest reply'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    final paragraph = tester.renderObject<RenderParagraph>(
-      find.descendant(
-        of: find.text('Latest reply'),
-        matching: find.byType(RichText),
-      ),
-    );
-    expect(paragraph.selections, isNotEmpty);
-    position.jumpTo(0);
-    await tester.pumpAndSettle();
-    expect(tester.state(find.byType(ConversationTaskCard)), same(cardState));
-    await tester.longPress(find.text('Retained production'));
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    final restored = tester.renderObject<RenderParagraph>(
-      find.descendant(
-        of: find.text('Retained production'),
-        matching: find.byType(RichText),
-      ),
-    );
-    expect(restored.selections, isNotEmpty);
-    await tester.pumpWidget(const SizedBox.shrink());
-  }, variant: TargetPlatformVariant.mobile());
+        ],
+      });
+      final controller = ConversationController(repository, 'a')..open(chatId);
+      addTearDown(() async {
+        controller.dispose();
+        await repository.close();
+      });
+      await tester.pumpWidget(
+        _app(Scaffold(body: ConversationTimeline(controller: controller))),
+      );
+      await tester.pumpAndSettle();
+      final position = _position(tester);
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Retained production', skipOffstage: false),
+        findsOneWidget,
+      );
+      final cardState = tester.state(find.byType(ConversationTaskCard));
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Retained production', skipOffstage: false),
+        findsOneWidget,
+      );
+      await tester.longPress(find.text('Latest reply'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.text('Latest reply'),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(paragraph.selections, isNotEmpty);
+      position.jumpTo(0);
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(ConversationTaskCard)), same(cardState));
+      await tester.longPress(find.text('Retained production'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final restored = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.text('Retained production'),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(restored.selections, isNotEmpty);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.mobile(),
+  );
 
   testWidgets('iOS selection handle scrolls the timeline and stops on release', (
     tester,
