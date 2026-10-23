@@ -17,7 +17,7 @@ abstract final class DemoFixtures {
     DemoCharacter('leo', 'Leo', 'assets/images/demo_role_12.png'),
   ];
   static const memberImages = {
-    'popi': 'assets/images/demo_avatar_popi.png',
+    'popi': 'assets/animations/bot_avatars/tiger.png',
     'designer': 'assets/images/demo_avatar_designer.png',
     'writer': 'assets/images/demo_avatar_writer.png',
     'director': 'assets/images/demo_avatar_director.png',

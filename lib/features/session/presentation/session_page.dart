@@ -17,6 +17,7 @@ import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_bot_avatar.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../attachments/presentation/attachment_picker_sheet.dart';
@@ -210,18 +211,27 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     centerTitle: true,
                     title: sessionTitle == null
                         ? null
-                        : Tooltip(
-                            message: sessionTitle,
-                            child: Text(
-                              sessionTitle,
-                              key: const Key('session-app-bar-title'),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const AppBotAvatar(size: 36),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Tooltip(
+                                  message: sessionTitle,
+                                  child: Text(
+                                    sessionTitle,
+                                    key: const Key('session-app-bar-title'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                     leadingWidth: 80,
                     leading: Align(

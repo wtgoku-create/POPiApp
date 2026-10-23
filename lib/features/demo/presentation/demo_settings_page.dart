@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/type/bot_avatar_type.dart';
 import '../data/demo_fixtures.dart';
 import '../data/demo_repository.dart';
 import '../domain/demo_models.dart';
@@ -930,7 +931,9 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   late final _session = widget.repository.session(widget.sessionId);
   late String _image =
       _session.memberAvatars[widget.memberId] ??
-      DemoFixtures.memberImages[widget.memberId]!;
+      (widget.memberId == 'popi'
+          ? BotAvatarCharacter.tiger.stillAsset
+          : DemoFixtures.memberImages[widget.memberId]!);
   late int _color = _session.memberColors[widget.memberId] ?? 0xFFFFDFEF;
   bool _initialized = false;
   bool _busy = false;
@@ -1077,13 +1080,13 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                       onPressed: _busy
                           ? null
                           : () => setState(() {
-                              final current =
-                                  int.tryParse(
-                                    _image.split('bot_').last.split('.').first,
-                                  ) ??
-                                  0;
+                              const characters = BotAvatarCharacter.values;
+                              final current = characters.indexWhere(
+                                (character) => character.stillAsset == _image,
+                              );
                               _image =
-                                  'assets/images/demo_bot_${current % 8 + 1}.png';
+                                  characters[(current + 1) % characters.length]
+                                      .stillAsset;
                             }),
                       child: Text(
                         l.demoRandomAppearance,
@@ -1102,10 +1105,12 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
               mainAxisSpacing: 10,
               childAspectRatio: 1,
             ),
-            itemCount: 8,
+            itemCount: BotAvatarCharacter.values.length,
             itemBuilder: (context, i) {
-              final path = 'assets/images/demo_bot_${i + 1}.png';
+              final character = BotAvatarCharacter.values[i];
+              final path = character.stillAsset;
               return Semantics(
+                key: ValueKey('demo-avatar-${character.name}'),
                 label: l.demoAvatarNumber(i + 1),
                 selected: _image == path,
                 button: true,
@@ -1175,38 +1180,6 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                         ),
                       ),
                   ],
-                ),
-                const SizedBox(height: 20),
-                ListenableBuilder(
-                  listenable: widget.repository,
-                  builder: (context, _) {
-                    final instructions =
-                        widget.repository
-                            .session(widget.sessionId)
-                            .memberInstructions[widget.memberId] ??
-                        demoMemberDescription(l, widget.memberId);
-                    return _section(
-                      context,
-                      title: l.demoWorkMode,
-                      onEdit: () => demoEditText(
-                        context,
-                        title: l.demoWorkMode,
-                        label: l.demoWorkMode,
-                        multiline: true,
-                        value: instructions,
-                        onSave: (v) => widget.repository.updateSession(
-                          widget.sessionId,
-                          (s) => s.copyWith(
-                            memberInstructions: {
-                              ...s.memberInstructions,
-                              widget.memberId: v,
-                            },
-                          ),
-                        ),
-                      ),
-                      children: [Text(instructions)],
-                    );
-                  },
                 ),
                 const SizedBox(height: 110),
               ],

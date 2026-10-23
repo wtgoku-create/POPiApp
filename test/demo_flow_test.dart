@@ -12,6 +12,7 @@ import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -419,6 +420,27 @@ void main() {
       repository.session('inspiration').capabilities,
       isNot(contains('character')),
     );
+    await tester.drag(
+      find.byKey(const PageStorageKey('demo-settings-skills')),
+      const Offset(0, 700),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('POPi').last);
+    await tester.pumpAndSettle();
+    expect(find.text('编辑成员'), findsOneWidget);
+    expect(find.text('我的名字'), findsOneWidget);
+    final rabbit = find.byKey(const ValueKey('demo-avatar-rabbit'));
+    await tester.ensureVisible(rabbit);
+    await tester.tap(rabbit);
+    await tester.ensureVisible(find.text('背景颜色').first);
+    await tester.pumpAndSettle();
+    expect(find.text('工作方式'), findsNothing);
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+    expect(
+      repository.session('inspiration').memberAvatars['popi'],
+      BotAvatarCharacter.rabbit.stillAsset,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -471,9 +493,19 @@ void main() {
     await tester.pump();
     for (var i = 0; i < 25; i++) {
       await tester.pump(const Duration(milliseconds: 100));
+      if (i == 0) {
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(
+          tester
+              .widget<IconButton>(find.byKey(const Key('popi-send-button')))
+              .onPressed,
+          isNull,
+        );
+      }
     }
     await tester.pumpAndSettle();
     expect(repository.sessions.first.messages.last.assetIds, hasLength(5));
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -130,7 +130,6 @@ class _DemoChatPageState extends State<DemoChatPage> {
         .toList();
     final batch =
         media.length > 1 && media.every((a) => a.kind == DemoAssetKind.image);
-    final l = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
@@ -157,18 +156,21 @@ class _DemoChatPageState extends State<DemoChatPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (message.text.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: message.user ? demoTint : demoSurface(context),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: MarkdownMessage(
-                        text: message.text,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          height: 1.5,
-                          fontWeight: FontWeight.w600,
+                    Semantics(
+                      liveRegion: message.id == 'thinking',
+                      child: Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: message.user ? demoTint : demoSurface(context),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: MarkdownMessage(
+                          text: message.text,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            height: 1.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -208,16 +210,6 @@ class _DemoChatPageState extends State<DemoChatPage> {
                           ),
                         ),
                   ],
-                  if (message.id == 'thinking')
-                    Semantics(
-                      liveRegion: true,
-                      label: l.demoThinking,
-                      child: const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
                 ],
               ),
             ),

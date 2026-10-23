@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/type/bot_avatar_type.dart';
 import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_bot_avatar.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
@@ -65,24 +67,33 @@ class DemoAvatar extends StatelessWidget {
   final Map<String, int> memberColors;
   @override
   Widget build(BuildContext context) {
-    Widget avatar(String path, double dimension, [Color? color]) => Container(
-      width: dimension,
-      height: dimension,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color ?? background ?? Colors.white,
-        border: Border.all(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          width: 1.5,
+    Widget avatar(String path, double dimension, [Color? color]) {
+      // Older saved member settings can still contain the retired default path.
+      final character = path == 'assets/images/demo_avatar_popi.png'
+          ? BotAvatarCharacter.tiger
+          : BotAvatarCharacter.fromStillAsset(path);
+      return Container(
+        width: dimension,
+        height: dimension,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color ?? background ?? Colors.white,
+          border: Border.all(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            width: 1.5,
+          ),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Image.asset(
-        path,
-        fit: BoxFit.cover,
-        cacheWidth: (dimension * 3).ceil(),
-      ),
-    );
+        clipBehavior: Clip.antiAlias,
+        child: character != null
+            ? AppBotAvatar(character: character, size: dimension)
+            : Image.asset(
+                path,
+                fit: BoxFit.cover,
+                cacheWidth: (dimension * 3).ceil(),
+              ),
+      );
+    }
+
     if (image != null) return avatar(image!, size);
     final images = (members.isEmpty ? ['popi'] : members)
         .take(4)
