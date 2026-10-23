@@ -106,6 +106,14 @@ def animated(values):
     ]}
 
 
+def animated_position(values):
+    # Separate axes avoid path-metric float rounding at the loop boundary.
+    return {'s': True, **{
+        axis: animated([(frame, position[index]) for frame, position in values])
+        for index, axis in enumerate(('x', 'y'))
+    }}
+
+
 def transform(position=(0, 0, 0), anchor=(0, 0, 0), rotation=0, scale=(100, 100, 100)):
     return {'o': static(100), 'p': static(list(position)), 'a': static(list(anchor)),
             'r': static(rotation), 's': static(list(scale))}
@@ -134,7 +142,7 @@ def build_animation(source, avatar, cover_scale):
     parent = transform(position=(256, 256, 0), anchor=(256, 256, 0), scale=(87.5, 87.5, 100))
     # Whole cycles close the loop without a jump at the eight-second boundary.
     parent['r'] = animated([(f, math.sin(f / FRAMES * math.tau) * 1.49) for f in range(0, FRAMES + 1, 4)])
-    parent['p'] = animated([(f, [256, 256 - math.sin(f / FRAMES * math.tau * 2) * 4.48, 0])
+    parent['p'] = animated_position([(f, [256, 256 - math.sin(f / FRAMES * math.tau * 2) * 4.48, 0])
                             for f in range(0, FRAMES + 1, 4)])
     layers = []
     for index, eye in enumerate(avatar['eyes']):
@@ -148,7 +156,7 @@ def build_animation(source, avatar, cover_scale):
             dimensions.append((frame, [length, width]))
             rotations.append((frame, eye['angle'] - 90 * (1 - open_blend)))
         ks = transform()
-        ks['p'] = animated([(f, [eye['cx'] + 3 + math.sin(f / FRAMES * math.tau) * 1.7,
+        ks['p'] = animated_position([(f, [eye['cx'] + 3 + math.sin(f / FRAMES * math.tau) * 1.7,
                                   eye['cy'] + math.sin(f / FRAMES * math.tau) * 1.1, 0])
                              for f in range(0, FRAMES + 1, 4)])
         ks['r'] = animated(rotations)

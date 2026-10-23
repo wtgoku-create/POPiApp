@@ -33,23 +33,23 @@ void main() {
           expect(composition.frameRate, 30);
           expect(composition.images.values.single.loadedImage, isNotNull);
           expect(composition.warnings, isEmpty, reason: character.name);
+          for (final layer in composition.layers) {
+            final transform = layer.transform.createAnimation();
+            transform.setProgress(0);
+            final start = transform.getMatrix().storage.toList();
+            transform.setProgress(1);
+            expect(
+              transform.getMatrix().storage,
+              orderedEquals(start),
+              reason: '${character.name} ${layer.name} loop transform',
+            );
+          }
           final drawable = LottieDrawable(composition);
           final first = await _render(drawable, 0);
           final blink = await _render(drawable, 2.8 / 8);
           final loop = await _render(drawable, 1);
           expect(first, isNot(orderedEquals(blink)), reason: character.name);
-          expect(loop.length, first.length);
-          var maxChannelDelta = 0;
-          for (var i = 0; i < first.length; i++) {
-            final delta = (first[i] - loop[i]).abs();
-            if (delta > maxChannelDelta) maxChannelDelta = delta;
-          }
-          // Rasterizers can round identical keyframes to adjacent 8-bit values.
-          expect(
-            maxChannelDelta,
-            lessThanOrEqualTo(1),
-            reason: '${character.name} loop channel delta',
-          );
+          expect(first, orderedEquals(loop), reason: '${character.name} loop');
           final opaquePixels = first.where((byte) => byte > 0).length;
           expect(opaquePixels, greaterThan(10000), reason: character.name);
           drawable.setProgress(0);
