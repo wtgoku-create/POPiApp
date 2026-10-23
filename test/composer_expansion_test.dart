@@ -16,6 +16,8 @@ void main() {
     WidgetTester tester,
     PopiMessageComposerController controller, {
     bool conversationMode = false,
+    bool sessionLayout = false,
+    double textScale = 1,
     bool running = false,
     VoidCallback? onStop,
   }) async {
@@ -25,12 +27,19 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
               child: PopiMessageComposer(
                 controller: controller,
                 conversationMode: conversationMode,
+                sessionLayout: sessionLayout,
                 running: running,
                 onStop: onStop,
                 selectedImages: const [],
@@ -169,6 +178,36 @@ void main() {
     expect(tester.getSize(frame).height, 60);
     await tester.pumpWidget(const SizedBox());
   });
+
+  for (final textScale in [1.0, 1.5]) {
+    testWidgets('collapsed session hint is centered at text scale $textScale', (
+      tester,
+    ) async {
+      final controller = PopiMessageComposerController();
+      addTearDown(controller.dispose);
+      await pumpComposer(
+        tester,
+        controller,
+        conversationMode: true,
+        sessionLayout: true,
+        textScale: textScale,
+      );
+      final hint = find.text('Say something to POPi...');
+      final attachment = find.byTooltip('Add attachment');
+      expect(
+        tester.getCenter(hint).dy,
+        closeTo(tester.getCenter(attachment).dy, .5),
+      );
+      await tester.tap(input);
+      await tester.pumpAndSettle();
+      expect(tester.widget<ExtendedTextField>(input).style!.fontSize, 18);
+      tester.testTextInput.enterText('First\nSecond\nThird');
+      await tester.pumpAndSettle();
+      expect(tester.getSize(frame).height, 78 + 81 * textScale);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 
   testWidgets('active conversation expands only for focus or draft content', (
     tester,
