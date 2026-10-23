@@ -6198,6 +6198,822 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Estimated cost: {points} points'**
   String chatEstimatedPoints(String points);
+
+  /// No description provided for @demoConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get demoConversations;
+
+  /// No description provided for @demoAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get demoAssets;
+
+  /// No description provided for @demoSearchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversations'**
+  String get demoSearchHistory;
+
+  /// No description provided for @demoSearchAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Search assets'**
+  String get demoSearchAssets;
+
+  /// No description provided for @demoProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get demoProject;
+
+  /// No description provided for @demoConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get demoConversation;
+
+  /// No description provided for @demoWorkflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Workflow'**
+  String get demoWorkflow;
+
+  /// No description provided for @demoNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get demoNew;
+
+  /// No description provided for @demoSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation settings'**
+  String get demoSettings;
+
+  /// No description provided for @demoInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get demoInfo;
+
+  /// No description provided for @demoCapabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills'**
+  String get demoCapabilities;
+
+  /// No description provided for @demoOutputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Outputs'**
+  String get demoOutputs;
+
+  /// No description provided for @demoLinkedRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked characters'**
+  String get demoLinkedRoles;
+
+  /// No description provided for @demoAddMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Add members'**
+  String get demoAddMembers;
+
+  /// No description provided for @demoMemberProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant profile'**
+  String get demoMemberProfile;
+
+  /// No description provided for @demoRoleProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Character profile'**
+  String get demoRoleProfile;
+
+  /// No description provided for @demoPopi.
+  ///
+  /// In en, this message translates to:
+  /// **'POPi'**
+  String get demoPopi;
+
+  /// No description provided for @demoDesigner.
+  ///
+  /// In en, this message translates to:
+  /// **'Character designer'**
+  String get demoDesigner;
+
+  /// No description provided for @demoWriter.
+  ///
+  /// In en, this message translates to:
+  /// **'Script writer'**
+  String get demoWriter;
+
+  /// No description provided for @demoDirector.
+  ///
+  /// In en, this message translates to:
+  /// **'Film director'**
+  String get demoDirector;
+
+  /// No description provided for @demoSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound creator'**
+  String get demoSound;
+
+  /// No description provided for @demoPopiDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A creative assistant for images, stories and video'**
+  String get demoPopiDescription;
+
+  /// No description provided for @demoDesignerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create characters and scene images'**
+  String get demoDesignerDescription;
+
+  /// No description provided for @demoWriterDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn ideas into scripts and storyboards'**
+  String get demoWriterDescription;
+
+  /// No description provided for @demoDirectorDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create moving images and finished videos'**
+  String get demoDirectorDescription;
+
+  /// No description provided for @demoSoundDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create voices, music and sound effects'**
+  String get demoSoundDescription;
+
+  /// No description provided for @demoRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename conversation'**
+  String get demoRename;
+
+  /// No description provided for @demoName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get demoName;
+
+  /// No description provided for @demoPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Account preferences'**
+  String get demoPreferences;
+
+  /// No description provided for @demoDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Content direction'**
+  String get demoDirection;
+
+  /// No description provided for @demoFeeling.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience feeling'**
+  String get demoFeeling;
+
+  /// No description provided for @demoFeelingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentic, with a little tenderness'**
+  String get demoFeelingValue;
+
+  /// No description provided for @demoFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get demoFormat;
+
+  /// No description provided for @demoFormatValue.
+  ///
+  /// In en, this message translates to:
+  /// **'AI realism × short stories'**
+  String get demoFormatValue;
+
+  /// No description provided for @demoAudience.
+  ///
+  /// In en, this message translates to:
+  /// **'Audience'**
+  String get demoAudience;
+
+  /// No description provided for @demoAudienceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Students and working professionals'**
+  String get demoAudienceValue;
+
+  /// No description provided for @demoPositioning.
+  ///
+  /// In en, this message translates to:
+  /// **'Account positioning'**
+  String get demoPositioning;
+
+  /// No description provided for @demoCharacterSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Character settings'**
+  String get demoCharacterSkill;
+
+  /// No description provided for @demoScriptSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts and storyboards'**
+  String get demoScriptSkill;
+
+  /// No description provided for @demoImageSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Image generation'**
+  String get demoImageSkill;
+
+  /// No description provided for @demoVideoSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Video generation'**
+  String get demoVideoSkill;
+
+  /// No description provided for @demoAudioSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio generation'**
+  String get demoAudioSkill;
+
+  /// No description provided for @demoEnabledHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled in this conversation'**
+  String get demoEnabledHere;
+
+  /// No description provided for @demoWorkMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Working mode'**
+  String get demoWorkMode;
+
+  /// No description provided for @demoOnDemand.
+  ///
+  /// In en, this message translates to:
+  /// **'On demand'**
+  String get demoOnDemand;
+
+  /// No description provided for @demoOfficialRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'Official'**
+  String get demoOfficialRoles;
+
+  /// No description provided for @demoMyRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'My characters'**
+  String get demoMyRoles;
+
+  /// No description provided for @demoCreateRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create character'**
+  String get demoCreateRole;
+
+  /// No description provided for @demoJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Join creation'**
+  String get demoJoin;
+
+  /// No description provided for @demoNoRoles.
+  ///
+  /// In en, this message translates to:
+  /// **'No linked characters'**
+  String get demoNoRoles;
+
+  /// No description provided for @demoNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching results'**
+  String get demoNoResults;
+
+  /// No description provided for @demoEmptyAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'No assets yet'**
+  String get demoEmptyAssets;
+
+  /// No description provided for @demoEmptyConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet'**
+  String get demoEmptyConversations;
+
+  /// No description provided for @demoAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get demoAll;
+
+  /// No description provided for @demoImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get demoImages;
+
+  /// No description provided for @demoVideos.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get demoVideos;
+
+  /// No description provided for @demoScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts'**
+  String get demoScripts;
+
+  /// No description provided for @demoAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get demoAudio;
+
+  /// No description provided for @demoUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload material'**
+  String get demoUpload;
+
+  /// No description provided for @demoSampleLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Material library'**
+  String get demoSampleLibrary;
+
+  /// No description provided for @demoImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get demoImport;
+
+  /// No description provided for @demoImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Material added to your library'**
+  String get demoImported;
+
+  /// No description provided for @demoAssetDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset details'**
+  String get demoAssetDetails;
+
+  /// No description provided for @demoRenameAsset.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename asset'**
+  String get demoRenameAsset;
+
+  /// No description provided for @demoAudioDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio details'**
+  String get demoAudioDetails;
+
+  /// No description provided for @demoAudioBackward.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 15 seconds'**
+  String get demoAudioBackward;
+
+  /// No description provided for @demoAudioForward.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 15 seconds'**
+  String get demoAudioForward;
+
+  /// No description provided for @demoGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get demoGenerated;
+
+  /// No description provided for @demoComposer.
+  ///
+  /// In en, this message translates to:
+  /// **'Say something to POPi…'**
+  String get demoComposer;
+
+  /// No description provided for @demoGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi there'**
+  String get demoGreeting;
+
+  /// No description provided for @demoGreetingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to create?'**
+  String get demoGreetingDetail;
+
+  /// No description provided for @demoDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-generated results may contain errors'**
+  String get demoDisclaimer;
+
+  /// No description provided for @demoThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'POPi is thinking…'**
+  String get demoThinking;
+
+  /// No description provided for @demoVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Let Alice meet an old friend at a cafe.'**
+  String get demoVoice;
+
+  /// No description provided for @demoQuickImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate five scene images'**
+  String get demoQuickImage;
+
+  /// No description provided for @demoQuickScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a reunion script'**
+  String get demoQuickScript;
+
+  /// No description provided for @demoQuickVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a weekend video'**
+  String get demoQuickVideo;
+
+  /// No description provided for @demoQuickAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Create afternoon music'**
+  String get demoQuickAudio;
+
+  /// No description provided for @demoReply.
+  ///
+  /// In en, this message translates to:
+  /// **'This could become a warm short film.\\n\\n**Three ideas**\\n1. An unexpected reunion at a cafe\\n2. Walking home before graduation\\n3. A letter that arrived years late\\n\\nWhich shall we develop?'**
+  String get demoReply;
+
+  /// No description provided for @demoImageReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Your scene images are ready. How do you like this look?'**
+  String get demoImageReply;
+
+  /// No description provided for @demoScriptReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Your script and storyboard are ready.'**
+  String get demoScriptReply;
+
+  /// No description provided for @demoAudioReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Your afternoon music is ready.'**
+  String get demoAudioReply;
+
+  /// No description provided for @demoVideoReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Your weekend video is ready.'**
+  String get demoVideoReply;
+
+  /// No description provided for @demoWelcomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, creator'**
+  String get demoWelcomeTitle;
+
+  /// No description provided for @demoWelcomeCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Before we begin,\ntell me what you\nwould like to create.'**
+  String get demoWelcomeCopy;
+
+  /// No description provided for @demoStartIp.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a new IP account'**
+  String get demoStartIp;
+
+  /// No description provided for @demoStartRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with a character'**
+  String get demoStartRole;
+
+  /// No description provided for @demoStartIdea.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with an idea'**
+  String get demoStartIdea;
+
+  /// No description provided for @demoStartChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s chat first'**
+  String get demoStartChat;
+
+  /// No description provided for @demoReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset demo data'**
+  String get demoReset;
+
+  /// No description provided for @demoResetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore the original conversations and assets and clear your demo edits?'**
+  String get demoResetDescription;
+
+  /// No description provided for @demoResetDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo data restored'**
+  String get demoResetDone;
+
+  /// No description provided for @demoStorageError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save locally. Please try again.'**
+  String get demoStorageError;
+
+  /// No description provided for @demoDeleteDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this item?'**
+  String get demoDeleteDescription;
+
+  /// No description provided for @demoUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get demoUpdated;
+
+  /// No description provided for @demoNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Just now'**
+  String get demoNow;
+
+  /// No description provided for @demoPlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get demoPlayback;
+
+  /// No description provided for @demoPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get demoPause;
+
+  /// No description provided for @demoSeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback position'**
+  String get demoSeek;
+
+  /// No description provided for @demoReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get demoReplay;
+
+  /// No description provided for @demoReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Image / Reference'**
+  String get demoReference;
+
+  /// No description provided for @demoImageMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Image / 9:16'**
+  String get demoImageMeta;
+
+  /// No description provided for @demoScriptMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Script/MD'**
+  String get demoScriptMeta;
+
+  /// No description provided for @demoAudioMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio/00:24'**
+  String get demoAudioMeta;
+
+  /// No description provided for @demoVideoMeta.
+  ///
+  /// In en, this message translates to:
+  /// **'Video / 00:08'**
+  String get demoVideoMeta;
+
+  /// No description provided for @demoAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Add material'**
+  String get demoAttachments;
+
+  /// No description provided for @demoRemoveAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove material'**
+  String get demoRemoveAttachment;
+
+  /// No description provided for @demoChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Select members'**
+  String get demoChoose;
+
+  /// No description provided for @demoProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get demoProfile;
+
+  /// No description provided for @demoMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get demoMembers;
+
+  /// No description provided for @demoRoleBio.
+  ///
+  /// In en, this message translates to:
+  /// **'Loves life and turns everyday moments into warm stories.'**
+  String get demoRoleBio;
+
+  /// No description provided for @demoAddSkill.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a skill'**
+  String get demoAddSkill;
+
+  /// No description provided for @demoGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating'**
+  String get demoGenerating;
+
+  /// No description provided for @demoNewRoleName.
+  ///
+  /// In en, this message translates to:
+  /// **'Character name'**
+  String get demoNewRoleName;
+
+  /// No description provided for @demoSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get demoSend;
+
+  /// No description provided for @demoSessionName.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation name'**
+  String get demoSessionName;
+
+  /// No description provided for @demoRoleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters'**
+  String demoRoleCount(int count);
+
+  /// No description provided for @demoSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected {count}/{total}'**
+  String demoSelectedCount(int count, int total);
+
+  /// No description provided for @demoSelectMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Select members'**
+  String get demoSelectMembers;
+
+  /// No description provided for @demoEditMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit member'**
+  String get demoEditMember;
+
+  /// No description provided for @demoMyName.
+  ///
+  /// In en, this message translates to:
+  /// **'My name'**
+  String get demoMyName;
+
+  /// No description provided for @demoMyAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'My appearance'**
+  String get demoMyAppearance;
+
+  /// No description provided for @demoRandomAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggest another'**
+  String get demoRandomAppearance;
+
+  /// No description provided for @demoAvatarNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar {number}'**
+  String demoAvatarNumber(int number);
+
+  /// No description provided for @demoBackgroundColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Background color'**
+  String get demoBackgroundColor;
+
+  /// No description provided for @demoProfileLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get demoProfileLink;
+
+  /// No description provided for @demoEnabledItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled skills'**
+  String get demoEnabledItems;
+
+  /// No description provided for @demoCharacterDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the character identity and look'**
+  String get demoCharacterDetail;
+
+  /// No description provided for @demoScriptDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn ideas into a complete plan'**
+  String get demoScriptDetail;
+
+  /// No description provided for @demoImageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create character and scene images'**
+  String get demoImageDetail;
+
+  /// No description provided for @demoVideoDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create videos ready to publish'**
+  String get demoVideoDetail;
+
+  /// No description provided for @demoAudioDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create voices, music and sound effects'**
+  String get demoAudioDetail;
+
+  /// No description provided for @demoUploadLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload to asset library'**
+  String get demoUploadLibrary;
+
+  /// No description provided for @demoSelectFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Select files'**
+  String get demoSelectFiles;
+
+  /// No description provided for @demoFileTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Images, videos, scripts, audio'**
+  String get demoFileTypes;
+
+  /// No description provided for @demoSelectedFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files selected'**
+  String demoSelectedFiles(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -7,13 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       build_environment:
-        description: Build environment (dev uses the test server)
+        description: Build variant (dev uses the test server; demo uses offline Mock UI)
         required: true
         default: production
         type: choice
         options:
           - production
           - dev
+          - demo
       build_android:
         description: Build Android APK
         required: true
@@ -34,8 +35,9 @@ permissions:
   contents: read
 
 env:
-  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && 'development' || 'production' }}
-  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
+  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
@@ -121,7 +123,7 @@ jobs:
           EOF
 
       - name: Build signed release APK
-        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release
+        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release --target="$BUILD_TARGET"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -277,6 +279,7 @@ jobs:
           echo "Building iOS IPA $build_name ($build_number)"
           dart run tool/flutter_env.dart "$FLUTTER_ENV" build ipa \
             --release \
+            --target="$BUILD_TARGET" \
             --build-name="$build_name" \
             --build-number="$build_number" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"

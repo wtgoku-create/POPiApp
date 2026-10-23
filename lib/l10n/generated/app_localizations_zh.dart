@@ -3196,4 +3196,421 @@ class AppLocalizationsZh extends AppLocalizations {
   String chatEstimatedPoints(String points) {
     return '预计消耗 $points 积分';
   }
+
+  @override
+  String get demoConversations => '会话';
+
+  @override
+  String get demoAssets => '资产';
+
+  @override
+  String get demoSearchHistory => '搜索对话历史';
+
+  @override
+  String get demoSearchAssets => '搜索资产名称';
+
+  @override
+  String get demoProject => '项目';
+
+  @override
+  String get demoConversation => '对话';
+
+  @override
+  String get demoWorkflow => '工作流';
+
+  @override
+  String get demoNew => '新建会话';
+
+  @override
+  String get demoSettings => '会话设置';
+
+  @override
+  String get demoInfo => '信息';
+
+  @override
+  String get demoCapabilities => '能力';
+
+  @override
+  String get demoOutputs => '产物';
+
+  @override
+  String get demoLinkedRoles => '关联角色';
+
+  @override
+  String get demoAddMembers => '添加成员';
+
+  @override
+  String get demoMemberProfile => '机器人档案';
+
+  @override
+  String get demoRoleProfile => '角色档案';
+
+  @override
+  String get demoPopi => 'POPi';
+
+  @override
+  String get demoDesigner => '角色设计师';
+
+  @override
+  String get demoWriter => '特级编导';
+
+  @override
+  String get demoDirector => '金牌导演';
+
+  @override
+  String get demoSound => '声音达人';
+
+  @override
+  String get demoPopiDescription => '图文视频皆可的多元创作助手';
+
+  @override
+  String get demoDesignerDescription => '生成 IP 形象、创意角色与场景图片';
+
+  @override
+  String get demoWriterDescription => '编写剧情脚本，把想法整理成方案';
+
+  @override
+  String get demoDirectorDescription => '制作动态影像、可发布的媒体成片';
+
+  @override
+  String get demoSoundDescription => '生成配音、轻音乐、歌曲与音效';
+
+  @override
+  String get demoRename => '重命名会话';
+
+  @override
+  String get demoName => '名称';
+
+  @override
+  String get demoPreferences => '账号偏好';
+
+  @override
+  String get demoDirection => '内容方向';
+
+  @override
+  String get demoFeeling => '观众感受';
+
+  @override
+  String get demoFeelingValue => '主感受真实，次感受略带泪目';
+
+  @override
+  String get demoFormat => '表现形式';
+
+  @override
+  String get demoFormatValue => 'AI 真人视觉风格 × 剧情短片';
+
+  @override
+  String get demoAudience => '目标受众';
+
+  @override
+  String get demoAudienceValue => '学生群体 × 职场人群';
+
+  @override
+  String get demoPositioning => '账号定位';
+
+  @override
+  String get demoCharacterSkill => '角色设定';
+
+  @override
+  String get demoScriptSkill => '脚本与分镜';
+
+  @override
+  String get demoImageSkill => '图片生成';
+
+  @override
+  String get demoVideoSkill => '视频生成';
+
+  @override
+  String get demoAudioSkill => '音频生成';
+
+  @override
+  String get demoEnabledHere => '本会话已启用';
+
+  @override
+  String get demoWorkMode => '工作方式';
+
+  @override
+  String get demoOnDemand => '按需调用';
+
+  @override
+  String get demoOfficialRoles => '官方角色';
+
+  @override
+  String get demoMyRoles => '我的角色';
+
+  @override
+  String get demoCreateRole => '创建角色';
+
+  @override
+  String get demoJoin => '加入创作';
+
+  @override
+  String get demoNoRoles => '尚未关联角色';
+
+  @override
+  String get demoNoResults => '暂无匹配结果';
+
+  @override
+  String get demoEmptyAssets => '暂无资产';
+
+  @override
+  String get demoEmptyConversations => '暂无会话';
+
+  @override
+  String get demoAll => '全部';
+
+  @override
+  String get demoImages => '图片';
+
+  @override
+  String get demoVideos => '视频';
+
+  @override
+  String get demoScripts => '脚本';
+
+  @override
+  String get demoAudio => '音频';
+
+  @override
+  String get demoUpload => '上传素材';
+
+  @override
+  String get demoSampleLibrary => '素材库';
+
+  @override
+  String get demoImport => '导入';
+
+  @override
+  String get demoImported => '素材已加入资产库';
+
+  @override
+  String get demoAssetDetails => '资产详情';
+
+  @override
+  String get demoRenameAsset => '重命名资产';
+
+  @override
+  String get demoAudioDetails => '音频详情';
+
+  @override
+  String get demoAudioBackward => '后退15秒';
+
+  @override
+  String get demoAudioForward => '前进15秒';
+
+  @override
+  String get demoGenerated => '生成完成';
+
+  @override
+  String get demoComposer => '跟 POPi 说点什么…';
+
+  @override
+  String get demoGreeting => '嗨，用户～';
+
+  @override
+  String get demoGreetingDetail => '告诉我，你现在最想做什么？';
+
+  @override
+  String get demoDisclaimer => 'AI 生成结果可能有误，仅供参考';
+
+  @override
+  String get demoThinking => 'POPi 正在思考…';
+
+  @override
+  String get demoVoice => '让爱丽丝在奶茶店遇见一位老朋友。';
+
+  @override
+  String get demoQuickImage => '批量生成五张场景图';
+
+  @override
+  String get demoQuickScript => '写一段重逢的脚本';
+
+  @override
+  String get demoQuickVideo => '生成一个周末出游视频';
+
+  @override
+  String get demoQuickAudio => '生成一段午后轻音乐';
+
+  @override
+  String get demoReply =>
+      '可以把这个想法拍成一个温暖的短片。\\n\\n**三个选题**\\n1. 奶茶店里意外重逢的老朋友\\n2. 毕业前最后一次放学同行\\n3. 一封迟到很多年的信\\n\\n你想先展开哪一个？';
+
+  @override
+  String get demoImageReply => '场景图已生成，你看看这个造型喜欢吗？';
+
+  @override
+  String get demoScriptReply => '脚本与分镜已整理好。';
+
+  @override
+  String get demoAudioReply => '午后的轻音乐已生成。';
+
+  @override
+  String get demoVideoReply => '周末出游成片已生成。';
+
+  @override
+  String get demoWelcomeTitle => '嗨，逍遥的小柯子～';
+
+  @override
+  String get demoWelcomeCopy => '在创建会话之前\n请告诉我：\n你现在最想做什么？';
+
+  @override
+  String get demoStartIp => '做一个新IP账号';
+
+  @override
+  String get demoStartRole => '从DIY一个角色开始';
+
+  @override
+  String get demoStartIdea => '从一个想法或选题开始';
+
+  @override
+  String get demoStartChat => '我还没想好，先聊聊';
+
+  @override
+  String get demoReset => '恢复演示数据';
+
+  @override
+  String get demoResetDescription => '恢复初始会话和资产，清除本次演示中的修改？';
+
+  @override
+  String get demoResetDone => '已恢复初始数据';
+
+  @override
+  String get demoStorageError => '本地保存失败，请再次操作';
+
+  @override
+  String get demoDeleteDescription => '确认删除这条记录？';
+
+  @override
+  String get demoUpdated => '已保存';
+
+  @override
+  String get demoNow => '刚刚';
+
+  @override
+  String get demoPlayback => '播放';
+
+  @override
+  String get demoPause => '暂停';
+
+  @override
+  String get demoSeek => '播放位置';
+
+  @override
+  String get demoReplay => '重新播放';
+
+  @override
+  String get demoReference => '图片 / 参考';
+
+  @override
+  String get demoImageMeta => '图片 / 9:16';
+
+  @override
+  String get demoScriptMeta => '脚本/MD';
+
+  @override
+  String get demoAudioMeta => '音频/00:24';
+
+  @override
+  String get demoVideoMeta => '视频 / 00:08';
+
+  @override
+  String get demoAttachments => '添加素材';
+
+  @override
+  String get demoRemoveAttachment => '移除素材';
+
+  @override
+  String get demoChoose => '选择成员';
+
+  @override
+  String get demoProfile => '个人资料';
+
+  @override
+  String get demoMembers => '成员';
+
+  @override
+  String get demoRoleBio => '热爱生活，喜欢把平凡的日常变成温暖的故事。';
+
+  @override
+  String get demoAddSkill => '添加能力';
+
+  @override
+  String get demoGenerating => '正在创作';
+
+  @override
+  String get demoNewRoleName => '角色名称';
+
+  @override
+  String get demoSend => '发送';
+
+  @override
+  String get demoSessionName => '会话名称';
+
+  @override
+  String demoRoleCount(int count) {
+    return '$count人';
+  }
+
+  @override
+  String demoSelectedCount(int count, int total) {
+    return '已选 $count/$total';
+  }
+
+  @override
+  String get demoSelectMembers => '选择成员';
+
+  @override
+  String get demoEditMember => '编辑成员';
+
+  @override
+  String get demoMyName => '我的名字';
+
+  @override
+  String get demoMyAppearance => '我的样子';
+
+  @override
+  String get demoRandomAppearance => '随机推荐';
+
+  @override
+  String demoAvatarNumber(int number) {
+    return '头像 $number';
+  }
+
+  @override
+  String get demoBackgroundColor => '背景颜色';
+
+  @override
+  String get demoProfileLink => '档案';
+
+  @override
+  String get demoEnabledItems => '启用项';
+
+  @override
+  String get demoCharacterDetail => '沿用 IP 人设与形象';
+
+  @override
+  String get demoScriptDetail => '把想法整理成完整方案';
+
+  @override
+  String get demoImageDetail => '创作角色图与场景图';
+
+  @override
+  String get demoVideoDetail => '制作可发布短视频平台的作品';
+
+  @override
+  String get demoAudioDetail => '生成配音、轻音乐、歌曲与音效';
+
+  @override
+  String get demoUploadLibrary => '上传到官方资产库';
+
+  @override
+  String get demoSelectFiles => '点击选择文件';
+
+  @override
+  String get demoFileTypes => '图片、视频、脚本、音频';
+
+  @override
+  String demoSelectedFiles(int count) {
+    return '已选择 $count 个文件';
+  }
 }

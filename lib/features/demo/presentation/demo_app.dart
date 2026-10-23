@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:toastification/toastification.dart';
+
+import '../../../app/theme.dart';
+import '../../../app/router.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/providers/storage_provider.dart';
+import '../../../shared/providers/settings_provider.dart';
+import '../../../shared/providers/user_provider.dart';
+import '../../../shared/widgets/app_keyboard_dismiss.dart';
+import '../data/demo_repository.dart';
+import 'demo_home_page.dart';
+
+/// Mock creation flows share the existing account pages and local preferences.
+class DemoApp extends ConsumerStatefulWidget {
+  const DemoApp({this.locale = const Locale('zh'), super.key});
+  final Locale locale;
+  @override
+  ConsumerState<DemoApp> createState() => _DemoAppState();
+}
+
+class _DemoAppState extends ConsumerState<DemoApp> {
+  late final _repository = DemoRepository(ref.read(preferencesStorageProvider))
+    ..restore();
+  late final _router = createAppRouter(
+    homeBuilder: (_, _) => DemoHomePage(repository: _repository),
+  );
+  @override
+  void dispose() {
+    _router.dispose();
+    _repository.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(userBootstrapProvider);
+    return ToastificationWrapper(
+      child: MaterialApp.router(
+        routerConfig: _router,
+        title: 'POPi',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light.copyWith(
+          scaffoldBackgroundColor: AppColors.profileBackground,
+          appBarTheme: AppTheme.light.appBarTheme.copyWith(
+            backgroundColor: AppColors.profileBackground,
+          ),
+        ),
+        darkTheme: AppTheme.dark,
+        themeMode: ref.watch(themeModeProvider),
+        locale: ref.watch(localeProvider) ?? widget.locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        builder: (_, child) => AppKeyboardDismiss(child: child!),
+      ),
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/assets/presentation/assets_page.dart';
@@ -30,13 +31,20 @@ import '../features/payments/domain/mobile_payment.dart';
 import '../features/payments/presentation/android_payment_page.dart';
 
 final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
+  return createAppRouter();
+});
+
+/// Demo and production share the same profile and account destinations.
+GoRouter createAppRouter({
+  Widget Function(BuildContext, GoRouterState)? homeBuilder,
+}) {
   return GoRouter(
     initialLocation: '/',
     routes: [
       // Keep home beneath every destination, including direct links.
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomePage(),
+        builder: homeBuilder ?? (context, state) => const HomePage(),
         routes: [
           GoRoute(
             path: 'activities',
@@ -190,4 +198,4 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
     ],
   );
-});
+}

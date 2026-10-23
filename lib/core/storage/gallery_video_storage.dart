@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:gal/gal.dart';
+import 'package:flutter/services.dart';
 
 import 'gallery_image_storage.dart';
 
@@ -35,7 +36,15 @@ abstract final class GalleryVideoStorage {
           ? extension
           : 'mp4';
       final path = '${directory.path}/POPi_video.$suffix';
-      await dio.download(url.toString(), path, cancelToken: cancelToken);
+      if (url.scheme == 'asset') {
+        final bytes = await rootBundle.load(url.path);
+        if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
+        await File(path).writeAsBytes(
+          bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+        );
+      } else {
+        await dio.download(url.toString(), path, cancelToken: cancelToken);
+      }
       return await action(path);
     } finally {
       dio.close(force: true);

@@ -189,6 +189,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.running = false,
     this.conversationMode = false,
     this.sessionLayout = false,
+    this.bottomPadding,
     this.onStop,
     this.castRoles,
     this.onCastRequested,
@@ -222,6 +223,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   /// Session screens use the compact Figma insets, including above the keyboard.
   final bool sessionLayout;
+
+  /// Overrides the bottom inset when the host already handles safe areas.
+  final double? bottomPadding;
   final VoidCallback? onStop;
   final List<LibraryRole>? castRoles;
   final VoidCallback? onCastRequested;
@@ -485,9 +489,11 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final bottomPadding = widget.sessionLayout && keyboardHeight > 0
-        ? 10.0
-        : math.max(safeArea.bottom - keyboardHeight, 20).toDouble();
+    final bottomPadding =
+        widget.bottomPadding ??
+        (widget.sessionLayout && keyboardHeight > 0
+            ? 10.0
+            : math.max(safeArea.bottom - keyboardHeight, 20).toDouble());
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImages = widget.selectedImages.isNotEmpty;

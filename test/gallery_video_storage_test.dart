@@ -81,6 +81,30 @@ void main() {
   });
 
   test(
+    'bundled video exports original bytes and cleans up without HTTP',
+    () async {
+      final assetUrl = Uri(
+        scheme: 'asset',
+        path: 'assets/images/demo_video.mp4',
+      );
+      final original = await rootBundle.load(assetUrl.path);
+      String? temporary;
+      await GalleryVideoStorage.withDownloadedVideo(assetUrl, (path) async {
+        temporary = path;
+        expect(
+          await File(path).readAsBytes(),
+          original.buffer.asUint8List(
+            original.offsetInBytes,
+            original.lengthInBytes,
+          ),
+        );
+      });
+      expect(requests, isEmpty);
+      expect(await File(temporary!).parent.exists(), false);
+    },
+  );
+
+  test(
     'HTTP failure does not save and a subsequent download can succeed',
     () async {
       status = HttpStatus.internalServerError;

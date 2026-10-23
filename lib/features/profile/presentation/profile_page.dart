@@ -15,7 +15,6 @@ import '../../../shared/type/social_app_type.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/purchase_catalog_repository.dart';
 import '../data/social_app_binding_repository.dart';
 import 'points_details_page.dart';
@@ -82,10 +81,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       backgroundColor: Theme.of(context).brightness == Brightness.light
           ? AppColors.profileBackground
           : colorScheme.surface,
-      drawer: const PopiNavigationDrawer(),
       body: Column(
         children: [
-          const ProfileTopBar(showNavigation: true),
+          const ProfileTopBar(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),

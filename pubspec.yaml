@@ -68,3 +68,5 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+  shaders:
+    - assets/shaders/demo_backdrop_fade.frag

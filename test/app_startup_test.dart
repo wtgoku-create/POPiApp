@@ -156,7 +156,7 @@ void main() {
     expect(find.byType(LoginPage), findsNothing);
   });
 
-  testWidgets('drawer routes replace the root and keep the drawer accessible', (
+  testWidgets('profile from drawer returns home with back button', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -193,9 +193,7 @@ void main() {
     final profileContext = tester.element(find.byType(ProfilePage));
     expect(Navigator.of(profileContext).canPop(), isTrue);
 
-    await tester.tap(find.byKey(const Key('popi-open-navigation')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('drawer-nav-home')));
+    await tester.tap(find.byKey(const Key('profile-back')));
     await tester.pumpAndSettle();
     expect(find.byType(HomePage), findsOneWidget);
   });

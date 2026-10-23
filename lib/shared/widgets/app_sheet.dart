@@ -20,9 +20,11 @@ class AppSheet {
     bool isDismissible = true,
     bool enableDrag = true,
     bool showDragHandle = true,
+    double maxHeightFraction = maxHeightFactor,
     Color? backgroundColor,
     ShapeBorder? shape,
   }) {
+    assert(maxHeightFraction > 0 && maxHeightFraction <= 1);
     FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context);
     final localizations = MaterialLocalizations.of(context);
@@ -43,6 +45,7 @@ class AppSheet {
         isDismissible: isDismissible,
         enableDrag: enableDrag,
         showDragHandle: showDragHandle,
+        maxHeightFraction: maxHeightFraction,
         backgroundColor: backgroundColor,
         shape: shape,
         sheetConstraints:
@@ -95,6 +98,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
     required super.enableDrag,
     required super.showDragHandle,
     required this.sheetConstraints,
+    required this.maxHeightFraction,
     super.backgroundColor,
     super.shape,
     super.sheetAnimationStyle,
@@ -105,6 +109,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
        );
 
   final BoxConstraints sheetConstraints;
+  final double maxHeightFraction;
   BoxConstraints? _heightConstraints;
 
   @override
@@ -119,7 +124,7 @@ class _AppSheetRoute<T> extends ModalBottomSheetRoute<T> {
     // Recalculate when the viewport changes while the sheet is open.
     _heightConstraints = sheetConstraints.enforce(
       BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * AppSheet.maxHeightFactor,
+        maxHeight: MediaQuery.sizeOf(context).height * maxHeightFraction,
       ),
     );
     return super.buildPage(context, animation, secondaryAnimation);

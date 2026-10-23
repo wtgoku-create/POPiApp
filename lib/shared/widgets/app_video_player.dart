@@ -60,7 +60,9 @@ class _AppVideoPlayerState extends State<AppVideoPlayer>
     final previous = _controller;
     previous?.removeListener(_syncControls);
     _controlsTimer?.cancel();
-    final controller = VideoPlayerController.networkUrl(widget.url);
+    final controller = widget.url.scheme == 'asset'
+        ? VideoPlayerController.asset(widget.url.path)
+        : VideoPlayerController.networkUrl(widget.url);
     controller.addListener(_syncControls);
     setState(() {
       _controller = controller;

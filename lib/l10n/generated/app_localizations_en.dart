@@ -3344,4 +3344,427 @@ class AppLocalizationsEn extends AppLocalizations {
   String chatEstimatedPoints(String points) {
     return 'Estimated cost: $points points';
   }
+
+  @override
+  String get demoConversations => 'Conversations';
+
+  @override
+  String get demoAssets => 'Assets';
+
+  @override
+  String get demoSearchHistory => 'Search conversations';
+
+  @override
+  String get demoSearchAssets => 'Search assets';
+
+  @override
+  String get demoProject => 'Project';
+
+  @override
+  String get demoConversation => 'Chat';
+
+  @override
+  String get demoWorkflow => 'Workflow';
+
+  @override
+  String get demoNew => 'New conversation';
+
+  @override
+  String get demoSettings => 'Conversation settings';
+
+  @override
+  String get demoInfo => 'Info';
+
+  @override
+  String get demoCapabilities => 'Skills';
+
+  @override
+  String get demoOutputs => 'Outputs';
+
+  @override
+  String get demoLinkedRoles => 'Linked characters';
+
+  @override
+  String get demoAddMembers => 'Add members';
+
+  @override
+  String get demoMemberProfile => 'Assistant profile';
+
+  @override
+  String get demoRoleProfile => 'Character profile';
+
+  @override
+  String get demoPopi => 'POPi';
+
+  @override
+  String get demoDesigner => 'Character designer';
+
+  @override
+  String get demoWriter => 'Script writer';
+
+  @override
+  String get demoDirector => 'Film director';
+
+  @override
+  String get demoSound => 'Sound creator';
+
+  @override
+  String get demoPopiDescription =>
+      'A creative assistant for images, stories and video';
+
+  @override
+  String get demoDesignerDescription => 'Create characters and scene images';
+
+  @override
+  String get demoWriterDescription => 'Turn ideas into scripts and storyboards';
+
+  @override
+  String get demoDirectorDescription =>
+      'Create moving images and finished videos';
+
+  @override
+  String get demoSoundDescription => 'Create voices, music and sound effects';
+
+  @override
+  String get demoRename => 'Rename conversation';
+
+  @override
+  String get demoName => 'Name';
+
+  @override
+  String get demoPreferences => 'Account preferences';
+
+  @override
+  String get demoDirection => 'Content direction';
+
+  @override
+  String get demoFeeling => 'Audience feeling';
+
+  @override
+  String get demoFeelingValue => 'Authentic, with a little tenderness';
+
+  @override
+  String get demoFormat => 'Format';
+
+  @override
+  String get demoFormatValue => 'AI realism × short stories';
+
+  @override
+  String get demoAudience => 'Audience';
+
+  @override
+  String get demoAudienceValue => 'Students and working professionals';
+
+  @override
+  String get demoPositioning => 'Account positioning';
+
+  @override
+  String get demoCharacterSkill => 'Character settings';
+
+  @override
+  String get demoScriptSkill => 'Scripts and storyboards';
+
+  @override
+  String get demoImageSkill => 'Image generation';
+
+  @override
+  String get demoVideoSkill => 'Video generation';
+
+  @override
+  String get demoAudioSkill => 'Audio generation';
+
+  @override
+  String get demoEnabledHere => 'Enabled in this conversation';
+
+  @override
+  String get demoWorkMode => 'Working mode';
+
+  @override
+  String get demoOnDemand => 'On demand';
+
+  @override
+  String get demoOfficialRoles => 'Official';
+
+  @override
+  String get demoMyRoles => 'My characters';
+
+  @override
+  String get demoCreateRole => 'Create character';
+
+  @override
+  String get demoJoin => 'Join creation';
+
+  @override
+  String get demoNoRoles => 'No linked characters';
+
+  @override
+  String get demoNoResults => 'No matching results';
+
+  @override
+  String get demoEmptyAssets => 'No assets yet';
+
+  @override
+  String get demoEmptyConversations => 'No conversations yet';
+
+  @override
+  String get demoAll => 'All';
+
+  @override
+  String get demoImages => 'Images';
+
+  @override
+  String get demoVideos => 'Videos';
+
+  @override
+  String get demoScripts => 'Scripts';
+
+  @override
+  String get demoAudio => 'Audio';
+
+  @override
+  String get demoUpload => 'Upload material';
+
+  @override
+  String get demoSampleLibrary => 'Material library';
+
+  @override
+  String get demoImport => 'Import';
+
+  @override
+  String get demoImported => 'Material added to your library';
+
+  @override
+  String get demoAssetDetails => 'Asset details';
+
+  @override
+  String get demoRenameAsset => 'Rename asset';
+
+  @override
+  String get demoAudioDetails => 'Audio details';
+
+  @override
+  String get demoAudioBackward => 'Back 15 seconds';
+
+  @override
+  String get demoAudioForward => 'Forward 15 seconds';
+
+  @override
+  String get demoGenerated => 'Completed';
+
+  @override
+  String get demoComposer => 'Say something to POPi…';
+
+  @override
+  String get demoGreeting => 'Hi there';
+
+  @override
+  String get demoGreetingDetail => 'What would you like to create?';
+
+  @override
+  String get demoDisclaimer => 'AI-generated results may contain errors';
+
+  @override
+  String get demoThinking => 'POPi is thinking…';
+
+  @override
+  String get demoVoice => 'Let Alice meet an old friend at a cafe.';
+
+  @override
+  String get demoQuickImage => 'Generate five scene images';
+
+  @override
+  String get demoQuickScript => 'Write a reunion script';
+
+  @override
+  String get demoQuickVideo => 'Create a weekend video';
+
+  @override
+  String get demoQuickAudio => 'Create afternoon music';
+
+  @override
+  String get demoReply =>
+      'This could become a warm short film.\\n\\n**Three ideas**\\n1. An unexpected reunion at a cafe\\n2. Walking home before graduation\\n3. A letter that arrived years late\\n\\nWhich shall we develop?';
+
+  @override
+  String get demoImageReply =>
+      'Your scene images are ready. How do you like this look?';
+
+  @override
+  String get demoScriptReply => 'Your script and storyboard are ready.';
+
+  @override
+  String get demoAudioReply => 'Your afternoon music is ready.';
+
+  @override
+  String get demoVideoReply => 'Your weekend video is ready.';
+
+  @override
+  String get demoWelcomeTitle => 'Hi, creator';
+
+  @override
+  String get demoWelcomeCopy =>
+      'Before we begin,\ntell me what you\nwould like to create.';
+
+  @override
+  String get demoStartIp => 'Create a new IP account';
+
+  @override
+  String get demoStartRole => 'Start with a character';
+
+  @override
+  String get demoStartIdea => 'Start with an idea';
+
+  @override
+  String get demoStartChat => 'Let\'s chat first';
+
+  @override
+  String get demoReset => 'Reset demo data';
+
+  @override
+  String get demoResetDescription =>
+      'Restore the original conversations and assets and clear your demo edits?';
+
+  @override
+  String get demoResetDone => 'Demo data restored';
+
+  @override
+  String get demoStorageError => 'Could not save locally. Please try again.';
+
+  @override
+  String get demoDeleteDescription => 'Delete this item?';
+
+  @override
+  String get demoUpdated => 'Saved';
+
+  @override
+  String get demoNow => 'Just now';
+
+  @override
+  String get demoPlayback => 'Play';
+
+  @override
+  String get demoPause => 'Pause';
+
+  @override
+  String get demoSeek => 'Playback position';
+
+  @override
+  String get demoReplay => 'Replay';
+
+  @override
+  String get demoReference => 'Image / Reference';
+
+  @override
+  String get demoImageMeta => 'Image / 9:16';
+
+  @override
+  String get demoScriptMeta => 'Script/MD';
+
+  @override
+  String get demoAudioMeta => 'Audio/00:24';
+
+  @override
+  String get demoVideoMeta => 'Video / 00:08';
+
+  @override
+  String get demoAttachments => 'Add material';
+
+  @override
+  String get demoRemoveAttachment => 'Remove material';
+
+  @override
+  String get demoChoose => 'Select members';
+
+  @override
+  String get demoProfile => 'Profile';
+
+  @override
+  String get demoMembers => 'Members';
+
+  @override
+  String get demoRoleBio =>
+      'Loves life and turns everyday moments into warm stories.';
+
+  @override
+  String get demoAddSkill => 'Add a skill';
+
+  @override
+  String get demoGenerating => 'Creating';
+
+  @override
+  String get demoNewRoleName => 'Character name';
+
+  @override
+  String get demoSend => 'Send';
+
+  @override
+  String get demoSessionName => 'Conversation name';
+
+  @override
+  String demoRoleCount(int count) {
+    return '$count characters';
+  }
+
+  @override
+  String demoSelectedCount(int count, int total) {
+    return 'Selected $count/$total';
+  }
+
+  @override
+  String get demoSelectMembers => 'Select members';
+
+  @override
+  String get demoEditMember => 'Edit member';
+
+  @override
+  String get demoMyName => 'My name';
+
+  @override
+  String get demoMyAppearance => 'My appearance';
+
+  @override
+  String get demoRandomAppearance => 'Suggest another';
+
+  @override
+  String demoAvatarNumber(int number) {
+    return 'Avatar $number';
+  }
+
+  @override
+  String get demoBackgroundColor => 'Background color';
+
+  @override
+  String get demoProfileLink => 'Profile';
+
+  @override
+  String get demoEnabledItems => 'Enabled skills';
+
+  @override
+  String get demoCharacterDetail => 'Keep the character identity and look';
+
+  @override
+  String get demoScriptDetail => 'Turn ideas into a complete plan';
+
+  @override
+  String get demoImageDetail => 'Create character and scene images';
+
+  @override
+  String get demoVideoDetail => 'Create videos ready to publish';
+
+  @override
+  String get demoAudioDetail => 'Create voices, music and sound effects';
+
+  @override
+  String get demoUploadLibrary => 'Upload to asset library';
+
+  @override
+  String get demoSelectFiles => 'Select files';
+
+  @override
+  String get demoFileTypes => 'Images, videos, scripts, audio';
+
+  @override
+  String demoSelectedFiles(int count) {
+    return '$count files selected';
+  }
 }
