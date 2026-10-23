@@ -50,5 +50,7 @@ BOT_AVATAR_QA_DIR=build/bot-avatar-qa flutter test test/app_bot_avatar_test.dart
 ```
 
 The test loads all embedded images, renders every character, checks nonblank
-frames, blink changes and matching loop endpoints, and exercises reduced motion
-and character switching. The contact sheet is `build/bot-avatar-qa/all-characters.png`.
+frames and blink changes, and exercises reduced motion and character switching.
+Loop keyframes must match exactly and hold through the final displayed frame.
+Rendered loop endpoints allow at most one 8-bit channel value of rounding error
+between rasterizers. The contact sheet is `build/bot-avatar-qa/all-characters.png`.

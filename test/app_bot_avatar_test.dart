@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lottie/lottie.dart';
 import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
@@ -16,6 +18,14 @@ void main() {
         final canvas = Canvas(recorder);
         canvas.drawColor(const Color(0xFFF1F3F4), BlendMode.src);
         for (final (index, character) in BotAvatarCharacter.values.indexed) {
+          final animation =
+              jsonDecode(await rootBundle.loadString(character.animationAsset))
+                  as Map<String, Object?>;
+          _expectClosedTracks(
+            animation,
+            character.name,
+            (animation['op'] as num).toDouble(),
+          );
           final composition = await AssetLottie(
             character.animationAsset,
           ).load();
@@ -28,7 +38,18 @@ void main() {
           final blink = await _render(drawable, 2.8 / 8);
           final loop = await _render(drawable, 1);
           expect(first, isNot(orderedEquals(blink)), reason: character.name);
-          expect(first, orderedEquals(loop), reason: '${character.name} loop');
+          expect(loop.length, first.length);
+          var maxChannelDelta = 0;
+          for (var i = 0; i < first.length; i++) {
+            final delta = (first[i] - loop[i]).abs();
+            if (delta > maxChannelDelta) maxChannelDelta = delta;
+          }
+          // Rasterizers can round identical keyframes to adjacent 8-bit values.
+          expect(
+            maxChannelDelta,
+            lessThanOrEqualTo(1),
+            reason: '${character.name} loop channel delta',
+          );
           final opaquePixels = first.where((byte) => byte > 0).length;
           expect(opaquePixels, greaterThan(10000), reason: character.name);
           drawable.setProgress(0);
@@ -101,6 +122,33 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     expect(tester.takeException(), isNull);
   });
+}
+
+void _expectClosedTracks(Object? node, String path, double endFrame) {
+  if (node is Map<String, Object?>) {
+    if (node['a'] == 1 && node['k'] is List<Object?>) {
+      final frames = node['k'] as List<Object?>;
+      expect(frames.length, greaterThanOrEqualTo(2), reason: path);
+      final first = frames.first as Map<String, Object?>;
+      final last = frames.last as Map<String, Object?>;
+      final held = frames[frames.length - 2] as Map<String, Object?>;
+      expect(last['s'], first['s'], reason: '$path endpoints');
+      expect(held['s'], first['s'], reason: '$path final hold');
+      expect(
+        (held['t'] as num).toDouble(),
+        lessThanOrEqualTo(endFrame - 1),
+        reason: '$path holds through the final displayed frame',
+      );
+      return;
+    }
+    for (final entry in node.entries) {
+      _expectClosedTracks(entry.value, '$path.${entry.key}', endFrame);
+    }
+  } else if (node is List<Object?>) {
+    for (var i = 0; i < node.length; i++) {
+      _expectClosedTracks(node[i], '$path[$i]', endFrame);
+    }
+  }
 }
 
 Future<List<int>> _render(LottieDrawable drawable, double progress) async {
