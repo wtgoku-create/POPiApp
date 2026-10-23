@@ -807,6 +807,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       color: colorScheme.onSurfaceVariant,
       fontSize: placeholderFontSize,
       fontWeight: FontWeight.w400,
+      height: 1.5,
     );
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -835,9 +836,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
           maxLines: expandedEditor ? null : 3,
           expands: expandedEditor,
           cursorColor: colorScheme.primary,
+          textAlignVertical: expandedEditor || _isExpanded
+              ? TextAlignVertical.top
+              : TextAlignVertical.center,
           style: TextStyle(
             color: colorScheme.onSurface,
-            fontSize: expandedEditor || widget.conversationMode ? 18 : 14,
+            fontSize: expandedEditor || (_isExpanded && widget.conversationMode)
+                ? 18
+                : placeholderFontSize,
             fontWeight: FontWeight.w400,
             height: 1.5,
           ),
@@ -1216,7 +1222,7 @@ class _ComposerContent extends StatelessWidget {
               alignment: isExpanded ? Alignment.topLeft : Alignment.centerLeft,
               child: SizedBox(
                 width: double.infinity,
-                height: isExpanded ? expandedInputHeight : 24,
+                height: isExpanded ? expandedInputHeight : null,
                 child: input,
               ),
             ),
