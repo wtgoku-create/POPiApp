@@ -11,7 +11,6 @@ import 'package:popi_ai_app/features/demo/presentation/demo_chat_controller.dart
 import 'package:popi_ai_app/features/demo/presentation/demo_create_session_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
-import 'package:popi_ai_app/shared/widgets/app_bot_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _memberCharacters = <String, BotAvatarCharacter>{
@@ -56,56 +55,53 @@ DemoSession _session({Map<String, String> memberAvatars = const {}}) =>
     );
 
 void main() {
-  testWidgets(
-    'creation picker gives every built-in Bot its own zodiac avatar',
-    (tester) async {
-      tester.view.physicalSize = const Size(402, 874);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      SharedPreferences.setMockInitialValues({});
-      final repository = DemoRepository(
-        PreferencesStorage(await SharedPreferences.getInstance()),
-      )..restore();
-      addTearDown(repository.dispose);
+  testWidgets('direct Popi creation exposes all zodiac avatar choices', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final repository = DemoRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    addTearDown(repository.dispose);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light,
-          locale: const Locale('zh'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: TextButton(
-                onPressed: () => showDemoCreateSessionSheet(
-                  context: context,
-                  repository: repository,
-                  initialTitle: '新的创作组',
-                  kind: DemoSessionKind.project,
-                ),
-                child: const Text('打开'),
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        locale: const Locale('zh'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => showDemoCreateSessionSheet(
+                context: context,
+                repository: repository,
+                kind: DemoSessionKind.project,
               ),
+              child: const Text('打开'),
             ),
           ),
         ),
-      );
-      await tester.tap(find.text('打开'));
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.tap(find.text('打开'));
+    await tester.pumpAndSettle();
 
-      final rendered = <BotAvatarCharacter>[];
-      for (final entry in _memberCharacters.entries) {
-        final row = find.byKey(ValueKey('demo-create-member-${entry.key}'));
-        final avatar = tester.widget<AppBotAvatar>(
-          find.descendant(of: row, matching: find.byType(AppBotAvatar)),
-        );
-        expect(avatar.character, entry.value, reason: entry.key);
-        rendered.add(avatar.character);
-      }
-      expect(rendered.toSet(), hasLength(_memberCharacters.length));
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(find.text('创建新的 Popi'), findsOneWidget);
+    for (final character in BotAvatarCharacter.values) {
+      expect(
+        find.byKey(ValueKey('demo-assistant-avatar-${character.name}')),
+        findsOneWidget,
+        reason: character.name,
+      );
+    }
+    expect(BotAvatarCharacter.values, hasLength(12));
+    expect(tester.takeException(), isNull);
+  });
 
   test('legacy role portraits normalize to stable zodiac defaults only', () {
     for (final entry in _legacyMemberImages.entries) {

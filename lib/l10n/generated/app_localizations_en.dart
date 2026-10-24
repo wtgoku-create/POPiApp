@@ -3864,17 +3864,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoChooseAssistant => 'Choose an assistant';
 
   @override
-  String get demoCreateAssistant => 'Create a new assistant';
+  String get demoCreateAssistant => 'Create a new Popi';
 
   @override
-  String get demoAssistantName => 'Assistant name';
+  String get demoAssistantName => 'Popi name';
 
   @override
   String get demoAssistantInstructions => 'Role and personality';
 
   @override
   String get demoAssistantInstructionsHint =>
-      'Describe responsibilities, communication style, and preferences (optional)';
+      'Describe Popi’s responsibilities, communication style, and preferences (optional)';
 
   @override
   String get demoSingleAssistantNotice =>

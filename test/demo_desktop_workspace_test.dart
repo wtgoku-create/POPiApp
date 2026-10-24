@@ -123,7 +123,7 @@ void main() {
 
     for (final label in [
       localizations.searchConversations,
-      localizations.demoNew,
+      localizations.demoCreateAssistant,
       localizations.demoAssets,
       localizations.demoProfile,
       localizations.demoSettings,

@@ -130,11 +130,9 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
     FocusManager.instance.primaryFocus?.unfocus();
     final sheetContext = _detailNavigatorKey.currentContext;
     if (sheetContext == null || !sheetContext.mounted) return;
-    final l = AppLocalizations.of(sheetContext)!;
     final id = await showDemoCreateSessionSheet(
       context: sheetContext,
       repository: widget.repository,
-      initialTitle: l.demoNew,
       kind: DemoSessionKind.conversation,
     );
     if (id == null || !mounted) return;

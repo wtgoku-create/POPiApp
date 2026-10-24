@@ -131,7 +131,7 @@ class _DemoDesktopSidebarState extends State<DemoDesktopSidebar> {
               onSearchClosed: _clearOrCloseSearch,
               onCreate: widget.onCreate,
               searchTooltip: l.searchConversations,
-              createTooltip: l.demoNew,
+              createTooltip: l.demoCreateAssistant,
             ),
             Expanded(
               child: _SessionList(

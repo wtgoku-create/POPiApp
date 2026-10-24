@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/theme.dart';
 import 'core/config/app_config.dart';
+import 'core/diagnostics/launch_diagnostics.dart';
 import 'core/network/network_agent_api.dart';
 import 'features/demo/data/demo_repository.dart';
 import 'features/demo/presentation/demo_app.dart';
@@ -18,13 +19,20 @@ import 'shared/providers/storage_provider.dart';
 /// Shared native and Web client for local or explicitly configured remote Harness.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  LaunchDiagnostics.mark(LaunchStage.dartBindingReady);
   if (!AppConfig.harnessEnabled) {
     throw StateError(
       'main_harness.dart requires a local or remote Harness transport',
     );
   }
   final preferences = await SharedPreferences.getInstance();
+  LaunchDiagnostics.mark(LaunchStage.preferencesReady);
   await DemoFrostedBackdrop.precache();
+  LaunchDiagnostics.mark(LaunchStage.frostedReady);
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    LaunchDiagnostics.mark(LaunchStage.firstFrame);
+  });
+  LaunchDiagnostics.mark(LaunchStage.runApp);
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
@@ -69,6 +77,7 @@ class _HarnessContentState extends ConsumerState<_HarnessContent> {
   Future<void> _loadRepository() async {
     setState(() => _loadError = null);
     try {
+      LaunchDiagnostics.mark(LaunchStage.repositoryRestore);
       final storage = ref.read(preferencesStorageProvider);
       await DemoRepository.prepareHarnessStorage(storage);
       if (!mounted) return;
@@ -76,6 +85,7 @@ class _HarnessContentState extends ConsumerState<_HarnessContent> {
         storage,
         NetworkAgentApi(ref.read(agentDioProvider)),
       )..restore();
+      LaunchDiagnostics.mark(LaunchStage.repositoryReady);
       if (!mounted) {
         repository.dispose();
         return;

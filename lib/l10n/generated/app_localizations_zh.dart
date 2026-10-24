@@ -3701,16 +3701,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoChooseAssistant => '选择助理';
 
   @override
-  String get demoCreateAssistant => '创建新助理';
+  String get demoCreateAssistant => '创建新的 Popi';
 
   @override
-  String get demoAssistantName => '助理名称';
+  String get demoAssistantName => 'Popi 名称';
 
   @override
   String get demoAssistantInstructions => '职责与个性';
 
   @override
-  String get demoAssistantInstructionsHint => '描述助理的职责、表达风格与协作偏好，可选';
+  String get demoAssistantInstructionsHint => '描述 Popi 的职责、表达风格与协作偏好，可选';
 
   @override
   String get demoSingleAssistantNotice => '当前仅支持选择一名助理';

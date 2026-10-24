@@ -1,8 +1,10 @@
 import 'dart:ui';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/type/bot_avatar_type.dart';
 import '../../../../shared/widgets/app_dialog.dart';
@@ -382,12 +384,14 @@ abstract final class DemoSheet {
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
+    bool enableDrag = true,
   }) {
     final top = MediaQuery.paddingOf(context).top + 60;
     return AppSheet.show<T>(
       context: context,
       useSafeArea: false,
       isScrollControlled: true,
+      enableDrag: enableDrag,
       maxHeightFraction: 1,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
@@ -556,9 +560,16 @@ Future<bool> demoPerform(
   try {
     await action();
     return true;
-  } catch (_) {
+  } catch (error) {
+    if (error is DioException && CancelToken.isCancel(error)) return false;
     if (context.mounted) {
-      AppToast.error(context, AppLocalizations.of(context)!.demoStorageError);
+      final l = AppLocalizations.of(context)!;
+      AppToast.error(
+        context,
+        error is DioException || error is ApiException
+            ? l.networkRequestFailed
+            : l.demoStorageError,
+      );
     }
     return false;
   }

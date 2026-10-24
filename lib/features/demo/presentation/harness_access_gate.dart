@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/diagnostics/launch_diagnostics.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/harness_access_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
@@ -34,6 +35,7 @@ class _HarnessAccessGateState extends ConsumerState<HarnessAccessGate> {
   void initState() {
     super.initState();
     if (ref.read(harnessAccessRequiredProvider)) {
+      LaunchDiagnostics.mark(LaunchStage.accessRestore);
       unawaited(ref.read(harnessAccessProvider.notifier).initialize());
     }
   }
@@ -42,11 +44,13 @@ class _HarnessAccessGateState extends ConsumerState<HarnessAccessGate> {
   Widget build(BuildContext context) {
     final required = ref.watch(harnessAccessRequiredProvider);
     if (!required) {
+      LaunchDiagnostics.mark(LaunchStage.accessAuthenticated);
       return _authenticatedChild ??= widget.authenticatedBuilder(context);
     }
 
     final access = ref.watch(harnessAccessProvider);
     if (access.authenticated) {
+      LaunchDiagnostics.mark(LaunchStage.accessAuthenticated);
       _authenticatedChild ??= KeyedSubtree(
         key: const ValueKey('harness-authenticated-app'),
         child: widget.authenticatedBuilder(context),
@@ -91,6 +95,9 @@ class _HarnessAccessStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final child = authenticatedChild;
+    if (!access.authenticated && !(access.loading && child == null)) {
+      LaunchDiagnostics.mark(LaunchStage.accessLogin);
+    }
     return Stack(
       fit: StackFit.expand,
       children: [

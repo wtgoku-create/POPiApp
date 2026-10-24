@@ -7174,13 +7174,13 @@ abstract class AppLocalizations {
   /// No description provided for @demoCreateAssistant.
   ///
   /// In en, this message translates to:
-  /// **'Create a new assistant'**
+  /// **'Create a new Popi'**
   String get demoCreateAssistant;
 
   /// No description provided for @demoAssistantName.
   ///
   /// In en, this message translates to:
-  /// **'Assistant name'**
+  /// **'Popi name'**
   String get demoAssistantName;
 
   /// No description provided for @demoAssistantInstructions.
@@ -7192,7 +7192,7 @@ abstract class AppLocalizations {
   /// No description provided for @demoAssistantInstructionsHint.
   ///
   /// In en, this message translates to:
-  /// **'Describe responsibilities, communication style, and preferences (optional)'**
+  /// **'Describe Popi’s responsibilities, communication style, and preferences (optional)'**
   String get demoAssistantInstructionsHint;
 
   /// No description provided for @demoSingleAssistantNotice.

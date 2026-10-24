@@ -11,6 +11,7 @@ import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_chat_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_home_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
@@ -18,6 +19,7 @@ Future<T> _pump<T extends DemoRepository>(
   WidgetTester tester,
   Future<T> Function(PreferencesStorage storage) createRepository, {
   Size size = const Size(375, 775),
+  Locale locale = const Locale('zh'),
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -34,7 +36,7 @@ Future<T> _pump<T extends DemoRepository>(
       child: ToastificationWrapper(
         child: MaterialApp(
           theme: AppTheme.light,
-          locale: const Locale('zh'),
+          locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           builder: (context, child) => MediaQuery(
@@ -57,38 +59,20 @@ Future<void> _openCreationSheet(WidgetTester tester) async {
 
 FilledButton _createButton(WidgetTester tester) => tester.widget<FilledButton>(
   find.descendant(
-    of: find.byKey(const Key('demo-create-session-action')),
+    of: find.byKey(const Key('demo-create-assistant-confirm')),
     matching: find.byType(FilledButton),
   ),
 );
 
-Future<void> _scrollToMember(WidgetTester tester, String memberId) async {
-  tester.testTextInput.hide();
-  await tester.pump();
-  final member = find.byKey(ValueKey('demo-create-member-$memberId'));
-  final scrollable = find.descendant(
-    of: find.byKey(const Key('demo-create-session-scroll')),
-    matching: find.byWidgetPredicate(
-      (widget) =>
-          widget is Scrollable && widget.axisDirection == AxisDirection.down,
-    ),
-  );
-  await tester.scrollUntilVisible(member, 180, scrollable: scrollable.first);
-  await tester.pump();
-  final viewportBottom = tester.getBottomRight(scrollable.first).dy;
-  final overlap = tester.getBottomRight(member).dy - viewportBottom;
-  if (overlap > -8) {
-    await tester.drag(scrollable.first, Offset(0, -(overlap + 48)));
-    await tester.pump();
-  }
-}
+class _RetryingCreateRepository extends DemoRepository {
+  _RetryingCreateRepository(super.storage);
 
-class _ControlledCreateRepository extends DemoRepository {
-  _ControlledCreateRepository(super.storage);
-
-  final completer = Completer<String>();
+  final firstAttempt = Completer<String>();
   final finished = Completer<void>();
   int createCalls = 0;
+  String? capturedTitle;
+  DemoSessionKind? capturedKind;
+  List<String>? capturedMembers;
   DemoAssistantProfile? capturedAssistant;
 
   @override
@@ -99,12 +83,23 @@ class _ControlledCreateRepository extends DemoRepository {
     DemoAssistantProfile? assistant,
   }) async {
     createCalls += 1;
+    capturedTitle = title;
+    capturedKind = kind;
+    capturedMembers = members;
     capturedAssistant = assistant;
-    try {
-      return await completer.future;
-    } finally {
-      finished.complete();
+    if (createCalls == 1) {
+      try {
+        return await firstAttempt.future;
+      } finally {
+        finished.complete();
+      }
     }
+    return super.createSession(
+      title,
+      kind,
+      members: members,
+      assistant: assistant,
+    );
   }
 }
 
@@ -112,6 +107,7 @@ class _CapturingCreateRepository extends DemoRepository {
   _CapturingCreateRepository(super.storage);
 
   int createCalls = 0;
+  String? capturedTitle;
   DemoSessionKind? capturedKind;
   List<String>? capturedMembers;
   DemoAssistantProfile? capturedAssistant;
@@ -124,6 +120,7 @@ class _CapturingCreateRepository extends DemoRepository {
     DemoAssistantProfile? assistant,
   }) {
     createCalls += 1;
+    capturedTitle = title;
     capturedKind = kind;
     capturedMembers = members;
     capturedAssistant = assistant;
@@ -150,7 +147,7 @@ void main() {
     }
   });
 
-  testWidgets('new conversation opens the single assistant sheet directly', (
+  testWidgets('mobile new conversation opens the new Popi form directly', (
     tester,
   ) async {
     await _pump(tester, (storage) async => DemoRepository(storage));
@@ -159,44 +156,75 @@ void main() {
     expect(find.byType(DemoHomePage), findsOneWidget);
     expect(
       find.byWidgetPredicate(
-        (widget) => widget is Text && widget.data == '新建会话',
+        (widget) => widget is Text && widget.data == '创建新的 Popi',
       ),
       findsOneWidget,
     );
-    expect(find.text('选择助理'), findsOneWidget);
-    expect(find.text('创建新助理'), findsOneWidget);
-    expect(find.text('当前仅支持选择一名助理'), findsOneWidget);
+    expect(find.text('Popi 名称'), findsOneWidget);
+    expect(find.byKey(const Key('demo-assistant-name')), findsOneWidget);
+    expect(
+      find.byKey(const Key('demo-assistant-instructions')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('demo-create-session-name')), findsNothing);
+    expect(find.byKey(const Key('demo-create-assistant')), findsNothing);
+    expect(find.text('选择助理'), findsNothing);
     expect(tester.getTopLeft(find.byType(BottomSheet)).dy, closeTo(60, 1));
     expect(
       tester
-          .getRect(find.byKey(const Key('demo-create-session-action')))
+          .getRect(find.byKey(const Key('demo-create-assistant-confirm')))
           .bottom,
       lessThanOrEqualTo(755),
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('desktop new button opens the same single assistant sheet', (
+  for (final width in [1200.0, 950.0]) {
+    testWidgets('desktop new button opens the new Popi form at width $width', (
+      tester,
+    ) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        await _pump(
+          tester,
+          (storage) async => DemoRepository(storage),
+          size: Size(width, 775),
+        );
+
+        expect(
+          tester
+              .getSize(find.byKey(const Key('demo-desktop-sidebar-frame')))
+              .width,
+          width >= 1000 ? 280 : 80,
+        );
+        await tester.tap(find.byKey(const Key('demo-desktop-create')).first);
+        await tester.pumpAndSettle();
+
+        expect(find.text('创建新的 Popi'), findsOneWidget);
+        expect(find.byKey(const Key('demo-assistant-name')), findsOneWidget);
+        expect(find.byKey(const Key('demo-create-session-name')), findsNothing);
+        expect(find.text('选择助理'), findsNothing);
+        expect(tester.takeException(), isNull);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  }
+
+  testWidgets('English creation form uses the Popi product language', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    try {
-      await _pump(
-        tester,
-        (storage) async => DemoRepository(storage),
-        size: const Size(1200, 775),
-      );
+    await _pump(
+      tester,
+      (storage) async => DemoRepository(storage),
+      size: const Size(390, 844),
+      locale: const Locale('en'),
+    );
+    await _openCreationSheet(tester);
 
-      await tester.tap(find.byKey(const Key('demo-desktop-create')).first);
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('demo-create-session-name')), findsOneWidget);
-      expect(find.text('选择助理'), findsOneWidget);
-      expect(find.text('创建新助理'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
+    expect(find.text('Create a new Popi'), findsOneWidget);
+    expect(find.text('Popi name'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('cancelling the creation sheet does not create a conversation', (
@@ -208,159 +236,176 @@ void main() {
     );
     final before = repository.sessions.length;
     await _openCreationSheet(tester);
+    await tester.enterText(
+      find.byKey(const Key('demo-assistant-name')),
+      '不要保存',
+    );
+    await tester.enterText(
+      find.byKey(const Key('demo-assistant-instructions')),
+      '这份职责也应该丢弃。',
+    );
+    await tester.tap(
+      find.byKey(const ValueKey('demo-assistant-avatar-rabbit')),
+    );
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     expect(repository.sessions, hasLength(before));
+    expect(
+      repository.assistantProfiles.where((profile) => !profile.isBuiltIn),
+      isEmpty,
+    );
     expect(find.byType(DemoHomePage), findsOneWidget);
     expect(find.byType(BottomSheet), findsNothing);
   });
 
-  testWidgets('assistant selection replaces the previous choice', (
-    tester,
-  ) async {
-    final repository = await _pump(
-      tester,
-      (storage) async => DemoRepository(storage),
-    );
+  testWidgets('empty Popi name disables confirmation', (tester) async {
+    await _pump(tester, (storage) async => DemoRepository(storage));
     await _openCreationSheet(tester);
 
-    final name = find.byKey(const Key('demo-create-session-name'));
-    await tester.enterText(name, '');
-    await tester.pump();
+    final name = find.byKey(const Key('demo-assistant-name'));
     expect(_createButton(tester).onPressed, isNull);
-
-    await tester.enterText(name, '校园生活制作组');
-    await _scrollToMember(tester, 'writer');
-    await tester.tap(find.byKey(const ValueKey('demo-create-member-writer')));
-    await tester.pump();
-    expect(
-      tester
-          .widget<Semantics>(
-            find
-                .ancestor(
-                  of: find.byKey(const ValueKey('demo-create-member-writer')),
-                  matching: find.byType(Semantics),
-                )
-                .first,
-          )
-          .properties
-          .selected,
-      isTrue,
-    );
-    await _scrollToMember(tester, 'sound');
-    await tester.tap(find.byKey(const ValueKey('demo-create-member-sound')));
+    await tester.enterText(name, '一二三四五六七八九十');
     await tester.pump();
     expect(_createButton(tester).onPressed, isNotNull);
-
-    await tester.tap(find.byKey(const Key('demo-create-session-action')));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(DemoChatPage), findsOneWidget);
-    expect(repository.sessions.first.title, '校园生活制作组');
-    expect(repository.sessions.first.members, ['sound']);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('new assistant draft is submitted atomically with one member', (
-    tester,
-  ) async {
-    final repository = await _pump(
-      tester,
-      (storage) async => _CapturingCreateRepository(storage),
-    );
-    await _openCreationSheet(tester);
-
-    await tester.tap(find.byKey(const Key('demo-create-assistant')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('demo-assistant-name')), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('demo-assistant-avatar-rabbit')),
-      findsOneWidget,
-    );
-
-    await tester.enterText(
-      find.byKey(const Key('demo-assistant-name')),
-      '灵感搭档',
-    );
-    await tester.enterText(
-      find.byKey(const Key('demo-assistant-instructions')),
-      '帮我整理图文和视频内容。',
-    );
-    await tester.tap(
-      find.byKey(const ValueKey('demo-assistant-avatar-rabbit')),
-    );
-    final color = find.byKey(const ValueKey('demo-assistant-color-4293188862'));
-    await tester.ensureVisible(color);
-    await tester.pump();
-    await tester.tap(color);
-    await tester.tap(find.byKey(const Key('demo-create-assistant-confirm')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('灵感搭档'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('demo-create-session-action')));
-    await tester.pumpAndSettle();
-
-    expect(repository.createCalls, 1);
-    expect(repository.capturedKind, DemoSessionKind.conversation);
-    expect(repository.capturedMembers, ['popi']);
-    expect(repository.capturedAssistant?.memberId, 'popi');
-    expect(repository.capturedAssistant?.name, '灵感搭档');
-    expect(repository.capturedAssistant?.instructions, '帮我整理图文和视频内容。');
-    expect(
-      repository.capturedAssistant?.avatarAsset,
-      'assets/animations/bot_avatars/rabbit.png',
-    );
-    expect(repository.capturedAssistant?.avatarColor, 0xFFE4DCFE);
+    expect(find.text('10/10'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'cancelling new assistant keeps the built-in assistant selected',
+    'all zodiac avatars are available with tiger selected initially',
     (tester) async {
       await _pump(tester, (storage) async => DemoRepository(storage));
       await _openCreationSheet(tester);
 
-      await tester.tap(find.byKey(const Key('demo-create-assistant')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('demo-assistant-name')),
-        '不要保存',
+      for (final character in BotAvatarCharacter.values) {
+        expect(
+          find.byKey(ValueKey('demo-assistant-avatar-${character.name}')),
+          findsOneWidget,
+        );
+      }
+      final tiger = tester.widget<Semantics>(
+        find.byKey(const ValueKey('demo-assistant-avatar-tiger')),
       );
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-
-      expect(find.text('不要保存'), findsNothing);
-      expect(find.text('POPi助手'), findsOneWidget);
-      expect(
-        find.byKey(const Key('demo-create-session-action')),
-        findsOneWidget,
+      expect(tiger.properties.selected, isTrue);
+      final pink = tester.widget<Semantics>(
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('demo-assistant-color-4294959087')),
+              matching: find.byType(Semantics),
+            )
+            .first,
       );
+      expect(pink.properties.selected, isTrue);
+      expect(BotAvatarCharacter.values, hasLength(12));
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'busy and failed creation keep the draft without duplicate calls',
+    'new Popi profile is submitted atomically and names the session',
     (tester) async {
       final repository = await _pump(
         tester,
-        (storage) async => _ControlledCreateRepository(storage),
+        (storage) async => _CapturingCreateRepository(storage),
       );
       await _openCreationSheet(tester);
-      final name = find.byKey(const Key('demo-create-session-name'));
+
+      await tester.enterText(
+        find.byKey(const Key('demo-assistant-name')),
+        '一二三四五六七八九十',
+      );
+      await tester.enterText(
+        find.byKey(const Key('demo-assistant-instructions')),
+        '帮我整理图文和视频内容。',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('demo-assistant-avatar-rabbit')),
+      );
+      final color = find.byKey(
+        const ValueKey('demo-assistant-color-4293188862'),
+      );
+      await tester.ensureVisible(color);
+      await tester.pump();
+      await tester.tap(color);
+      await tester.tap(find.byKey(const Key('demo-create-assistant-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DemoChatPage), findsOneWidget);
+      expect(repository.createCalls, 1);
+      expect(repository.capturedTitle, '一二三四五六七八九十');
+      expect(repository.capturedKind, DemoSessionKind.conversation);
+      expect(repository.capturedMembers, ['popi']);
+      expect(repository.capturedAssistant?.memberId, 'popi');
+      expect(repository.capturedAssistant?.name, '一二三四五六七八九十');
+      expect(repository.capturedAssistant?.instructions, '帮我整理图文和视频内容。');
+      expect(
+        repository.capturedAssistant?.avatarAsset,
+        'assets/animations/bot_avatars/rabbit.png',
+      );
+      expect(repository.capturedAssistant?.avatarColor, 0xFFE4DCFE);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'busy and failed creation keep the complete draft and allow retry',
+    (tester) async {
+      final repository = await _pump(
+        tester,
+        (storage) async => _RetryingCreateRepository(storage),
+      );
+      await _openCreationSheet(tester);
+      final name = find.byKey(const Key('demo-assistant-name'));
+      final instructions = find.byKey(const Key('demo-assistant-instructions'));
       await tester.enterText(name, '保留这份草稿');
-      await _scrollToMember(tester, 'writer');
-      await tester.tap(find.byKey(const ValueKey('demo-create-member-writer')));
-      await tester.tap(find.byKey(const Key('demo-create-session-action')));
+      await tester.enterText(instructions, '失败后也不能丢失。');
+      await tester.tap(
+        find.byKey(const ValueKey('demo-assistant-avatar-rooster')),
+      );
+      final color = find.byKey(
+        const ValueKey('demo-assistant-color-4291818742'),
+      );
+      tester.testTextInput.hide();
+      await tester.ensureVisible(color);
+      await tester.pump();
+      await tester.tap(color);
+      await tester.tap(find.byKey(const Key('demo-create-assistant-confirm')));
+      await tester.tap(find.byKey(const Key('demo-create-assistant-confirm')));
       await tester.pump();
 
       expect(repository.createCalls, 1);
       expect(_createButton(tester).onPressed, isNull);
+      expect(tester.widget<TextField>(name).enabled, isFalse);
+      expect(tester.widget<TextField>(instructions).enabled, isFalse);
+      expect(
+        tester
+            .widget<InkWell>(
+              find.descendant(
+                of: find.byKey(const ValueKey('demo-assistant-avatar-rooster')),
+                matching: find.byType(InkWell),
+              ),
+            )
+            .onTap,
+        isNull,
+      );
+      expect(tester.widget<InkWell>(color).onTap, isNull);
+      expect(
+        tester
+            .widget<TextButton>(
+              find.byKey(const Key('demo-assistant-random-avatar')),
+            )
+            .onPressed,
+        isNull,
+      );
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.drag(find.byType(BottomSheet), const Offset(0, 400));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(repository.createCalls, 1);
 
-      repository.completer.completeError(Exception('create failed'));
+      repository.firstAttempt.completeError(Exception('create failed'));
       await tester.runAsync(() => repository.finished.future);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -368,9 +413,24 @@ void main() {
 
       expect(repository.createCalls, 1);
       expect(tester.widget<TextField>(name).controller!.text, '保留这份草稿');
-      expect(repository.capturedAssistant?.memberId, 'writer');
+      expect(
+        tester.widget<TextField>(instructions).controller!.text,
+        '失败后也不能丢失。',
+      );
+      expect(
+        repository.capturedAssistant?.avatarAsset,
+        BotAvatarCharacter.rooster.stillAsset,
+      );
+      expect(repository.capturedAssistant?.avatarColor, 0xFFCFF4F6);
       expect(_createButton(tester).onPressed, isNotNull);
       expect(find.text('本地保存失败，请再次操作'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('demo-create-assistant-confirm')));
+      await tester.pumpAndSettle();
+      expect(repository.createCalls, 2);
+      expect(repository.sessions.first.title, '保留这份草稿');
+      expect(repository.sessions.first.memberInstructions['popi'], '失败后也不能丢失。');
+      expect(find.byType(DemoChatPage), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
       expect(tester.takeException(), isNull);
     },

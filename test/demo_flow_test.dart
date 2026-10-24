@@ -478,7 +478,15 @@ void main() {
         .update(const EdgeInsets.only(bottom: 34));
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('demo-create-session-action')));
+    await tester.enterText(
+      find.byKey(const Key('demo-assistant-name')),
+      '安全区测试',
+    );
+    tester.testTextInput.hide();
+    final create = find.byKey(const Key('demo-create-assistant-confirm'));
+    await tester.ensureVisible(create);
+    await tester.pump();
+    await tester.tap(create);
     await tester.pumpAndSettle();
     final disclaimer = find.text('AI生成结果可能有误，仅供参考');
     final bottom = tester.getBottomLeft(disclaimer).dy;
@@ -492,7 +500,15 @@ void main() {
     final repository = await _pump(tester);
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('demo-create-session-action')));
+    await tester.enterText(
+      find.byKey(const Key('demo-assistant-name')),
+      '本地生成',
+    );
+    tester.testTextInput.hide();
+    final create = find.byKey(const Key('demo-create-assistant-confirm'));
+    await tester.ensureVisible(create);
+    await tester.pump();
+    await tester.tap(create);
     await tester.pumpAndSettle();
     expect(find.text('嗨，用户～'), findsOneWidget);
     final attachment = repository.assets.first;

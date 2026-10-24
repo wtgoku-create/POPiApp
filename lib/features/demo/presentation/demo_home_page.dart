@@ -121,11 +121,9 @@ class _DemoHomePageState extends State<DemoHomePage>
   void _profile() => context.push('/profile');
 
   Future<void> _startCreate() async {
-    final l = AppLocalizations.of(context)!;
     final id = await showDemoCreateSessionSheet(
       context: context,
       repository: widget.repository,
-      initialTitle: l.demoNew,
       kind: DemoSessionKind.conversation,
     );
     if (id == null || !mounted) return;
@@ -188,7 +186,7 @@ class _DemoHomePageState extends State<DemoHomePage>
         if (_tab == 0)
           IconButton(
             key: const Key('demo-create'),
-            tooltip: l.demoNew,
+            tooltip: l.demoCreateAssistant,
             onPressed: _startCreate,
             icon: const DemoIcon('plus', color: AppColors.brand),
           )

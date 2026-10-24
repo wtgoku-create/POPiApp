@@ -1,5 +1,43 @@
 # 手机安装测试版
 
+## 2026-10-24 启动退出现场诊断
+
+通过已配对真机的实时日志确认，安装版本为 `1.0.0 (4701)`。重复启动均在约两秒后退出，
+系统明确记录 `jetsam / per-process-limit`：进程实际占用 `3,457,028 KB`，超过 `3376 MiB`
+硬上限。已确认内存超限终止，但尚未定位具体分配来源，不能将 4701 描述为已修复。
+
+原生启动诊断只在启动后的 15 秒采样进程内存，并记录固定的引擎、插件、Dart、登录恢复、
+Repository 和首帧检查点。记录限于设备本地系统日志，不写用户内容、账号、路径、请求或 Token，
+也不上传日志。原始设备日志仅保存在忽略的 `.omx/state/iphone-crash-4701-launch/` 中。
+诊断通道不可用或无响应时不阻塞启动；Web、Android 和 macOS 不发送该通道消息。
+
+## iPhone 4701 兼容性复测
+
+[GitHub Release：1.0.0（4701）](https://github.com/wtgoku-create/POPiApp/releases/tag/ios-harness-1.0.0-4701)
+用于复测 4201 登录成功后或进入会话时退出的问题。 Apple 已确认 4701 为 `IN_BETA_TESTING`，已加入内部测试的用户可在 TestFlight 更新。
+
+- iOS 原生端跳过自定义组合 shader 的预加载和创建，复用现有普通模糊与渐变。
+- 远程缩略图按已有 `cacheWidth` 限制解码内存，保留原图预览与原有鉴权、缓存命名空间。
+- 本机与 CI 均通过 1,874 项测试；IPA 签名、版本、SHA-256 和原生 dSYM UUID 已核验。
+- Apple 确认 4201 的既有声明为 `usesNonExemptEncryption=false`；4701 沿用该声明，SDK 与依赖锁未变。
+- 本次未取得设备原生崩溃栈，不能将兼容性处理描述为已确认所有闪退根因。Apple crash-feedback 为零，也不等于未发生崩溃。
+
+更新后重点复测打开 App、登录、进入已有会话、滚动及图片预览。若仍退出，需要对应时刻的
+`.ips` 设备分析日志，以及 iPhone 型号和 iOS 版本。精确的符号文件保存在构建记录中。
+完整证据位于 `.omx/state/iphone-crash-4201/verification.json`。
+
+## 2026-10-24 交付记录
+
+- 版本：`1.0.0 (4201)`，代码快照 `07b2f0ff719cb843a426f8a64082bc221ef2a412`。
+- Android 安装包：<https://124.222.185.31/downloads/POPi-android-1.0.0-4201-c6f35ff35a18.apk>，约 256 MiB，Android 7.0 及以上。
+- 本机和签名 CI 均通过 1,872 项测试；Android/iOS 签名与版本校验通过。
+- Android 公网下载、文件摘要、HEAD、Range 和未公开路径 404 已验证，尚待同事手机实机验收。
+- iOS 同版本初次上传时状态为 `MISSING_EXPORT_COMPLIANCE`；截至 08:07 UTC，Apple 已确认 `IN_BETA_TESTING`，可内部测试。账号仍没有外部测试组或公开邀请链接。
+- 外部同事测试还需 Apple ID 和测试组配置；加密声明应依据实际 SDK 与已有确认记录，不能仅为消除提示而盲填。
+- 原生登录、素材鉴权和打包复用已有网关、Secure Storage、媒体组件与签名流程，未新增依赖或将固定密码写入包内。
+
+完整构建和下载验证保存在 `.omx/state/mobile-package/verification.json`。登录密码仅在独立私密交付文件中保管，不写入本文。
+
 ## Android：直接安装 APK
 
 远程 Harness 测试包由 GitHub Actions 使用正式 Android 签名配置构建。CI 会先用
