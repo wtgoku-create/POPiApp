@@ -283,7 +283,10 @@ void main() {
         matching: find.byType(Image),
       ),
     );
-    expect(image.image, isA<CachedNetworkImageProvider>());
+    expect(image.image, isA<ResizeImage>());
+    final resized = image.image as ResizeImage;
+    expect(resized.width, 800);
+    expect(resized.imageProvider, isA<CachedNetworkImageProvider>());
     expect(find.text('南极猫角色图'), findsOneWidget);
     expect(find.text('图片 / 1024×1024'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -343,9 +346,13 @@ void main() {
         matching: find.byType(Image),
       ),
     );
-    expect(image.image, isA<CachedNetworkImageProvider>());
+    expect(image.image, isA<ResizeImage>());
+    final resized = image.image as ResizeImage;
+    final network = resized.imageProvider;
+    expect(resized.width, 800);
+    expect(network, isA<CachedNetworkImageProvider>());
     expect(
-      (image.image as CachedNetworkImageProvider).url,
+      (network as CachedNetworkImageProvider).url,
       _remoteVideoPosterAsset.posterUrl,
     );
     expect(platform.sources, isEmpty);

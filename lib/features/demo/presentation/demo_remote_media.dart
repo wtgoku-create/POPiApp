@@ -11,15 +11,17 @@ ImageProvider demoAssetImageProvider(
   Map<String, String> headers = const {},
   String? cacheKey,
   VoidCallback? onUnauthorized,
+  int? cacheWidth,
 }) {
-  if (!asset.isRemote) return AssetImage(asset.cover);
-  final url = demoAssetImageUrl(asset);
-  return AppImageCache.provider(
-    url,
-    headers: headers,
-    cacheKey: cacheKey,
-    onUnauthorized: onUnauthorized,
-  );
+  final ImageProvider provider = asset.isRemote
+      ? AppImageCache.provider(
+          demoAssetImageUrl(asset),
+          headers: headers,
+          cacheKey: cacheKey,
+          onUnauthorized: onUnauthorized,
+        )
+      : AssetImage(asset.cover);
+  return ResizeImage.resizeIfNeeded(cacheWidth, null, provider);
 }
 
 String demoAssetImageUrl(DemoAsset asset) {
@@ -92,12 +94,11 @@ class DemoAssetImage extends ConsumerWidget {
             onUnauthorized: ref.watch(
               harnessAccessUnauthorizedProvider(demoAssetImageUrl(asset)),
             ),
+            cacheWidth: cacheWidth,
           )
-        : demoAssetImageProvider(asset);
+        : demoAssetImageProvider(asset, cacheWidth: cacheWidth);
     return Image(
-      image: asset.isRemote || cacheWidth == null
-          ? image
-          : ResizeImage.resizeIfNeeded(cacheWidth, null, image),
+      image: image,
       width: width,
       height: height,
       fit: fit,
