@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,14 +12,13 @@ class ProfileTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top = math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
-    return SizedBox(
-      height: top + 48,
-      child: Padding(
-        padding: EdgeInsets.only(top: top),
+    return SafeArea(
+      bottom: false,
+      child: SizedBox(
+        height: Theme.of(context).appBarTheme.toolbarHeight ?? kToolbarHeight,
         child: Row(
           children: [
-            const SizedBox(width: 20),
+            const SizedBox(width: 16),
             SizedBox.square(
               dimension: 40,
               child: IconButton(
@@ -81,6 +78,12 @@ class ProfileAvatar extends StatelessWidget {
                   width: size,
                   height: size,
                   fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Image.asset(
+                    'assets/icons/common_user_avatar.png',
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                  ),
                 )
               : imageUrl == null || imageUrl!.isEmpty
               ? Image.asset(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -9,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
+import '../../../../shared/providers/speech_input_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
@@ -18,6 +20,7 @@ import '../../../assets/domain/library_work.dart';
 import '../../../assets/presentation/library_work_thumbnail.dart';
 import '../../../role_guide/presentation/widgets/role_guide_controls.dart';
 import '../composer_image_upload_controller.dart';
+import '../composer_voice_input_controller.dart';
 
 export '../composer_image_upload_controller.dart' show PopiComposerImage;
 
@@ -118,6 +121,7 @@ class PopiMessageComposerController {
   final Map<int, _InlineComposerImage> _images = {};
   int _nextImageId = 0;
   final ValueNotifier<String> textNotifier = ValueNotifier('');
+  VoidCallback? _requestInputFocus;
 
   String get markdown =>
       textController.text.replaceAll(RegExp(r'\[popi-image:\d+\]'), '').trim();
@@ -130,6 +134,9 @@ class PopiMessageComposerController {
   void dismissKeyboard() {
     FocusManager.instance.primaryFocus?.unfocus();
   }
+
+  /// Restores editing after a host picker closes without exposing FocusNode.
+  void requestInputFocus() => _requestInputFocus?.call();
 
   Future<void> setText(String value) async {
     _images.clear();
@@ -190,7 +197,10 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.conversationMode = false,
     this.sessionLayout = false,
     this.bottomPadding,
+    this.maxWidth,
+    this.active = true,
     this.onStop,
+    this.onVoiceInput,
     this.castRoles,
     this.onCastRequested,
     this.castEnabled = true,
@@ -213,7 +223,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final String modelParametersDescription;
   final VoidCallback? onMentionRequested;
 
-  /// Enables the image picker triggered by typing @.
+  /// Enables the host mention picker triggered by typing @.
   final bool enableMentions;
   final bool sending;
   final bool running;
@@ -226,7 +236,16 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   /// Overrides the bottom inset when the host already handles safe areas.
   final double? bottomPadding;
+
+  /// Lets a desktop conversation use the width of its content pane.
+  final double? maxWidth;
+
+  /// Cached desktop editors must release input when another session is active.
+  final bool active;
   final VoidCallback? onStop;
+
+  /// Optional host override; otherwise uses the shared speech-to-text input.
+  final VoidCallback? onVoiceInput;
   final List<LibraryRole>? castRoles;
   final VoidCallback? onCastRequested;
   final bool castEnabled;
@@ -237,7 +256,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 }
 
 class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final FocusNode _focusNode;
   late final AnimationController _composerAnimationController;
   final _sizeKey = GlobalKey();
@@ -247,6 +266,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
   bool _expandedEditorOpen = false;
+  late ComposerVoiceInputController _voiceInput;
   late final ValueNotifier<
     ({bool sending, bool running, bool attachmentsReady})
   >
@@ -255,12 +275,15 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _createVoiceInput();
     _editorStatus = ValueNotifier((
       sending: widget.sending,
       running: widget.running,
       attachmentsReady: widget.attachmentsReady,
     ));
     _focusNode = FocusNode()..addListener(_handleFocusChanged);
+    widget.controller._requestInputFocus = _focusInput;
     _isExpanded =
         widget.controller.textController.text.isNotEmpty ||
         widget.selectedRoles.isNotEmpty ||
@@ -270,7 +293,6 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       value: _isExpanded ? 1 : 0,
       duration: const Duration(milliseconds: 220),
     )..addStatusListener(_handleComposerAnimationStatus);
-    widget.controller.textNotifier.addListener(_handleTextChanged);
     widget.controller.textController.addListener(_syncExpansion);
     _lastInputText = widget.controller.textController.text;
     widget.controller.textController.addListener(_revealInsertedText);
@@ -279,15 +301,19 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _voiceInput
+      ..removeListener(_voiceStateChanged)
+      ..dispose();
     _focusNode
       ..removeListener(_handleFocusChanged)
       ..dispose();
     _composerAnimationController
       ..removeStatusListener(_handleComposerAnimationStatus)
       ..dispose();
-    widget.controller.textNotifier.removeListener(_handleTextChanged);
     widget.controller.textController.removeListener(_syncExpansion);
     widget.controller.textController.removeListener(_revealInsertedText);
+    widget.controller._requestInputFocus = null;
     _inputScroll.dispose();
     _editorStatus.dispose();
     super.dispose();
@@ -297,17 +323,25 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   void didUpdateWidget(PopiMessageComposer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.textNotifier.removeListener(_handleTextChanged);
+      oldWidget.controller._requestInputFocus = null;
+      _voiceInput
+        ..removeListener(_voiceStateChanged)
+        ..dispose();
+      _createVoiceInput();
       oldWidget.controller.textController
         ..removeListener(_syncExpansion)
         ..removeListener(_revealInsertedText);
-      widget.controller.textNotifier.addListener(_handleTextChanged);
       widget.controller.textController
         ..addListener(_syncExpansion)
         ..addListener(_revealInsertedText);
+      widget.controller._requestInputFocus = _focusInput;
       _lastInputText = '';
       _revealInsertedText();
     }
+    if (widget.sending || widget.running || !widget.active) {
+      _voiceInput.cancel();
+    }
+    if (oldWidget.active && !widget.active) _dismissEditor();
     _syncExpansion();
     if (oldWidget.sending != widget.sending ||
         oldWidget.running != widget.running ||
@@ -324,12 +358,78 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     }
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (ModalRoute.of(context)?.isCurrent == false) _voiceInput.cancel();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _voiceInput.cancel();
+    }
+  }
+
+  void _createVoiceInput() {
+    _voiceInput = ComposerVoiceInputController(
+      speechInput: ref.read(speechInputFactoryProvider)(),
+      textController: widget.controller.textController,
+      onError: _showVoiceError,
+    )..addListener(_voiceStateChanged);
+  }
+
+  void _voiceStateChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _showVoiceError(String code) {
+    if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
+    AppToast.error(context, switch (code) {
+      'permission_denied' => l.voiceInputPermissionDenied,
+      'unavailable' => l.voiceInputUnavailable,
+      'no_speech' => l.voiceInputNoSpeech,
+      'network' => l.voiceInputNetworkError,
+      'audio' => l.voiceInputAudioError,
+      _ => l.voiceInputFailed,
+    });
+  }
+
+  void _toggleVoiceInput() {
+    if (!widget.active || widget.sending || widget.running) return;
+    if (widget.onVoiceInput case final override?) {
+      override();
+      return;
+    }
+    if (_voiceInput.active) {
+      unawaited(_voiceInput.stop());
+      return;
+    }
+    _dismissEditor();
+    final locale = Localizations.localeOf(context);
+    final language = locale.countryCode == null
+        ? locale.languageCode == 'zh'
+              ? 'zh-CN'
+              : 'en-US'
+        : locale.toLanguageTag();
+    unawaited(_voiceInput.start(language));
+  }
+
+  void _submit(String text) {
+    _voiceInput.cancel();
+    widget.onSubmitted(text);
+  }
+
   Future<void> _openExpandedEditor() async {
     if (widget.running) {
       _showRunningToast();
       return;
     }
     if (_expandedEditorOpen || widget.sending) return;
+    _voiceInput.cancel();
     _expandedEditorOpen = true;
     try {
       final submitted = await AppSheet.show<bool>(
@@ -379,7 +479,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       if (!mounted) return;
       if (submitted == true) {
         _dismissEditor();
-        widget.onSubmitted(widget.controller.markdown);
+        _submit(widget.controller.markdown);
       } else {
         _dismissEditor();
       }
@@ -410,15 +510,30 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     });
   }
 
-  void _handleTextChanged() {
-    if (!widget.enableMentions || _mentionSheetOpen || !mounted) return;
-    if (widget.controller.markdown.endsWith('@')) {
-      _mentionSheetOpen = true;
-      widget.onMentionRequested?.call();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _mentionSheetOpen = false;
-      });
+  void _handleUserTextChanged(String rawText) {
+    if (!widget.enableMentions ||
+        _mentionSheetOpen ||
+        !widget.active ||
+        widget.sending ||
+        widget.running ||
+        _voiceInput.active ||
+        !mounted) {
+      return;
     }
+    final selection = widget.controller.textController.selection;
+    if (!selection.isValid || !selection.isCollapsed) return;
+    final caret = selection.extentOffset;
+    // onChanged is emitted only for user edits. Looking at the caret means an
+    // @ typed in the middle of a draft works without reopening for setText or
+    // a selection-only update.
+    if (caret <= 0 || caret > rawText.length || rawText[caret - 1] != '@') {
+      return;
+    }
+    _mentionSheetOpen = true;
+    widget.onMentionRequested?.call();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mentionSheetOpen = false;
+    });
   }
 
   void _handleFocusChanged() {
@@ -462,11 +577,21 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   }
 
   void _focusInput() {
+    if (!widget.active || _voiceInput.active) return;
     if (widget.running) {
       _showRunningToast();
       return;
     }
-    _focusNode.requestFocus();
+    final editor = _focusNode.context
+        ?.findAncestorStateOfType<ExtendedTextFieldState>()
+        ?.editableTextKey
+        .currentState;
+    if (editor != null) {
+      // Reopen the editing connection even when Flutter still holds focus.
+      editor.requestKeyboard();
+    } else {
+      _focusNode.requestFocus();
+    }
   }
 
   void _reportHeight() {
@@ -518,11 +643,45 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
               // Figma's 376px measurement is the content box. The visible frame
               // also includes 10px padding and a 2px border on each side.
               constraints: BoxConstraints(
-                maxWidth: widget.conversationMode ? 640 : 400,
+                maxWidth:
+                    widget.maxWidth ?? (widget.conversationMode ? 640 : 400),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (_voiceInput.active)
+                    Semantics(
+                      liveRegion: true,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12, bottom: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                switch (_voiceInput.state) {
+                                  ComposerVoiceInputState.starting =>
+                                    l10n.voiceInputStarting,
+                                  ComposerVoiceInputState.stopping =>
+                                    l10n.voiceInputFinishing,
+                                  _ => l10n.voiceInputListening,
+                                },
+                                style: TextStyle(
+                                  color: colorScheme.primary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              key: const Key('popi-voice-cancel'),
+                              tooltip: l10n.voiceInputCancel,
+                              onPressed: () =>
+                                  _voiceInput.cancel(discard: true),
+                              icon: const Icon(Icons.close_rounded, size: 20),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   if (widget.selectedAssets.isNotEmpty) ...[
                     SizedBox(
                       height: 92,
@@ -660,6 +819,13 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 sending: widget.sending,
                                 running: widget.running,
                                 onStop: widget.onStop,
+                                onVoiceInput: _toggleVoiceInput,
+                                voiceActive: _voiceInput.active,
+                                voicePending:
+                                    _voiceInput.state ==
+                                        ComposerVoiceInputState.starting ||
+                                    _voiceInput.state ==
+                                        ComposerVoiceInputState.stopping,
                                 images: widget.selectedImages,
                                 expandedInputHeight: animatedInputHeight,
                                 onExpand: inputLayout.overflows
@@ -675,11 +841,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                       : 14,
                                 ),
                                 colorScheme: colorScheme,
-                                onAttachment: widget.onAttachment,
+                                onAttachment: () {
+                                  _voiceInput.cancel();
+                                  widget.onAttachment();
+                                },
                                 onRemoveImage: widget.onRemoveImage,
                                 onRetryImage: widget.onRetryImage,
                                 attachmentsReady: widget.attachmentsReady,
-                                onSubmitted: () => widget.onSubmitted(text),
+                                onSubmitted: () => _submit(text),
                                 onModelParametersRequested:
                                     widget.onModelParametersRequested,
                                 modelParametersDescription:
@@ -718,34 +887,22 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                         decoration: BoxDecoration(
                                           color: isDark
                                               ? colorScheme.surfaceContainerHigh
-                                              : null,
-                                          gradient: isDark
-                                              ? null
-                                              : const LinearGradient(
-                                                  begin: Alignment.topCenter,
-                                                  end: Alignment.bottomCenter,
-                                                  colors: [
-                                                    AppColors.pageBackground,
-                                                    AppColors.surface,
-                                                  ],
-                                                ),
+                                              : AppColors.surface,
                                           border: isDark
                                               ? Border.all(
                                                   color: colorScheme
                                                       .outlineVariant
                                                       .withValues(alpha: .45),
                                                 )
-                                              : Border.all(
-                                                  color: AppColors.surface,
-                                                  width: 2,
-                                                ),
+                                              : null,
                                           borderRadius: borderRadius,
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.black.withValues(
-                                                alpha: isDark ? 0.2 : 0.05,
+                                                alpha: isDark ? 0.2 : 0.025,
                                               ),
-                                              blurRadius: isDark ? 14 : 20,
+                                              blurRadius: isDark ? 14 : 12,
+                                              offset: Offset(0, isDark ? 0 : 4),
                                             ),
                                           ],
                                         ),
@@ -810,7 +967,9 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final l10n = AppLocalizations.of(context)!;
     final isRunning = running ?? widget.running;
     final placeholderStyle = TextStyle(
-      color: colorScheme.onSurfaceVariant,
+      color: Theme.of(context).brightness == Brightness.light
+          ? AppColors.textTertiary
+          : colorScheme.onSurfaceVariant,
       fontSize: placeholderFontSize,
       fontWeight: FontWeight.w400,
       height: 1.5,
@@ -830,9 +989,11 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
           autofocus: expandedEditor,
           onTapOutside: (_) => widget.controller.dismissKeyboard(),
           controller: widget.controller.textController,
+          onChanged: _handleUserTextChanged,
           scrollController: expandedEditor ? null : _inputScroll,
           enabled: !isRunning,
-          readOnly: isRunning || (readOnly ?? widget.sending),
+          readOnly:
+              isRunning || _voiceInput.active || (readOnly ?? widget.sending),
           specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
           minLines: expandedEditor
               ? null
@@ -1146,6 +1307,9 @@ class _ComposerContent extends StatelessWidget {
     required this.sending,
     required this.running,
     required this.onStop,
+    required this.onVoiceInput,
+    required this.voiceActive,
+    required this.voicePending,
     required this.castRoles,
     required this.onCastRequested,
     required this.castEnabled,
@@ -1168,6 +1332,9 @@ class _ComposerContent extends StatelessWidget {
   final bool sending;
   final bool running;
   final VoidCallback? onStop;
+  final VoidCallback? onVoiceInput;
+  final bool voiceActive;
+  final bool voicePending;
   final List<LibraryRole>? castRoles;
   final VoidCallback? onCastRequested;
   final bool castEnabled;
@@ -1177,9 +1344,13 @@ class _ComposerContent extends StatelessWidget {
     const duration = Duration(milliseconds: 220);
     const curve = Curves.easeOutCubic;
     final hasImages = images.isNotEmpty;
-    final showAction = isExpanded || running || sending;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final showSend = hasText || hasImages || running || sending;
+    final showVoice = onVoiceInput != null && !running && !sending;
+    final showAction = showSend || showVoice;
     final showCast = castRoles != null;
-    final compactTrailingWidth = showAction ? 48.0 : 0.0;
+    final compactTrailingWidth =
+        (showSend ? 48.0 : 0.0) + (showVoice ? 48.0 : 0.0);
     final compactImageStripWidth = images.isEmpty
         ? 0.0
         : images.length * 28.0 + (images.length - 1) * 6.0;
@@ -1261,7 +1432,7 @@ class _ComposerContent extends StatelessWidget {
         if (onModelParametersRequested != null || showCast)
           Positioned(
             left: isExpanded ? 50 : null,
-            right: showAction ? 48 : 0,
+            right: compactTrailingWidth,
             width: isExpanded ? null : 132,
             bottom: isExpanded ? 0 : 10,
             height: 40,
@@ -1309,9 +1480,53 @@ class _ComposerContent extends StatelessWidget {
               child: AnimatedSize(
                 duration: duration,
                 curve: curve,
-                child: hasText || hasImages || running || sending
-                    ? _SendButton(
-                        onPressed: sending
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (showVoice)
+                      SizedBox.square(
+                        dimension: 40,
+                        child: IconButton(
+                          key: const Key('popi-voice-input'),
+                          tooltip: voiceActive
+                              ? AppLocalizations.of(context)!.voiceInputStop
+                              : AppLocalizations.of(context)!.voiceInput,
+                          onPressed: voicePending ? null : onVoiceInput,
+                          style: IconButton.styleFrom(
+                            backgroundColor: voiceActive
+                                ? colorScheme.primaryContainer
+                                : isDark
+                                ? colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: .35)
+                                : AppColors.surface,
+                            shape: CircleBorder(
+                              side: BorderSide(
+                                color: voiceActive
+                                    ? colorScheme.primary.withValues(alpha: .3)
+                                    : isDark
+                                    ? colorScheme.outlineVariant
+                                    : const Color(0xFFE6E6E6),
+                                width: 1,
+                              ),
+                            ),
+                            foregroundColor: voiceActive
+                                ? colorScheme.primary
+                                : colorScheme.onSurface,
+                          ),
+                          icon: voicePending
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const AppSvgIcon.asset('demo_mic', size: 22),
+                        ),
+                      ),
+                    if (showVoice && showSend) const SizedBox(width: 8),
+                    if (showSend)
+                      _SendButton(
+                        onPressed: sending || voiceActive
                             ? null
                             : running
                             ? onStop
@@ -1320,8 +1535,9 @@ class _ComposerContent extends StatelessWidget {
                             : null,
                         sending: sending,
                         running: running,
-                      )
-                    : const SizedBox.shrink(),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

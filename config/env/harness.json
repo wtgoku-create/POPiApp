@@ -1,0 +1,17 @@
+{
+  "APP_ENV": "local_harness",
+  "ALIPAY_PAYMENT_ENVIRONMENT": "Production",
+  "API_BASE_URL": "https://wwwtest.popi.art",
+  "TEACHING_CENTER_URL": "https://wwwtest.popi.art/teaching",
+  "TEACHING_READER_URL": "https://wwwtest.popi.art/teaching/reader",
+  "AGENT_API_BASE_URL": "http://127.0.0.1:3084",
+  "AGENT_API_ORIGIN": "http://127.0.0.1:7357",
+  "API_ENABLE_LOGGING": false,
+  "WECHAT_APP_ID": "wx0d9c23195606fc80",
+  "WECHAT_UNIVERSAL_LINK": "https://app.popi.art/WeChat",
+  "DOUYIN_CLIENT_KEY": "awrmmvudt93mnhxg",
+  "DOUYIN_UNIVERSAL_LINK": "https://app.popi.art/Douyin",
+  "USER_AGREEMENT_URL": "https://tcnshqo5yu6i.feishu.cn/wiki/BmCNwr8o0ii19dkcTYAcaW9Jnhc",
+  "PRIVACY_POLICY_URL": "https://tcnshqo5yu6i.feishu.cn/wiki/Wu8mwLqOYi2nZjkur3rc18wFnbg",
+  "LOCAL_HARNESS_ENABLED": true
+}

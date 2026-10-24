@@ -1,0 +1,55 @@
+https://124.222.185.31 {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	encode zstd gzip
+	header {
+		Cache-Control "no-store"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+	}
+	request_body {
+		max_size 134217728
+	}
+	route {
+		@private path /_internal /_internal/* /verify /.env* /.git /.git/*
+		respond @private 404
+		@access path /login /logout /login.js
+		handle @access {
+			reverse_proxy 127.0.0.1:3085
+		}
+		# BEGIN POPI MOBILE DOWNLOADS
+		# Deny by default. publish-mobile.py replaces only this bounded block
+		# with exact matchers for the currently published APK and metadata.
+		handle /downloads/* {
+			respond 404
+		}
+		# END POPI MOBILE DOWNLOADS
+		handle {
+			route {
+				forward_auth 127.0.0.1:3085 {
+					uri /verify
+				}
+				handle /api_agent/* {
+					reverse_proxy 127.0.0.1:3084 {
+						header_up Host 127.0.0.1:3084
+						header_up -Authorization
+						# Buffer phone uploads before the loopback API's 30s timer.
+						request_buffers 134217728
+						transport http {
+							response_header_timeout 180s
+						}
+					}
+				}
+				handle {
+					root * /srv/popi-web/current
+					try_files {path} /index.html
+					file_server
+				}
+			}
+		}
+	}
+}

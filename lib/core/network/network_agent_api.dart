@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -9,6 +10,38 @@ class NetworkAgentApi {
   const NetworkAgentApi(this.dio);
 
   final Dio dio;
+
+  /// Exchanges test-server credentials for the dedicated Harness cookie.
+  ///
+  /// Redirects stay disabled so only the server's explicit 303 response can
+  /// be validated by the access repository. The caller owns all response
+  /// interpretation; credentials are never placed in a URL.
+  Future<Response<Object?>> signInHarness({
+    required String username,
+    required String password,
+    CancelToken? cancelToken,
+  }) => dio.post<Object?>(
+    '/login',
+    data: {'username': username, 'password': password},
+    options: Options(
+      contentType: Headers.formUrlEncodedContentType,
+      followRedirects: false,
+      maxRedirects: 0,
+      validateStatus: (status) =>
+          status != null && status >= 200 && status < 500,
+    ),
+    cancelToken: cancelToken,
+  );
+
+  /// Returns the tools, Skills, and MCP bindings supplied by the Agent runtime.
+  Future<Map<String, dynamic>> harnessCapabilities({
+    String? sessionId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/capabilities',
+    queryParameters: {if (sessionId != null) 'sessionId': sessionId},
+    cancelToken: cancelToken,
+  );
 
   Future<Map<String, dynamic>> enterHome(
     Map<String, Object?> input, {
@@ -103,6 +136,24 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
+  Future<Map<String, dynamic>> createHarnessSession({
+    required String clientRequestId,
+    required String title,
+    required String kind,
+    Map<String, Object?>? configuration,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions',
+    method: 'POST',
+    data: {
+      'clientRequestId': clientRequestId,
+      'title': title,
+      'kind': kind,
+      if (configuration != null) 'configuration': configuration,
+    },
+    cancelToken: cancelToken,
+  );
+
   Future<Map<String, dynamic>> createProjectSession(
     String projectId,
     String title, {
@@ -179,6 +230,8 @@ class NetworkAgentApi {
     String? title,
     bool? archived,
     bool? pinned,
+    Map<String, Object?>? configuration,
+    int? expectedConfigRevision,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}',
@@ -188,6 +241,9 @@ class NetworkAgentApi {
       if (title != null) 'title': title,
       if (archived != null) 'archived': archived,
       if (pinned != null) 'pinned': pinned,
+      if (configuration != null) 'configuration': configuration,
+      if (expectedConfigRevision != null)
+        'expectedConfigRevision': expectedConfigRevision,
     },
     cancelToken: cancelToken,
   );
@@ -236,6 +292,7 @@ class NetworkAgentApi {
     required String text,
     String? taskId,
     List<String>? mediaIds,
+    List<String>? contextRoleIds,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/messages',
@@ -245,6 +302,7 @@ class NetworkAgentApi {
       'text': text,
       if (taskId != null) 'taskId': taskId,
       if (mediaIds != null) 'mediaIds': mediaIds,
+      if (contextRoleIds != null) 'contextRoleIds': contextRoleIds,
     },
     cancelToken: cancelToken,
   );
@@ -260,6 +318,153 @@ class NetworkAgentApi {
     cancelToken: cancelToken,
   );
 
+  Future<Map<String, dynamic>> assets({
+    String? sessionId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/assets',
+    queryParameters: {if (sessionId != null) 'sessionId': sessionId},
+    cancelToken: cancelToken,
+  );
+
+  /// Uploads one owned asset as a raw body. The request ID makes retries safe.
+  Future<Map<String, dynamic>> uploadAsset({
+    required String clientRequestId,
+    required String name,
+    required String mimeType,
+    required Uint8List bytes,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await dio.post<Object?>(
+        '/api_agent/v2/assets',
+        data: bytes,
+        queryParameters: {'clientRequestId': clientRequestId, 'name': name},
+        options: Options(
+          contentType: mimeType,
+          headers: {'Content-Length': bytes.lengthInBytes},
+        ),
+        cancelToken: cancelToken,
+      );
+      final body = response.data;
+      if ((response.statusCode != 200 && response.statusCode != 201) ||
+          body is! Map<String, dynamic> ||
+          body['asset'] is! Map) {
+        throw AgentApiException(
+          code: 'INVALID_RESPONSE',
+          message: 'Invalid Agent upload response',
+          statusCode: response.statusCode,
+          requestId: response.headers.value('x-request-id'),
+          retryable: true,
+        );
+      }
+      return body;
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  /// Reads bytes only from the configured Agent's owned-asset content route.
+  Future<Uint8List> readAssetBytes(
+    String contentUrl, {
+    CancelToken? cancelToken,
+  }) async {
+    final uri = _ownedAssetContentUri(contentUrl);
+    try {
+      final response = await dio.get<List<int>>(
+        uri.toString(),
+        options: Options(responseType: ResponseType.bytes),
+        cancelToken: cancelToken,
+      );
+      final body = response.data;
+      if (body == null) {
+        throw AgentApiException(
+          code: 'INVALID_RESPONSE',
+          message: 'Invalid Agent asset response',
+          statusCode: response.statusCode,
+          requestId: response.headers.value('x-request-id'),
+          retryable: true,
+        );
+      }
+      return body is Uint8List ? body : Uint8List.fromList(body);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  /// Resolves only the owned-asset route on the configured Agent origin.
+  /// This prevents an upstream provider URL from becoming an image source.
+  String resolveAssetContentUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null || candidate.hasScheme || candidate.hasAuthority) {
+      throw const FormatException('Asset URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/content$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException('Asset URL is outside the Agent origin');
+    }
+    return resolved.toString();
+  }
+
+  /// Resolves only a server-owned video poster on the configured Agent origin.
+  String resolveAssetPosterUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null || candidate.hasScheme || candidate.hasAuthority) {
+      throw const FormatException('Asset poster URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/poster$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException(
+        'Asset poster URL is outside the Agent origin',
+      );
+    }
+    return resolved.toString();
+  }
+
+  Uri _ownedAssetContentUri(String value) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(value);
+    if (candidate == null) throw const FormatException('Invalid asset URL');
+    final resolved = candidate.hasScheme
+        ? candidate
+        : base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/content$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException('Asset URL is outside the Agent origin');
+    }
+    return resolved;
+  }
+
   Future<Map<String, dynamic>> retryRun(
     String runId, {
     required String clientRequestId,
@@ -274,6 +479,7 @@ class NetworkAgentApi {
   Future<Map<String, dynamic>> respondQuestion(
     String sessionId,
     String questionId, {
+    String? clientRequestId,
     required int revision,
     required String action,
     Map<String, Object?>? answer,
@@ -282,6 +488,7 @@ class NetworkAgentApi {
     '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/questions/${Uri.encodeComponent(questionId)}/respond',
     method: 'POST',
     data: {
+      if (clientRequestId != null) 'clientRequestId': clientRequestId,
       'revision': revision,
       'action': action,
       if (answer != null) 'answer': answer,

@@ -17,15 +17,20 @@
 
 ## 使用
 
-本机安装包含 Dart 3.10.1 或更高版本的 Flutter SDK 后，在项目目录执行：
+项目使用 Flutter 3.44.9 stable。平台工程已完整纳入仓库，无需执行
+`flutter create .`。首次拉取后执行：
 
 ```bash
-flutter create .
-flutter pub get
-dart run tool/flutter_env.dart development run
+./tool/dev.sh setup
+./tool/dev.sh          # 默认 Web Harness
+./tool/dev.sh macos    # macOS POPi，读取同一个 Harness
 ```
 
-`flutter create .` 会补齐 Android、iOS、Web 等平台目录，不会覆盖 `lib/` 和 `pubspec.yaml`。
+macOS 与 Web 默认共用 `lib/main_harness.dart`、`config/env/harness.json` 和本机 Agent 服务，
+会话、图片与视频以服务端为准。离线样例需显式运行 `./tool/dev.sh demo`。
+
+本机环境检查、离线 Demo、正式入口、配置覆盖、测试和 Web 构建命令见
+[本地开发指南](docs/local-development.md)。
 
 ## 目录
 
@@ -54,10 +59,11 @@ lib/
 `https://wwwtest.popi.art`，生产环境为 `https://www.popi.art`。
 
 `/api_agent` 接口通过 `agentDioProvider` 和 `NetworkAgentApi` 调用，使用独立的
-服务地址和 Origin，并复用 Token 鉴权。开发环境当前对齐 Web 的本地配置：
-`http://192.168.77.249:3100`；原生 App 默认不发送 Origin，Web 联调需要时可以配置
-后台允许的 Origin。地址变更时修改环境 JSON。Agent 成功响应直接返回 JSON，错误保留 code、retryable、requestId
-和 current 等字段。
+服务地址和 Origin，并复用 Token 鉴权。开发环境当前使用
+`https://wwwtest.popi.art`。原生 App 只发送环境中显式配置的 Origin，Web 由浏览器自动发送。
+本机 Harness 环境使用 loopback 服务和允许的 Origin，且不读取或发送正式账号 Token。
+地址变更时修改环境 JSON。Agent 成功响应直接返回 JSON，错误保留 code、
+retryable、requestId 和 current 等字段。
 
 会话契约按 `popiart-agent-server/src/studio/http/routes.ts` 核对：v2 使用
 `page/pageSize` 与 `list/pageInfo`，支持服务端置顶及不带项目过滤的会话列表。
@@ -75,7 +81,7 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | `APP_ENV` | 环境名称 |
 | `API_BASE_URL` | 后端根地址，接口路径自身包含 `/api_client` |
 | `AGENT_API_BASE_URL` | Agent 独立服务根地址，接口路径自身包含 `/api_agent` |
-| `AGENT_API_ORIGIN` | 可选 Origin，原生 App 留空；配置值必须在后台白名单中 |
+| `AGENT_API_ORIGIN` | 原生客户端的可选 Origin；Harness 已配置本机白名单值，Web 自动发送 |
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
 | `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，默认 `https://app.popi.art/WeChat` |

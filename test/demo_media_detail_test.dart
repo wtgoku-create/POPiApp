@@ -54,7 +54,7 @@ void main() {
         Size(width, 838),
       );
       final player = find.byKey(const Key('demo-audio-player'));
-      expect(tester.getSize(player), Size(width - 40, 244));
+      expect(tester.getSize(player), Size(width - 32, 208));
       expect(find.byType(Image), findsNothing);
       expect(find.text('00:00'), findsOneWidget);
       expect(platform.sources.single.asset, asset.media);

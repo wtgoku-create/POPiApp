@@ -5,6 +5,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_home_page.dart';
+import 'package:popi_ai_app/features/demo/presentation/demo_welcome_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_app.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
@@ -54,13 +55,22 @@ Future<DemoRepository> _pump(
 }
 
 void main() {
-  testWidgets(
-    'avatar opens the existing profile and its edit and return routes',
-    (tester) async {
+  for (final testCase in [
+    (name: 'without system insets', padding: FakeViewPadding.zero),
+    (
+      name: 'with top and horizontal system insets',
+      padding: const FakeViewPadding(top: 59, left: 12, right: 8),
+    ),
+  ]) {
+    testWidgets('avatar and profile backs share a position ${testCase.name}', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(440, 956);
       tester.view.devicePixelRatio = 1;
+      tester.view.padding = testCase.padding;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
       SharedPreferences.setMockInitialValues({});
       final preferences = await SharedPreferences.getInstance();
       await tester.pumpWidget(
@@ -73,20 +83,32 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('个人资料'));
+      final profileEntry = find.byTooltip('个人资料');
+      final entryRect = tester.getRect(profileEntry);
+      expect(entryRect.size, const Size.square(40));
+      await tester.tap(profileEntry);
       await tester.pumpAndSettle();
       expect(find.byType(ProfilePage), findsOneWidget);
+      final profileBack = find.byKey(const Key('profile-back'));
+      final profileBackRect = tester.getRect(profileBack);
+      expect(profileBackRect.size, const Size.square(40));
+      expect(profileBackRect.center.dx, closeTo(entryRect.center.dx, .01));
+      expect(profileBackRect.center.dy, closeTo(entryRect.center.dy, .01));
       await tester.tap(find.text('编辑资料'));
       await tester.pumpAndSettle();
       expect(find.byType(EditProfilePage), findsOneWidget);
-      await tester.tap(find.byKey(const Key('profile-back')));
+      final editBackRect = tester.getRect(profileBack);
+      expect(editBackRect.size, const Size.square(40));
+      expect(editBackRect.center.dx, closeTo(entryRect.center.dx, .01));
+      expect(editBackRect.center.dy, closeTo(entryRect.center.dy, .01));
+      await tester.tap(profileBack);
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('profile-back')));
+      await tester.tap(profileBack);
       await tester.pumpAndSettle();
       expect(find.byType(DemoHomePage), findsOneWidget);
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
 
   testWidgets('bottom navigation floats over the full-height scroll area', (
     tester,
@@ -108,7 +130,7 @@ void main() {
     expect(tester.getSize(backdrop.first).width, 390);
     expect(tester.getSize(backdrop.first).height, greaterThan(0));
     final tabs = find.byKey(const Key('demo-bottom-tabs'));
-    expect(tester.getSize(tabs).height, 54);
+    expect(tester.getSize(tabs).height, 48);
     expect(tester.getRect(tabs).bottom, closeTo(844 - 34, .01));
     tester.view.padding = FakeViewPadding.zero;
     await tester.pumpAndSettle();
@@ -150,7 +172,7 @@ void main() {
       final mainTabs = tester.getRect(segments.first);
       final filters = tester.getRect(segments.last);
       expect(mainTabs.top, closeTo(pinned, 1));
-      expect(filters.top - mainTabs.bottom, closeTo(20, 1));
+      expect(filters.top - mainTabs.bottom, closeTo(13, 1));
       expect(tester.takeException(), isNull);
     },
   );
@@ -170,8 +192,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.getTopLeft(search).dy, y);
-    expect(find.text('图片').hitTestable(), findsOneWidget);
-    await tester.tap(find.text('视频').hitTestable());
+    final filters = find.byType(DemoSegments).hitTestable();
+    expect(
+      find.descendant(of: filters, matching: find.text('图片')).hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(of: filters, matching: find.text('视频')).hitTestable(),
+    );
     await tester.pumpAndSettle();
     expect(find.text('奶茶店的午后'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -198,7 +226,7 @@ void main() {
         tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
         false,
       );
-      expect(tester.getTopLeft(find.byType(BottomSheet)).dy, closeTo(66, 1));
+      expect(tester.getTopLeft(find.byType(BottomSheet)).dy, closeTo(60, 1));
       expect(
         find.byWidgetPredicate((w) => w is DemoSelectionMark && w.number == 1),
         findsOneWidget,
@@ -390,7 +418,7 @@ void main() {
     });
   }
 
-  testWidgets('settings retain capability edits and selected members', (
+  testWidgets('settings retain DSH defaults and edit the existing assistant', (
     tester,
   ) async {
     final repository = await _pump(tester);
@@ -400,25 +428,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('能力'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加成员'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('角色设计师'));
-    await tester.tap(find.text('确认'));
-    await tester.pumpAndSettle();
-    expect(repository.session('inspiration').members, contains('designer'));
-    expect(find.text('工作方式'), findsNothing);
-    final control = find.byType(Switch).first;
-    await tester.ensureVisible(control);
-    await tester.pumpAndSettle();
-    final controlSize =
-        tester.getBottomRight(control) - tester.getTopLeft(control);
-    expect(controlSize.dx, greaterThanOrEqualTo(51));
-    expect(controlSize.dy, greaterThanOrEqualTo(31));
-    await tester.tap(control);
-    await tester.pumpAndSettle();
+    final add = find.descendant(
+      of: find.byKey(const Key('demo-add-members')),
+      matching: find.byType(TextButton),
+    );
+    expect(tester.widget<TextButton>(add).onPressed, isNull);
+    expect(repository.session('inspiration').members, [
+      'popi',
+      'writer',
+      'director',
+    ]);
+    expect(find.byType(Switch), findsNothing);
     expect(
-      repository.session('inspiration').capabilities,
-      isNot(contains('character')),
+      repository.session('inspiration').capabilitiesFor('popi'),
+      containsAll(['character', 'script', 'image', 'video', 'audio', 'vision']),
     );
     await tester.drag(
       find.byKey(const PageStorageKey('demo-settings-skills')),
@@ -434,7 +457,6 @@ void main() {
     await tester.tap(rabbit);
     await tester.ensureVisible(find.text('背景颜色').first);
     await tester.pumpAndSettle();
-    expect(find.text('工作方式'), findsNothing);
     await tester.tap(find.text('确认'));
     await tester.pumpAndSettle();
     expect(
@@ -456,7 +478,7 @@ void main() {
         .update(const EdgeInsets.only(bottom: 34));
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('我还没想好，先聊聊'));
+    await tester.tap(find.byKey(const Key('demo-create-session-action')));
     await tester.pumpAndSettle();
     final disclaimer = find.text('AI生成结果可能有误，仅供参考');
     final bottom = tester.getBottomLeft(disclaimer).dy;
@@ -470,7 +492,7 @@ void main() {
     final repository = await _pump(tester);
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('我还没想好，先聊聊'));
+    await tester.tap(find.byKey(const Key('demo-create-session-action')));
     await tester.pumpAndSettle();
     expect(find.text('嗨，用户～'), findsOneWidget);
     final attachment = repository.assets.first;
@@ -512,15 +534,19 @@ void main() {
   testWidgets(
     'welcome matches the design geometry and keeps real line breaks',
     (tester) async {
-      await _pump(tester, size: const Size(440, 956));
-      await tester.tap(find.byKey(const Key('demo-create')));
+      final repository = await _pump(tester, size: const Size(440, 956));
+      Navigator.of(tester.element(find.byType(DemoHomePage))).push<void>(
+        MaterialPageRoute(
+          builder: (_) => DemoWelcomePage(repository: repository),
+        ),
+      );
       await tester.pumpAndSettle();
       final panel = find.byKey(const Key('demo-welcome-options'));
-      expect(tester.getSize(panel), const Size(400, 310));
-      expect(tester.getTopLeft(panel).dy, closeTo(412, 1));
+      expect(tester.getSize(panel), const Size(400, 262));
+      expect(tester.getTopLeft(panel).dy, closeTo(311, 1));
       expect(
         tester.getTopLeft(find.byKey(const Key('demo-welcome-greeting'))).dy,
-        closeTo(233, 1),
+        closeTo(164, 1),
       );
       expect(find.text('在创建会话之前\n请告诉我：\n你现在最想做什么？'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -530,14 +556,24 @@ void main() {
   testWidgets('all welcome entries remain reachable on a small English phone', (
     tester,
   ) async {
-    await _pump(tester, size: const Size(320, 680), locale: const Locale('en'));
-    await tester.tap(find.byKey(const Key('demo-create')));
+    final repository = await _pump(
+      tester,
+      size: const Size(320, 680),
+      locale: const Locale('en'),
+    );
+    final intent = Navigator.of(tester.element(find.byType(DemoHomePage)))
+        .push<DemoCreateIntent>(
+          MaterialPageRoute(
+            builder: (_) => DemoWelcomePage(repository: repository),
+          ),
+        );
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('demo-welcome-entry-3')));
     await tester.pumpAndSettle();
     await tester.tap(find.text("Let's chat first"));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('demo-settings')), findsOneWidget);
+    expect((await intent)?.title, "Let's chat first");
+    expect(find.byType(DemoHomePage), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

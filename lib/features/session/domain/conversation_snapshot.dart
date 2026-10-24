@@ -299,17 +299,40 @@ class ConversationProgressStep {
 }
 
 class ConversationQuestionField {
+  const ConversationQuestionField({
+    required this.id,
+    required this.label,
+    this.multiple = false,
+    this.required = false,
+    this.options = const [],
+    this.optionDescriptions = const {},
+  });
+
   ConversationQuestionField.fromJson(Map<String, Object?> json)
     : id = json['id'] as String,
       label = json['label'] as String,
       multiple = json['type'] == 'multi_select',
       required = json['required'] == true,
-      options = ((json['options'] as List?) ?? []).whereType<String>().toList();
+      options = [
+        for (final option in (json['options'] as List?) ?? const [])
+          if (option is String)
+            option
+          else if (option is Map && option['label'] is String)
+            option['label'] as String,
+      ],
+      optionDescriptions = {
+        for (final option in (json['options'] as List?) ?? const [])
+          if (option is Map &&
+              option['label'] is String &&
+              option['description'] is String)
+            option['label'] as String: option['description'] as String,
+      };
   final String id;
   final String label;
   final bool multiple;
   final bool required;
   final List<String> options;
+  final Map<String, String> optionDescriptions;
 }
 
 class ConversationMessage {

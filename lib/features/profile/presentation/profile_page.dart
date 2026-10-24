@@ -9,6 +9,7 @@ import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/local_profile_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/social_app_type.dart';
@@ -57,7 +58,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
-    final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
+    final localProfileEnabled = ref.watch(localProfileEnabledProvider);
+    final localProfile = ref.watch(localProfileProvider);
+    final displayedLocalProfile = user == null && localProfileEnabled
+        ? localProfile
+        : null;
+    final displayName = user?.name.isNotEmpty == true
+        ? user!.name
+        : displayedLocalProfile?.name ?? '--';
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
         : user?.id ?? '--';
@@ -88,7 +96,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: [
-                Center(child: ProfileAvatar(imageUrl: user?.avatarUrl)),
+                Center(
+                  child: ProfileAvatar(
+                    imageUrl: user?.avatarUrl,
+                    imageProvider: displayedLocalProfile?.avatarBytes == null
+                        ? null
+                        : MemoryImage(displayedLocalProfile!.avatarBytes!),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Center(
                   child: Text(

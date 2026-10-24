@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/providers/local_profile_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_toast.dart';
 import 'widgets/profile_chrome.dart';
@@ -24,7 +25,7 @@ class EditProfilePage extends ConsumerStatefulWidget {
 
 class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _nameController = TextEditingController();
-  String? _hydratedUserId;
+  bool _hasHydratedName = false;
   bool _isSaving = false;
   bool _isPicking = false;
   Uint8List? _avatarBytes;
@@ -41,14 +42,20 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
+    final localProfileEnabled = ref.watch(localProfileEnabledProvider);
+    final localProfile = ref.watch(localProfileProvider);
+    final displayedLocalProfile = user == null && localProfileEnabled
+        ? localProfile
+        : null;
     final colorScheme = Theme.of(context).colorScheme;
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
         : user?.id ?? '--';
     final l10n = AppLocalizations.of(context)!;
-    if (user != null && _hydratedUserId != user.id) {
-      _nameController.text = user.name;
-      _hydratedUserId = user.id;
+    final initialName = user?.name ?? displayedLocalProfile?.name;
+    if (!_hasHydratedName && initialName != null) {
+      _nameController.text = initialName;
+      _hasHydratedName = true;
     }
 
     return Scaffold(
@@ -73,7 +80,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         size: 130,
                         editable: true,
                         imageUrl: user?.avatarUrl,
-                        imageProvider: _avatarPreview,
+                        imageProvider:
+                            _avatarPreview ??
+                            (displayedLocalProfile?.avatarBytes == null
+                                ? null
+                                : MemoryImage(
+                                    displayedLocalProfile!.avatarBytes!,
+                                  )),
                       ),
                     ),
                   ),
@@ -102,6 +115,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                         key: const Key('profile-name'),
                         controller: _nameController,
                         maxLength: 15,
+                        maxLengthEnforcement: MaxLengthEnforcement.none,
                         enabled: !_isSaving,
                         textInputAction: TextInputAction.done,
                         onSubmitted: (_) {
@@ -111,12 +125,16 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           filled: true,
                           fillColor: colorScheme.surfaceContainerHighest,
                           counterText: '',
-                          suffixText: '${_nameController.text.length}/15',
+                          suffixText:
+                              '${_nameController.text.characters.length}/15',
                           border: _border,
                           enabledBorder: _border,
                           focusedBorder: _border,
                         ),
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) {
+                          _hasHydratedName = true;
+                          setState(() {});
+                        },
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -211,26 +229,50 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   );
 
   Future<void> _saveProfile() async {
-    if (_isSaving || _isPicking || ref.read(userProvider) == null) return;
+    if (_isSaving || _isPicking) return;
     final l10n = AppLocalizations.of(context)!;
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       AppToast.error(context, l10n.nicknameRequired);
       return;
     }
+    if (name.characters.length > 15) {
+      AppToast.error(context, l10n.nicknameHelp);
+      return;
+    }
+
+    final userAtStart = ref.read(userProvider);
+    final localProfileEnabled = ref.read(localProfileEnabledProvider);
+    if (userAtStart == null && !localProfileEnabled) {
+      AppToast.error(context, l10n.profileUpdateFailed);
+      return;
+    }
 
     setState(() => _isSaving = true);
     FocusManager.instance.primaryFocus?.unfocus();
     try {
-      if (_avatarBytes != null && _uploadedAvatarUrl == null) {
-        _uploadedAvatarUrl = await NetworkApi(
-          ref.read(dioProvider),
-        ).uploadAvatar(bytes: _avatarBytes!, filename: _avatarFilename!);
+      if (userAtStart == null) {
+        if (ref.read(userProvider) != null) throw const _ProfileChanged();
+        await ref
+            .read(localProfileProvider.notifier)
+            .updateProfile(name: name, avatarBytes: _avatarBytes);
+        if (ref.read(userProvider) != null) throw const _ProfileChanged();
+      } else {
+        if (_avatarBytes != null && _uploadedAvatarUrl == null) {
+          _uploadedAvatarUrl = await NetworkApi(
+            ref.read(dioProvider),
+          ).uploadAvatar(bytes: _avatarBytes!, filename: _avatarFilename!);
+        }
+        if (ref.read(userProvider)?.id != userAtStart.id) {
+          throw const _ProfileChanged();
+        }
+        await ref
+            .read(userProvider.notifier)
+            .updateUser(name: name, avatarUrl: _uploadedAvatarUrl);
+        if (ref.read(userProvider)?.id != userAtStart.id) {
+          throw const _ProfileChanged();
+        }
       }
-      if (!mounted) return;
-      await ref
-          .read(userProvider.notifier)
-          .updateUser(name: name, avatarUrl: _uploadedAvatarUrl);
       if (!mounted) return;
       AppToast.success(context, l10n.profileUpdated);
       context.pop();
@@ -256,6 +298,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               ));
       if (file == null || !mounted) return;
       final bytes = await file.readAsBytes();
+      if (bytes.lengthInBytes > 2 * 1024 * 1024) {
+        throw const FormatException('Avatar is too large');
+      }
       final codec = await instantiateImageCodec(bytes);
       codec.dispose();
       if (!mounted) return;
@@ -276,4 +321,8 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       if (mounted) setState(() => _isPicking = false);
     }
   }
+}
+
+class _ProfileChanged implements Exception {
+  const _ProfileChanged();
 }

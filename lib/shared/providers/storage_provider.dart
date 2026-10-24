@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/storage/preferences_storage.dart';
+import '../../core/storage/harness_access_storage.dart';
 import '../../core/storage/secure_storage.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -13,8 +14,16 @@ final preferencesStorageProvider = Provider<PreferencesStorage>(
   (ref) => PreferencesStorage(ref.watch(sharedPreferencesProvider)),
 );
 
+final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
+  (ref) => const FlutterSecureStorage(),
+);
+
 final secureStorageProvider = Provider<TokenStorage>(
-  (ref) => const SecureStorage(FlutterSecureStorage()),
+  (ref) => SecureStorage(ref.watch(flutterSecureStorageProvider)),
+);
+
+final harnessAccessStorageProvider = Provider<HarnessAccessStorage>(
+  (ref) => SecureHarnessAccessStorage(ref.watch(flutterSecureStorageProvider)),
 );
 
 final accessTokenProvider = FutureProvider<String?>(

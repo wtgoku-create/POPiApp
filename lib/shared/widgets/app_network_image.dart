@@ -19,6 +19,9 @@ class AppNetworkImage extends StatelessWidget {
     this.loadingBuilder,
     this.semanticLabel,
     this.excludeFromSemantics = false,
+    this.headers = const {},
+    this.cacheKey,
+    this.onUnauthorized,
   });
 
   final String url;
@@ -29,6 +32,9 @@ class AppNetworkImage extends StatelessWidget {
   final ImageLoadingBuilder? loadingBuilder;
   final String? semanticLabel;
   final bool excludeFromSemantics;
+  final Map<String, String> headers;
+  final String? cacheKey;
+  final VoidCallback? onUnauthorized;
 
   @override
   Widget build(BuildContext context) =>
@@ -36,8 +42,13 @@ class AppNetworkImage extends StatelessWidget {
       ? _image(url)
       : _ProtectedImage(image: this);
 
-  Widget _image(String resolvedUrl) => Image(
-    image: AppImageCache.provider(resolvedUrl),
+  Widget _image(String resolvedUrl, {bool includeAccess = true}) => Image(
+    image: AppImageCache.provider(
+      resolvedUrl,
+      headers: includeAccess ? headers : const {},
+      cacheKey: includeAccess ? cacheKey : null,
+      onUnauthorized: includeAccess ? onUnauthorized : null,
+    ),
     width: width,
     height: height,
     fit: fit,
@@ -59,7 +70,7 @@ class _ProtectedImage extends ConsumerWidget {
       .when(
         skipLoadingOnRefresh: false,
         skipLoadingOnReload: false,
-        data: image._image,
+        data: (url) => image._image(url, includeAccess: false),
         error: (error, stack) =>
             image.errorBuilder?.call(context, error, stack) ??
             SizedBox(width: image.width, height: image.height),

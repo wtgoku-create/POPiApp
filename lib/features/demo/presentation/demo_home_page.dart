@@ -1,17 +1,24 @@
+import 'dart:async';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/providers/user_provider.dart';
+import '../../../shared/providers/local_profile_provider.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../profile/presentation/widgets/profile_chrome.dart';
 import '../data/demo_repository.dart';
 import '../domain/demo_models.dart';
 import 'demo_assets_page.dart';
 import 'demo_chat_page.dart';
-import 'demo_welcome_page.dart';
+import 'demo_create_session_sheet.dart';
+import 'demo_desktop_workspace.dart';
 import 'widgets/demo_widgets.dart';
 
 class DemoHomePage extends StatefulWidget {
@@ -21,71 +28,217 @@ class DemoHomePage extends StatefulWidget {
   State<DemoHomePage> createState() => _DemoHomePageState();
 }
 
-class _DemoHomePageState extends State<DemoHomePage> {
+class _DemoHomePageState extends State<DemoHomePage>
+    with WidgetsBindingObserver {
   int _tab = 0;
   String _query = '';
+  Future<void>? _refreshInFlight;
+  bool _openingSession = false;
 
-  void _open(DemoSession s) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            DemoChatPage(repository: widget.repository, sessionId: s.id),
-      ),
+  @override
+  void initState() {
+    super.initState();
+    if (widget.repository.isHarness) {
+      WidgetsBinding.instance.addObserver(this);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(_refreshHarness(reportError: true));
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.repository.isHarness) {
+      WidgetsBinding.instance.removeObserver(this);
+    }
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshHarness());
+    }
+  }
+
+  Future<void> _refreshHarness({bool reportError = false}) {
+    if (!widget.repository.isHarness || !mounted) return Future.value();
+    if (ModalRoute.of(context)?.isCurrent == false) return Future.value();
+    return _refreshInFlight ??= _performHarnessRefresh(
+      reportError: reportError,
     );
+  }
+
+  Future<void> _performHarnessRefresh({required bool reportError}) async {
+    try {
+      if (reportError) {
+        await demoPerform(context, widget.repository.refreshSessions);
+      } else {
+        try {
+          await widget.repository.refreshSessions();
+        } catch (_) {
+          // Automatic synchronization keeps the last good snapshot visible.
+        }
+      }
+    } finally {
+      _refreshInFlight = null;
+    }
+  }
+
+  void _selectTab(int tab) {
+    if (_tab == tab) return;
+    setState(() => _tab = tab);
+    unawaited(_refreshHarness());
+  }
+
+  Future<void> _open(DemoSession s) async {
+    if (_openingSession) return;
+    _openingSession = true;
+    try {
+      final pendingRefresh = _refreshInFlight;
+      if (pendingRefresh != null) await pendingRefresh;
+      if (!mounted) return;
+      final current = widget.repository.sessions
+          .where((session) => session.id == s.id)
+          .firstOrNull;
+      if (current == null) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => DemoChatPage(
+            repository: widget.repository,
+            sessionId: current.id,
+          ),
+        ),
+      );
+      if (mounted) await _refreshHarness();
+    } finally {
+      _openingSession = false;
+    }
   }
 
   void _profile() => context.push('/profile');
 
+  Future<void> _startCreate() async {
+    final l = AppLocalizations.of(context)!;
+    final id = await showDemoCreateSessionSheet(
+      context: context,
+      repository: widget.repository,
+      initialTitle: l.demoNew,
+      kind: DemoSessionKind.conversation,
+    );
+    if (id == null || !mounted) return;
+    await _open(widget.repository.session(id));
+  }
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final desktop =
+            (!kIsWeb && Theme.of(context).platform == TargetPlatform.macOS) ||
+            (kIsWeb && constraints.maxWidth >= 900);
+        return desktop
+            ? DemoDesktopWorkspace(repository: widget.repository)
+            : _buildMobile(context);
+      },
+    );
+  }
+
+  Widget _buildMobile(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return DemoScaffold(
       floatingBottom: true,
-      title: Text(_tab == 0 ? l.demoConversations : l.demoAssets),
+      frostedBottom: _tab == 0,
+      actionsPadding: 16,
+      title: Text(
+        _tab == 0 ? l.demoConversations : l.demoAssets,
+        style: _tab == 1
+            ? const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)
+            : null,
+      ),
       leading: Padding(
         padding: const EdgeInsets.only(left: 16),
-        child: IconButton(
-          tooltip: l.demoProfile,
-          padding: EdgeInsets.zero,
-          onPressed: _profile,
-          icon: const DemoAvatar(size: 40),
+        child: Center(
+          child: SizedBox.square(
+            dimension: 40,
+            child: IconButton(
+              tooltip: l.demoProfile,
+              padding: EdgeInsets.zero,
+              onPressed: _profile,
+              icon: Consumer(
+                builder: (context, ref, _) {
+                  final user = ref.watch(userProvider);
+                  final bytes = user == null
+                      ? ref.watch(localProfileProvider)?.avatarBytes
+                      : null;
+                  return ProfileAvatar(
+                    size: 36,
+                    imageUrl: user?.avatarUrl,
+                    imageProvider: bytes == null ? null : MemoryImage(bytes),
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       ),
       actions: [
-        IconButton(
-          key: const Key('demo-create'),
-          tooltip: _tab == 0 ? l.demoNew : l.demoUpload,
-          onPressed: () => _tab == 0
-              ? Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        DemoWelcomePage(repository: widget.repository),
-                  ),
-                )
-              : showDemoImport(context, widget.repository),
-          icon: _tab == 0
-              ? const DemoIcon('plus', color: AppColors.brand)
-              : const DemoIcon('upload', size: 24, color: AppColors.brand),
-        ),
+        if (_tab == 0)
+          IconButton(
+            key: const Key('demo-create'),
+            tooltip: l.demoNew,
+            onPressed: _startCreate,
+            icon: const DemoIcon('plus', color: AppColors.brand),
+          )
+        else
+          SizedBox.square(
+            dimension: 40,
+            child: IconButton(
+              key: const Key('demo-create'),
+              tooltip: l.demoUpload,
+              padding: EdgeInsets.zero,
+              onPressed: () => showDemoImport(context, widget.repository),
+              icon: Container(
+                width: 36,
+                height: 36,
+                decoration: const ShapeDecoration(
+                  color: demoTint,
+                  shape: CircleBorder(),
+                ),
+                child: const Center(
+                  child: DemoIcon('upload', size: 20, color: AppColors.brand),
+                ),
+              ),
+            ),
+          ),
       ],
       bottom: SafeArea(
         top: false,
         minimum: const EdgeInsets.only(bottom: 20),
         child: Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(top: 8),
           child: Center(
             heightFactor: 1,
             child: ClipRRect(
               key: const Key('demo-bottom-tabs'),
-              borderRadius: BorderRadius.circular(27),
+              borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
                 key: const Key('demo-bottom-tabs-glass'),
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
-                  width: 144,
-                  height: 54,
-                  padding: const EdgeInsets.all(5),
-                  color: demoSurface(context),
+                  width: 152,
+                  height: 48,
+                  padding: const EdgeInsets.all(4),
+                  decoration: ShapeDecoration(
+                    color: demoSurface(context),
+                    shape: StadiumBorder(
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.surface,
+                      ),
+                    ),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -102,7 +255,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                               tooltip: i == 0
                                   ? l.demoConversations
                                   : l.demoAssets,
-                              onPressed: () => setState(() => _tab = i),
+                              onPressed: () => _selectTab(i),
                               icon: DemoIcon(
                                 i == 0 ? 'chat' : 'folder',
                                 color: _tab == i
@@ -126,7 +279,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
           Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                 child: DemoSearch(
                   hint: l.demoSearchHistory,
                   onChanged: (q) => setState(() => _query = q),
@@ -136,6 +289,10 @@ class _DemoHomePageState extends State<DemoHomePage> {
                 child: ListenableBuilder(
                   listenable: widget.repository,
                   builder: (context, _) {
+                    if (widget.repository.loading &&
+                        widget.repository.sessions.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
                     final sessions = widget.repository.sessions
                         .where(
                           (s) =>
@@ -155,7 +312,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                     }
                     return ListView.separated(
                       key: const PageStorageKey('demo-conversations'),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 140),
                       itemCount: sessions.length,
                       itemBuilder: (context, index) {
                         final s = sessions[index];
@@ -163,6 +320,25 @@ class _DemoHomePageState extends State<DemoHomePage> {
                           key: ValueKey(s.id),
                           label: s.title,
                           entries: [
+                            AppMenuItem(
+                              key: const Key('demo-session-pin'),
+                              label: s.pinned
+                                  ? l.demoUnpinSession
+                                  : l.demoPinSession,
+                              icon: Icon(
+                                s.pinned
+                                    ? Icons.push_pin
+                                    : Icons.push_pin_outlined,
+                              ),
+                              onSelected: () => demoPerform(
+                                context,
+                                () => widget.repository.updateSession(
+                                  s.id,
+                                  (session) =>
+                                      session.copyWith(pinned: !session.pinned),
+                                ),
+                              ),
+                            ),
                             AppMenuItem(
                               label: l.renameProjectItem,
                               icon: const Icon(Icons.edit_outlined),
@@ -178,6 +354,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                     ),
                               ),
                             ),
+                            const AppMenuDivider(),
                             AppMenuItem(
                               label: l.delete,
                               destructive: true,
@@ -209,16 +386,12 @@ class _DemoHomePageState extends State<DemoHomePage> {
                               borderRadius: BorderRadius.circular(20),
                               onTap: () => _open(s),
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  10,
-                                  10,
-                                  12,
-                                  10,
-                                ),
+                                padding: const EdgeInsets.fromLTRB(8, 8, 10, 8),
                                 child: Row(
                                   children: [
                                     DemoAvatar(
                                       members: s.members,
+                                      size: 60,
                                       memberAvatars: s.memberAvatars,
                                       memberColors: s.memberColors,
                                     ),
@@ -240,7 +413,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                                         overflow: TextOverflow
                                                             .ellipsis,
                                                         style: const TextStyle(
-                                                          fontSize: 18,
+                                                          fontSize: 16,
                                                           fontWeight:
                                                               FontWeight.w600,
                                                         ),
@@ -316,7 +489,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: const TextStyle(
-                                                    fontSize: 16,
+                                                    fontSize: 14,
                                                     color:
                                                         AppColors.textSecondary,
                                                   ),

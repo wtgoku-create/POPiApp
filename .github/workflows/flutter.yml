@@ -7,12 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       build_environment:
-        description: Build variant (dev uses the test server; demo uses offline Mock UI)
+        description: Build variant (harness_remote uses the remote Harness; dev uses the test server; demo uses offline Mock UI)
         required: true
         default: production
         type: choice
         options:
           - production
+          - harness_remote
           - dev
           - demo
       build_android:
@@ -35,9 +36,9 @@ permissions:
   contents: read
 
 env:
-  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
-  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
-  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && 'harness_remote' || github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
+  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && 'lib/main_harness.dart' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && '-harness' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
@@ -75,7 +76,7 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" test --coverage
+        run: dart run tool/flutter_env.dart development test --coverage --timeout 60s
 
       - name: Upload coverage
         if: always()
@@ -123,13 +124,56 @@ jobs:
           EOF
 
       - name: Build signed release APK
-        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release --target="$BUILD_TARGET"
+        run: |
+          build_name=$(ruby -ryaml -e 'puts YAML.load_file("pubspec.yaml").fetch("version").split("+").first')
+          build_number=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          echo "ANDROID_BUILD_NAME=$build_name" >> "$GITHUB_ENV"
+          echo "ANDROID_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "Building Android APK $build_name ($build_number)"
+          dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk \
+            --release \
+            --target="$BUILD_TARGET" \
+            --build-name="$build_name" \
+            --build-number="$build_number"
+
+      - name: Verify signed APK and manifest metadata
+        run: |
+          python3 tool/ci_verify_android_apk.py \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --package com.popistudio.app \
+            --version "$ANDROID_BUILD_NAME" \
+            --build-number "$ANDROID_BUILD_NUMBER" \
+            --minimum-sdk 24 \
+            --maximum-sdk 30 \
+            --metadata-output build/metadata/android-verification.json
+
+      - name: Create remote Harness Android build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        run: |
+          python3 tool/ci_build_metadata.py \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --output build/metadata/android-harness.json \
+            --platform android \
+            --version "$ANDROID_BUILD_NAME" \
+            --build-number "$ANDROID_BUILD_NUMBER" \
+            --environment "$FLUTTER_ENV" \
+            --target "$BUILD_TARGET" \
+            --commit "$GITHUB_SHA" \
+            --android-verification build/metadata/android-verification.json
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: popi-app-android-apk-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - name: Upload remote Harness Android build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-android-build-metadata-harness
+          path: build/metadata/android-harness.json
           if-no-files-found: error
 
   build-ios:
@@ -301,11 +345,32 @@ jobs:
             --build-number "$IOS_BUILD_NUMBER" \
             --bundle-id "$IOS_BUNDLE_ID"
 
+      - name: Create remote Harness iOS build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        run: |
+          python3 tool/ci_build_metadata.py \
+            "$IOS_IPA_PATH" \
+            --output build/metadata/ios-harness.json \
+            --platform ios \
+            --version "$IOS_BUILD_NAME" \
+            --build-number "$IOS_BUILD_NUMBER" \
+            --environment "$FLUTTER_ENV" \
+            --target "$BUILD_TARGET" \
+            --commit "$GITHUB_SHA"
+
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: flutter-starter-ios-signed${{ env.BUILD_ARTIFACT_SUFFIX }}
           path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+
+      - name: Upload remote Harness iOS build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-build-metadata-harness
+          path: build/metadata/ios-harness.json
           if-no-files-found: error
 
   upload-ios-testflight:
@@ -318,9 +383,12 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.build_ios && inputs.upload_testflight)
       )
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download signed IPA
         uses: actions/download-artifact@v4
         with:
@@ -335,6 +403,46 @@ jobs:
             exit 1
           fi
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
+
+      - name: Read uploaded IPA identity
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          identity=$(python3 - "$IOS_IPA_PATH" <<'PY'
+          import plistlib
+          import re
+          import sys
+          import zipfile
+
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              candidates = [
+                  name for name in archive.namelist()
+                  if re.fullmatch(r'Payload/[^/]+\.app/Info\.plist', name)
+              ]
+              if len(candidates) != 1:
+                  raise SystemExit('Expected exactly one app Info.plist in the IPA.')
+              info = plistlib.loads(archive.read(candidates[0]))
+
+          values = [
+              info.get('CFBundleIdentifier'),
+              info.get('CFBundleShortVersionString'),
+              info.get('CFBundleVersion'),
+          ]
+          if not all(isinstance(value, str) and value for value in values):
+              raise SystemExit('IPA identity metadata is incomplete.')
+          if any('\t' in value or '\n' in value for value in values):
+              raise SystemExit('IPA identity metadata contains invalid whitespace.')
+          print('\t'.join(values))
+          PY
+          )
+          IFS=$'\t' read -r testflight_bundle_id testflight_version testflight_build_number <<< "$identity"
+          if [[ "$testflight_bundle_id" != "$IOS_BUNDLE_ID" ]]; then
+            echo 'Downloaded IPA Bundle ID does not match IOS_BUNDLE_ID.'
+            exit 1
+          fi
+          printf 'TESTFLIGHT_BUNDLE_ID=%s\n' "$testflight_bundle_id" >> "$GITHUB_ENV"
+          printf 'TESTFLIGHT_VERSION=%s\n' "$testflight_version" >> "$GITHUB_ENV"
+          printf 'TESTFLIGHT_BUILD_NUMBER=%s\n' "$testflight_build_number" >> "$GITHUB_ENV"
 
       - name: Upload build and wait for App Store processing
         env:
@@ -352,3 +460,70 @@ jobs:
             --api-issuer "$APPSTORE_ISSUER_ID" \
             --p8-file-path "$key_path" \
             --wait
+
+      - name: Query public TestFlight installation status
+        continue-on-error: true
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p build/metadata
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-status-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+
+          set +e
+          node tool/ci_testflight_status.mjs \
+            --private-key-file "$key_path" \
+            --bundle-id "$TESTFLIGHT_BUNDLE_ID" \
+            --version "$TESTFLIGHT_VERSION" \
+            --build-number "$TESTFLIGHT_BUILD_NUMBER" \
+            --wait-seconds 300 \
+            --poll-seconds 20 \
+            --output build/metadata/testflight-status.json
+          query_status=$?
+          set -e
+
+          if [[ $query_status -ne 0 || ! -s build/metadata/testflight-status.json ]]; then
+            python3 - "$query_status" <<'PY'
+          import json
+          import os
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          result = {
+              'schemaVersion': 1,
+              'status': 'error',
+              'queriedAt': datetime.now(timezone.utc).isoformat(),
+              'bundleId': os.environ.get('TESTFLIGHT_BUNDLE_ID'),
+              'requestedVersion': os.environ.get('TESTFLIGHT_VERSION'),
+              'requestedBuildNumber': os.environ.get('TESTFLIGHT_BUILD_NUMBER'),
+              'build': None,
+              'betaGroups': {
+                  'querySucceeded': False,
+                  'externalGroupCount': None,
+                  'publicLinkEnabledGroupCount': None,
+              },
+              'publicLinks': [],
+              'warnings': [],
+              'error': {
+                  'kind': 'status_script_failed',
+                  'exitCode': int(sys.argv[1]),
+              },
+          }
+          Path('build/metadata/testflight-status.json').write_text(
+              json.dumps(result, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+          fi
+
+      - name: Upload public TestFlight status
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-testflight-status${{ env.BUILD_ARTIFACT_SUFFIX }}
+          path: build/metadata/testflight-status.json
+          if-no-files-found: warn

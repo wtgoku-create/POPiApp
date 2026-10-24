@@ -4,6 +4,7 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let douyinLogin = DouyinLoginBridge()
+  private var speechInput: SpeechInputBridge?
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -20,6 +21,9 @@ import UIKit
       channel.setMethodCallHandler { [weak self] call, result in
         self?.douyinLogin.handle(call, result: result)
       }
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SpeechInputBridge") {
+      speechInput = SpeechInputBridge(messenger: registrar.messenger())
     }
   }
 

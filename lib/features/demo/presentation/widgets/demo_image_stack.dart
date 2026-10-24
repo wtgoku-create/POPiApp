@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
 import '../../domain/demo_models.dart';
+import '../demo_remote_media.dart';
 
 /// A paged image deck that opens the gallery at the visible image.
 class DemoImageStack extends StatefulWidget {
@@ -41,7 +42,7 @@ class _DemoImageStackState extends State<DemoImageStack> {
     images: [
       for (final asset in widget.images)
         ImagePreviewItem(
-          image: AssetImage(asset.cover),
+          image: demoAssetImageProviderForContext(context, asset),
           heroTag: 'message-${widget.messageId}-${asset.id}',
           label: asset.title,
         ),
@@ -50,8 +51,8 @@ class _DemoImageStackState extends State<DemoImageStack> {
 
   Widget _image(DemoAsset asset, double width, double height) => ClipRRect(
     borderRadius: BorderRadius.circular(20),
-    child: Image.asset(
-      asset.cover,
+    child: DemoAssetImage(
+      asset: asset,
       width: width,
       height: height,
       cacheWidth: 900,

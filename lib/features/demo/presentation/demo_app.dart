@@ -14,28 +14,37 @@ import 'demo_home_page.dart';
 
 /// Mock creation flows share the existing account pages and local preferences.
 class DemoApp extends ConsumerStatefulWidget {
-  const DemoApp({this.locale = const Locale('zh'), super.key});
+  const DemoApp({
+    this.locale = const Locale('zh'),
+    this.repository,
+    this.bootstrapUser = true,
+    super.key,
+  });
   final Locale locale;
+  final DemoRepository? repository;
+  final bool bootstrapUser;
   @override
   ConsumerState<DemoApp> createState() => _DemoAppState();
 }
 
 class _DemoAppState extends ConsumerState<DemoApp> {
-  late final _repository = DemoRepository(ref.read(preferencesStorageProvider))
-    ..restore();
+  late final _ownsRepository = widget.repository == null;
+  late final _repository =
+      widget.repository ??
+      (DemoRepository(ref.read(preferencesStorageProvider))..restore());
   late final _router = createAppRouter(
     homeBuilder: (_, _) => DemoHomePage(repository: _repository),
   );
   @override
   void dispose() {
     _router.dispose();
-    _repository.dispose();
+    if (_ownsRepository) _repository.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(userBootstrapProvider);
+    if (widget.bootstrapUser) ref.watch(userBootstrapProvider);
     return ToastificationWrapper(
       child: MaterialApp.router(
         routerConfig: _router,

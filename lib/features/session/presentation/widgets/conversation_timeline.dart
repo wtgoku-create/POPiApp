@@ -29,6 +29,7 @@ import '../conversation_error_text.dart';
 import 'conversation_role_card.dart';
 import 'conversation_selected_topic_card.dart';
 import 'conversation_card.dart';
+import 'conversation_question_card.dart';
 import 'conversation_style.dart';
 import 'conversation_selection_scope.dart';
 import 'conversation_card_content.dart';
@@ -1664,188 +1665,21 @@ String _detailLabel(String label, AppLocalizations l10n) => switch (label) {
 String _statusLabel(String status, AppLocalizations l10n) =>
     conversationStatusLabel(status, l10n);
 
-class _ConversationQuestion extends StatefulWidget {
+class _ConversationQuestion extends StatelessWidget {
   const _ConversationQuestion({
     required this.block,
     required this.controller,
     super.key,
   });
+
   final ConversationBlock block;
   final ConversationController controller;
-  @override
-  State<_ConversationQuestion> createState() => _ConversationQuestionState();
-}
 
-class _ConversationQuestionState extends State<_ConversationQuestion>
-    with AutomaticKeepAliveClientMixin {
-  final _answers = <String, Object?>{};
-  final _custom = <String, String>{};
-  final _customControllers = <String, TextEditingController>{};
-  bool _submitted = false;
   @override
-  bool get wantKeepAlive => true;
-  @override
-  void dispose() {
-    for (final controller in _customControllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  Map<String, Object?> get _values => {
-    for (final field in widget.block.fields)
-      if (_answers[field.id] != null ||
-          (_custom[field.id]?.trim().isNotEmpty ?? false))
-        field.id: field.multiple
-            ? [
-                ...?_answers[field.id] as List<String>?,
-                if (_custom[field.id]?.trim().isNotEmpty ?? false)
-                  _custom[field.id]!.trim(),
-              ]
-            : (_custom[field.id]?.trim().isNotEmpty ?? false)
-            ? _custom[field.id]!.trim()
-            : _answers[field.id],
-  };
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final l10n = AppLocalizations.of(context)!;
-    final disabled =
-        _submitted ||
-        widget.controller.pending ||
-        widget.controller.running ||
-        widget.controller.loading;
-    final valid = widget.block.fields.every(
-      (field) =>
-          !field.required ||
-          (field.multiple
-              ? (_values[field.id] as List?)?.isNotEmpty == true
-              : (_values[field.id] as String?)?.isNotEmpty == true),
-    );
-    return ConversationCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(widget.block.title, style: ConversationCardTypography.title),
-          for (final field in widget.block.fields) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 20, bottom: 6),
-              child: Text(
-                field.label,
-                style: ConversationCardTypography.body.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            if (field.multiple)
-              for (final option in field.options)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  shape: const StadiumBorder(),
-                  selected: (_answers[field.id] as List<String>? ?? [])
-                      .contains(option),
-                  selectedTileColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: .05),
-                  title: Text(option, style: ConversationCardTypography.body),
-                  value: (_answers[field.id] as List<String>? ?? []).contains(
-                    option,
-                  ),
-                  onChanged: disabled
-                      ? null
-                      : (checked) => setState(() {
-                          final selected = [
-                            ...?_answers[field.id] as List<String>?,
-                          ];
-                          checked == true
-                              ? selected.add(option)
-                              : selected.remove(option);
-                          _answers[field.id] = selected;
-                        }),
-                ),
-            if (!field.multiple)
-              RadioGroup<String>(
-                groupValue: _answers[field.id] as String?,
-                onChanged: (value) => setState(() {
-                  _answers[field.id] = value;
-                  _custom.remove(field.id);
-                  _customControllers[field.id]?.clear();
-                }),
-                child: Column(
-                  children: [
-                    for (final option in field.options)
-                      RadioListTile<String>(
-                        contentPadding: EdgeInsets.zero,
-                        shape: const StadiumBorder(),
-                        selected: _answers[field.id] == option,
-                        selectedTileColor: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: .05),
-                        title: Text(
-                          option,
-                          style: ConversationCardTypography.body,
-                        ),
-                        value: option,
-                        enabled: !disabled,
-                      ),
-                  ],
-                ),
-              ),
-            TextFormField(
-              controller: _customControllers.putIfAbsent(
-                field.id,
-                TextEditingController.new,
-              ),
-              enabled: !disabled,
-              maxLength: 8000,
-              decoration: InputDecoration(
-                hintText: l10n.chatCustomAnswer,
-                counterText: '',
-              ),
-              onChanged: (value) => setState(() {
-                _custom[field.id] = value;
-                if (!field.multiple && value.trim().isNotEmpty) {
-                  _answers.remove(field.id);
-                }
-              }),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(112, 50),
-                  shape: const StadiumBorder(),
-                ),
-                onPressed: disabled ? null : () => _respond('cancel'),
-                child: Text(l10n.cancel),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(112, 50),
-                  shape: const StadiumBorder(),
-                ),
-                onPressed: disabled || !valid ? null : () => _respond('submit'),
-                child: Text(l10n.confirm),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _respond(String action) async {
-    final success = await widget.controller.answer(
-      widget.block,
-      action,
-      _values,
-    );
-    if (success && mounted) setState(() => _submitted = true);
-  }
+  Widget build(BuildContext context) => ConversationQuestionCard(
+    title: block.title,
+    fields: block.fields,
+    busy: controller.pending || controller.running || controller.loading,
+    onRespond: (action, answer) => controller.answer(block, action, answer),
+  );
 }
