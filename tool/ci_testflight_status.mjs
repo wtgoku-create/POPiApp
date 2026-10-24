@@ -223,6 +223,10 @@ export function summarizeTestFlightStatus({
     uploadedDate: attributes.uploadedDate ?? null,
     expirationDate: attributes.expirationDate ?? null,
     expired,
+    usesNonExemptEncryption:
+      typeof attributes.usesNonExemptEncryption === 'boolean'
+        ? attributes.usesNonExemptEncryption
+        : null,
     processingState,
     processed: processingState !== null && processingState !== 'PROCESSING',
     processingSucceeded: processingState === 'VALID',
@@ -377,7 +381,7 @@ async function queryStatus(options) {
       'filter[version]': expectedBuildNumber,
       'filter[preReleaseVersion.platform]': 'IOS',
       'fields[builds]':
-        'version,uploadedDate,expirationDate,expired,processingState,buildAudienceType,preReleaseVersion,betaGroups,buildBetaDetail',
+        'version,uploadedDate,expirationDate,expired,usesNonExemptEncryption,processingState,buildAudienceType,preReleaseVersion,betaGroups,buildBetaDetail',
       include: 'preReleaseVersion,betaGroups,buildBetaDetail',
       'fields[preReleaseVersions]': 'version,platform',
       'fields[betaGroups]':
