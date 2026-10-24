@@ -390,6 +390,14 @@ jobs:
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
 
+      - name: Retain remote Harness iOS crash symbols
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-debug-symbols-harness
+          path: build/ios/archive/*.xcarchive/dSYMs/
+          if-no-files-found: error
+
       - name: Upload remote Harness iOS build metadata
         if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
         uses: actions/upload-artifact@v4
