@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 
 /// In-app browser for public H5 content. It never adds app credentials.
 class H5Page extends StatefulWidget {
@@ -134,28 +135,35 @@ class _H5PageState extends State<H5Page> {
     final controller = _controller;
     final supported = WebViewPlatform.instance != null;
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        leading: IconButton(
-          tooltip: l10n.back,
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
-            }
-          },
-          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          centerTitle: true,
+          title: Text(
+            widget.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          leading: IconButton(
+            tooltip: l10n.back,
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/');
+              }
+            },
+            icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+          ),
+          actions: [
+            if (supported)
+              IconButton(
+                tooltip: l10n.webPageRefresh,
+                onPressed: controller == null && !_failed ? null : _load,
+                icon: const Icon(Icons.refresh),
+              ),
+          ],
         ),
-        actions: [
-          if (supported)
-            IconButton(
-              tooltip: l10n.webPageRefresh,
-              onPressed: controller == null && !_failed ? null : _load,
-              icon: const Icon(Icons.refresh),
-            ),
-        ],
       ),
       body: SafeArea(
         top: false,

@@ -72,3 +72,4 @@ flutter:
     - assets/animations/bot_avatars/
   shaders:
     - assets/shaders/demo_backdrop_fade.frag
+    - assets/shaders/app_top_bar_fade.frag

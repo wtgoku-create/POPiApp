@@ -17,6 +17,7 @@ import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_bot_avatar.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
@@ -184,6 +185,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
           key: _scaffoldKey,
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
+          extendBodyBehindAppBar: true,
           drawer: PopiNavigationDrawer(
             onOpenConversation: _selectConversation,
             onNewConversation: _startNewConversation,
@@ -194,94 +196,96 @@ class _SessionPageState extends ConsumerState<SessionPage> {
               setState(() => _drawerOpen = isOpened);
             }
           },
-          appBar: PreferredSize(
-            preferredSize: Size.fromHeight(safeArea.top + 56),
-            child: Padding(
-              padding: EdgeInsets.only(top: safeArea.top),
-              child: SizedBox(
-                key: const Key('popi-home-app-bar'),
-                height: 56,
-                child: _blurBehindDrawer(
-                  AppBar(
-                    primary: false,
-                    backgroundColor: Colors.transparent,
-                    surfaceTintColor: Colors.transparent,
-                    elevation: 0,
-                    toolbarHeight: 56,
-                    centerTitle: true,
-                    title: sessionTitle == null
-                        ? null
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const AppBotAvatar(size: 36),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Tooltip(
-                                  message: sessionTitle,
-                                  child: Text(
-                                    sessionTitle,
-                                    key: const Key('session-app-bar-title'),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+          appBar: AppGlassAppBar(
+            child: PreferredSize(
+              preferredSize: Size.fromHeight(safeArea.top + 56),
+              child: Padding(
+                padding: EdgeInsets.only(top: safeArea.top),
+                child: SizedBox(
+                  key: const Key('popi-home-app-bar'),
+                  height: 56,
+                  child: _blurBehindDrawer(
+                    AppBar(
+                      primary: false,
+                      backgroundColor: Colors.transparent,
+                      surfaceTintColor: Colors.transparent,
+                      elevation: 0,
+                      toolbarHeight: 56,
+                      centerTitle: true,
+                      title: sessionTitle == null
+                          ? null
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const AppBotAvatar(size: 36),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Tooltip(
+                                    message: sessionTitle,
+                                    child: Text(
+                                      sessionTitle,
+                                      key: const Key('session-app-bar-title'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                    leadingWidth: 80,
-                    leading: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 15),
-                        child: SizedBox.square(
-                          dimension: 40,
-                          child: IconButton(
-                            key: const Key('popi-open-navigation'),
-                            tooltip: l10n.openNavigation,
-                            padding: const EdgeInsets.all(5),
-                            onPressed: () =>
-                                _scaffoldKey.currentState?.openDrawer(),
-                            icon: AppSvgIcon.asset(
-                              'common_navigation_menu',
-                              size: 30,
-                              color: colorScheme.onSurface,
-                              semanticsLabel: l10n.openNavigation,
+                              ],
                             ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    actions: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 15),
-                        child: SizedBox.square(
-                          dimension: 40,
-                          child: IconButton(
-                            key: const Key('session-new-conversation'),
-                            tooltip: l10n.sessionArtifactsTitle,
-                            padding: const EdgeInsets.all(4),
-                            onPressed: () => SessionArtifactsSheet.show(
-                              context,
-                              sessionId: _activeSessionId,
-                              mediaRepository: _conversation?.repository,
-                            ),
-                            icon: SizedBox(
-                              width: 30,
-                              height: 32,
-                              child: AppSvgIcon.asset(
-                                'session_new_conversation',
+                      leadingWidth: 80,
+                      leading: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 15),
+                          child: SizedBox.square(
+                            dimension: 40,
+                            child: IconButton(
+                              key: const Key('popi-open-navigation'),
+                              tooltip: l10n.openNavigation,
+                              padding: const EdgeInsets.all(5),
+                              onPressed: () =>
+                                  _scaffoldKey.currentState?.openDrawer(),
+                              icon: AppSvgIcon.asset(
+                                'common_navigation_menu',
+                                size: 30,
                                 color: colorScheme.onSurface,
+                                semanticsLabel: l10n.openNavigation,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
+                      actions: [
+                        Padding(
+                          padding: const EdgeInsets.only(right: 15),
+                          child: SizedBox.square(
+                            dimension: 40,
+                            child: IconButton(
+                              key: const Key('session-new-conversation'),
+                              tooltip: l10n.sessionArtifactsTitle,
+                              padding: const EdgeInsets.all(4),
+                              onPressed: () => SessionArtifactsSheet.show(
+                                context,
+                                sessionId: _activeSessionId,
+                                mediaRepository: _conversation?.repository,
+                              ),
+                              icon: SizedBox(
+                                width: 30,
+                                height: 32,
+                                child: AppSvgIcon.asset(
+                                  'session_new_conversation',
+                                  color: colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -299,6 +303,7 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                         '${_conversation!.userId}:$_activeSessionId',
                       ),
                       controller: _conversation!,
+                      topPadding: safeArea.top + 56 + 10,
                       onRevise: (content) =>
                           _selectPrompt(l10n.chatRevisePrompt(content.title)),
                     ),
@@ -306,7 +311,12 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                 else
                   Positioned.fill(
                     bottom: composerInset,
-                    child: SessionWelcome(keyboardVisible: keyboardHeight > 0),
+                    child: Padding(
+                      padding: EdgeInsets.only(top: safeArea.top + 56),
+                      child: SessionWelcome(
+                        keyboardVisible: keyboardHeight > 0,
+                      ),
+                    ),
                   ),
                 Positioned(
                   left: 0,

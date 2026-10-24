@@ -6,6 +6,7 @@ import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/type/bot_avatar_type.dart';
 import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../../shared/widgets/app_bot_avatar.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
@@ -150,6 +151,7 @@ class DemoScaffold extends StatelessWidget {
     this.leading,
     this.bottom,
     this.floatingBottom = false,
+    this.extendBodyBehindAppBar = false,
     super.key,
   });
   final Widget title;
@@ -158,32 +160,56 @@ class DemoScaffold extends StatelessWidget {
   final Widget? leading;
   final Widget? bottom;
   final bool floatingBottom;
+  final bool extendBodyBehindAppBar;
   @override
   Widget build(BuildContext context) => Scaffold(
     extendBody: floatingBottom,
-    appBar: AppBar(
-      centerTitle: true,
-      title: title,
-      titleTextStyle: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      leading:
-          leading ??
-          (Navigator.of(context).canPop()
-              ? IconButton(
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const RotatedBox(
-                    quarterTurns: 1,
-                    child: DemoIcon('back', size: 40),
+    extendBodyBehindAppBar: extendBodyBehindAppBar,
+    appBar: AppGlassAppBar(
+      extendBackdrop: extendBodyBehindAppBar,
+      child: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: true,
+        leadingWidth: 80,
+        title: title,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        leading: leading != null || Navigator.of(context).canPop()
+            ? Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 20),
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child:
+                        leading ??
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const RotatedBox(
+                            quarterTurns: 1,
+                            child: DemoIcon('back', size: 40),
+                          ),
+                        ),
                   ),
-                )
-              : null),
-      actions: actions == null
-          ? null
-          : [...actions!, const SizedBox(width: 12)],
+                ),
+              )
+            : null,
+        actions: actions == null
+            ? null
+            : [
+                for (final action in actions!)
+                  SizedBox.square(dimension: 40, child: action),
+                const SizedBox(width: 20),
+              ],
+      ),
     ),
     body: SafeArea(
       top: false,

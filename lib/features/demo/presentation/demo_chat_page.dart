@@ -222,11 +222,14 @@ class _DemoChatPageState extends State<DemoChatPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final topContentPadding =
+        MediaQuery.paddingOf(context).top + kToolbarHeight;
     return ListenableBuilder(
       listenable: _conversation,
       builder: (context, _) {
         final s = _conversation.session;
         return DemoScaffold(
+          extendBodyBehindAppBar: true,
           title: TextButton(
             onPressed: _settings,
             style: TextButton.styleFrom(
@@ -271,30 +274,33 @@ class _DemoChatPageState extends State<DemoChatPage> {
             children: [
               Expanded(
                 child: s.messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/demo_welcome.png',
-                              width: 150,
-                              height: 150,
-                              cacheWidth: 450,
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              l.demoGreeting,
-                              style: const TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.w600,
+                    ? Padding(
+                        padding: EdgeInsets.only(top: topContentPadding),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/images/demo_welcome.png',
+                                width: 150,
+                                height: 150,
+                                cacheWidth: 450,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l.demoGreetingDetail,
-                              style: const TextStyle(fontSize: 18),
-                            ),
-                          ],
+                              const SizedBox(height: 5),
+                              Text(
+                                l.demoGreeting,
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l.demoGreetingDetail,
+                                style: const TextStyle(fontSize: 18),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : Chat(
@@ -311,7 +317,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                 initialScrollToEndMode:
                                     InitialScrollToEndMode.none,
                                 handleSafeArea: false,
-                                topPadding: 10,
+                                topPadding: topContentPadding + 10,
                                 bottomPadding: 10,
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,

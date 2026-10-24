@@ -15,6 +15,7 @@ import '../../../shared/providers/project_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
@@ -458,74 +459,77 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         drawerScrimColor: const Color(0x33333333),
         drawer: const PopiNavigationDrawer(),
         onDrawerChanged: (open) => setState(() => _drawerOpen = open),
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(safeArea.top + 56),
-          child: Padding(
-            padding: EdgeInsets.only(top: safeArea.top),
-            child: _blurBehindDrawer(
-              AppBar(
-                primary: false,
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                toolbarHeight: 56,
-                leadingWidth: _step == 0 ? 80 : 100,
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 15),
-                  child: Row(
-                    children: [
-                      SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          key: const Key('ip-guide-menu'),
-                          tooltip: l10n.openNavigation,
-                          padding: const EdgeInsets.all(5),
-                          onPressed: () =>
-                              _scaffoldKey.currentState?.openDrawer(),
-                          icon: AppSvgIcon.asset(
-                            'common_navigation_menu',
-                            size: 30,
-                            color: colors.onSurface,
-                          ),
-                        ),
-                      ),
-                      if (_step > 0)
+        appBar: AppGlassAppBar(
+          extendBackdrop: false,
+          child: PreferredSize(
+            preferredSize: Size.fromHeight(safeArea.top + 56),
+            child: Padding(
+              padding: EdgeInsets.only(top: safeArea.top),
+              child: _blurBehindDrawer(
+                AppBar(
+                  primary: false,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  toolbarHeight: 56,
+                  leadingWidth: _step == 0 ? 80 : 100,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(left: 15),
+                    child: Row(
+                      children: [
                         SizedBox.square(
                           dimension: 40,
                           child: IconButton(
-                            key: const Key('ip-guide-back'),
-                            tooltip: l10n.back,
-                            onPressed: _back,
-                            padding: EdgeInsets.zero,
-                            icon: Transform.rotate(
-                              angle: math.pi / 2,
-                              child: AppSvgIcon.asset(
-                                'ip_guide_back',
-                                size: 40,
-                                color: colors.onSurface,
-                              ),
+                            key: const Key('ip-guide-menu'),
+                            tooltip: l10n.openNavigation,
+                            padding: const EdgeInsets.all(5),
+                            onPressed: () =>
+                                _scaffoldKey.currentState?.openDrawer(),
+                            icon: AppSvgIcon.asset(
+                              'common_navigation_menu',
+                              size: 30,
+                              color: colors.onSurface,
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  PopiAppBarActions(
-                    leadingWidth: _step == 0 ? 80 : 100,
-                    membershipEntry: PopiMembershipEntry(
-                      points: user?.allCoins ?? 0,
-                      showPoints: user != null,
-                      label: user == null
-                          ? l10n.goToLogin
-                          : l10n.upgradeMembership,
-                      fontSize: 18,
-                      height: 40,
-                      onTap: () => context.push(
-                        user == null ? '/login' : '/profile/membership',
-                      ),
+                        if (_step > 0)
+                          SizedBox.square(
+                            dimension: 40,
+                            child: IconButton(
+                              key: const Key('ip-guide-back'),
+                              tooltip: l10n.back,
+                              onPressed: _back,
+                              padding: EdgeInsets.zero,
+                              icon: Transform.rotate(
+                                angle: math.pi / 2,
+                                child: AppSvgIcon.asset(
+                                  'ip_guide_back',
+                                  size: 40,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ],
+                  actions: [
+                    PopiAppBarActions(
+                      leadingWidth: _step == 0 ? 80 : 100,
+                      membershipEntry: PopiMembershipEntry(
+                        points: user?.allCoins ?? 0,
+                        showPoints: user != null,
+                        label: user == null
+                            ? l10n.goToLogin
+                            : l10n.upgradeMembership,
+                        fontSize: 18,
+                        height: 40,
+                        onTap: () => context.push(
+                          user == null ? '/login' : '/profile/membership',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

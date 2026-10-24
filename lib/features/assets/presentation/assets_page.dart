@@ -10,6 +10,7 @@ import '../../../app/theme.dart';
 import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_skeleton.dart';
@@ -242,11 +243,19 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
         bottom: false,
         child: Column(
           children: [
-            SizedBox(height: statusBarHeight),
-            _LibraryNavigation(
-              selected: _section,
-              onLeadingPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              onSelected: _changeSection,
+            AppGlassHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: statusBarHeight),
+                  _LibraryNavigation(
+                    selected: _section,
+                    onLeadingPressed: () =>
+                        _scaffoldKey.currentState?.openDrawer(),
+                    onSelected: _changeSection,
+                  ),
+                ],
+              ),
             ),
             ...[
               const SizedBox(height: 10),

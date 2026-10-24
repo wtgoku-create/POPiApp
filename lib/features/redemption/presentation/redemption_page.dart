@@ -6,6 +6,7 @@ import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/user_provider.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../data/redemption_repository.dart';
 import 'widgets/invitation_tab.dart';
 import 'widgets/registration_reward_tab.dart';
@@ -25,17 +26,19 @@ class RedemptionPage extends ConsumerWidget {
         : const Color(0xFFF5F4FA);
     return Scaffold(
       backgroundColor: background,
-      appBar: AppBar(
-        backgroundColor: background,
-        centerTitle: true,
-        leading: IconButton(
-          tooltip: l10n.back,
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
-        ),
-        title: Text(
-          l10n.redemptionPageTitle,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          centerTitle: true,
+          leading: IconButton(
+            tooltip: l10n.back,
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+          ),
+          title: Text(
+            l10n.redemptionPageTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
         ),
       ),
       body: userId == null

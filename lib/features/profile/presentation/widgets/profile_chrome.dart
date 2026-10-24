@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_glass_app_bar.dart';
 
 class ProfileTopBar extends StatelessWidget {
   const ProfileTopBar({this.showNavigation = false, super.key});
@@ -15,40 +16,42 @@ class ProfileTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
-    return SizedBox(
-      height: top + 48,
-      child: Padding(
-        padding: EdgeInsets.only(top: top),
-        child: Row(
-          children: [
-            const SizedBox(width: 20),
-            SizedBox.square(
-              dimension: 40,
-              child: IconButton(
-                key: Key(
-                  showNavigation ? 'popi-open-navigation' : 'profile-back',
+    return AppGlassHeader(
+      child: SizedBox(
+        height: top + 48,
+        child: Padding(
+          padding: EdgeInsets.only(top: top),
+          child: Row(
+            children: [
+              const SizedBox(width: 20),
+              SizedBox.square(
+                dimension: 40,
+                child: IconButton(
+                  key: Key(
+                    showNavigation ? 'popi-open-navigation' : 'profile-back',
+                  ),
+                  tooltip: showNavigation
+                      ? AppLocalizations.of(context)!.openNavigation
+                      : AppLocalizations.of(context)!.back,
+                  padding: showNavigation
+                      ? const EdgeInsets.all(5)
+                      : EdgeInsets.zero,
+                  onPressed: () => showNavigation
+                      ? Scaffold.of(context).openDrawer()
+                      : context.pop(),
+                  icon: showNavigation
+                      ? AppSvgIcon.asset(
+                          'common_navigation_menu',
+                          size: 30,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        )
+                      : const Icon(Icons.arrow_back_ios_new, size: 21),
                 ),
-                tooltip: showNavigation
-                    ? AppLocalizations.of(context)!.openNavigation
-                    : AppLocalizations.of(context)!.back,
-                padding: showNavigation
-                    ? const EdgeInsets.all(5)
-                    : EdgeInsets.zero,
-                onPressed: () => showNavigation
-                    ? Scaffold.of(context).openDrawer()
-                    : context.pop(),
-                icon: showNavigation
-                    ? AppSvgIcon.asset(
-                        'common_navigation_menu',
-                        size: 30,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      )
-                    : const Icon(Icons.arrow_back_ios_new, size: 21),
               ),
-            ),
-            const Spacer(),
-            const SizedBox(width: 20),
-          ],
+              const Spacer(),
+              const SizedBox(width: 20),
+            ],
+          ),
         ),
       ),
     );

@@ -18,6 +18,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_expanded_text_field.dart';
 import '../../../shared/type/account_input_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_account_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../projects/data/project_repository.dart';
@@ -390,36 +391,46 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
         ),
         child: Column(
           children: [
-            SizedBox(
-              height: math.max(
-                52,
-                math.max(insets.top, MediaQuery.viewPaddingOf(context).top),
-              ),
-            ),
-            SizedBox(
-              height: 56,
-              child: Row(
+            AppGlassHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(width: 15),
-                  IconButton(
-                    key: const Key('ip-account-home-back'),
-                    tooltip: l10n.back,
-                    onPressed: () => context.canPop()
-                        ? context.pop()
-                        : context.go('/ip-accounts'),
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 21),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      l10n.ipAccountHomeTitle,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                  SizedBox(
+                    height: math.max(
+                      52,
+                      math.max(
+                        insets.top,
+                        MediaQuery.viewPaddingOf(context).top,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 15),
+                  SizedBox(
+                    height: 56,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 15),
+                        IconButton(
+                          key: const Key('ip-account-home-back'),
+                          tooltip: l10n.back,
+                          onPressed: () => context.canPop()
+                              ? context.pop()
+                              : context.go('/ip-accounts'),
+                          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l10n.ipAccountHomeTitle,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 15),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

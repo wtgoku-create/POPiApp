@@ -9,6 +9,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_account_icon.dart';
 import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
@@ -76,41 +77,48 @@ class IpAccountsPage extends ConsumerWidget {
           : colors.surface,
       body: Column(
         children: [
-          SizedBox(height: top),
-          SizedBox(
-            height: 56,
-            child: Row(
+          AppGlassHeader(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(width: 15),
-                SizedBox.square(
-                  dimension: 40,
-                  child: Builder(
-                    builder: (context) => IconButton(
-                      key: const Key('popi-open-navigation'),
-                      tooltip: l10n.openNavigation,
-                      padding: const EdgeInsets.all(5),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                      icon: AppSvgIcon.asset(
-                        'common_navigation_menu',
-                        size: 30,
-                        color: colors.onSurface,
+                SizedBox(height: top),
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 15),
+                      SizedBox.square(
+                        dimension: 40,
+                        child: Builder(
+                          builder: (context) => IconButton(
+                            key: const Key('popi-open-navigation'),
+                            tooltip: l10n.openNavigation,
+                            padding: const EdgeInsets.all(5),
+                            onPressed: () => Scaffold.of(context).openDrawer(),
+                            icon: AppSvgIcon.asset(
+                              'common_navigation_menu',
+                              size: 30,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          l10n.ipAccountsTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.ipAccountsTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
               ],
             ),
           ),

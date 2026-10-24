@@ -14,6 +14,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/teaching_reader_bridge.dart';
@@ -399,33 +400,36 @@ class _TeachingDocumentPageState extends ConsumerState<TeachingDocumentPage> {
     });
     final supported = WebViewPlatform.instance != null;
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Text(
-          widget.course?.name.isNotEmpty == true
-              ? widget.course!.name
-              : l10n.teachingCenter,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        leading: IconButton(
-          tooltip: l10n.back,
-          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/teaching'),
-        ),
-        actions: [
-          IconButton(
-            tooltip: l10n.teachingCatalog,
-            icon: const Icon(Icons.format_list_bulleted),
-            onPressed: _rendered && _catalog.isNotEmpty ? _showCatalog : null,
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          centerTitle: true,
+          title: Text(
+            widget.course?.name.isNotEmpty == true
+                ? widget.course!.name
+                : l10n.teachingCenter,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          IconButton(
-            tooltip: l10n.webPageRefresh,
-            icon: const Icon(Icons.refresh),
-            onPressed: supported ? _load : null,
+          leading: IconButton(
+            tooltip: l10n.back,
+            icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+            onPressed: () =>
+                context.canPop() ? context.pop() : context.go('/teaching'),
           ),
-        ],
+          actions: [
+            IconButton(
+              tooltip: l10n.teachingCatalog,
+              icon: const Icon(Icons.format_list_bulleted),
+              onPressed: _rendered && _catalog.isNotEmpty ? _showCatalog : null,
+            ),
+            IconButton(
+              tooltip: l10n.webPageRefresh,
+              icon: const Icon(Icons.refresh),
+              onPressed: supported ? _load : null,
+            ),
+          ],
+        ),
       ),
       body: SafeArea(
         top: false,

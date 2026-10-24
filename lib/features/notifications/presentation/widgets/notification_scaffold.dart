@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_glass_app_bar.dart';
 
 /// Shared framing for the inbox and its full notification content.
 class NotificationScaffold extends StatelessWidget {
@@ -30,52 +31,61 @@ class NotificationScaffold extends StatelessWidget {
         top: false,
         child: Column(
           children: [
-            SizedBox(height: math.max(52, MediaQuery.paddingOf(context).top)),
-            SizedBox(
-              height: 56,
-              child: Stack(
-                alignment: Alignment.center,
+            AppGlassHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 64),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: AppTypeSizes.pageTitle,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                  SizedBox(
+                    height: math.max(52, MediaQuery.paddingOf(context).top),
                   ),
-                  Positioned(
-                    left: 15,
-                    child: IconButton(
-                      key: const Key('notification-back'),
-                      tooltip: AppLocalizations.of(context)!.back,
-                      onPressed: () {
-                        final navigator = Navigator.of(context);
-                        if (navigator.canPop()) {
-                          navigator.pop();
-                        } else {
-                          context.go('/');
-                        }
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(
-                        width: 40,
-                        height: 40,
-                      ),
-                      icon: RotatedBox(
-                        quarterTurns: 1,
-                        child: AppSvgIcon.asset(
-                          'ip_guide_back',
-                          size: 40,
-                          color: scheme.onSurface,
+                  SizedBox(
+                    height: 56,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 64),
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: AppTypeSizes.pageTitle,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          left: 15,
+                          child: IconButton(
+                            key: const Key('notification-back'),
+                            tooltip: AppLocalizations.of(context)!.back,
+                            onPressed: () {
+                              final navigator = Navigator.of(context);
+                              if (navigator.canPop()) {
+                                navigator.pop();
+                              } else {
+                                context.go('/');
+                              }
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 40,
+                              height: 40,
+                            ),
+                            icon: RotatedBox(
+                              quarterTurns: 1,
+                              child: AppSvgIcon.asset(
+                                'ip_guide_back',
+                                size: 40,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

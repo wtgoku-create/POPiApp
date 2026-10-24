@@ -228,7 +228,7 @@ void main() {
       );
       final timeline = find.byType(ConversationTimeline);
       final toggle = find.byTooltip('收起进度');
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
       await tester.pumpAndSettle();
       final header = tester.getRect(toggle);
       expect(header.height, 25);
@@ -323,7 +323,7 @@ void main() {
       expect(find.byKey(const Key('conversation-topic-refresh')), findsNothing);
       expect(find.byType(TextFormField), findsNothing);
       expect(tester.getSize(content).height, lessThanOrEqualTo(320));
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
       await tester.pumpAndSettle();
       await _capture(tester, '$name-confirmed-topic');
       await tester.tap(toggle);
@@ -350,11 +350,11 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(content, findsNothing);
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
       await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(content);
+      await Scrollable.ensureVisible(tester.element(content), alignment: .5);
       await tester.pumpAndSettle();
       await tester.drag(content, const Offset(0, -150));
       await tester.pumpAndSettle();
@@ -367,11 +367,11 @@ void main() {
           .position;
       final offset = position().pixels;
       expect(offset, greaterThan(0));
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
       await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(toggle);
+      await Scrollable.ensureVisible(tester.element(toggle), alignment: .5);
       await tester.pumpAndSettle();
       await tester.tap(toggle);
       await tester.pumpAndSettle();
@@ -405,7 +405,7 @@ void main() {
       expect(find.text('Story 1'), findsOneWidget);
       expect(find.text('Story 2'), findsNothing);
       expect(tester.widget<IconButton>(previous).onPressed, isNull);
-      await tester.ensureVisible(next);
+      await Scrollable.ensureVisible(tester.element(next), alignment: .5);
       await tester.pumpAndSettle();
       final card = tester.getRect(find.byType(ConversationObjectView));
       final button = tester.getRect(next);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../shared/widgets/app_icon_button_glass.dart';
+
 abstract final class AppColors {
   static const brand = Color(0xFF6F47F5);
   static const pageBackground = Color(0xFFF8F8F8);
@@ -144,6 +146,7 @@ class AppTheme {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
+          backgroundBuilder: AppIconButtonGlass.backgroundBuilder,
           shape: const WidgetStatePropertyAll(CircleBorder()),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {

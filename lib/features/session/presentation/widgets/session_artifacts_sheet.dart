@@ -10,6 +10,7 @@ import '../../../../shared/providers/network_provider.dart';
 import '../../../../shared/providers/session_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/widgets/app_sheet.dart';
+import '../../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
@@ -625,16 +626,19 @@ class SessionArtifactDetailPage extends ConsumerWidget {
       }
     });
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_detailTitle(AppLocalizations.of(context)!, item.type)),
-        actions: [
-          ...actions,
-          if (SessionArtifactExporter.supports(item))
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: _DownloadButton(item: item),
-            ),
-        ],
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          title: Text(_detailTitle(AppLocalizations.of(context)!, item.type)),
+          actions: [
+            ...actions,
+            if (SessionArtifactExporter.supports(item))
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: _DownloadButton(item: item),
+              ),
+          ],
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),

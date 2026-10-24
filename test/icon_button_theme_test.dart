@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/shared/widgets/app_icon_button_glass.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 void main() {
@@ -13,6 +14,7 @@ void main() {
     double size = 40,
     VoidCallback? onPressed,
     FocusNode? focusNode,
+    ButtonStyle? style,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -24,6 +26,7 @@ void main() {
               child: IconButton(
                 key: const Key('button'),
                 focusNode: focusNode,
+                style: style,
                 tooltip: 'Options',
                 padding: EdgeInsets.zero,
                 onPressed: onPressed,
@@ -67,6 +70,8 @@ void main() {
         final button = find.byKey(const Key('button'));
         final initialRect = tester.getRect(button);
         final initialColor = buttonSurface(tester).color;
+        expect(find.byType(AppIconButtonGlass), findsOneWidget);
+        expect(tester.getSize(find.byType(BackdropFilter)), Size.square(size));
         final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
         await mouse.addPointer(location: const Offset(10, 10));
         // Hover beside the SVG dots, within the button's full clickable area.
@@ -96,6 +101,7 @@ void main() {
       final button = find.byKey(const Key('button'));
       final initialRect = tester.getRect(button);
       final initialColor = buttonSurface(tester).color;
+      expect(find.byType(AppIconButtonGlass), findsNothing);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await mouse.addPointer(location: const Offset(10, 10));
       await mouse.moveTo(initialRect.center);
@@ -106,6 +112,60 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('glass stays 40px within a larger button tap target', (
+    tester,
+  ) async {
+    var clicks = 0;
+    await pumpButton(
+      tester,
+      theme: AppTheme.light,
+      size: 56,
+      onPressed: () => clicks++,
+    );
+    final button = tester.getRect(find.byKey(const Key('button')));
+    final glass = tester.getRect(find.byType(BackdropFilter));
+    expect(button.size, const Size.square(56));
+    expect(glass.size, const Size.square(40));
+    expect(glass.center, button.center);
+    final decoration =
+        tester
+                .widget<DecoratedBox>(
+                  find.descendant(
+                    of: find.byType(BackdropFilter),
+                    matching: find.byType(DecoratedBox),
+                  ),
+                )
+                .decoration
+            as BoxDecoration;
+    expect(decoration.color, Colors.white.withValues(alpha: .5));
+    expect(decoration.border, Border.all(color: Colors.white));
+    await tester.tapAt(button.centerLeft + const Offset(4, 0));
+    await tester.pumpAndSettle();
+    expect(clicks, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('filled and non-circular buttons retain their own surfaces', (
+    tester,
+  ) async {
+    for (final style in [
+      IconButton.styleFrom(backgroundColor: AppColors.brand),
+      IconButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    ]) {
+      await pumpButton(
+        tester,
+        theme: AppTheme.light,
+        onPressed: () {},
+        style: style,
+      );
+      expect(find.byType(AppIconButtonGlass), findsNothing);
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   testWidgets('keyboard focus has visible feedback and can activate', (
     tester,

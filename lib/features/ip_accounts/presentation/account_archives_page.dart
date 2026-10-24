@@ -10,6 +10,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/ip_account_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../role_guide/presentation/widgets/role_storyboard_body.dart';
 import '../domain/account_preferences.dart';
 import '../domain/ip_account_home.dart';
@@ -97,7 +98,10 @@ class _AccountArchivesPageState extends ConsumerState<AccountArchivesPage> {
     });
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.accountArchives)),
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(title: Text(l10n.accountArchives)),
+      ),
       body: Column(
         children: [
           Padding(
@@ -297,26 +301,29 @@ class _AccountArchiveDetailPageState
       'generation': l10n.accountArchiveGeneration,
     };
     return Scaffold(
-      appBar: AppBar(
-        title: Text(archive?.title ?? l10n.accountArchives),
-        actions: [
-          if (archive != null && archive.versions.length > 1)
-            AppMenuButton(
-              tooltip: l10n.accountArchiveVersion,
-              icon: const Icon(Icons.history),
-              entries: [
-                for (final version in archive.versions.entries)
-                  AppMenuItem(
-                    label: '${l10n.accountArchiveVersion} ${version.value}',
-                    selected: _version == version.key,
-                    onSelected: () {
-                      _version = version.key;
-                      _load();
-                    },
-                  ),
-              ],
-            ),
-        ],
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          title: Text(archive?.title ?? l10n.accountArchives),
+          actions: [
+            if (archive != null && archive.versions.length > 1)
+              AppMenuButton(
+                tooltip: l10n.accountArchiveVersion,
+                icon: const Icon(Icons.history),
+                entries: [
+                  for (final version in archive.versions.entries)
+                    AppMenuItem(
+                      label: '${l10n.accountArchiveVersion} ${version.value}',
+                      selected: _version == version.key,
+                      onSelected: () {
+                        _version = version.key;
+                        _load();
+                      },
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
       body: archive == null
           ? Center(

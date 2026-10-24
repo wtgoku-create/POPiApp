@@ -9,6 +9,7 @@ import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/popi_app_bar_actions.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
@@ -113,54 +114,57 @@ class _HomePageState extends ConsumerState<HomePage> {
         drawerScrimColor: const Color(0x33333333),
         drawer: const PopiNavigationDrawer(),
         onDrawerChanged: (open) => setState(() => _drawerOpen = open),
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(safeArea.top + 56),
-          child: Padding(
-            padding: EdgeInsets.only(top: safeArea.top),
-            child: _blurBehindDrawer(
-              AppBar(
-                primary: false,
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                toolbarHeight: 56,
-                leadingWidth: 80,
-                leading: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 15),
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        key: const Key('popi-open-navigation'),
-                        tooltip: l10n.openNavigation,
-                        padding: const EdgeInsets.all(5),
-                        onPressed: () =>
-                            _scaffoldKey.currentState?.openDrawer(),
-                        icon: AppSvgIcon.asset(
-                          'common_navigation_menu',
-                          size: 30,
-                          color: colors.onSurface,
+        appBar: AppGlassAppBar(
+          extendBackdrop: false,
+          child: PreferredSize(
+            preferredSize: Size.fromHeight(safeArea.top + 56),
+            child: Padding(
+              padding: EdgeInsets.only(top: safeArea.top),
+              child: _blurBehindDrawer(
+                AppBar(
+                  primary: false,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  toolbarHeight: 56,
+                  leadingWidth: 80,
+                  leading: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 15),
+                      child: SizedBox.square(
+                        dimension: 40,
+                        child: IconButton(
+                          key: const Key('popi-open-navigation'),
+                          tooltip: l10n.openNavigation,
+                          padding: const EdgeInsets.all(5),
+                          onPressed: () =>
+                              _scaffoldKey.currentState?.openDrawer(),
+                          icon: AppSvgIcon.asset(
+                            'common_navigation_menu',
+                            size: 30,
+                            color: colors.onSurface,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                actions: [
-                  PopiAppBarActions(
-                    membershipEntry: PopiMembershipEntry(
-                      points: user?.allCoins ?? 0,
-                      showPoints: user != null,
-                      label: user == null
-                          ? l10n.goToLogin
-                          : l10n.upgradeMembership,
-                      fontSize: 18,
-                      height: 40,
-                      onTap: () => context.push(
-                        user == null ? '/login' : '/profile/membership',
+                  actions: [
+                    PopiAppBarActions(
+                      membershipEntry: PopiMembershipEntry(
+                        points: user?.allCoins ?? 0,
+                        showPoints: user != null,
+                        label: user == null
+                            ? l10n.goToLogin
+                            : l10n.upgradeMembership,
+                        fontSize: 18,
+                        height: 40,
+                        onTap: () => context.push(
+                          user == null ? '/login' : '/profile/membership',
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

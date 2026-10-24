@@ -103,10 +103,12 @@ class ConversationTimeline extends StatefulWidget {
   const ConversationTimeline({
     required this.controller,
     this.onRevise,
+    this.topPadding = 10,
     super.key,
   });
   final ConversationController controller;
   final ValueChanged<ConversationBlock>? onRevise;
+  final double topPadding;
   @override
   State<ConversationTimeline> createState() => _ConversationTimelineState();
 }
@@ -460,7 +462,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                     scrollToEndAnimationDuration: Duration.zero,
                     itemBuilder: itemBuilder,
                     handleSafeArea: false,
-                    topPadding: 10,
+                    topPadding: widget.topPadding,
                     bottomPadding: 32,
                     scrollToBottomAppearanceThreshold: 120,
                     keyboardDismissBehavior:

@@ -14,6 +14,7 @@ import '../../../core/network/network_api.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/role_library_repository.dart';
 import '../domain/library_role.dart';
@@ -255,37 +256,37 @@ class _RoleDetailPageState extends ConsumerState<RoleDetailPage> {
             : colors.surface,
         appBar: widget.isSheet
             ? null
-            : AppBar(
-                backgroundColor: light
-                    ? const Color(0xFFF5F4FA)
-                    : colors.surface,
-                surfaceTintColor: Colors.transparent,
-                titleSpacing: 0,
-                title: Text(
-                  l10n.roleArchive,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+            : AppGlassAppBar(
+                extendBackdrop: false,
+                child: AppBar(
+                  surfaceTintColor: Colors.transparent,
+                  titleSpacing: 0,
+                  title: Text(
+                    l10n.roleArchive,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                leading: IconButton(
-                  key: const Key('role-profile-back'),
-                  tooltip: l10n.backToPreviousPage,
-                  onPressed: _saving
-                      ? null
-                      : () {
-                          if (_edit != null) {
-                            _cancelEditing();
-                          } else {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                  icon: Transform.rotate(
-                    angle: math.pi / 2,
-                    child: AppSvgIcon.asset(
-                      'role_profile_back',
-                      size: 40,
-                      color: colors.onSurface,
+                  leading: IconButton(
+                    key: const Key('role-profile-back'),
+                    tooltip: l10n.backToPreviousPage,
+                    onPressed: _saving
+                        ? null
+                        : () {
+                            if (_edit != null) {
+                              _cancelEditing();
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                    icon: Transform.rotate(
+                      angle: math.pi / 2,
+                      child: AppSvgIcon.asset(
+                        'role_profile_back',
+                        size: 40,
+                        color: colors.onSurface,
+                      ),
                     ),
                   ),
                 ),

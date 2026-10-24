@@ -16,6 +16,7 @@ import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/purchase_catalog_repository.dart';
 import '../domain/product_plan.dart';
@@ -106,8 +107,15 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         ),
         child: Column(
           children: [
-            SizedBox(height: topPadding),
-            const _MembershipTopBar(),
+            AppGlassHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: topPadding),
+                  const _MembershipTopBar(),
+                ],
+              ),
+            ),
             if (plans == null)
               const Expanded(
                 child: Center(

@@ -11,6 +11,7 @@ import '../../../shared/providers/payment_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/android_payment_service.dart';
@@ -203,18 +204,21 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
 
     return Scaffold(
       key: const Key('android-payment-page'),
-      appBar: AppBar(
-        toolbarHeight: 48,
-        leadingWidth: 80,
-        title: Text(l10n.paymentTitle),
-        leading: Center(
-          child: SizedBox.square(
-            dimension: 40,
-            child: IconButton(
-              tooltip: l10n.back,
-              padding: EdgeInsets.zero,
-              onPressed: () => context.pop(completed),
-              icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: AppBar(
+          toolbarHeight: 48,
+          leadingWidth: 80,
+          title: Text(l10n.paymentTitle),
+          leading: Center(
+            child: SizedBox.square(
+              dimension: 40,
+              child: IconButton(
+                tooltip: l10n.back,
+                padding: EdgeInsets.zero,
+                onPressed: () => context.pop(completed),
+                icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+              ),
             ),
           ),
         ),

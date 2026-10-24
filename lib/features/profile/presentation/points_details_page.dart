@@ -17,6 +17,7 @@ import '../../../shared/providers/purchase_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/purchase_catalog_repository.dart';
@@ -190,38 +191,40 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
 
     final pageBody = Column(
       children: [
-        SizedBox(
-          height: topPadding + 48,
-          child: Padding(
-            padding: EdgeInsets.only(top: topPadding),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 20),
-                    child: SizedBox.square(
-                      dimension: 40,
-                      child: IconButton(
-                        key: const Key('points-details-back'),
-                        tooltip: l10n.back,
-                        padding: EdgeInsets.zero,
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+        AppGlassHeader(
+          child: SizedBox(
+            height: topPadding + 48,
+            child: Padding(
+              padding: EdgeInsets.only(top: topPadding),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 20),
+                      child: SizedBox.square(
+                        dimension: 40,
+                        child: IconButton(
+                          key: const Key('points-details-back'),
+                          tooltip: l10n.back,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => context.pop(),
+                          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Text(
-                  l10n.pointsDetailsTitle,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: AppTypeSizes.pageTitle,
-                    fontWeight: FontWeight.w700,
+                  Text(
+                    l10n.pointsDetailsTitle,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: AppTypeSizes.pageTitle,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

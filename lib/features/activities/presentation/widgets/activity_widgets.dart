@@ -9,6 +9,7 @@ import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
+import '../../../../shared/widgets/app_glass_app_bar.dart';
 import '../../domain/activity.dart';
 
 class ActivityScaffold extends ConsumerWidget {
@@ -30,45 +31,51 @@ class ActivityScaffold extends ConsumerWidget {
     return Scaffold(
       primary: false,
       backgroundColor: background,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(top + 56),
-        child: Padding(
-          padding: EdgeInsets.only(top: top),
-          child: AppBar(
-            primary: false,
-            toolbarHeight: 56,
-            backgroundColor: background,
-            surfaceTintColor: Colors.transparent,
-            centerTitle: true,
-            leadingWidth: 70,
-            leading: Padding(
-              padding: const EdgeInsets.only(left: 15, right: 15),
-              child: IconButton(
-                key: const Key('activity-back'),
-                tooltip: AppLocalizations.of(context)!.back,
-                padding: EdgeInsets.zero,
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/');
-                  }
-                },
-                icon: RotatedBox(
-                  quarterTurns: 1,
-                  child: AppSvgIcon.asset(
-                    'activity_back',
-                    size: 40,
-                    color: colors.onSurface,
+      appBar: AppGlassAppBar(
+        extendBackdrop: false,
+        child: PreferredSize(
+          preferredSize: Size.fromHeight(top + 56),
+          child: Padding(
+            padding: EdgeInsets.only(top: top),
+            child: AppBar(
+              primary: false,
+              toolbarHeight: 56,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              centerTitle: true,
+              leadingWidth: 70,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 15, right: 15),
+                child: IconButton(
+                  key: const Key('activity-back'),
+                  tooltip: AppLocalizations.of(context)!.back,
+                  padding: EdgeInsets.zero,
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/');
+                    }
+                  },
+                  icon: RotatedBox(
+                    quarterTurns: 1,
+                    child: AppSvgIcon.asset(
+                      'activity_back',
+                      size: 40,
+                      color: colors.onSurface,
+                    ),
                   ),
                 ),
               ),
-            ),
-            title: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              title: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),

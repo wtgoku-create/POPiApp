@@ -176,6 +176,9 @@ void main() {
         ),
       ],
     );
+    final triggerBlurLayers = tester
+        .elementList(find.byType(BackdropFilter))
+        .toList();
     await tester.tap(find.byKey(const Key('menu')));
     await tester.pump();
     expect(find.text('Project').hitTestable(), findsOneWidget);
@@ -199,7 +202,10 @@ void main() {
     final childRect = tester.getRect(find.text('Export'));
     await tester.pump(const Duration(milliseconds: 200));
     expect(tester.getRect(find.text('Export')), childRect);
-    expect(find.byType(BackdropFilter), findsNothing);
+    expect(
+      tester.elementList(find.byType(BackdropFilter)),
+      unorderedEquals(triggerBlurLayers),
+    );
     await tester.tap(find.text('Export'));
     await tester.pump();
     expect(find.text('Export'), findsNothing);

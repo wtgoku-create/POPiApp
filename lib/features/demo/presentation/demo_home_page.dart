@@ -42,14 +42,11 @@ class _DemoHomePageState extends State<DemoHomePage> {
     return DemoScaffold(
       floatingBottom: true,
       title: Text(_tab == 0 ? l.demoConversations : l.demoAssets),
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: IconButton(
-          tooltip: l.demoProfile,
-          padding: EdgeInsets.zero,
-          onPressed: _profile,
-          icon: const DemoAvatar(size: 40),
-        ),
+      leading: IconButton(
+        tooltip: l.demoProfile,
+        padding: EdgeInsets.zero,
+        onPressed: _profile,
+        icon: const DemoAvatar(size: 40),
       ),
       actions: [
         IconButton(

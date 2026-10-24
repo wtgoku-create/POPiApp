@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
 import '../data/demo_repository.dart';
@@ -60,19 +61,29 @@ class DemoWelcomePage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          leadingWidth: 70,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 15),
-            child: IconButton(
-              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-              padding: const EdgeInsets.all(5),
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const RotatedBox(
-                quarterTurns: 1,
-                child: DemoIcon('back', size: 40),
+        appBar: AppGlassAppBar(
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            leadingWidth: 80,
+            leading: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: SizedBox.square(
+                  dimension: 40,
+                  child: IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).backButtonTooltip,
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const RotatedBox(
+                      quarterTurns: 1,
+                      child: DemoIcon('back', size: 40),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

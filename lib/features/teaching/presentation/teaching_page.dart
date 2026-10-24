@@ -11,6 +11,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/widgets/app_image_preview.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/teaching_repository.dart';
 import '../domain/teaching.dart';
@@ -183,37 +184,47 @@ class _TeachingPageState extends ConsumerState<TeachingPage> {
         top: false,
         child: Column(
           children: [
-            SizedBox(height: math.max(52, MediaQuery.paddingOf(context).top)),
-            SizedBox(
-              height: 56,
-              width: double.infinity,
-              child: Stack(
-                alignment: Alignment.center,
+            AppGlassHeader(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 64),
-                    child: Text(
-                      l10n.teachingCenter,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: AppTypeSizes.pageTitle,
-                        letterSpacing: 0,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                  SizedBox(
+                    height: math.max(52, MediaQuery.paddingOf(context).top),
                   ),
-                  Positioned(
-                    left: 15,
-                    child: IconButton(
-                      key: const Key('popi-open-navigation'),
-                      tooltip: l10n.openNavigation,
-                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                      icon: AppSvgIcon.asset(
-                        'common_navigation_menu',
-                        size: 30,
-                        color: scheme.onSurface,
-                      ),
+                  SizedBox(
+                    height: 56,
+                    width: double.infinity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 64),
+                          child: Text(
+                            l10n.teachingCenter,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: AppTypeSizes.pageTitle,
+                              letterSpacing: 0,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 15,
+                          child: IconButton(
+                            key: const Key('popi-open-navigation'),
+                            tooltip: l10n.openNavigation,
+                            onPressed: () =>
+                                _scaffoldKey.currentState?.openDrawer(),
+                            icon: AppSvgIcon.asset(
+                              'common_navigation_menu',
+                              size: 30,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

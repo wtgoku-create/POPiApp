@@ -54,6 +54,28 @@ Future<DemoRepository> _pump(
 }
 
 void main() {
+  for (final width in [320.0, 390.0, 440.0]) {
+    testWidgets('navigation buttons use equal side margins at $width', (
+      tester,
+    ) async {
+      await _pump(tester, size: Size(width, 844));
+      final avatar = tester.getRect(find.byTooltip('个人资料'));
+      final create = tester.getRect(find.byKey(const Key('demo-create')));
+      expect(avatar.size, const Size.square(40));
+      expect(avatar.left, 20);
+      expect(width - create.right, 20);
+      await tester.tap(find.text('灵感到成片'));
+      await tester.pumpAndSettle();
+      final back = tester.getRect(find.byTooltip('返回'));
+      final settings = tester.getRect(find.byKey(const Key('demo-settings')));
+      expect(back.size, const Size.square(40));
+      expect(back.left, 20);
+      expect(settings.size, const Size.square(40));
+      expect(width - settings.right, 20);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'avatar opens the existing profile and its edit and return routes',
     (tester) async {
@@ -87,6 +109,24 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('chat applies the status and toolbar inset only once', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(top: 62, bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    await _pump(tester);
+    await tester.tap(find.text('灵感到成片'));
+    await tester.pumpAndSettle();
+    final avatar = find.byWidgetPredicate(
+      (widget) => widget is DemoAvatar && widget.size == 32,
+    );
+    expect(
+      tester.getTopLeft(avatar.first).dy,
+      tester.getRect(find.byType(AppBar).hitTestable()).bottom + 10,
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('bottom navigation floats over the full-height scroll area', (
     tester,

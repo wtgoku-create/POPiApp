@@ -14,6 +14,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/list_page.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../session/domain/session_artifact.dart';
 import '../../session/presentation/widgets/session_artifacts_sheet.dart';
 import 'widgets/ip_account_history.dart';
@@ -160,47 +161,54 @@ class _IpAccountHistoryPageState extends ConsumerState<IpAccountHistoryPage> {
           : colors.surface,
       body: Column(
         children: [
-          SizedBox(
-            height: math.max(
-              52,
-              math.max(insets.top, MediaQuery.viewPaddingOf(context).top),
-            ),
-          ),
-          SizedBox(
-            height: 56,
-            child: Row(
+          AppGlassHeader(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(width: 15),
-                SizedBox.square(
-                  dimension: 40,
-                  child: IconButton(
-                    key: const Key('ip-account-history-back'),
-                    tooltip: l10n.back,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => context.canPop()
-                        ? context.pop()
-                        : context.go('/ip-accounts'),
-                    icon: RotatedBox(
-                      quarterTurns: 1,
-                      child: AppSvgIcon.asset(
-                        'ip_guide_back',
-                        size: 40,
-                        color: colors.onSurface,
+                SizedBox(
+                  height: math.max(
+                    52,
+                    math.max(insets.top, MediaQuery.viewPaddingOf(context).top),
+                  ),
+                ),
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 15),
+                      SizedBox.square(
+                        dimension: 40,
+                        child: IconButton(
+                          key: const Key('ip-account-history-back'),
+                          tooltip: l10n.back,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => context.canPop()
+                              ? context.pop()
+                              : context.go('/ip-accounts'),
+                          icon: RotatedBox(
+                            quarterTurns: 1,
+                            child: AppSvgIcon.asset(
+                              'ip_guide_back',
+                              size: 40,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          l10n.creationHistory,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    l10n.creationHistory,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
               ],
             ),
           ),

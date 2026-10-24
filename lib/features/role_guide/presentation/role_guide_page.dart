@@ -17,6 +17,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/generation_credit_notice.dart';
 import '../../../shared/widgets/popi_membership_entry.dart';
@@ -1019,68 +1020,71 @@ class _RoleGuidePageState extends ConsumerState<RoleGuidePage> {
           drawerScrimColor: const Color(0x33333333),
           drawer: const PopiNavigationDrawer(),
           onDrawerChanged: (open) => setState(() => _drawerOpen = open),
-          appBar: PreferredSize(
-            preferredSize: Size.fromHeight(safeArea.top + 56),
-            child: Padding(
-              padding: EdgeInsets.only(top: safeArea.top),
-              child: _blur(
-                AppBar(
-                  primary: false,
-                  backgroundColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                  toolbarHeight: 56,
-                  leadingWidth: showBack ? 100 : 60,
-                  leading: Padding(
-                    padding: const EdgeInsets.only(left: 15),
-                    child: Row(
-                      children: [
-                        SizedBox.square(
-                          dimension: 40,
-                          child: IconButton(
-                            key: const Key('role-guide-menu'),
-                            tooltip: l10n.openNavigation,
-                            onPressed: () =>
-                                _scaffoldKey.currentState?.openDrawer(),
-                            padding: const EdgeInsets.all(5),
-                            icon: AppSvgIcon.asset(
-                              'common_navigation_menu',
-                              size: 30,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                        ),
-                        if (showBack)
+          appBar: AppGlassAppBar(
+            extendBackdrop: false,
+            child: PreferredSize(
+              preferredSize: Size.fromHeight(safeArea.top + 56),
+              child: Padding(
+                padding: EdgeInsets.only(top: safeArea.top),
+                child: _blur(
+                  AppBar(
+                    primary: false,
+                    backgroundColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    toolbarHeight: 56,
+                    leadingWidth: showBack ? 100 : 60,
+                    leading: Padding(
+                      padding: const EdgeInsets.only(left: 15),
+                      child: Row(
+                        children: [
                           SizedBox.square(
                             dimension: 40,
                             child: IconButton(
-                              key: const Key('role-guide-back'),
-                              tooltip: l10n.backToPreviousPage,
-                              onPressed: _canGoBack ? _back : null,
-                              icon: const Icon(Icons.chevron_left),
+                              key: const Key('role-guide-menu'),
+                              tooltip: l10n.openNavigation,
+                              onPressed: () =>
+                                  _scaffoldKey.currentState?.openDrawer(),
+                              padding: const EdgeInsets.all(5),
+                              icon: AppSvgIcon.asset(
+                                'common_navigation_menu',
+                                size: 30,
+                                color: colors.onSurface,
+                              ),
                             ),
                           ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    PopiAppBarActions(
-                      leadingWidth: showBack ? 100 : 60,
-                      membershipEntry: PopiMembershipEntry(
-                        points: user?.allCoins ?? 0,
-                        showPoints: user != null,
-                        label: user == null
-                            ? l10n.goToLogin
-                            : l10n.upgradeMembership,
-                        fontSize: MediaQuery.sizeOf(context).width < 380
-                            ? 14
-                            : 18,
-                        height: 40,
-                        onTap: () => context.push(
-                          user == null ? '/login' : '/profile/membership',
-                        ),
+                          if (showBack)
+                            SizedBox.square(
+                              dimension: 40,
+                              child: IconButton(
+                                key: const Key('role-guide-back'),
+                                tooltip: l10n.backToPreviousPage,
+                                onPressed: _canGoBack ? _back : null,
+                                icon: const Icon(Icons.chevron_left),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ],
+                    actions: [
+                      PopiAppBarActions(
+                        leadingWidth: showBack ? 100 : 60,
+                        membershipEntry: PopiMembershipEntry(
+                          points: user?.allCoins ?? 0,
+                          showPoints: user != null,
+                          label: user == null
+                              ? l10n.goToLogin
+                              : l10n.upgradeMembership,
+                          fontSize: MediaQuery.sizeOf(context).width < 380
+                              ? 14
+                              : 18,
+                          height: 40,
+                          onTap: () => context.push(
+                            user == null ? '/login' : '/profile/membership',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

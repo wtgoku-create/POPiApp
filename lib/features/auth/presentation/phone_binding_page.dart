@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
 
 /// The phone verification step shared by WeChat and Douyin authorization.
 class PhoneBindingPage extends StatelessWidget {
@@ -32,14 +33,17 @@ class PhoneBindingPage extends StatelessWidget {
         key: const Key('phone-binding-page'),
         backgroundColor: theme.colorScheme.surface,
         resizeToAvoidBottomInset: false,
-        appBar: AppBar(
-          title: Text(l10n.bindPhone),
-          centerTitle: true,
-          leading: IconButton(
-            key: const Key('phone-binding-back-button'),
-            tooltip: l10n.backToPreviousPage,
-            onPressed: busy ? null : onBack,
-            icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+        appBar: AppGlassAppBar(
+          extendBackdrop: false,
+          child: AppBar(
+            title: Text(l10n.bindPhone),
+            centerTitle: true,
+            leading: IconButton(
+              key: const Key('phone-binding-back-button'),
+              tooltip: l10n.backToPreviousPage,
+              onPressed: busy ? null : onBack,
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+            ),
           ),
         ),
         body: GestureDetector(
