@@ -51,6 +51,11 @@ on:
         required: false
         default: ''
         type: string
+      read_ios_crashes:
+        description: Read privacy-filtered crash feedback for the selected TestFlight build
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -69,7 +74,7 @@ jobs:
     name: Analyze and test
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '')
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes)
     runs-on: ubuntu-latest
 
     steps:
@@ -111,7 +116,7 @@ jobs:
     needs: verify
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && inputs.build_android)
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_android)
     runs-on: ubuntu-latest
 
     steps:
@@ -201,7 +206,7 @@ jobs:
     needs: verify
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && inputs.build_ios)
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_ios)
     runs-on: macos-latest
 
     env:
@@ -400,7 +405,7 @@ jobs:
       needs.build-ios.result == 'success' &&
       (
         (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-        (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && inputs.build_ios && inputs.upload_testflight)
+        (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_ios && inputs.upload_testflight)
       )
     runs-on: macos-latest
     timeout-minutes: 45
@@ -550,7 +555,7 @@ jobs:
 
   notarize-macos:
     name: Notarize Signed macOS Harness DMG
-    if: github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url != '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url != '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes
     runs-on: macos-latest
     timeout-minutes: 25
 
@@ -731,7 +736,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.macos_notarize_url != '' &&
-      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '')
+      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '' || inputs.read_ios_crashes)
     runs-on: ubuntu-latest
 
     steps:
@@ -745,7 +750,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' &&
       inputs.macos_notarize_url == '' &&
-      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '')
+      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '' || inputs.read_ios_crashes)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -815,4 +820,54 @@ jobs:
           result = json.loads(path.read_text(encoding='utf-8'))
           if result.get('status') == 'error':
               raise SystemExit('App Store Connect status query failed; inspect the status artifact.')
+          PY
+
+      - name: Read privacy-filtered crash feedback for selected build
+        id: crash_summary
+        if: inputs.read_ios_crashes
+        continue-on-error: true
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          TESTFLIGHT_STATUS_BUILD: ${{ inputs.ios_testflight_status_build }}
+          TESTFLIGHT_STATUS_VERSION: ${{ inputs.ios_testflight_status_version }}
+        run: |
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-crash-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          node tool/ci_testflight_crashes.mjs \
+            --private-key-file "$key_path" \
+            --bundle-id "$IOS_BUNDLE_ID" \
+            --version "$TESTFLIGHT_STATUS_VERSION" \
+            --build-number "$TESTFLIGHT_STATUS_BUILD" \
+            --output build/metadata/testflight-crash-summary.json
+
+      - name: Upload privacy-filtered crash summary
+        if: always() && inputs.read_ios_crashes
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-crash-summary
+          path: build/metadata/testflight-crash-summary.json
+          if-no-files-found: error
+
+      - name: Require successful crash feedback query
+        if: always() && inputs.read_ios_crashes
+        env:
+          CRASH_QUERY_OUTCOME: ${{ steps.crash_summary.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('build/metadata/testflight-crash-summary.json')
+          if not path.is_file():
+              raise SystemExit('TestFlight crash summary artifact was not generated.')
+          result = json.loads(path.read_text(encoding='utf-8'))
+          if os.environ.get('CRASH_QUERY_OUTCOME') != 'success' or result.get('status') == 'error':
+              raise SystemExit('Crash feedback query failed; inspect the redacted summary artifact.')
           PY
