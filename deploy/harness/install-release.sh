@@ -27,13 +27,28 @@ command -v runuser >/dev/null
 # Browser sandbox behavior and private writable paths must match the final
 # service account. Restore immutable release ownership on every exit path so a
 # failed qualification cannot leave a user-owned executable tree behind.
-test_directory="$release_directory/.qualification-tmp"
-install -d -m 0700 "$test_directory"
+test_directory=$(mktemp -d /tmp/popi-qualify.XXXXXX)
+chmod 0700 "$test_directory"
+chown popi-harness:popi-harness "$test_directory"
 restore_release_owner() {
   chown -R root:root "$release_directory"
   chmod -R u=rwX,go=rX "$release_directory"
 }
-trap restore_release_owner EXIT
+cleanup_qualification() {
+  local cleanup_status=0
+  if [[ -d "$test_directory" ]]; then
+    [[ "$test_directory" =~ ^/tmp/popi-qualify\.[a-zA-Z0-9]+$ ]] || cleanup_status=$?
+    test ! -L "$test_directory" || cleanup_status=$?
+    test "$(realpath -- "$test_directory")" = "$test_directory" || cleanup_status=$?
+    test "$(stat -c '%U:%G' -- "$test_directory")" = "popi-harness:popi-harness" || cleanup_status=$?
+    if [[ "$cleanup_status" -eq 0 ]]; then
+      rm -rf --one-file-system -- "$test_directory" || cleanup_status=$?
+    fi
+  fi
+  restore_release_owner || cleanup_status=$?
+  return "$cleanup_status"
+}
+trap cleanup_qualification EXIT
 chown -R popi-harness:popi-harness "$release_directory"
 
 run_as_harness() {
@@ -50,8 +65,7 @@ run_as_harness "$film_chrome" --version > "$release_directory/chrome-version.log
 cd "$release_directory"
 run_as_harness /opt/popi-harness/node/bin/node --test --test-concurrency=2 services/agent/local/*.test.mjs > "$release_directory/backend-tests.log" 2>&1
 run_as_harness env DSH_NODE_BIN=/opt/popi-harness/node/bin/node sh services/agent/m0/run-local-harness.sh > "$release_directory/sdk-m0.log" 2>&1
-run_as_harness rm -r -- "$test_directory"
-restore_release_owner
+cleanup_qualification
 trap - EXIT
 touch "$release_directory/.qualified"
 bash "$release_directory/deploy/harness/activate-server.sh" "$deployment_release"
