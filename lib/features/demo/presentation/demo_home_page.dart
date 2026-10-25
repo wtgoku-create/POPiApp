@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/diagnostics/launch_diagnostics.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/providers/local_profile_provider.dart';
@@ -38,6 +39,10 @@ class _DemoHomePageState extends State<DemoHomePage>
   @override
   void initState() {
     super.initState();
+    LaunchDiagnostics.mark(LaunchStage.homeInit);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) LaunchDiagnostics.mark(LaunchStage.homeFirstFrame);
+    });
     if (widget.repository.isHarness) {
       WidgetsBinding.instance.addObserver(this);
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -72,6 +77,7 @@ class _DemoHomePageState extends State<DemoHomePage>
   }
 
   Future<void> _performHarnessRefresh({required bool reportError}) async {
+    LaunchDiagnostics.mark(LaunchStage.refreshBegin);
     try {
       if (reportError) {
         await demoPerform(context, widget.repository.refreshSessions);
@@ -83,6 +89,7 @@ class _DemoHomePageState extends State<DemoHomePage>
         }
       }
     } finally {
+      LaunchDiagnostics.mark(LaunchStage.refreshEnd);
       _refreshInFlight = null;
     }
   }
@@ -132,6 +139,7 @@ class _DemoHomePageState extends State<DemoHomePage>
 
   @override
   Widget build(BuildContext context) {
+    LaunchDiagnostics.mark(LaunchStage.homeBuild);
     return LayoutBuilder(
       builder: (context, constraints) {
         final desktop =

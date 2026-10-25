@@ -14,7 +14,12 @@ enum LaunchStage {
   accessLogin('access_login'),
   accessAuthenticated('access_authenticated'),
   repositoryRestore('repository_restore'),
-  repositoryReady('repository_ready');
+  repositoryReady('repository_ready'),
+  homeInit('home_init'),
+  homeBuild('home_build'),
+  homeFirstFrame('home_first_frame'),
+  refreshBegin('refresh_begin'),
+  refreshEnd('refresh_end');
 
   const LaunchStage(this.label);
 

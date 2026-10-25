@@ -7,6 +7,9 @@
 	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Use the engine-supported system drawable pool for the iPhone memory comparison. -->
+	<key>FLTUseFlutterMetalLayer</key>
+	<false/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

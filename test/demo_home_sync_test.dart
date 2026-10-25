@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
@@ -132,6 +133,50 @@ void _restoreResumed(WidgetTester tester) {
 
 void main() {
   tearDown(() => toastification.dismissAll(delayForAnimation: false));
+
+  testWidgets(
+    'native diagnostics cannot delay the first Home refresh',
+    (tester) async {
+      const channel = MethodChannel('art.popi/launch_diagnostics');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      final diagnosticResponse = Completer<void>();
+      final stages = <String>[];
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        stages.add(call.arguments as String);
+        await diagnosticResponse.future;
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      final repository = _HarnessSyncRepository(await _storage())
+        ..remoteSessions = [_session('synced', '启动同步完成')];
+      addTearDown(repository.dispose);
+      final refresh = repository.blockNextRefresh();
+      await _pumpHome(tester, repository);
+
+      expect(repository.refreshCalls, 1);
+      expect(stages, [
+        'home_init',
+        'home_build',
+        'home_first_frame',
+        'refresh_begin',
+      ]);
+      repository.notifyListeners();
+      await tester.pump();
+      expect(repository.refreshCalls, 1);
+
+      refresh.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('启动同步完成'), findsOneWidget);
+      expect(stages.last, 'refresh_end');
+      expect(diagnosticResponse.isCompleted, isFalse);
+      expect(tester.takeException(), isNull);
+      diagnosticResponse.complete();
+      await tester.pump();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+  );
 
   for (final failure in {
     'connection failure': DioException(

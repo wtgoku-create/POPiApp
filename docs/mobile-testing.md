@@ -1,5 +1,22 @@
 # 手机安装测试版
 
+## iPhone 系统画面缓冲对照
+
+5001 的四次真机复现均显示：登录恢复与 Repository 恢复完成时约 60 MiB，随后首条
+500 ms 采样升至约 568–1055 MiB，一秒左右达到 1625–1882 MiB，最终被系统按
+`per-process-limit` 终止。此前的 `first_frame` 是 Gate 加载页的回调，不是业务首页首帧。
+
+当前对照使用 Flutter 3.44.9 支持的 `FLTUseFlutterMetalLayer=false`，将显示缓冲交给系统
+`CAMetalLayer`。这仍使用 Impeller/Metal；是否改善该设备的内存增长必须由下一次真机记录确认。
+原生激活检查只记录固定的 layer 类型标记，以核实开关确实生效。
+
+新增 `home_init/home_build/home_first_frame/refresh_begin/refresh_end` 固定检查点，区分业务页面
+挂载与首次同步。原生日志追加 malloc zones 与 Metal 资源计数；无法读取 Metal 时输出 `-1`。
+这些计数覆盖范围不同、可能重叠，不能相加，也不能仅凭差值认定分配来源。采样仍仅在启动后
+15 秒内进行，数据留在设备本地，不记录用户内容。
+
+iOS 签名构建与完整验证并行执行；TestFlight 上传同时依赖两者成功，不跳过验证。
+
 ## 2026-10-24 启动退出现场诊断
 
 通过已配对真机的实时日志确认，安装版本为 `1.0.0 (4701)`。重复启动均在约两秒后退出，
