@@ -45,15 +45,18 @@ def package(args: argparse.Namespace) -> dict:
     })
     info_path.write_bytes(plistlib.dumps(info))
 
-    # Distribution signing is separate from the ad-hoc development build.
-    # This also gives Keychain and sandbox preferences an isolated identity.
+    # Developer ID apps without an embedded distribution provisioning profile
+    # may claim App Sandbox entitlements, but not restricted keychain groups or
+    # application/team identifiers. Code signing supplies the signing identity;
+    # the app uses its private file-based macOS keychain instead of sharing one.
     entitlements = plistlib.loads(args.entitlements.read_bytes())
     entitlements.pop("com.apple.security.get-task-allow", None)
-    entitlements["keychain-access-groups"] = []
-    entitlements["com.apple.application-identifier"] = (
-        f"{args.team}.{args.bundle_id}"
-    )
-    entitlements["com.apple.developer.team-identifier"] = args.team
+    for restricted in (
+        "keychain-access-groups",
+        "com.apple.application-identifier",
+        "com.apple.developer.team-identifier",
+    ):
+        entitlements.pop(restricted, None)
     entitlements_path = output / "distribution.entitlements"
     entitlements_path.write_bytes(plistlib.dumps(entitlements))
 

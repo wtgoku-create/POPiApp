@@ -19,13 +19,41 @@ void main() {
     cacheNamespace: '123e4567-e89b-42d3-a456-426614174000',
   );
 
-  test('development storage uses the ad-hoc compatible macOS keychain', () {
+  test('macOS storage uses the profile-free private keychain', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
     final storage = container.read(flutterSecureStorageProvider);
 
     expect(storage.mOptions.toMap()['useDataProtectionKeyChain'], 'false');
+  });
+
+  test('remote release app uses an isolated private keychain service', () {
+    final distributed = macOsStorageOptions(
+      remoteHarnessEnabled: true,
+      releaseMode: true,
+    ).toMap();
+    expect(distributed['useDataProtectionKeyChain'], 'false');
+    expect(distributed['accountName'], 'com.popistudio.app.harness.remote');
+    expect(distributed['synchronizable'], 'false');
+    expect(distributed, isNot(contains('groupId')));
+
+    final debug = macOsStorageOptions(
+      remoteHarnessEnabled: true,
+      releaseMode: false,
+    ).toMap();
+    expect(debug['useDataProtectionKeyChain'], 'false');
+    expect(debug['accountName'], isNot('com.popistudio.app.harness.remote'));
+
+    final normalRelease = macOsStorageOptions(
+      remoteHarnessEnabled: false,
+      releaseMode: true,
+    ).toMap();
+    expect(normalRelease['useDataProtectionKeyChain'], 'true');
+    expect(
+      normalRelease['accountName'],
+      isNot('com.popistudio.app.harness.remote'),
+    );
   });
 
   test('initializes, restores, and clears the persisted session', () async {
