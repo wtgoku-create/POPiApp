@@ -556,6 +556,7 @@ class _ActivityApi extends NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     List<String>? contextRoleIds,
+    Map<String, Object?>? skillInvocation,
     CancelToken? cancelToken,
   }) async {
     if (sendGate case final gate?) await gate.future;

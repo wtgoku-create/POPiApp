@@ -206,10 +206,13 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.placeholderText,
     this.active = true,
     this.onStop,
+    this.canStopRunning = true,
     this.onVoiceInput,
     this.castRoles,
     this.onCastRequested,
     this.castEnabled = true,
+    this.contextChips = const [],
+    this.attachmentAction,
     super.key,
   });
 
@@ -223,6 +226,12 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final Widget? Function(BuildContext context, int index)?
   selectedAssetThumbnailBuilder;
   final VoidCallback onAttachment;
+
+  /// Optional conversation-specific controls shown above the editor.
+  final List<Widget> contextChips;
+
+  /// Replaces the default add-attachment button without changing other hosts.
+  final Widget? attachmentAction;
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<int>? onRetryImage;
   final bool attachmentsReady;
@@ -255,6 +264,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   /// Cached desktop editors must release input when another session is active.
   final bool active;
   final VoidCallback? onStop;
+
+  /// Keeps a running turn read-only while hiding Stop for non-cancellable work.
+  final bool canStopRunning;
 
   /// Optional host override; otherwise uses the shared speech-to-text input.
   final VoidCallback? onVoiceInput;
@@ -841,6 +853,20 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                     ),
                     const SizedBox(height: 8),
                   ],
+                  if (widget.contextChips.isNotEmpty) ...[
+                    SizedBox(
+                      height: 44,
+                      child: ListView.separated(
+                        key: const Key('popi-composer-context-chips'),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.contextChips.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) =>
+                            widget.contextChips[index],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   LayoutBuilder(
                     builder: (context, constraints) {
                       return ValueListenableBuilder<TextEditingValue>(
@@ -878,6 +904,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                 sending: widget.sending,
                                 running: widget.running,
                                 onStop: widget.onStop,
+                                canStopRunning: widget.canStopRunning,
                                 onVoiceInput: _toggleVoiceInput,
                                 voiceActive: _voiceInput.active,
                                 voicePending:
@@ -904,6 +931,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                                   _voiceInput.cancel();
                                   widget.onAttachment();
                                 },
+                                attachmentAction: widget.attachmentAction,
                                 onRemoveImage: widget.onRemoveImage,
                                 onRetryImage: widget.onRetryImage,
                                 attachmentsReady: widget.attachmentsReady,
@@ -1346,6 +1374,7 @@ class _ComposerContent extends StatelessWidget {
     required this.input,
     required this.colorScheme,
     required this.onAttachment,
+    required this.attachmentAction,
     required this.onRemoveImage,
     required this.onRetryImage,
     required this.attachmentsReady,
@@ -1355,6 +1384,7 @@ class _ComposerContent extends StatelessWidget {
     required this.sending,
     required this.running,
     required this.onStop,
+    required this.canStopRunning,
     required this.onVoiceInput,
     required this.voiceActive,
     required this.voicePending,
@@ -1371,6 +1401,7 @@ class _ComposerContent extends StatelessWidget {
   final Widget input;
   final ColorScheme colorScheme;
   final VoidCallback onAttachment;
+  final Widget? attachmentAction;
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<int>? onRetryImage;
   final bool attachmentsReady;
@@ -1380,6 +1411,7 @@ class _ComposerContent extends StatelessWidget {
   final bool sending;
   final bool running;
   final VoidCallback? onStop;
+  final bool canStopRunning;
   final VoidCallback? onVoiceInput;
   final bool voiceActive;
   final bool voicePending;
@@ -1472,10 +1504,12 @@ class _ComposerContent extends StatelessWidget {
           left: 0,
           top: isExpanded ? null : 10,
           bottom: isExpanded ? 0 : null,
-          child: _AttachmentButton(
-            color: colorScheme.primary,
-            onPressed: onAttachment,
-          ),
+          child:
+              attachmentAction ??
+              _AttachmentButton(
+                color: colorScheme.primary,
+                onPressed: onAttachment,
+              ),
         ),
         if (onModelParametersRequested != null || showCast)
           Positioned(
@@ -1572,7 +1606,16 @@ class _ComposerContent extends StatelessWidget {
                         ),
                       ),
                     if (showVoice && showSend) const SizedBox(width: 8),
-                    if (showSend)
+                    if (running && !canStopRunning)
+                      const SizedBox.square(
+                        key: Key('popi-running-indicator'),
+                        dimension: 40,
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else if (showSend)
                       _SendButton(
                         onPressed: sending || voiceActive
                             ? null

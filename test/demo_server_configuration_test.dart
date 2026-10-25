@@ -498,6 +498,8 @@ Map<String, Object?> _standardDefaultConfiguration() => {
   'roles': <String>[],
   'capabilities': DemoSession.defaultCapabilities,
   'memberCapabilities': {'popi': DemoSession.defaultCapabilities},
+  'memberSkills': {'popi': <String>[]},
+  'memberBotIds': {'popi': 'builtin:popi'},
   'memberNames': <String, String>{},
   'memberInstructions': <String, String>{},
   'memberAvatars': <String, String>{},

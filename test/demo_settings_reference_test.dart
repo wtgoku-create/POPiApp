@@ -44,6 +44,14 @@ Future<DemoRepository> _pumpSettings(
   return resolvedRepository;
 }
 
+Future<void> _showCapabilityCatalog(WidgetTester tester) async {
+  await tester.drag(
+    find.byKey(const PageStorageKey('demo-settings-skills')),
+    const Offset(0, -440),
+  );
+  await tester.pumpAndSettle();
+}
+
 class _CatalogRepository extends DemoRepository {
   _CatalogRepository(super.storage);
 
@@ -337,6 +345,11 @@ void main() {
       expect(repository.requestedSessionIds, ['inspiration']);
       await tester.tap(find.text('能力'));
       await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('demo-style-film-capability-popi')),
+        findsOneWidget,
+      );
+      await _showCapabilityCatalog(tester);
 
       final tools = find.byKey(const ValueKey('demo-dsh-tools'));
       final skills = find.byKey(const ValueKey('demo-dsh-skills'));
@@ -356,7 +369,12 @@ void main() {
         find.descendant(of: mcp, matching: find.text('尚未接入')),
         findsOneWidget,
       );
-      expect(find.byType(Switch), findsNothing);
+      for (final section in [tools, skills, mcp]) {
+        expect(
+          find.descendant(of: section, matching: find.byType(Switch)),
+          findsNothing,
+        );
+      }
       expect(find.text('添加能力'), findsNothing);
       expect(tester.takeException(), isNull);
     },
@@ -368,6 +386,7 @@ void main() {
     await _pumpSettings(tester);
     await tester.tap(find.text('能力'));
     await tester.pumpAndSettle();
+    await _showCapabilityCatalog(tester);
 
     expect(find.text('尚未接入'), findsNWidgets(3));
     expect(find.byIcon(Icons.check_circle), findsNothing);
@@ -405,6 +424,7 @@ void main() {
     await _pumpSettings(tester, repository: repository);
     await tester.tap(find.text('能力'));
     await tester.pumpAndSettle();
+    await _showCapabilityCatalog(tester);
     expect(find.text('本会话已启用'), findsOneWidget);
 
     final settingsScroll = find

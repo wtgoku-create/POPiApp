@@ -230,7 +230,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('添加附件'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('demo-attachment-library')));
+    await tester.tap(find.byKey(const Key('demo-add-from-library')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('owned-image-1')));
     await tester.pumpAndSettle();
@@ -261,8 +261,16 @@ void main() {
 
     await tester.tap(find.text('能力'));
     await tester.pumpAndSettle();
-    expect(find.byType(Switch), findsNothing);
-    expect(find.byKey(const ValueKey('demo-dsh-tools')), findsOneWidget);
+    final tools = find.byKey(const ValueKey('demo-dsh-tools'));
+    expect(tools, findsOneWidget);
+    expect(
+      find.descendant(of: tools, matching: find.byType(Switch)),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('demo-style-film-capability-popi')),
+      findsOneWidget,
+    );
 
     final settingsScroll = find
         .descendant(

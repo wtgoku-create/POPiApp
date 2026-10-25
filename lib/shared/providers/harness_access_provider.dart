@@ -336,7 +336,12 @@ String? harnessAccessCacheKeyFor(
   final ownedAsset = RegExp(
     r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/(?:content|poster|thumbnail)$',
   );
-  if (!ownedAsset.hasMatch(uri.path)) return null;
+  final stylePoster = RegExp(
+    r'^/api_agent/v2/style-films/styles/[a-z0-9]+(?:-[a-z0-9]+)*/poster$',
+  );
+  if (!ownedAsset.hasMatch(uri.path) && !stylePoster.hasMatch(uri.path)) {
+    return null;
+  }
   return '${uri.toString()}::${session.cacheNamespace}';
 }
 

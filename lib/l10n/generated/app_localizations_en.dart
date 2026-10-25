@@ -4271,4 +4271,197 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoAttachmentInvalid =>
       'An attachment cannot be read or has changed. Upload it again.';
+
+  @override
+  String get demoStyleFilmCapabilityTitle => 'Create styled short films';
+
+  @override
+  String get demoStyleFilmCapabilityDescription =>
+      'Enable style selection in the composer and the + menu.';
+
+  @override
+  String get demoStyleFilmSelect => 'Choose style';
+
+  @override
+  String get demoStyleFilmChange => 'Change style';
+
+  @override
+  String get demoStyleFilmClear => 'Clear selected style';
+
+  @override
+  String get demoStyleFilmMenu => 'Choose style';
+
+  @override
+  String get demoStyleFilmSheetTitle => 'Film styles';
+
+  @override
+  String get demoStyleFilmSearchHint => 'Search styles or uses';
+
+  @override
+  String get demoStyleFilmAllCategories => 'All categories';
+
+  @override
+  String get demoStyleFilmUnavailable => 'Not ready to create';
+
+  @override
+  String get demoStyleFilmDuration => 'Duration';
+
+  @override
+  String get demoStyleFilmAspectRatio => 'Aspect ratio';
+
+  @override
+  String get demoStyleFilmSoundtrack => 'Soundtrack';
+
+  @override
+  String get demoStyleFilmSoundNone => 'No audio';
+
+  @override
+  String get demoStyleFilmSoundMusic => 'Original music';
+
+  @override
+  String get demoStyleFilmStoryboardReview =>
+      'Review the storyboard before rendering';
+
+  @override
+  String get demoStyleFilmCreate => 'Use this style';
+
+  @override
+  String get demoStyleFilmConfirmTitle => 'Confirm the film brief';
+
+  @override
+  String demoStyleFilmConfirmDescription(
+    String style,
+    int seconds,
+    String ratio,
+  ) {
+    return 'Style: $style. Duration: $seconds seconds. Aspect ratio: $ratio. Review the storyboard before rendering the video.';
+  }
+
+  @override
+  String get demoStyleFilmCostPending =>
+      'Creation uses the current model and server resources. Model usage is billed by your service provider.';
+
+  @override
+  String get demoStyleFilmPreparingStoryboard => 'Preparing storyboard';
+
+  @override
+  String get demoStyleFilmAwaitingStoryboard =>
+      'Storyboard awaiting your review';
+
+  @override
+  String get demoStyleFilmApproveStoryboard => 'Approve storyboard and render';
+
+  @override
+  String get demoStyleFilmReviseStoryboard => 'Revise storyboard';
+
+  @override
+  String get demoStyleFilmRevisionNotes =>
+      'How should the story and visuals change?';
+
+  @override
+  String get demoStyleFilmRevisionNotice =>
+      'Submitting creates a new complete storyboard. The video waits for your approval.';
+
+  @override
+  String get demoStyleFilmSubmitRevision => 'Submit changes';
+
+  @override
+  String get demoStyleFilmCreating => 'Creating your film';
+
+  @override
+  String get demoStyleFilmCompleted => 'Film completed';
+
+  @override
+  String get demoStyleFilmFailed => 'Film creation failed';
+
+  @override
+  String get demoStyleFilmViewOutput => 'View film';
+
+  @override
+  String get demoStyleFilmNoReadyStyles =>
+      'No styles are ready for creation. You can still browse the catalog.';
+
+  @override
+  String get demoStyleFilmLoadFailed =>
+      'Could not load film styles. Open the picker again to try.';
+
+  @override
+  String get demoStyleFilmReviewFailed =>
+      'The storyboard action was not submitted. Your choices and notes are preserved.';
+
+  @override
+  String get demoStyleFilmSaveFailed =>
+      'Capability settings were not saved. Your changes are preserved.';
+
+  @override
+  String get demoStyleFilmRetry => 'Create again';
+
+  @override
+  String demoStyleFilmStyleCount(int count) {
+    return '$count styles';
+  }
+
+  @override
+  String demoStyleFilmPosterLabel(String name) {
+    return '$name style example';
+  }
+
+  @override
+  String get demoStyleFilmPreviewLabel => 'Storyboard preview';
+
+  @override
+  String get demoStyleFilmNoStoryboard =>
+      'The storyboard is not ready yet. Progress stays in this conversation.';
+
+  @override
+  String get demoStyleFilmUpload => 'Upload from device';
+
+  @override
+  String get demoStyleFilmLibrary => 'Choose from library';
+
+  @override
+  String get demoStyleFilmReferencesUnsupported =>
+      'Style films currently support text prompts only. Remove attachments and content roles before creating.';
+
+  @override
+  String demoStyleFilmBotContext(String name) {
+    return 'For Bot: $name';
+  }
+
+  @override
+  String get demoStyleFilmLoadingCatalog => 'Loading style catalog';
+
+  @override
+  String demoStyleFilmReadyCount(int count) {
+    return '$count ready to create';
+  }
+
+  @override
+  String get demoStyleFilmBrowsePending =>
+      'Browse all styles now; creation unlocks after verification.';
+
+  @override
+  String get demoStyleFilmNoReadyFooter =>
+      'No verified style is ready to create yet';
+
+  @override
+  String get demoStyleFilmReasonUnsupportedStyle => 'Not adapted yet';
+
+  @override
+  String get demoStyleFilmReasonUnverifiedStyle => 'Awaiting verification';
+
+  @override
+  String get demoStyleFilmReasonRuntimeUnavailable =>
+      'Creation is temporarily unavailable';
+
+  @override
+  String get demoStyleFilmReasonModelUnavailable =>
+      'The current model is not ready';
+
+  @override
+  String get demoStyleFilmReasonUnknown => 'Not available for creation yet';
+
+  @override
+  String get demoStyleFilmCapabilitiesHint =>
+      'DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.';
 }

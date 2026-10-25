@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:crypto/crypto.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/network/agent_api_exception.dart';
@@ -18,6 +17,7 @@ import 'demo_fixtures.dart';
 
 export '../domain/demo_capability_catalog.dart';
 export '../domain/demo_assistant_profile.dart';
+export '../domain/demo_style_film_models.dart';
 
 /// The demo store can run against bundled fixtures or the isolated local Harness.
 class DemoRepository extends ChangeNotifier {
@@ -55,8 +55,12 @@ class DemoRepository extends ChangeNotifier {
   final Duration _questionPollInterval;
   final int _maxPollAttempts;
   final Map<String, String> _requestIds = {};
+  final Map<String, String> _pendingBotIds = {};
+  final Map<String, Future<void>> _filmReviews = {};
   final Set<String> _stopRequestedSessions = {};
   final Set<String> _runningSessions = {};
+  final Map<String, bool> _currentRunCanStop = {};
+  final Map<String, String> _acceptedRunAwaitingSnapshot = {};
   final Map<String, Completer<void>> _questionWaiters = {};
   final Map<String, ({String payloadSignature, Future<void> operation})>
   _questionResponses = {};
@@ -79,6 +83,7 @@ class DemoRepository extends ChangeNotifier {
   bool get loading => _loading;
   bool isSessionLoading(String id) => _loadingSessions.contains(id);
   bool isSessionRunning(String id) => _runningSessions.contains(id);
+  bool canStopCurrentHarnessRun(String id) => _currentRunCanStop[id] ?? true;
   List<DemoSession> get sessions => List.unmodifiable([
     ..._sessions.where((session) => session.pinned),
     ..._sessions.where((session) => !session.pinned),
@@ -110,22 +115,17 @@ class DemoRepository extends ChangeNotifier {
             color == null) {
           continue;
         }
-        final identity = sha256
-            .convert(
-              utf8.encode(
-                jsonEncode([memberId, name, instructions, avatar, color]),
-              ),
-            )
-            .toString();
+        final identity = session.botIdFor(memberId);
         if (!seen.add(identity)) continue;
         profiles.add(
           DemoAssistantProfile(
-            id: 'saved:$identity',
+            id: identity,
             memberId: memberId,
             name: name,
             instructions: instructions,
             avatarAsset: avatar,
             avatarColor: color,
+            skillIds: session.skillsFor(memberId),
           ),
         );
       }
@@ -141,6 +141,178 @@ class DemoRepository extends ChangeNotifier {
     return DemoCapabilityCatalog.fromResponse(
       await api.harnessCapabilities(sessionId: sessionId),
     );
+  }
+
+  Future<DemoStyleFilmCatalog> loadStyleFilmCatalog({
+    String? q,
+    String? category,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    final api = _api;
+    if (api == null) {
+      return const DemoStyleFilmCatalog(reasonUnavailable: 'not_connected');
+    }
+    final response = Map<String, Object?>.from(
+      await api.styleFilmCatalog(
+        q: q,
+        category: category,
+        page: page,
+        pageSize: pageSize,
+      ),
+    );
+    response['list'] = _mapList(response['list'])
+        .map(
+          (style) => {
+            ...style,
+            if (style['posterUrl'] case final String url when url.isNotEmpty)
+              'posterUrl': api.resolveStyleFilmPosterUrl(url),
+          },
+        )
+        .toList();
+    return DemoStyleFilmCatalog.fromJson(response);
+  }
+
+  DemoStyleFilmSelection? styleFilmDraft(String sessionId, String botId) =>
+      session(sessionId).filmDrafts[botId];
+
+  Future<String> prepareStyleFilmRequest(
+    String sessionId,
+    String botId, {
+    required String body,
+    required String proposedRequestId,
+  }) async {
+    if (_disposed) throw StateError('Repository is disposed');
+    var requestId = proposedRequestId;
+    await _commit(
+      () => (
+        sessions: _sessions.map((item) {
+          if (item.id != sessionId) return item;
+          if (!item.members.any((member) => item.botIdFor(member) == botId)) {
+            throw ArgumentError('Unknown Bot for film request');
+          }
+          final previous = item.filmPendingRequests[botId];
+          if (previous?.body == body) requestId = previous!.clientRequestId;
+          return item.copyWith(
+            filmPendingRequests: {
+              ...item.filmPendingRequests,
+              botId: DemoStyleFilmPendingRequest(
+                body: body,
+                clientRequestId: requestId,
+              ),
+            },
+          );
+        }).toList(),
+        assets: _assets,
+      ),
+    );
+    return requestId;
+  }
+
+  Future<void> updateStyleFilmDraft(
+    String sessionId,
+    String botId,
+    DemoStyleFilmSelection? selection,
+  ) {
+    final current = session(sessionId);
+    if (!current.members.any((member) => current.botIdFor(member) == botId) ||
+        (selection != null && !selection.isValid)) {
+      throw ArgumentError('Invalid style film draft');
+    }
+    return _commit(
+      () => (
+        sessions: _sessions.map((item) {
+          if (item.id != sessionId) return item;
+          final drafts = {...item.filmDrafts};
+          if (selection == null) {
+            drafts.remove(botId);
+          } else {
+            drafts[botId] = selection;
+          }
+          return item.copyWith(filmDrafts: drafts);
+        }).toList(),
+        assets: _assets,
+      ),
+    );
+  }
+
+  DemoStyleFilmJob? styleFilmJob(String sessionId, String jobId) => session(
+    sessionId,
+  ).filmJobs.where((job) => job.jobId == jobId).firstOrNull;
+
+  Future<void> reviewStyleFilm(
+    String sessionId,
+    String jobId, {
+    required int expectedRevision,
+    required String action,
+    String? notes,
+  }) {
+    final api = _api;
+    if (api == null) throw StateError('Style films require Harness transport');
+    final trimmedNotes = notes?.trim();
+    if (!const ['approve', 'revise'].contains(action) ||
+        (trimmedNotes?.runes.length ?? 0) > 2000) {
+      throw ArgumentError('Invalid style film review');
+    }
+    final key =
+        '$sessionId:$jobId:$expectedRevision:$action:${trimmedNotes ?? ''}';
+    final pending = _filmReviews[key];
+    if (pending != null) return pending;
+    final operation = _reviewStyleFilm(
+      sessionId,
+      jobId,
+      expectedRevision,
+      action,
+      trimmedNotes,
+      key,
+    );
+    _filmReviews[key] = operation;
+    unawaited(
+      operation.then<void>(
+        (_) => _filmReviews.remove(key),
+        onError: (Object _, StackTrace _) {
+          _filmReviews.remove(key);
+        },
+      ),
+    );
+    return operation;
+  }
+
+  Future<void> _reviewStyleFilm(
+    String sessionId,
+    String jobId,
+    int revision,
+    String action,
+    String? notes,
+    String key,
+  ) async {
+    try {
+      await _api!.reviewStyleFilm(
+        sessionId,
+        jobId,
+        clientRequestId: _requestId('film-review:$key'),
+        expectedRevision: revision,
+        action: action,
+        notes: notes,
+      );
+      final snapshot = await _loadSnapshot(
+        sessionId,
+        fallback: session(sessionId),
+      );
+      await _applySnapshot(snapshot);
+      _requestIds.remove('film-review:$key');
+      if (snapshot.hasPendingMediaJobs) _startMediaWatcher(sessionId);
+    } on AgentApiException catch (error) {
+      if (error.statusCode == 409) {
+        _requestIds.remove('film-review:$key');
+        try {
+          await refreshSession(sessionId);
+        } catch (_) {
+          /* Keep the review error. */
+        }
+      }
+      rethrow;
+    }
   }
 
   bool isMediaJobNoticeDismissed(String sessionId, String jobId) {
@@ -428,6 +600,10 @@ class DemoRepository extends ChangeNotifier {
         }
         if (state == 'failed' || state == 'interrupted') {
           if (_stopRequestedSessions.remove(id)) return;
+          if (snapshot.hasFilmJobForRun(observedRunId)) {
+            if (snapshot.hasPendingMediaJobs) _startMediaWatcher(id);
+            return;
+          }
           final error = _map(observedRun?['error']);
           throw HarnessRunTerminalException(
             error['message']?.toString() ?? 'Agent run $state',
@@ -473,7 +649,9 @@ class DemoRepository extends ChangeNotifier {
                     null) ||
             (assistant.avatarColor != null &&
                 (assistant.avatarColor! < 0 ||
-                    assistant.avatarColor! > 0xFFFFFFFF)))) {
+                    assistant.avatarColor! > 0xFFFFFFFF)) ||
+            assistant.skillIds.toSet().length != assistant.skillIds.length ||
+            assistant.skillIds.any((id) => id != demoStyleFilmSkillId))) {
       throw ArgumentError.value(
         assistant,
         'assistant',
@@ -495,6 +673,39 @@ class DemoRepository extends ChangeNotifier {
     final memberColors = <String, int>{
       if (assistant?.avatarColor case final color?) assistant!.memberId: color,
     };
+    final draftIdentityKey = assistant == null
+        ? ''
+        : jsonEncode({
+            'id': assistant.id,
+            'member': assistant.memberId,
+            'name': assistant.name,
+            'instructions': assistant.instructions,
+            'avatar': assistant.avatarAsset,
+            'color': assistant.avatarColor,
+            'skills': assistant.skillIds,
+          });
+    final persistentProfile =
+        assistant != null &&
+        (assistant.id.startsWith('builtin:') ||
+            assistant.id.startsWith('bot:') ||
+            assistant.id.startsWith('legacy:'));
+    final botId = assistant == null
+        ? ''
+        : persistentProfile
+        ? assistant.id
+        : _pendingBotIds.putIfAbsent(
+            draftIdentityKey,
+            () => 'bot:${const Uuid().v4()}',
+          );
+    final memberBotIds = {
+      for (final member in selectedMembers)
+        member: assistant != null && member == assistant.memberId
+            ? botId
+            : 'builtin:$member',
+    };
+    final memberSkills = <String, List<String>>{
+      if (assistant != null) assistant.memberId: List.of(assistant.skillIds),
+    };
     final api = _api;
     if (api == null) {
       final id = const Uuid().v4();
@@ -513,6 +724,8 @@ class DemoRepository extends ChangeNotifier {
               memberInstructions: memberInstructions,
               memberAvatars: memberAvatars,
               memberColors: memberColors,
+              memberBotIds: memberBotIds,
+              memberSkills: memberSkills,
               configRevision: 1,
               configurationStatus: 'configured',
             ),
@@ -521,6 +734,7 @@ class DemoRepository extends ChangeNotifier {
           assets: _assets,
         ),
       );
+      _pendingBotIds.remove(draftIdentityKey);
       return id;
     }
 
@@ -536,6 +750,8 @@ class DemoRepository extends ChangeNotifier {
       memberInstructions: memberInstructions,
       memberAvatars: memberAvatars,
       memberColors: memberColors,
+      memberBotIds: memberBotIds,
+      memberSkills: memberSkills,
       configRevision: 1,
       configurationStatus: 'configured',
     );
@@ -559,6 +775,7 @@ class DemoRepository extends ChangeNotifier {
         );
     await _replace(sessions: [created, ..._sessions], assets: _assets);
     _requestIds.remove(requestKey);
+    _pendingBotIds.remove(draftIdentityKey);
     return created.id;
   }
 
@@ -572,7 +789,10 @@ class DemoRepository extends ChangeNotifier {
           sessions: _sessions
               .map(
                 (session) => session.id == id
-                    ? _normalizeSingleAssistantRename(session, update(session))
+                    ? _normalizeSingleAssistantRename(
+                        session,
+                        update(_withBotIdentity(session)),
+                      )
                     : session,
               )
               .toList(),
@@ -580,7 +800,7 @@ class DemoRepository extends ChangeNotifier {
         ),
       );
     }
-    final current = session(id);
+    final current = _withBotIdentity(session(id));
     final next = _normalizeSingleAssistantRename(current, update(current));
     final api = _api;
     final currentConfiguration = _configurationJson(current);
@@ -717,11 +937,30 @@ class DemoRepository extends ChangeNotifier {
     required String text,
     List<String> mediaIds = const [],
     List<String> contextRoleIds = const [],
+    DemoStyleFilmInvocation? skillInvocation,
     VoidCallback? onAccepted,
   }) async {
     final api = _api;
     if (api == null) throw StateError('Harness transport is not configured');
     final selectedRoles = session(sessionId).roles;
+    final currentSession = session(sessionId);
+    final memberId = currentSession.activeMemberId;
+    final botId = currentSession.botIdFor(memberId);
+    if (skillInvocation != null &&
+        (!skillInvocation.selection.isValid ||
+            !currentSession
+                .skillsFor(memberId)
+                .contains(demoStyleFilmSkillId))) {
+      throw ArgumentError('The active Bot has not enabled this film skill');
+    }
+    if (skillInvocation != null &&
+        (mediaIds.isNotEmpty || contextRoleIds.isNotEmpty)) {
+      throw const AgentApiException(
+        code: 'style_film_references_unsupported',
+        message: 'Style films currently accept text stories only.',
+        statusCode: 400,
+      );
+    }
     if (contextRoleIds.length > 5 ||
         contextRoleIds.toSet().length != contextRoleIds.length ||
         contextRoleIds.any((id) => !selectedRoles.contains(id))) {
@@ -734,8 +973,13 @@ class DemoRepository extends ChangeNotifier {
       text: text,
       mediaIds: mediaIds.isEmpty ? null : mediaIds,
       contextRoleIds: contextRoleIds.isEmpty ? null : contextRoleIds,
+      skillInvocation: skillInvocation?.toJson(),
     );
     final runId = accepted['runId']?.toString();
+    // The accepted response identifies this run before its first snapshot.
+    _currentRunCanStop[sessionId] =
+        accepted['jobId']?.toString().isNotEmpty != true;
+    if (runId != null) _acceptedRunAwaitingSnapshot[sessionId] = runId;
     // A newly accepted run starts a new stop-idempotency lifecycle. Keep an
     // uncertain stop key reusable within one run, but never replay it later.
     _requestIds.remove('stop:$sessionId');
@@ -743,6 +987,30 @@ class DemoRepository extends ChangeNotifier {
     _runningSessions.add(sessionId);
     notifyListeners();
     onAccepted?.call();
+    if (skillInvocation != null) {
+      final submitted = skillInvocation.selection.toArguments();
+      await _commit(
+        () => (
+          sessions: _sessions.map((item) {
+            if (item.id != sessionId) return item;
+            final drafts = {...item.filmDrafts};
+            if (jsonEncode(drafts[botId]?.toArguments()) ==
+                jsonEncode(submitted)) {
+              drafts.remove(botId);
+            }
+            final requests = {...item.filmPendingRequests};
+            if (requests[botId]?.clientRequestId == clientRequestId) {
+              requests.remove(botId);
+            }
+            return item.copyWith(
+              filmDrafts: drafts,
+              filmPendingRequests: requests,
+            );
+          }).toList(),
+          assets: _assets,
+        ),
+      );
+    }
     var handedOffQuestionRun = false;
     try {
       var attempt = 0;
@@ -773,6 +1041,10 @@ class DemoRepository extends ChangeNotifier {
         if (state == 'failed' || state == 'interrupted') {
           if (_stopRequestedSessions.remove(sessionId)) {
             throw const HarnessRunStoppedException();
+          }
+          if (snapshot.hasFilmJobForRun(runId)) {
+            if (snapshot.hasPendingMediaJobs) _startMediaWatcher(sessionId);
+            return;
           }
           final error = _map(run?['error']);
           throw HarnessRunTerminalException(
@@ -1167,7 +1439,12 @@ class DemoRepository extends ChangeNotifier {
         await _applySnapshot(snapshot);
         if (!snapshot.hasPendingMediaJobs) return;
         if (attempt == _maxPollAttempts) return;
-        await Future<void>.delayed(_pollInterval);
+        final delay =
+            snapshot.session.filmJobs.any((job) => job.isPending) &&
+                _pollInterval > Duration.zero
+            ? const Duration(seconds: 2)
+            : _pollInterval;
+        await Future<void>.delayed(delay);
       }
     } catch (_) {
       // Background observation is best effort. Server workers own generation;
@@ -1201,6 +1478,7 @@ class DemoRepository extends ChangeNotifier {
       mediaJobs: _mapList(
         response['mediaJobs'],
       ).map(DemoMediaJob.fromJson).toList(),
+      filmJobs: _mapList(response['filmJobs']).map(_filmJobFromRecord).toList(),
       lastSeq: _int(response['lastSeq'], fallback: fallback?.lastSeq ?? 0),
     );
     if (migrateLegacy &&
@@ -1230,13 +1508,22 @@ class DemoRepository extends ChangeNotifier {
       if (!_acceptSnapshot(snapshot, current)) {
         return (sessions: _sessions, assets: _assets);
       }
+      _projectCurrentRunStop(snapshot);
       _latestAppliedSnapshotRequest[snapshot.session.id] =
           snapshot.requestOrder;
       return (
         sessions: _sessions
             .map(
-              (item) =>
-                  item.id == snapshot.session.id ? snapshot.session : item,
+              (item) => item.id == snapshot.session.id
+                  ? snapshot.session.copyWith(
+                      filmDrafts: item.filmDrafts,
+                      filmPendingRequests: item.filmPendingRequests,
+                      filmJobs: _mergeFilmJobs(
+                        item.filmJobs,
+                        snapshot.session.filmJobs,
+                      ),
+                    )
+                  : item,
             )
             .toList(),
         assets: _mergeSnapshotAssets(_assets, [snapshot]),
@@ -1253,8 +1540,20 @@ class DemoRepository extends ChangeNotifier {
       for (final snapshot in snapshots) {
         final current = currentById[snapshot.session.id];
         if (_acceptSnapshot(snapshot, current)) {
+          _projectCurrentRunStop(snapshot);
           accepted.add(snapshot);
-          sessions.add(snapshot.session);
+          sessions.add(
+            snapshot.session.copyWith(
+              filmDrafts: current?.filmDrafts ?? snapshot.session.filmDrafts,
+              filmPendingRequests:
+                  current?.filmPendingRequests ??
+                  snapshot.session.filmPendingRequests,
+              filmJobs: _mergeFilmJobs(
+                current?.filmJobs ?? const [],
+                snapshot.session.filmJobs,
+              ),
+            ),
+          );
           _latestAppliedSnapshotRequest[snapshot.session.id] =
               snapshot.requestOrder;
         } else if (current != null) {
@@ -1291,10 +1590,67 @@ class DemoRepository extends ChangeNotifier {
       return response.copyWith(
         messages: current.messages,
         mediaJobs: current.mediaJobs,
+        filmJobs: current.filmJobs,
+        filmDrafts: current.filmDrafts,
+        filmPendingRequests: current.filmPendingRequests,
         lastSeq: current.lastSeq,
       );
     }
-    return response;
+    return response.copyWith(
+      filmDrafts: current.filmDrafts,
+      filmPendingRequests: current.filmPendingRequests,
+      filmJobs: _mergeFilmJobs(current.filmJobs, response.filmJobs),
+    );
+  }
+
+  static DemoSession _withBotIdentity(DemoSession session) => session.copyWith(
+    memberBotIds: {
+      for (final member in session.members) member: session.botIdFor(member),
+    },
+  );
+
+  void _projectCurrentRunStop(_HarnessSnapshot snapshot) {
+    final id = snapshot.session.id;
+    final acceptedRun = _acceptedRunAwaitingSnapshot[id];
+    if (acceptedRun != null &&
+        !snapshot.runs.any((run) => run['id'] == acceptedRun)) {
+      return;
+    }
+    _currentRunCanStop[id] = snapshot.canStopCurrentRun;
+    _acceptedRunAwaitingSnapshot.remove(id);
+  }
+
+  static List<DemoStyleFilmJob> _mergeFilmJobs(
+    List<DemoStyleFilmJob> current,
+    List<DemoStyleFilmJob> incoming,
+  ) {
+    final existing = {for (final job in current) job.jobId: job};
+    return incoming.map((job) {
+      final old = existing[job.jobId];
+      if (old == null) return job;
+      if (job.revision < old.revision) return old;
+      final oldTime = DateTime.tryParse(old.updatedAt);
+      final newTime = DateTime.tryParse(job.updatedAt);
+      if (job.revision == old.revision &&
+          oldTime != null &&
+          newTime != null &&
+          newTime.isBefore(oldTime)) {
+        return old;
+      }
+      return job;
+    }).toList();
+  }
+
+  DemoStyleFilmJob _filmJobFromRecord(Map<String, Object?> record) {
+    final normalized = {...record};
+    normalized['storyboard'] = _mapList(record['storyboard']).map((shot) {
+      final url = shot['previewUrl']?.toString() ?? '';
+      return {
+        ...shot,
+        'previewUrl': url.isEmpty ? '' : _api!.resolveAssetContentUrl(url),
+      };
+    }).toList();
+    return DemoStyleFilmJob.fromJson(normalized);
   }
 
   Future<DemoSession> _migrateLegacyConfiguration(
@@ -1313,6 +1669,11 @@ class DemoRepository extends ChangeNotifier {
       memberAvatars: fallback.memberAvatars,
       memberColors: fallback.memberColors,
       memberCapabilities: fallback.memberCapabilities,
+      memberSkills: fallback.memberSkills,
+      memberBotIds: {
+        for (final member in fallback.members)
+          member: fallback.botIdFor(member),
+      },
       workMode: fallback.workMode,
       activeMemberId: fallback.members.contains(fallback.activeMemberId)
           ? fallback.activeMemberId
@@ -1353,6 +1714,9 @@ class DemoRepository extends ChangeNotifier {
         mediaJobs: _mapList(
           response['mediaJobs'],
         ).map(DemoMediaJob.fromJson).toList(),
+        filmJobs: _mapList(
+          response['filmJobs'],
+        ).map(_filmJobFromRecord).toList(),
         lastSeq: _int(response['lastSeq'], fallback: server.lastSeq),
       );
     }
@@ -1378,6 +1742,7 @@ class DemoRepository extends ChangeNotifier {
     activity: message['activity'] is Map
         ? DemoActivity.fromJson(_map(message['activity']))
         : null,
+    filmJobId: message['filmJobId']?.toString() ?? '',
   );
 
   DemoSession _sessionFromRecord(
@@ -1386,6 +1751,7 @@ class DemoRepository extends ChangeNotifier {
     DemoSessionKind? fallbackKind,
     List<DemoMessage>? messages,
     List<DemoMediaJob>? mediaJobs,
+    List<DemoStyleFilmJob>? filmJobs,
     int? lastSeq,
   }) {
     final kindName = record['kind']?.toString();
@@ -1451,6 +1817,12 @@ class DemoRepository extends ChangeNotifier {
       memberCapabilities: configured
           ? _stringListMap(configuration['memberCapabilities'])
           : fallback?.memberCapabilities ?? const {},
+      memberSkills: configured
+          ? _stringListMap(configuration['memberSkills'])
+          : fallback?.memberSkills ?? const {},
+      memberBotIds: configured && configuration['memberBotIds'] is Map
+          ? _stringMap(configuration['memberBotIds'])
+          : fallback?.memberBotIds ?? const {},
       workMode: configured
           ? configuration['workMode']?.toString() ?? 'onDemand'
           : fallback?.workMode ?? 'onDemand',
@@ -1475,6 +1847,9 @@ class DemoRepository extends ChangeNotifier {
       ),
       lastSeq: lastSeq ?? fallback?.lastSeq ?? 0,
       mediaJobs: mediaJobs ?? fallback?.mediaJobs ?? const [],
+      filmJobs: filmJobs ?? fallback?.filmJobs ?? const [],
+      filmDrafts: fallback?.filmDrafts ?? const {},
+      filmPendingRequests: fallback?.filmPendingRequests ?? const {},
       pinned: record['pinned'] as bool? ?? fallback?.pinned ?? false,
     );
   }
@@ -1670,6 +2045,12 @@ class DemoRepository extends ChangeNotifier {
       'roles': session.roles,
       'capabilities': capabilities.toList(),
       'memberCapabilities': memberCapabilities,
+      'memberSkills': {
+        for (final member in session.members) member: session.skillsFor(member),
+      },
+      'memberBotIds': {
+        for (final member in session.members) member: session.botIdFor(member),
+      },
       'memberNames': {
         for (final entry in session.memberNames.entries)
           if (members.contains(entry.key)) entry.key: entry.value,
@@ -1904,6 +2285,10 @@ class DemoRepository extends ChangeNotifier {
     _questionResponses.clear();
     _questionRunWatchers.clear();
     _mediaWatchers.clear();
+    _filmReviews.clear();
+    _pendingBotIds.clear();
+    _currentRunCanStop.clear();
+    _acceptedRunAwaitingSnapshot.clear();
     super.dispose();
   }
 }
@@ -1923,9 +2308,31 @@ class _HarnessSnapshot {
   final bool assetsAuthoritative;
   final int requestOrder;
 
-  bool get hasPendingMediaJobs => session.mediaJobs.any((job) => job.isPending);
+  bool get canStopCurrentRun {
+    final reversed = runs.reversed;
+    final active =
+        reversed
+            .where(
+              (run) => const [
+                'running',
+                'waiting_user',
+                'stopping',
+                'cancel_requested',
+              ].contains(run['state']),
+            )
+            .firstOrNull ??
+        reversed.where((run) => run['state'] == 'queued').firstOrNull;
+    return active?['filmJobId']?.toString().isNotEmpty != true;
+  }
+
+  bool get hasPendingMediaJobs =>
+      session.mediaJobs.any((job) => job.isPending) ||
+      session.filmJobs.any((job) => job.isPending);
   bool get hasPendingQuestions =>
       session.messages.any((message) => message.question?.isPending ?? false);
+
+  bool hasFilmJobForRun(String? runId) =>
+      runId != null && session.filmJobs.any((job) => job.runId == runId);
 
   bool hasPendingQuestionForRun(String? runId) => session.messages.any(
     (message) =>

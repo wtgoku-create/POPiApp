@@ -901,6 +901,7 @@ class _HarnessApi extends NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     List<String>? contextRoleIds,
+    Map<String, Object?>? skillInvocation,
     CancelToken? cancelToken,
   }) async {
     sendRequestIds.add(clientRequestId);

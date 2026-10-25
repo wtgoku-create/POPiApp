@@ -8,6 +8,7 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/app_image_cache.dart';
 import 'package:popi_ai_app/core/storage/app_image_file_service.dart';
 import 'package:popi_ai_app/core/storage/gallery_video_storage.dart';
+import 'package:popi_ai_app/features/demo/domain/harness_access_session.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/harness_access_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
@@ -129,6 +130,67 @@ void main() {
       await tester.pump();
     },
   );
+
+  test('style poster cache partitions use exact authenticated routes only', () {
+    const base = 'https://harness.test';
+    const url = '$base/api_agent/v2/style-films/styles/ink-wash/poster';
+    final first = HarnessAccessSession(
+      cookieValue: 'secret-one',
+      origin: base,
+      expiresAt: DateTime.utc(2099),
+      cacheNamespace: '11111111-1111-4111-8111-111111111111',
+    );
+    final second = HarnessAccessSession(
+      cookieValue: 'secret-two',
+      origin: base,
+      expiresAt: DateTime.utc(2099),
+      cacheNamespace: '22222222-2222-4222-8222-222222222222',
+    );
+    final firstKey = harnessAccessCacheKeyFor(
+      url,
+      session: first,
+      baseUrl: base,
+    );
+    final secondKey = harnessAccessCacheKeyFor(
+      url,
+      session: second,
+      baseUrl: base,
+    );
+    expect(firstKey, '$url::${first.cacheNamespace}');
+    expect(firstKey, isNot(secondKey));
+    expect(firstKey, isNot(contains(first.cookieValue)));
+    final image = AppImageCache.provider(
+      url,
+      headers: harnessAccessHeadersFor(url, session: first, baseUrl: base),
+      cacheKey: firstKey,
+    );
+    expect(image.headers?['Cookie'], first.cookieHeader);
+    expect(
+      image,
+      isNot(
+        AppImageCache.provider(
+          url,
+          headers: harnessAccessHeadersFor(url, session: second, baseUrl: base),
+          cacheKey: secondKey,
+        ),
+      ),
+    );
+    for (final rejected in [
+      '$url?redirect=elsewhere',
+      '$url#fragment',
+      'https://other.test/api_agent/v2/style-films/styles/ink-wash/poster',
+      'https://user:secret@harness.test/api_agent/v2/style-films/styles/ink-wash/poster',
+      '$base/api_agent/v2/style-films/styles/../poster',
+      '$base/api_agent/v2/style-films/styles/ink-wash/preview',
+      '$base/api_agent/v2/style-films/styles/ink-wash/poster/extra',
+      '$base/api_agent/v2/style-films/catalog',
+    ]) {
+      expect(
+        harnessAccessCacheKeyFor(rejected, session: first, baseUrl: base),
+        isNull,
+      );
+    }
+  });
 
   testWidgets('protected video keeps its poster visible while downloading', (
     tester,

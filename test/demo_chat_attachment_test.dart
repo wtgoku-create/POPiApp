@@ -382,6 +382,7 @@ class _AttachmentApi extends NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     List<String>? contextRoleIds,
+    Map<String, Object?>? skillInvocation,
     CancelToken? cancelToken,
   }) async {
     sentMediaIds = mediaIds;

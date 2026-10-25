@@ -7,7 +7,10 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../assets/domain/library_work.dart';
 import '../../assets/domain/library_role.dart';
@@ -29,6 +32,9 @@ import 'demo_chat_controller.dart';
 import 'demo_diy_role_sheet.dart';
 import 'demo_file_import_sheet.dart';
 import 'demo_settings_page.dart';
+import 'demo_style_film_job_card.dart';
+import 'demo_style_film_review_sheet.dart';
+import 'demo_style_film_sheet.dart';
 import 'demo_task_brief_sheet.dart';
 import 'demo_remote_media.dart';
 import 'widgets/demo_image_stack.dart';
@@ -283,6 +289,19 @@ class _DemoChatPageState extends State<DemoChatPage> {
     if (_conversation.busy) return;
     final l = AppLocalizations.of(context)!;
     final session = _conversation.session;
+    final memberId = session.members.contains(session.activeMemberId)
+        ? session.activeMemberId
+        : session.members.first;
+    final botId = session.botIdFor(memberId);
+    final filmEnabled = session
+        .skillsFor(memberId)
+        .contains(demoStyleFilmSkillId);
+    final filmSelection = filmEnabled
+        ? widget.repository.styleFilmDraft(session.id, botId)
+        : null;
+    final filmInvocation = filmSelection == null
+        ? null
+        : DemoStyleFilmInvocation(selection: filmSelection);
     final contextRoleIds = _roleMentions.resolve(
       draft: input,
       linkedRoleIds: session.roles,
@@ -290,6 +309,30 @@ class _DemoChatPageState extends State<DemoChatPage> {
         for (final roleId in session.roles) roleId: _roleName(session, roleId),
       },
     );
+    if (filmInvocation != null) {
+      if (_attachments.isNotEmpty || contextRoleIds.isNotEmpty) {
+        AppToast.error(context, l.demoStyleFilmReferencesUnsupported);
+        return;
+      }
+      final style = Localizations.localeOf(context).languageCode == 'zh'
+          ? (filmSelection!.styleNameZh.isEmpty
+                ? filmSelection.styleNameEn
+                : filmSelection.styleNameZh)
+          : (filmSelection!.styleNameEn.isEmpty
+                ? filmSelection.styleNameZh
+                : filmSelection.styleNameEn);
+      final confirmed = await AppDialog.confirm(
+        context: context,
+        title: l.demoStyleFilmConfirmTitle,
+        description:
+            '${l.demoStyleFilmConfirmDescription(style, filmSelection.durationSeconds, filmSelection.aspectRatio)}\n\n'
+            '${l.demoStyleFilmStoryboardReview}\n'
+            '${l.demoStyleFilmCostPending}',
+        cancelLabel: l.cancel,
+        confirmLabel: l.demoStyleFilmCreate,
+      );
+      if (confirmed != true || !mounted || _conversation.busy) return;
+    }
     var accepted = false;
     void clearAcceptedDraft() {
       if (accepted || !mounted) return;
@@ -305,6 +348,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
         List.of(_attachments),
         l,
         contextRoleIds: contextRoleIds,
+        skillInvocation: filmInvocation,
         onAccepted: clearAcceptedDraft,
       );
       if (ok) clearAcceptedDraft();
@@ -529,6 +573,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
       return;
     }
     switch (source) {
+      // Keep the sheet entry point for callers outside the compact menu.
       case _AttachmentSource.device:
         if (!widget.repository.isHarness) {
           return;
@@ -573,6 +618,111 @@ class _DemoChatPageState extends State<DemoChatPage> {
     }
   }
 
+  Future<void> _attachFrom(_AttachmentSource source) async {
+    if (!mounted || !widget.active || _conversation.busy) return;
+    switch (source) {
+      case _AttachmentSource.device:
+        if (!widget.repository.isHarness) return;
+        await DemoSheet.show<void>(
+          context: context,
+          builder: (_) => DemoFileImportSheet(
+            repository: widget.repository,
+            pickFiles: widget.pickAttachmentFiles ?? pickDemoAssetFiles,
+            onImported: _addAttachments,
+          ),
+        );
+        return;
+      case _AttachmentSource.library:
+        await DemoSheet.show<void>(
+          context: context,
+          builder: (sheetContext) => Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Column(
+              children: [
+                Text(
+                  AppLocalizations.of(sheetContext)!.demoSelectFromLibrary,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: DemoAssetsView(
+                    repository: widget.repository,
+                    compactHeader: true,
+                    onSelect: (asset) {
+                      _addAttachments([asset]);
+                      Navigator.of(sheetContext).pop();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+    }
+  }
+
+  Future<void> _chooseStyleFilm(DemoSession session) async {
+    if (!mounted || !widget.active || _conversation.busy) return;
+    final memberId = session.members.contains(session.activeMemberId)
+        ? session.activeMemberId
+        : session.members.first;
+    if (!session.skillsFor(memberId).contains(demoStyleFilmSkillId)) return;
+    final botId = session.botIdFor(memberId);
+    final selected = await showDemoStyleFilmSheet(
+      context: context,
+      initialSelection: widget.repository.styleFilmDraft(session.id, botId),
+      loadCatalog:
+          ({required query, category, required page, required pageSize}) =>
+              widget.repository.loadStyleFilmCatalog(
+                q: query,
+                category: category,
+                page: page,
+                pageSize: pageSize,
+              ),
+    );
+    if (selected == null || !mounted) return;
+    await widget.repository.updateStyleFilmDraft(session.id, botId, selected);
+  }
+
+  Future<bool> _reviewStyleFilm(
+    DemoStyleFilmJob job,
+    String action,
+    String? notes,
+  ) async {
+    try {
+      await widget.repository.reviewStyleFilm(
+        widget.sessionId,
+        job.jobId,
+        expectedRevision: job.revision,
+        action: action,
+        notes: notes,
+      );
+      return true;
+    } catch (_) {
+      if (mounted) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.demoStyleFilmReviewFailed,
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> _openStyleFilmJob(DemoStyleFilmJob job) =>
+      showDemoStyleFilmReviewSheet(
+        context: context,
+        job: job,
+        jobListenable: widget.repository,
+        jobResolver: () =>
+            widget.repository.styleFilmJob(widget.sessionId, job.jobId) ?? job,
+        onReview: _reviewStyleFilm,
+      );
+
   void _previewAttachment(DemoAsset asset) {
     if (!mounted || !widget.active || _conversation.busy) return;
     openDemoAsset(context, asset, repository: widget.repository);
@@ -582,6 +732,11 @@ class _DemoChatPageState extends State<DemoChatPage> {
     final localizations = AppLocalizations.of(context)!;
     final question = message.question;
     final activity = _conversation.activityFor(message);
+    final filmJob = message.filmJobId.isEmpty
+        ? null
+        : _conversation.session.filmJobs
+              .where((job) => job.jobId == message.filmJobId)
+              .firstOrNull;
     final text = message.text.isNotEmpty
         ? message.text
         : switch (message.status) {
@@ -597,7 +752,11 @@ class _DemoChatPageState extends State<DemoChatPage> {
         .toList();
     final batch =
         media.length > 1 && media.every((a) => a.kind == DemoAssetKind.image);
-    if (text.isEmpty && media.isEmpty && question == null && activity == null) {
+    if (text.isEmpty &&
+        media.isEmpty &&
+        question == null &&
+        activity == null &&
+        filmJob == null) {
       return const SizedBox.shrink();
     }
     final session = _conversation.session;
@@ -733,6 +892,20 @@ class _DemoChatPageState extends State<DemoChatPage> {
                           _answerQuestion(question, action, answer),
                     ),
                   ],
+                  if (filmJob != null) ...[
+                    if (text.isNotEmpty || question != null)
+                      const SizedBox(height: 10),
+                    DemoStyleFilmJobCard(
+                      job: filmJob,
+                      onOpen: () => _openStyleFilmJob(filmJob),
+                      onOpenOutput: filmJob.isCompleted
+                          ? () => _settings(initialTab: 2)
+                          : null,
+                      onRetry: filmJob.allowedActions.contains('revise')
+                          ? () => _openStyleFilmJob(filmJob)
+                          : null,
+                    ),
+                  ],
                   if (media.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     if (batch)
@@ -826,6 +999,23 @@ class _DemoChatPageState extends State<DemoChatPage> {
             for (final asset in widget.repository.assets)
               if (asset.id == id) asset,
         ];
+        final activeMemberId = s.members.contains(s.activeMemberId)
+            ? s.activeMemberId
+            : s.members.first;
+        final activeBotId = s.botIdFor(activeMemberId);
+        final styleFilmEnabled = s
+            .skillsFor(activeMemberId)
+            .contains(demoStyleFilmSkillId);
+        final styleFilmDraft = styleFilmEnabled
+            ? widget.repository.styleFilmDraft(s.id, activeBotId)
+            : null;
+        final messageFilmJobIds = s.messages
+            .map((message) => message.filmJobId)
+            .where((id) => id.isNotEmpty)
+            .toSet();
+        final unlinkedFilmJobs = s.filmJobs
+            .where((job) => !messageFilmJobIds.contains(job.jobId))
+            .toList();
         return DemoScaffold(
           maxContentWidth: widget.desktopLayout ? 1120 : 640,
           backgroundColor: widget.desktopLayout
@@ -944,6 +1134,33 @@ class _DemoChatPageState extends State<DemoChatPage> {
                       onShowBrief: _showTaskBrief,
                       onDismiss: _dismissMediaJobNotice,
                     ),
+                  if (unlinkedFilmJobs.isNotEmpty)
+                    SizedBox(
+                      key: const Key('demo-style-film-jobs-panel'),
+                      height: 92,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: unlinkedFilmJobs.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final job = unlinkedFilmJobs[index];
+                          return SizedBox(
+                            width: widget.desktopLayout ? 360 : 310,
+                            child: DemoStyleFilmJobCard(
+                              job: job,
+                              onOpen: () => _openStyleFilmJob(job),
+                              onOpenOutput: job.isCompleted
+                                  ? () => _settings(initialTab: 2)
+                                  : null,
+                              onRetry: job.allowedActions.contains('revise')
+                                  ? () => _openStyleFilmJob(job)
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   PopiMessageComposer(
                     active: widget.active,
                     maxWidth: widget.desktopLayout ? 1000 : null,
@@ -955,6 +1172,52 @@ class _DemoChatPageState extends State<DemoChatPage> {
                       demoSessionDisplayName(l, s),
                     ),
                     selectedImages: const [],
+                    contextChips: styleFilmEnabled
+                        ? [
+                            _ComposerContextChip(
+                              key: ValueKey('demo-style-film-bot-$activeBotId'),
+                              label: demoSessionMemberName(
+                                l,
+                                s,
+                                activeMemberId,
+                              ),
+                              leading: DemoAvatar(
+                                members: [activeMemberId],
+                                memberAvatars: s.memberAvatars,
+                                memberColors: s.memberColors,
+                                size: 24,
+                              ),
+                            ),
+                            _ComposerContextChip(
+                              key: const Key('demo-style-film-style-chip'),
+                              label: styleFilmDraft == null
+                                  ? l.demoStyleFilmSelect
+                                  : _styleFilmSelectionName(
+                                      styleFilmDraft,
+                                      Localizations.localeOf(
+                                        context,
+                                      ).languageCode,
+                                    ),
+                              leading: const Icon(
+                                Icons.palette_outlined,
+                                size: 20,
+                              ),
+                              onPressed: _conversation.busy
+                                  ? null
+                                  : () => _chooseStyleFilm(s),
+                              onClear:
+                                  styleFilmDraft == null || _conversation.busy
+                                  ? null
+                                  : () =>
+                                        widget.repository.updateStyleFilmDraft(
+                                          s.id,
+                                          activeBotId,
+                                          null,
+                                        ),
+                              clearLabel: l.demoStyleFilmClear,
+                            ),
+                          ]
+                        : const [],
                     selectedAssets: [
                       for (final asset in selectedAttachments)
                         LibraryWork(
@@ -1029,9 +1292,45 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         ),
                       );
                     },
-                    onAttachment: () {
-                      if (!_conversation.busy) _attach();
-                    },
+                    onAttachment: _attach,
+                    attachmentAction: AppMenuButton(
+                      key: const Key('demo-composer-add-menu'),
+                      tooltip: l.addAttachment,
+                      enabled: widget.active && !_conversation.busy,
+                      size: 40,
+                      icon: const AppSvgIcon.asset(
+                        'home_composer_add',
+                        size: 16,
+                      ),
+                      entries: [
+                        if (widget.repository.isHarness)
+                          AppMenuItem(
+                            key: const Key('demo-add-from-device'),
+                            label: l.demoStyleFilmUpload,
+                            icon: const DemoIcon('upload', size: 20),
+                            onSelected: () => unawaited(
+                              _attachFrom(_AttachmentSource.device),
+                            ),
+                          ),
+                        AppMenuItem(
+                          key: const Key('demo-add-from-library'),
+                          label: l.demoStyleFilmLibrary,
+                          icon: const DemoIcon('folder', size: 20),
+                          onSelected: () =>
+                              unawaited(_attachFrom(_AttachmentSource.library)),
+                        ),
+                        if (styleFilmEnabled) ...[
+                          const AppMenuDivider(),
+                          AppMenuItem(
+                            key: const Key('demo-add-style-film'),
+                            label: l.demoStyleFilmMenu,
+                            selected: styleFilmDraft != null,
+                            icon: const Icon(Icons.palette_outlined, size: 20),
+                            onSelected: () => unawaited(_chooseStyleFilm(s)),
+                          ),
+                        ],
+                      ],
+                    ),
                     onRemoveImage: (_) {},
                     onRemoveAsset: (index) {
                       if (index < 0 || index >= selectedAttachments.length) {
@@ -1054,7 +1353,8 @@ class _DemoChatPageState extends State<DemoChatPage> {
                     onMentionRequested: _showRoleMentionSheet,
                     sending: _conversation.sending || loadingSnapshot,
                     running: _conversation.running,
-                    onStop: _stop,
+                    canStopRunning: _conversation.canStop,
+                    onStop: _conversation.canStop ? _stop : null,
                     castRoles: [
                       for (final id in s.roles)
                         LibraryRole(
@@ -1077,6 +1377,96 @@ class _DemoChatPageState extends State<DemoChatPage> {
           ),
         );
       },
+    );
+  }
+}
+
+String _styleFilmSelectionName(
+  DemoStyleFilmSelection selection,
+  String languageCode,
+) => languageCode == 'zh'
+    ? (selection.styleNameZh.isEmpty
+          ? selection.styleNameEn
+          : selection.styleNameZh)
+    : (selection.styleNameEn.isEmpty
+          ? selection.styleNameZh
+          : selection.styleNameEn);
+
+class _ComposerContextChip extends StatelessWidget {
+  const _ComposerContextChip({
+    required this.label,
+    required this.leading,
+    this.onPressed,
+    this.onClear,
+    this.clearLabel,
+    super.key,
+  });
+
+  final String label;
+  final Widget leading;
+  final VoidCallback? onPressed;
+  final VoidCallback? onClear;
+  final String? clearLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        leading,
+        const SizedBox(width: 7),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+        ),
+        if (onClear != null)
+          SizedBox.square(
+            dimension: 40,
+            child: IconButton(
+              key: const Key('demo-style-film-clear'),
+              tooltip: clearLabel,
+              onPressed: onClear,
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.close_rounded, size: 18),
+            ),
+          ),
+      ],
+    );
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: 44,
+        maxWidth: MediaQuery.sizeOf(context).width - 40,
+      ),
+      child: Material(
+        color: onPressed == null
+            ? colors.surface
+            : colors.primaryContainer.withValues(alpha: .55),
+        borderRadius: BorderRadius.circular(22),
+        clipBehavior: Clip.antiAlias,
+        child: onPressed == null
+            ? Padding(
+                padding: EdgeInsets.fromLTRB(9, 2, onClear == null ? 13 : 2, 2),
+                child: content,
+              )
+            : InkWell(
+                onTap: onPressed,
+                borderRadius: BorderRadius.circular(22),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    9,
+                    2,
+                    onClear == null ? 13 : 2,
+                    2,
+                  ),
+                  child: content,
+                ),
+              ),
+      ),
     );
   }
 }

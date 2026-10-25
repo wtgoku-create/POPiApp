@@ -418,6 +418,7 @@ class _QuestionApi extends NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     List<String>? contextRoleIds,
+    Map<String, Object?>? skillInvocation,
     CancelToken? cancelToken,
   }) async => {
     'sessionId': id,

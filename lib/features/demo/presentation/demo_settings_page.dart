@@ -432,7 +432,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  l.demoDshCapabilitiesHint,
+                  l.demoStyleFilmCapabilitiesHint,
                   style: const TextStyle(
                     fontSize: 12,
                     height: 1.4,
@@ -475,8 +475,17 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                     onEdit: () =>
                         _editMember(context, session.id, session.members[i]),
                   ),
+                  const SizedBox(height: 8),
+                  _MemberStyleFilmCapability(
+                    key: ValueKey(
+                      'demo-member-style-film-${session.members[i]}',
+                    ),
+                    repository: widget.repository,
+                    session: session,
+                    memberId: session.members[i],
+                  ),
                   if (i != session.members.length - 1)
-                    const SizedBox(height: 8),
+                    const Divider(height: 20),
                 ],
                 if (session.members.isNotEmpty) const SizedBox(height: 12),
                 Tooltip(
@@ -907,6 +916,8 @@ String _workModeLabel(AppLocalizations l, String mode) => switch (mode) {
 String _capabilitySignature(DemoSession session) {
   final memberCapabilities = session.memberCapabilities.entries.toList()
     ..sort((a, b) => a.key.compareTo(b.key));
+  final memberSkills = session.memberSkills.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
   return [
     session.workMode,
     session.activeMemberId,
@@ -914,7 +925,168 @@ String _capabilitySignature(DemoSession session) {
     session.capabilities.join(','),
     for (final entry in memberCapabilities)
       '${entry.key}:${entry.value.join(',')}',
+    for (final entry in memberSkills)
+      'skills:${entry.key}:${entry.value.join(',')}',
   ].join('|');
+}
+
+class _MemberStyleFilmCapability extends StatefulWidget {
+  const _MemberStyleFilmCapability({
+    required this.repository,
+    required this.session,
+    required this.memberId,
+    super.key,
+  });
+
+  final DemoRepository repository;
+  final DemoSession session;
+  final String memberId;
+
+  @override
+  State<_MemberStyleFilmCapability> createState() =>
+      _MemberStyleFilmCapabilityState();
+}
+
+class _MemberStyleFilmCapabilityState
+    extends State<_MemberStyleFilmCapability> {
+  late bool _draftEnabled = _effectiveEnabled;
+  bool _busy = false;
+
+  bool get _effectiveEnabled =>
+      widget.session.skillsFor(widget.memberId).contains(demoStyleFilmSkillId);
+
+  @override
+  void didUpdateWidget(covariant _MemberStyleFilmCapability oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_busy &&
+        oldWidget.session.configRevision != widget.session.configRevision) {
+      _draftEnabled = _effectiveEnabled;
+    }
+  }
+
+  Future<void> _save(bool enabled) async {
+    if (_busy) return;
+    setState(() {
+      _draftEnabled = enabled;
+      _busy = true;
+    });
+    try {
+      await widget.repository.updateSession(widget.session.id, (session) {
+        final next = {
+          ...session.memberSkills,
+          widget.memberId: [
+            for (final skill in session.skillsFor(widget.memberId))
+              if (skill != demoStyleFilmSkillId) skill,
+            if (enabled) demoStyleFilmSkillId,
+          ],
+        };
+        return session.copyWith(memberSkills: next);
+      });
+    } catch (_) {
+      if (mounted) {
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.demoStyleFilmSaveFailed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l.demoStyleFilmCapabilityDescription,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 58),
+        padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+        decoration: BoxDecoration(
+          color: _draftEnabled
+              ? AppColors.brand.withValues(alpha: .07)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.brand.withValues(alpha: .08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.palette_outlined,
+                size: 20,
+                color: AppColors.brand,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.demoStyleFilmCapabilityTitle,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    l.demoStyleFilmBotContext(
+                      demoSessionMemberName(l, widget.session, widget.memberId),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.all(11),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              Semantics(
+                key: ValueKey(
+                  'demo-style-film-capability-semantics-${widget.memberId}',
+                ),
+                label:
+                    '${l.demoStyleFilmCapabilityTitle}, '
+                    '${l.demoStyleFilmBotContext(demoSessionMemberName(l, widget.session, widget.memberId))}',
+                toggled: _draftEnabled,
+                enabled: widget.repository.isHarness,
+                onTap: widget.repository.isHarness
+                    ? () => _save(!_draftEnabled)
+                    : null,
+                child: ExcludeSemantics(
+                  child: Switch.adaptive(
+                    key: ValueKey(
+                      'demo-style-film-capability-${widget.memberId}',
+                    ),
+                    value: _draftEnabled,
+                    onChanged: !widget.repository.isHarness ? null : _save,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CapabilityCatalogSection extends StatelessWidget {

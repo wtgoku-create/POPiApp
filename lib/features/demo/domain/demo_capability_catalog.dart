@@ -11,6 +11,7 @@ class DemoRuntimeCapability {
     this.available = false,
     this.bound = true,
     this.granted = true,
+    this.reasonUnavailable = '',
   });
 
   final String id;
@@ -20,6 +21,7 @@ class DemoRuntimeCapability {
   final bool available;
   final bool bound;
   final bool granted;
+  final String reasonUnavailable;
 
   factory DemoRuntimeCapability.fromJson(Map<String, Object?> json) {
     final id = json['id']?.toString().trim() ?? '';
@@ -35,6 +37,7 @@ class DemoRuntimeCapability {
           json['bound'] == true ||
           (json['bound'] == null && json['available'] == true),
       granted: json['granted'] != false,
+      reasonUnavailable: json['reasonUnavailable']?.toString() ?? '',
     );
   }
 }

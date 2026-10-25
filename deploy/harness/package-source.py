@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import re
 import tarfile
 
 parser = argparse.ArgumentParser()
@@ -14,6 +15,7 @@ parser.add_argument("--release", default=datetime.now(timezone.utc).strftime("%Y
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=True)
 sources = []
+vendor_directory = args.harness_source / "services/agent/local/style-film-vendor"
 for directory in ["services/agent/local", "services/agent/runtime", "services/agent/m0"]:
     for path in (args.harness_source / directory).rglob("*"):
         relative = path.relative_to(args.harness_source)
@@ -23,7 +25,11 @@ for directory in ["services/agent/local", "services/agent/runtime", "services/ag
             continue
         if path.name in {"model.json", "huimengi.json", "credentials.yaml"}:
             raise ValueError("Private configuration cannot enter a source release")
-        if path.suffix in {".mjs", ".js", ".json", ".md", ".sh", ".yml", ".yaml"}:
+        vendor_asset = path.is_relative_to(vendor_directory) and (
+            path.suffix.lower() in {".jpg", ".png", ".webp", ".otf", ".ttf", ".woff2", ".txt"}
+            or path.name in {"LICENSE", "NOTICE"}
+        )
+        if vendor_asset or path.suffix in {".mjs", ".js", ".json", ".md", ".sh", ".yml", ".yaml"}:
             sources.append((path, str(relative)))
 for name in ["services/agent/dev.mjs", "services/agent/runtime-lock.json"]:
     sources.append((args.harness_source / name, name))
@@ -33,6 +39,28 @@ for path in Path(__file__).parent.iterdir():
 names = {name for _, name in sources}
 if "services/agent/local/text-only.patch.yml" not in names:
     raise ValueError("Harness runtime overlay is missing")
+if vendor_directory.exists():
+    vendor_manifest = json.loads((vendor_directory / "manifest.json").read_text())
+    for name, expected in vendor_manifest["files"].items():
+        relative = Path(name)
+        if relative.is_absolute() or ".." in relative.parts or "\\" in name:
+            raise ValueError("Film vendor manifest contains an invalid path")
+        path = vendor_directory / relative
+        if (
+            not path.is_file()
+            or path.is_symlink()
+            or not path.resolve().is_relative_to(vendor_directory.resolve())
+            or any(parent.is_symlink() for parent in path.parents if parent.is_relative_to(vendor_directory))
+        ):
+            raise ValueError("Film vendor resources must be regular files inside the vendor directory")
+        digest = expected.get("sha256", "")
+        if not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise ValueError("Film vendor manifest contains an invalid digest")
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != digest or len(data) != expected.get("bytes"):
+            raise ValueError(f"Film vendor resource failed integrity verification: {name}")
+        if str(path.relative_to(args.harness_source)) not in names:
+            raise ValueError(f"Film vendor resource would be missing from release: {name}")
 with tarfile.open(args.output / "harness-release.tar.gz", "w:gz") as archive:
     for path, name in sorted(sources, key=lambda entry: entry[1]):
         archive.add(path, arcname=name, recursive=False)

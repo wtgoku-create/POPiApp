@@ -440,7 +440,18 @@ void main() {
       'writer',
       'director',
     ]);
-    expect(find.byType(Switch), findsNothing);
+    expect(
+      find.byKey(const ValueKey('demo-style-film-capability-popi')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Switch>(
+            find.byKey(const ValueKey('demo-style-film-capability-popi')),
+          )
+          .onChanged,
+      isNull,
+    );
     expect(
       repository.session('inspiration').capabilitiesFor('popi'),
       containsAll(['character', 'script', 'image', 'video', 'audio', 'vision']),
@@ -516,9 +527,9 @@ void main() {
     final attachment = repository.assets.first;
     await tester.tap(find.byTooltip('添加附件'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('demo-attachment-device')), findsNothing);
-    expect(find.byKey(const Key('demo-attachment-library')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('demo-attachment-library')));
+    expect(find.byKey(const Key('demo-add-from-device')), findsNothing);
+    expect(find.byKey(const Key('demo-add-from-library')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('demo-add-from-library')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey(attachment.id)));
     await tester.pumpAndSettle();

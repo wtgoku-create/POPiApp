@@ -7884,6 +7884,334 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An attachment cannot be read or has changed. Upload it again.'**
   String get demoAttachmentInvalid;
+
+  /// No description provided for @demoStyleFilmCapabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create styled short films'**
+  String get demoStyleFilmCapabilityTitle;
+
+  /// No description provided for @demoStyleFilmCapabilityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable style selection in the composer and the + menu.'**
+  String get demoStyleFilmCapabilityDescription;
+
+  /// No description provided for @demoStyleFilmSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose style'**
+  String get demoStyleFilmSelect;
+
+  /// No description provided for @demoStyleFilmChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Change style'**
+  String get demoStyleFilmChange;
+
+  /// No description provided for @demoStyleFilmClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selected style'**
+  String get demoStyleFilmClear;
+
+  /// No description provided for @demoStyleFilmMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose style'**
+  String get demoStyleFilmMenu;
+
+  /// No description provided for @demoStyleFilmSheetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Film styles'**
+  String get demoStyleFilmSheetTitle;
+
+  /// No description provided for @demoStyleFilmSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search styles or uses'**
+  String get demoStyleFilmSearchHint;
+
+  /// No description provided for @demoStyleFilmAllCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'All categories'**
+  String get demoStyleFilmAllCategories;
+
+  /// No description provided for @demoStyleFilmUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not ready to create'**
+  String get demoStyleFilmUnavailable;
+
+  /// No description provided for @demoStyleFilmDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get demoStyleFilmDuration;
+
+  /// No description provided for @demoStyleFilmAspectRatio.
+  ///
+  /// In en, this message translates to:
+  /// **'Aspect ratio'**
+  String get demoStyleFilmAspectRatio;
+
+  /// No description provided for @demoStyleFilmSoundtrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Soundtrack'**
+  String get demoStyleFilmSoundtrack;
+
+  /// No description provided for @demoStyleFilmSoundNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No audio'**
+  String get demoStyleFilmSoundNone;
+
+  /// No description provided for @demoStyleFilmSoundMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Original music'**
+  String get demoStyleFilmSoundMusic;
+
+  /// No description provided for @demoStyleFilmStoryboardReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the storyboard before rendering'**
+  String get demoStyleFilmStoryboardReview;
+
+  /// No description provided for @demoStyleFilmCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this style'**
+  String get demoStyleFilmCreate;
+
+  /// No description provided for @demoStyleFilmConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm the film brief'**
+  String get demoStyleFilmConfirmTitle;
+
+  /// No description provided for @demoStyleFilmConfirmDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Style: {style}. Duration: {seconds} seconds. Aspect ratio: {ratio}. Review the storyboard before rendering the video.'**
+  String demoStyleFilmConfirmDescription(
+    String style,
+    int seconds,
+    String ratio,
+  );
+
+  /// No description provided for @demoStyleFilmCostPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation uses the current model and server resources. Model usage is billed by your service provider.'**
+  String get demoStyleFilmCostPending;
+
+  /// No description provided for @demoStyleFilmPreparingStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing storyboard'**
+  String get demoStyleFilmPreparingStoryboard;
+
+  /// No description provided for @demoStyleFilmAwaitingStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard awaiting your review'**
+  String get demoStyleFilmAwaitingStoryboard;
+
+  /// No description provided for @demoStyleFilmApproveStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve storyboard and render'**
+  String get demoStyleFilmApproveStoryboard;
+
+  /// No description provided for @demoStyleFilmReviseStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Revise storyboard'**
+  String get demoStyleFilmReviseStoryboard;
+
+  /// No description provided for @demoStyleFilmRevisionNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'How should the story and visuals change?'**
+  String get demoStyleFilmRevisionNotes;
+
+  /// No description provided for @demoStyleFilmRevisionNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting creates a new complete storyboard. The video waits for your approval.'**
+  String get demoStyleFilmRevisionNotice;
+
+  /// No description provided for @demoStyleFilmSubmitRevision.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit changes'**
+  String get demoStyleFilmSubmitRevision;
+
+  /// No description provided for @demoStyleFilmCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating your film'**
+  String get demoStyleFilmCreating;
+
+  /// No description provided for @demoStyleFilmCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Film completed'**
+  String get demoStyleFilmCompleted;
+
+  /// No description provided for @demoStyleFilmFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Film creation failed'**
+  String get demoStyleFilmFailed;
+
+  /// No description provided for @demoStyleFilmViewOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'View film'**
+  String get demoStyleFilmViewOutput;
+
+  /// No description provided for @demoStyleFilmNoReadyStyles.
+  ///
+  /// In en, this message translates to:
+  /// **'No styles are ready for creation. You can still browse the catalog.'**
+  String get demoStyleFilmNoReadyStyles;
+
+  /// No description provided for @demoStyleFilmLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load film styles. Open the picker again to try.'**
+  String get demoStyleFilmLoadFailed;
+
+  /// No description provided for @demoStyleFilmReviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The storyboard action was not submitted. Your choices and notes are preserved.'**
+  String get demoStyleFilmReviewFailed;
+
+  /// No description provided for @demoStyleFilmSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Capability settings were not saved. Your changes are preserved.'**
+  String get demoStyleFilmSaveFailed;
+
+  /// No description provided for @demoStyleFilmRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Create again'**
+  String get demoStyleFilmRetry;
+
+  /// No description provided for @demoStyleFilmStyleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} styles'**
+  String demoStyleFilmStyleCount(int count);
+
+  /// No description provided for @demoStyleFilmPosterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} style example'**
+  String demoStyleFilmPosterLabel(String name);
+
+  /// No description provided for @demoStyleFilmPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Storyboard preview'**
+  String get demoStyleFilmPreviewLabel;
+
+  /// No description provided for @demoStyleFilmNoStoryboard.
+  ///
+  /// In en, this message translates to:
+  /// **'The storyboard is not ready yet. Progress stays in this conversation.'**
+  String get demoStyleFilmNoStoryboard;
+
+  /// No description provided for @demoStyleFilmUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload from device'**
+  String get demoStyleFilmUpload;
+
+  /// No description provided for @demoStyleFilmLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from library'**
+  String get demoStyleFilmLibrary;
+
+  /// No description provided for @demoStyleFilmReferencesUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Style films currently support text prompts only. Remove attachments and content roles before creating.'**
+  String get demoStyleFilmReferencesUnsupported;
+
+  /// No description provided for @demoStyleFilmBotContext.
+  ///
+  /// In en, this message translates to:
+  /// **'For Bot: {name}'**
+  String demoStyleFilmBotContext(String name);
+
+  /// No description provided for @demoStyleFilmLoadingCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading style catalog'**
+  String get demoStyleFilmLoadingCatalog;
+
+  /// No description provided for @demoStyleFilmReadyCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} ready to create'**
+  String demoStyleFilmReadyCount(int count);
+
+  /// No description provided for @demoStyleFilmBrowsePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse all styles now; creation unlocks after verification.'**
+  String get demoStyleFilmBrowsePending;
+
+  /// No description provided for @demoStyleFilmNoReadyFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'No verified style is ready to create yet'**
+  String get demoStyleFilmNoReadyFooter;
+
+  /// No description provided for @demoStyleFilmReasonUnsupportedStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not adapted yet'**
+  String get demoStyleFilmReasonUnsupportedStyle;
+
+  /// No description provided for @demoStyleFilmReasonUnverifiedStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting verification'**
+  String get demoStyleFilmReasonUnverifiedStyle;
+
+  /// No description provided for @demoStyleFilmReasonRuntimeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Creation is temporarily unavailable'**
+  String get demoStyleFilmReasonRuntimeUnavailable;
+
+  /// No description provided for @demoStyleFilmReasonModelUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The current model is not ready'**
+  String get demoStyleFilmReasonModelUnavailable;
+
+  /// No description provided for @demoStyleFilmReasonUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available for creation yet'**
+  String get demoStyleFilmReasonUnknown;
+
+  /// No description provided for @demoStyleFilmCapabilitiesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.'**
+  String get demoStyleFilmCapabilitiesHint;
 }
 
 class _AppLocalizationsDelegate

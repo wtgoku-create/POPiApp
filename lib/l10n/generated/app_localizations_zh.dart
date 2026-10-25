@@ -4085,4 +4085,181 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoAttachmentInvalid => '附件无法读取或已发生变化，请重新上传。';
+
+  @override
+  String get demoStyleFilmCapabilityTitle => '制作风格短片';
+
+  @override
+  String get demoStyleFilmCapabilityDescription => '启用后，可在对话输入区和＋菜单中选择短片风格。';
+
+  @override
+  String get demoStyleFilmSelect => '选择风格';
+
+  @override
+  String get demoStyleFilmChange => '更换风格';
+
+  @override
+  String get demoStyleFilmClear => '清除已选风格';
+
+  @override
+  String get demoStyleFilmMenu => '选择风格';
+
+  @override
+  String get demoStyleFilmSheetTitle => '短片风格';
+
+  @override
+  String get demoStyleFilmSearchHint => '搜索风格或用途';
+
+  @override
+  String get demoStyleFilmAllCategories => '全部分类';
+
+  @override
+  String get demoStyleFilmUnavailable => '暂不可制作';
+
+  @override
+  String get demoStyleFilmDuration => '时长';
+
+  @override
+  String get demoStyleFilmAspectRatio => '画幅';
+
+  @override
+  String get demoStyleFilmSoundtrack => '声音';
+
+  @override
+  String get demoStyleFilmSoundNone => '无声短片';
+
+  @override
+  String get demoStyleFilmSoundMusic => '原创配乐';
+
+  @override
+  String get demoStyleFilmStoryboardReview => '先看分镜，确认后制作';
+
+  @override
+  String get demoStyleFilmCreate => '使用这个风格';
+
+  @override
+  String get demoStyleFilmConfirmTitle => '确认创作简报';
+
+  @override
+  String demoStyleFilmConfirmDescription(
+    String style,
+    int seconds,
+    String ratio,
+  ) {
+    return '使用「$style」制作 $seconds 秒、$ratio 的短片。先生成分镜，确认后再制作成片。';
+  }
+
+  @override
+  String get demoStyleFilmCostPending => '制作会使用当前模型和服务器算力，具体模型用量以服务账单为准。';
+
+  @override
+  String get demoStyleFilmPreparingStoryboard => '正在准备分镜';
+
+  @override
+  String get demoStyleFilmAwaitingStoryboard => '分镜待你确认';
+
+  @override
+  String get demoStyleFilmApproveStoryboard => '确认分镜，开始制作';
+
+  @override
+  String get demoStyleFilmReviseStoryboard => '调整分镜';
+
+  @override
+  String get demoStyleFilmRevisionNotes => '希望怎样调整故事与画面？';
+
+  @override
+  String get demoStyleFilmRevisionNotice => '提交后将重新生成整套分镜，确认前不会制作成片。';
+
+  @override
+  String get demoStyleFilmSubmitRevision => '提交调整';
+
+  @override
+  String get demoStyleFilmCreating => '正在制作短片';
+
+  @override
+  String get demoStyleFilmCompleted => '短片已完成';
+
+  @override
+  String get demoStyleFilmFailed => '短片制作失败';
+
+  @override
+  String get demoStyleFilmViewOutput => '查看成片';
+
+  @override
+  String get demoStyleFilmNoReadyStyles => '当前没有可制作的风格，可先浏览风格目录。';
+
+  @override
+  String get demoStyleFilmLoadFailed => '风格目录读取失败，请稍后再打开。';
+
+  @override
+  String get demoStyleFilmReviewFailed => '分镜操作未提交，已保留你的选择和输入。';
+
+  @override
+  String get demoStyleFilmSaveFailed => '能力设置未保存，已保留你的修改。';
+
+  @override
+  String get demoStyleFilmRetry => '重新制作';
+
+  @override
+  String demoStyleFilmStyleCount(int count) {
+    return '$count 种风格';
+  }
+
+  @override
+  String demoStyleFilmPosterLabel(String name) {
+    return '$name风格示例';
+  }
+
+  @override
+  String get demoStyleFilmPreviewLabel => '分镜预览';
+
+  @override
+  String get demoStyleFilmNoStoryboard => '分镜尚未就绪，制作进展会保留在原会话中。';
+
+  @override
+  String get demoStyleFilmUpload => '从设备上传';
+
+  @override
+  String get demoStyleFilmLibrary => '从素材库选择';
+
+  @override
+  String get demoStyleFilmReferencesUnsupported => '当前风格短片仅支持文字主题，请先移除附件和内容角色。';
+
+  @override
+  String demoStyleFilmBotContext(String name) {
+    return '适用于 Bot：$name';
+  }
+
+  @override
+  String get demoStyleFilmLoadingCatalog => '正在加载风格目录';
+
+  @override
+  String demoStyleFilmReadyCount(int count) {
+    return '可制作 $count 种';
+  }
+
+  @override
+  String get demoStyleFilmBrowsePending => '可以浏览全部风格，完成验证后即可选择制作。';
+
+  @override
+  String get demoStyleFilmNoReadyFooter => '当前没有已验证可制作的风格';
+
+  @override
+  String get demoStyleFilmReasonUnsupportedStyle => '暂未适配';
+
+  @override
+  String get demoStyleFilmReasonUnverifiedStyle => '待验证';
+
+  @override
+  String get demoStyleFilmReasonRuntimeUnavailable => '暂时无法制作';
+
+  @override
+  String get demoStyleFilmReasonModelUnavailable => '当前模型未就绪';
+
+  @override
+  String get demoStyleFilmReasonUnknown => '暂不可制作';
+
+  @override
+  String get demoStyleFilmCapabilitiesHint =>
+      '能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。';
 }

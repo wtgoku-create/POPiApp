@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+import 'demo_style_film_models.dart';
+
+export 'demo_style_film_models.dart';
+
 enum DemoSessionKind { conversation, project, workflow }
 
 enum DemoAssetKind { image, video, script, audio }
@@ -411,6 +415,7 @@ class DemoMessage {
     this.createdAt,
     this.question,
     this.activity,
+    this.filmJobId = '',
   });
   final String id;
   final String text;
@@ -424,6 +429,7 @@ class DemoMessage {
   final DateTime? createdAt;
   final DemoQuestion? question;
   final DemoActivity? activity;
+  final String filmJobId;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -438,6 +444,7 @@ class DemoMessage {
     if (createdAt != null) 'createdAt': createdAt!.toUtc().toIso8601String(),
     if (question != null) 'question': question!.toJson(),
     if (activity != null) 'activity': activity!.toJson(),
+    if (filmJobId.isNotEmpty) 'filmJobId': filmJobId,
   };
   factory DemoMessage.fromJson(Map<String, Object?> json) => DemoMessage(
     id: json['id']?.toString() ?? '',
@@ -460,6 +467,7 @@ class DemoMessage {
             Map<String, Object?>.from(json['activity'] as Map),
           )
         : null,
+    filmJobId: json['filmJobId']?.toString() ?? '',
   );
 }
 
@@ -493,6 +501,8 @@ class DemoSession {
     this.memberAvatars = const {},
     this.memberColors = const {},
     this.memberCapabilities = const {},
+    this.memberSkills = const {},
+    this.memberBotIds = const {},
     this.workMode = 'onDemand',
     this.activeMemberId = 'popi',
     this.roleProfiles = const {},
@@ -501,6 +511,9 @@ class DemoSession {
     this.serverRevision = 0,
     this.lastSeq = 0,
     this.mediaJobs = const [],
+    this.filmJobs = const [],
+    this.filmDrafts = const {},
+    this.filmPendingRequests = const {},
     this.pinned = false,
   });
   final String id;
@@ -521,6 +534,8 @@ class DemoSession {
   final Map<String, String> memberAvatars;
   final Map<String, int> memberColors;
   final Map<String, List<String>> memberCapabilities;
+  final Map<String, List<String>> memberSkills;
+  final Map<String, String> memberBotIds;
   final String workMode;
   final String activeMemberId;
   final Map<String, DemoRoleProfile> roleProfiles;
@@ -529,11 +544,30 @@ class DemoSession {
   final int serverRevision;
   final int lastSeq;
   final List<DemoMediaJob> mediaJobs;
+  final List<DemoStyleFilmJob> filmJobs;
+
+  /// Unsent selections are local to this device and never enter configuration.
+  final Map<String, DemoStyleFilmSelection> filmDrafts;
+  final Map<String, DemoStyleFilmPendingRequest> filmPendingRequests;
   final bool pinned;
 
   /// A member inherits conversation capabilities until it has a local override.
   List<String> capabilitiesFor(String memberId) =>
       List.unmodifiable(memberCapabilities[memberId] ?? capabilities);
+
+  List<String> skillsFor(String memberId) =>
+      List.unmodifiable(memberSkills[memberId] ?? const <String>[]);
+
+  String botIdFor(String memberId) {
+    final saved = memberBotIds[memberId];
+    if (saved != null && saved.isNotEmpty) return saved;
+    final customized =
+        (memberNames[memberId]?.trim().isNotEmpty ?? false) ||
+        (memberInstructions[memberId]?.trim().isNotEmpty ?? false) ||
+        (memberAvatars[memberId]?.isNotEmpty ?? false) ||
+        memberColors.containsKey(memberId);
+    return customized ? 'legacy:$id:$memberId' : 'builtin:$memberId';
+  }
 
   bool get rolesReady =>
       roles.every((roleId) => roleProfiles[roleId]?.isReady ?? false);
@@ -555,6 +589,8 @@ class DemoSession {
     Map<String, String>? memberAvatars,
     Map<String, int>? memberColors,
     Map<String, List<String>>? memberCapabilities,
+    Map<String, List<String>>? memberSkills,
+    Map<String, String>? memberBotIds,
     String? workMode,
     String? activeMemberId,
     Map<String, DemoRoleProfile>? roleProfiles,
@@ -563,6 +599,9 @@ class DemoSession {
     int? serverRevision,
     int? lastSeq,
     List<DemoMediaJob>? mediaJobs,
+    List<DemoStyleFilmJob>? filmJobs,
+    Map<String, DemoStyleFilmSelection>? filmDrafts,
+    Map<String, DemoStyleFilmPendingRequest>? filmPendingRequests,
     bool? pinned,
   }) => DemoSession(
     id: id,
@@ -583,6 +622,8 @@ class DemoSession {
     memberAvatars: memberAvatars ?? this.memberAvatars,
     memberColors: memberColors ?? this.memberColors,
     memberCapabilities: memberCapabilities ?? this.memberCapabilities,
+    memberSkills: memberSkills ?? this.memberSkills,
+    memberBotIds: memberBotIds ?? this.memberBotIds,
     workMode: workMode ?? this.workMode,
     activeMemberId: activeMemberId ?? this.activeMemberId,
     roleProfiles: roleProfiles ?? this.roleProfiles,
@@ -591,6 +632,9 @@ class DemoSession {
     serverRevision: serverRevision ?? this.serverRevision,
     lastSeq: lastSeq ?? this.lastSeq,
     mediaJobs: mediaJobs ?? this.mediaJobs,
+    filmJobs: filmJobs ?? this.filmJobs,
+    filmDrafts: filmDrafts ?? this.filmDrafts,
+    filmPendingRequests: filmPendingRequests ?? this.filmPendingRequests,
     pinned: pinned ?? this.pinned,
   );
   Map<String, Object?> toJson() => {
@@ -612,6 +656,8 @@ class DemoSession {
     'memberAvatars': memberAvatars,
     'memberColors': memberColors,
     'memberCapabilities': memberCapabilities,
+    'memberSkills': memberSkills,
+    'memberBotIds': {for (final member in members) member: botIdFor(member)},
     'workMode': workMode,
     'activeMemberId': activeMemberId,
     'roleProfiles': roleProfiles.map(
@@ -622,6 +668,15 @@ class DemoSession {
     'serverRevision': serverRevision,
     'lastSeq': lastSeq,
     'mediaJobs': mediaJobs.map((job) => job.toJson()).toList(),
+    'filmJobs': filmJobs.map((job) => job.toJson()).toList(),
+    if (filmDrafts.isNotEmpty)
+      'filmDrafts': filmDrafts.map(
+        (id, selection) => MapEntry(id, selection.toJson()),
+      ),
+    if (filmPendingRequests.isNotEmpty)
+      'filmPendingRequests': filmPendingRequests.map(
+        (id, request) => MapEntry(id, request.toJson()),
+      ),
     'pinned': pinned,
   };
   factory DemoSession.fromJson(Map<String, Object?> json) => DemoSession(
@@ -660,6 +715,10 @@ class DemoSession {
     memberCapabilities: (json['memberCapabilities'] as Map? ?? {}).map(
       (key, value) => MapEntry(key as String, (value as List).cast<String>()),
     ),
+    memberSkills: (json['memberSkills'] as Map? ?? {}).map(
+      (key, value) => MapEntry(key as String, (value as List).cast<String>()),
+    ),
+    memberBotIds: Map<String, String>.from(json['memberBotIds'] as Map? ?? {}),
     workMode: json['workMode'] as String? ?? 'onDemand',
     activeMemberId:
         json['activeMemberId'] as String? ??
@@ -678,6 +737,26 @@ class DemoSession {
         .whereType<Map>()
         .map((job) => DemoMediaJob.fromJson(Map<String, Object?>.from(job)))
         .toList(),
+    filmJobs: (json['filmJobs'] as List? ?? const [])
+        .whereType<Map>()
+        .map((job) => DemoStyleFilmJob.fromJson(Map<String, Object?>.from(job)))
+        .toList(),
+    filmDrafts: (json['filmDrafts'] as Map? ?? {}).map(
+      (key, value) => MapEntry(
+        key as String,
+        DemoStyleFilmSelection.fromJson(
+          Map<String, Object?>.from(value as Map),
+        ),
+      ),
+    ),
+    filmPendingRequests: (json['filmPendingRequests'] as Map? ?? {}).map(
+      (key, value) => MapEntry(
+        key as String,
+        DemoStyleFilmPendingRequest.fromJson(
+          Map<String, Object?>.from(value as Map),
+        ),
+      ),
+    ),
     pinned: json['pinned'] as bool? ?? false,
   );
 }

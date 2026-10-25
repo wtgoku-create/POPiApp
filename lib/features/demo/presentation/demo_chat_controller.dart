@@ -34,6 +34,7 @@ class DemoChatController extends ChangeNotifier {
   final Set<String> _submittedQuestionKeys = {};
   bool get sending => _sending;
   bool get running => repository.isSessionRunning(sessionId);
+  bool get canStop => repository.canStopCurrentHarnessRun(sessionId);
   bool get busy => sending || running || repository.isSessionLoading(sessionId);
   bool get waitingForResponse =>
       sending || running || _provisionalActivityMessage != null;
@@ -87,6 +88,7 @@ class DemoChatController extends ChangeNotifier {
             !_messageIdsBeforeSend.contains(message.id) &&
             (message.activity != null ||
                 message.question != null ||
+                message.filmJobId.isNotEmpty ||
                 message.text.trim().isNotEmpty ||
                 message.assetIds.isNotEmpty),
       );
@@ -122,7 +124,16 @@ class DemoChatController extends ChangeNotifier {
         ? 'popi'
         : message.memberId,
     text: message.text,
-    metadata: {'demo': message},
+    metadata: {
+      'demo': message,
+      if (message.filmJobId.isNotEmpty)
+        'filmJobFingerprint': jsonEncode(
+          session.filmJobs
+              .where((job) => job.jobId == message.filmJobId)
+              .firstOrNull
+              ?.toJson(),
+        ),
+    },
   );
 
   bool _sameMessage(chat.Message old, chat.TextMessage next) {
@@ -138,6 +149,9 @@ class DemoChatController extends ChangeNotifier {
         oldDemo.memberName == nextDemo.memberName &&
         oldDemo.runId == nextDemo.runId &&
         oldDemo.configRevision == nextDemo.configRevision &&
+        oldDemo.filmJobId == nextDemo.filmJobId &&
+        old.metadata?['filmJobFingerprint'] ==
+            next.metadata?['filmJobFingerprint'] &&
         jsonEncode(oldDemo.question?.toJson()) ==
             jsonEncode(nextDemo.question?.toJson()) &&
         jsonEncode(oldDemo.activity?.toJson()) ==
@@ -148,6 +162,7 @@ class DemoChatController extends ChangeNotifier {
   bool _hasVisibleContent(DemoMessage message) {
     if (message.status == 'skipped') return false;
     return message.text.trim().isNotEmpty ||
+        message.filmJobId.isNotEmpty ||
         message.assetIds.isNotEmpty ||
         message.question != null ||
         message.activity != null;
@@ -294,6 +309,7 @@ class DemoChatController extends ChangeNotifier {
     List<String> assets,
     AppLocalizations l, {
     List<String> contextRoleIds = const [],
+    DemoStyleFilmInvocation? skillInvocation,
     VoidCallback? onAccepted,
   }) async {
     if (busy || (text.trim().isEmpty && assets.isEmpty)) return false;
@@ -301,28 +317,48 @@ class DemoChatController extends ChangeNotifier {
     notifyListeners();
     try {
       if (repository.isHarness) {
+        final invocation =
+            session
+                .skillsFor(session.activeMemberId)
+                .contains(demoStyleFilmSkillId)
+            ? skillInvocation
+            : null;
         final normalizedText = text.trim();
         final body = jsonEncode({
           'text': normalizedText,
           'assets': assets,
           'contextRoleIds': contextRoleIds,
+          if (invocation != null) 'skillInvocation': invocation.toJson(),
+          if (invocation != null)
+            'botId': session.botIdFor(session.activeMemberId),
         });
         if (_pendingBody != body) {
           _pendingBody = body;
           _pendingClientRequestId = const Uuid().v4();
         }
+        if (invocation != null) {
+          _pendingClientRequestId = await repository.prepareStyleFilmRequest(
+            sessionId,
+            session.botIdFor(session.activeMemberId),
+            body: body,
+            proposedRequestId: _pendingClientRequestId!,
+          );
+        }
         await _showProvisionalActivity(_pendingClientRequestId!, l);
+        final clientRequestId = _pendingClientRequestId!;
         var acceptedNotified = false;
         try {
           await repository.sendHarnessMessage(
             sessionId,
-            clientRequestId: _pendingClientRequestId!,
+            clientRequestId: clientRequestId,
             text: normalizedText,
             mediaIds: assets,
             contextRoleIds: contextRoleIds,
+            skillInvocation: invocation,
             onAccepted: () {
               if (acceptedNotified) return;
               acceptedNotified = true;
+              if (invocation != null) _clearPendingRequest();
               _sending = false;
               if (!_disposed) notifyListeners();
               onAccepted?.call();
@@ -406,7 +442,7 @@ class DemoChatController extends ChangeNotifier {
   }
 
   Future<void> stop() async {
-    if (!repository.isHarness || !running) return;
+    if (!repository.isHarness || !running || !canStop) return;
     try {
       await repository.stopHarnessSession(sessionId);
     } finally {

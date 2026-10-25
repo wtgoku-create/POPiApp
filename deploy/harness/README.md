@@ -45,8 +45,10 @@ Harness，模型密钥也不会编译进客户端。远程构建独立输出，�
 通过 SSH 传输 source release、私有配置归档和静态页面；私有配置归档只能包含
 `model.json`、`huimengi.json`、`.credentials.yaml`、`service.env`。服务器上依次运行：
 
-1. `prepare-server.sh`：创建 POPi 专用目录，校验官方 Node 下载摘要和媒体工具。
-2. `install-release.sh <release>`：Linux `npm ci --ignore-scripts`、显式 seal、后端测试和 SDK M0。
+1. `prepare-server.sh`：创建 POPi 专用目录，校验官方 Node 下载摘要、媒体工具、Chrome/Chromium 和 `runuser`。
+2. `install-release.sh <release>`：Linux `npm ci --ignore-scripts`、显式 seal，并以最终的
+   `popi-harness` 非 root 身份运行后端（含正常 Chrome sandbox）测试和 SDK M0；成功或失败
+   都将 release 恢复为 `root:root` 只读执行树。
 3. `prepare-access.py`：创建独立登录用户与服务，私有签名密钥在重发时保留。
 4. `prepare-site.py <release>`：验证带认证的 Caddy 配置，不立即切换已有入口。
 5. `publish-site.py <release>`：核对健康状态与页面摘要、备份原 Caddy 配置，再切换 Web 和 reload。
@@ -57,6 +59,31 @@ Linux 启动；Linux 必须自行安装依赖并 seal。SDK 路径指纹会在�
 当前 `install-release.sh` 对已运行的 Harness 只完成 staging 后退出 `3`，不会覆盖其私有
 配置或重启活动对话。更新服务前先核对正在运行的任务、备份 `/var/lib/popi-harness`，再显式
 安排版本切换。只更新页面可独立构建、上传并切换 Web，不需要重启 Harness。
+
+首次启动新服务会把 `store.json` 从 v1 原子迁移到 v2。`activate-server.sh` 在服务确认停止后，
+先把迁移前 store 和原 release 路径写入
+`/var/lib/popi-harness/release-backups/<release>/`。旧 release 不能读取 v2；回滚必须同时恢复旧
+release 与对应 store，且会放弃备份点之后的新消息和任务。以目标 release ID 替换下面的值：
+
+```sh
+release=20261025T223000Z
+backup="/var/lib/popi-harness/release-backups/$release"
+previous=$(cat "$backup/previous-release")
+systemctl stop popi-harness.service
+ln -s "$previous" /opt/popi-harness/current.rollback
+mv -Tf /opt/popi-harness/current.rollback /opt/popi-harness/current
+install -o popi-harness -g popi-harness -m 0600 \
+  "$backup/store.json" /var/lib/popi-harness/store.json
+install -m 0644 "$previous/deploy/harness/popi-harness.service" \
+  /etc/systemd/system/popi-harness.service
+systemctl daemon-reload
+systemctl start popi-harness.service
+curl --fail http://127.0.0.1:3084/health
+```
+
+若本次切换同时替换了私有配置，按需从 `/etc/popi-harness/backup-<release>/` 恢复四个私有
+文件后再启动旧服务。不要删除 `owned-assets/`、`sessions/`、`film-projects/` 或兼容性证据；
+旧 release 会忽略它不认识的新目录。
 
 ## 验证与运维
 

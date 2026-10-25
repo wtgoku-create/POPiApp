@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin"
 
 # This only prepares POPi-owned paths. Existing web/database services stay intact.
 if ! id popi-harness >/dev/null 2>&1; then
@@ -24,4 +25,14 @@ test "$(/opt/popi-harness/node/bin/node --version)" = "v$node_version"
 test -x /usr/bin/ffprobe
 test -x /usr/bin/ffmpeg
 test -x /bin/bash
+command -v runuser >/dev/null
+film_chrome=""
+for candidate in /usr/bin/google-chrome-stable /usr/bin/google-chrome /usr/bin/chromium /usr/bin/chromium-browser; do
+  if [[ -x "$candidate" ]]; then
+    film_chrome="$candidate"
+    break
+  fi
+done
+test -n "$film_chrome"
+"$film_chrome" --version
 printf 'POPi runtime prerequisites ready\n'

@@ -93,7 +93,7 @@ void main() {
       final repository = DemoRepository(storage)..restore();
       addTearDown(repository.dispose);
       const assistant = DemoAssistantProfile(
-        id: 'draft:director',
+        id: 'bot:director-test',
         memberId: 'director',
         name: '分镜搭档',
         instructions: '先整理镜头，再生成画面。',
@@ -204,6 +204,10 @@ void main() {
         'roles': <String>[],
         'capabilities': DemoSession.defaultCapabilities,
         'memberCapabilities': {'writer': DemoSession.defaultCapabilities},
+        'memberSkills': {'writer': <String>[]},
+        'memberBotIds': {
+          'writer': (request.configuration['memberBotIds'] as Map)['writer'],
+        },
         'memberNames': {'writer': '文案助手'},
         'memberInstructions': {'writer': '保持简洁。'},
         'memberAvatars': {'writer': _horseAvatar},
