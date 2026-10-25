@@ -9,6 +9,7 @@ import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/harness_access_provider.dart';
 import '../../../shared/providers/local_profile_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
@@ -337,6 +338,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (confirmed != true || !context.mounted) return;
 
     try {
+      if (ref.read(harnessAccessRequiredProvider)) {
+        await ref.read(harnessAccessProvider.notifier).signOut();
+        return;
+      }
       await ref.read(userProvider.notifier).clearUser();
       if (context.mounted) context.push('/login');
     } catch (_) {
