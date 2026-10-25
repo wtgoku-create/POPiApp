@@ -52,6 +52,11 @@ class _HarnessSyncRepository extends DemoRepository {
 
   Completer<void> blockNextRefresh() => _nextRefresh = Completer<void>();
 
+  void replaceCache(List<DemoSession> sessions) {
+    _visibleSessions = List.of(sessions);
+    notifyListeners();
+  }
+
   @override
   Future<void> refreshSessions() async {
     refreshCalls += 1;
@@ -414,7 +419,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('does not open a cached session removed by an active refresh', (
+  testWidgets('opens a cached session without waiting for an active refresh', (
     tester,
   ) async {
     final repository = _HarnessSyncRepository(await _storage())
@@ -422,22 +427,81 @@ void main() {
     addTearDown(repository.dispose);
     await _pumpHome(tester, repository);
 
-    repository.remoteSessions = [];
+    repository.replaceCache([_session('first', '瓦特')]);
+    await tester.pump();
+    repository.remoteSessions = [_session('first', '服务器同步后的瓦特')];
     final pendingRefresh = repository.blockNextRefresh();
     _backgroundAndResume(tester);
     await tester.pump();
     expect(repository.refreshCalls, 2);
 
-    await tester.tap(find.text('即将归档的会话'));
+    await tester.tap(find.text('瓦特'));
+    await tester.tap(find.text('瓦特'), warnIfMissed: false);
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(DemoChatPage), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(DemoChatPage),
+        matching: find.text('来自 Harness'),
+      ),
+      findsOneWidget,
+    );
+    expect(repository.refreshCalls, 2);
+
     pendingRefresh.complete();
     await tester.pumpAndSettle();
 
-    expect(find.byType(DemoChatPage), findsNothing);
-    expect(find.byType(DemoHomePage), findsOneWidget);
-    expect(repository.sessions, isEmpty);
+    expect(find.byType(DemoChatPage), findsOneWidget);
+    expect(find.byType(DemoHomePage), findsNothing);
+    expect(repository.session('first').title, '服务器同步后的瓦特');
     expect(tester.takeException(), isNull);
   });
+
+  for (final postPopError in <Object?>[
+    null,
+    DioException(
+      requestOptions: RequestOptions(path: '/api_agent/v2/sessions'),
+      type: DioExceptionType.connectionError,
+    ),
+  ]) {
+    testWidgets(
+      'post-pop ${postPopError == null ? 'sync' : 'sync failure'} does not lock the next session open',
+      (tester) async {
+        final repository = _HarnessSyncRepository(await _storage())
+          ..remoteSessions = [_session('first', '瓦特')];
+        addTearDown(repository.dispose);
+        await _pumpHome(tester, repository);
+
+        await tester.tap(find.text('瓦特'));
+        await tester.pumpAndSettle();
+        expect(find.byType(DemoChatPage), findsOneWidget);
+
+        final postPopRefresh = repository.blockNextRefresh();
+        repository.refreshError = postPopError;
+        Navigator.of(tester.element(find.byType(DemoChatPage))).pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(repository.refreshCalls, 2);
+        expect(find.byType(DemoHomePage), findsOneWidget);
+
+        await tester.tap(find.text('瓦特'));
+        await tester.tap(find.text('瓦特'), warnIfMissed: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(DemoChatPage), findsOneWidget);
+        expect(repository.refreshCalls, 2);
+
+        postPopRefresh.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DemoChatPage), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('a pending automatic refresh is safe after home is disposed', (
     tester,

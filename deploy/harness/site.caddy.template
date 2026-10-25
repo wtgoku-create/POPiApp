@@ -6,8 +6,14 @@ https://124.222.185.31 {
 		}
 	}
 	encode zstd gzip
+	# Owned media is content-addressed and the API supplies a private immutable
+	# cache policy. Keep the global no-store policy on pages and mutable APIs
+	# without overriding those content and poster responses.
+	@noStore {
+		not path /api_agent/v2/assets/*/content /api_agent/v2/assets/*/poster /api_agent/v2/assets/*/thumbnail
+	}
+	header @noStore Cache-Control "no-store"
 	header {
-		Cache-Control "no-store"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "same-origin"
 	}

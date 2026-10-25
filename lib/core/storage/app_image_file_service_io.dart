@@ -8,12 +8,14 @@ import 'sensitive_media_headers.dart';
 FileService createAppImageFileService({
   required void Function(String url, Map<String, String> headers)
   onUnauthorized,
-}) => _NoRedirectImageFileService(onUnauthorized);
+  Duration timeout = const Duration(seconds: 15),
+}) => _NoRedirectImageFileService(onUnauthorized, timeout);
 
 class _NoRedirectImageFileService extends FileService {
-  _NoRedirectImageFileService(this.onUnauthorized);
+  _NoRedirectImageFileService(this.onUnauthorized, this.timeout);
 
   final void Function(String url, Map<String, String> headers) onUnauthorized;
+  final Duration timeout;
 
   @override
   Future<FileServiceResponse> get(
@@ -21,7 +23,7 @@ class _NoRedirectImageFileService extends FileService {
     Map<String, String>? headers,
   }) async {
     final requestHeaders = Map<String, String>.of(headers ?? const {});
-    final client = HttpClient();
+    final client = HttpClient()..connectionTimeout = timeout;
     try {
       final request = await client.getUrl(Uri.parse(url));
       final protected = hasSensitiveMediaHeaders(requestHeaders);
@@ -29,18 +31,23 @@ class _NoRedirectImageFileService extends FileService {
         ..followRedirects = !protected
         ..maxRedirects = protected ? 0 : 5;
       requestHeaders.forEach(request.headers.set);
-      final response = await request.close();
+      final response = await request.close().timeout(timeout);
       if (response.statusCode == HttpStatus.unauthorized) {
         onUnauthorized(url, requestHeaders);
       }
       if (response.statusCode != HttpStatus.ok &&
           response.statusCode != HttpStatus.accepted) {
         final closed = _ClosedFileServiceResponse(response);
-        await response.drain<void>();
+        try {
+          await response.drain<void>().timeout(timeout);
+        } on TimeoutException {
+          // The status code is already known. Do not let a hanging error body
+          // keep a thumbnail in its loading state indefinitely.
+        }
         client.close(force: true);
         return closed;
       }
-      return _IoFileServiceResponse(response, client);
+      return _IoFileServiceResponse(response, client, timeout);
     } on Object {
       client.close(force: true);
       rethrow;
@@ -73,25 +80,36 @@ class _ClosedFileServiceResponse implements FileServiceResponse {
 }
 
 class _IoFileServiceResponse implements FileServiceResponse {
-  _IoFileServiceResponse(this.response, this.client);
+  _IoFileServiceResponse(this.response, this.client, this.timeout);
 
   final HttpClientResponse response;
   final HttpClient client;
+  final Duration timeout;
 
   @override
-  Stream<List<int>> get content => response.transform<List<int>>(
-    StreamTransformer.fromHandlers(
-      handleData: (data, sink) => sink.add(data),
-      handleDone: (sink) {
-        client.close(force: true);
-        sink.close();
-      },
-      handleError: (error, stack, sink) {
-        client.close(force: true);
-        sink.addError(error, stack);
-      },
-    ),
-  );
+  Stream<List<int>> get content => response
+      .timeout(
+        timeout,
+        onTimeout: (sink) {
+          sink.addError(TimeoutException('Image response timed out', timeout));
+          sink.close();
+          client.close(force: true);
+        },
+      )
+      .transform<List<int>>(
+        StreamTransformer.fromHandlers(
+          handleData: (data, sink) => sink.add(data),
+          handleDone: (sink) {
+            client.close(force: true);
+            sink.close();
+          },
+          handleError: (error, stack, sink) {
+            client.close(force: true);
+            sink.addError(error, stack);
+            sink.close();
+          },
+        ),
+      );
 
   @override
   int? get contentLength =>

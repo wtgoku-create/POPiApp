@@ -1315,6 +1315,9 @@ class DemoRepository extends ChangeNotifier {
     question: message['question'] is Map
         ? DemoQuestion.fromJson(_map(message['question']))
         : null,
+    activity: message['activity'] is Map
+        ? DemoActivity.fromJson(_map(message['activity']))
+        : null,
   );
 
   DemoSession _sessionFromRecord(
@@ -1442,6 +1445,9 @@ class DemoRepository extends ChangeNotifier {
     final posterUrl = kind == DemoAssetKind.video
         ? _resolveAssetPosterUrl(record['posterUrl'], id)
         : '';
+    final thumbnailUrl = kind == DemoAssetKind.image
+        ? _resolveAssetThumbnailUrl(record['thumbnailUrl'], id)
+        : '';
     return DemoAsset(
       id: id,
       title: record['title']?.toString() ?? '',
@@ -1452,6 +1458,7 @@ class DemoRepository extends ChangeNotifier {
           : '',
       contentUrl: contentUrl,
       posterUrl: posterUrl,
+      thumbnailUrl: thumbnailUrl,
       sessionId: record['sessionId']?.toString(),
       jobId: record['jobId']?.toString() ?? '',
       runId: record['runId']?.toString() ?? '',
@@ -1495,6 +1502,9 @@ class DemoRepository extends ChangeNotifier {
       '/api_agent/v2/assets/${cached.id}/content',
     );
     final posterUrl = _restoreAssetPosterUrl(cached.posterUrl, cached.id);
+    final thumbnailUrl = cached.kind == DemoAssetKind.image
+        ? _restoreAssetThumbnailUrl(cached.thumbnailUrl, cached.id)
+        : '';
     return DemoAsset(
       id: cached.id,
       title: cached.title,
@@ -1509,6 +1519,7 @@ class DemoRepository extends ChangeNotifier {
           : '',
       contentUrl: contentUrl,
       posterUrl: posterUrl,
+      thumbnailUrl: thumbnailUrl,
       jobId: cached.jobId,
       runId: cached.runId,
       memberId: cached.memberId,
@@ -1542,6 +1553,31 @@ class DemoRepository extends ChangeNotifier {
     try {
       final expected = _api!.resolveAssetPosterUrl(
         '/api_agent/v2/assets/$assetId/poster',
+      );
+      return Uri.parse(cachedUrl) == Uri.parse(expected) ? expected : '';
+    } on FormatException {
+      return '';
+    }
+  }
+
+  String _resolveAssetThumbnailUrl(Object? value, String assetId) {
+    final relative = value?.toString() ?? '';
+    if (relative.isEmpty) return '';
+    try {
+      final url = _api!.resolveAssetThumbnailUrl(relative);
+      return Uri.parse(url).path == '/api_agent/v2/assets/$assetId/thumbnail'
+          ? url
+          : '';
+    } on FormatException {
+      return '';
+    }
+  }
+
+  String _restoreAssetThumbnailUrl(String cachedUrl, String assetId) {
+    if (cachedUrl.isEmpty) return '';
+    try {
+      final expected = _api!.resolveAssetThumbnailUrl(
+        '/api_agent/v2/assets/$assetId/thumbnail',
       );
       return Uri.parse(cachedUrl) == Uri.parse(expected) ? expected : '';
     } on FormatException {

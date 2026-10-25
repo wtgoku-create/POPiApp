@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
@@ -24,6 +26,7 @@ import 'demo_settings_page.dart';
 import 'demo_task_brief_sheet.dart';
 import 'demo_remote_media.dart';
 import 'widgets/demo_image_stack.dart';
+import 'widgets/demo_activity_indicator.dart';
 import 'widgets/demo_chat_header.dart';
 import 'widgets/demo_content_role_avatar.dart';
 import 'widgets/demo_new_session_role_guide.dart';
@@ -203,18 +206,24 @@ class _DemoChatPageState extends State<DemoChatPage> {
         for (final roleId in session.roles) roleId: _roleName(session, roleId),
       },
     );
+    var accepted = false;
+    void clearAcceptedDraft() {
+      if (accepted || !mounted) return;
+      accepted = true;
+      unawaited(_composer.setText(''));
+      _roleMentions.clear();
+      setState(_attachments.clear);
+    }
+
     final sent = await demoPerform(context, () async {
       final ok = await _conversation.send(
         input,
         List.of(_attachments),
         l,
         contextRoleIds: contextRoleIds,
+        onAccepted: clearAcceptedDraft,
       );
-      if (mounted && ok) {
-        await _composer.setText('');
-        _roleMentions.clear();
-        setState(_attachments.clear);
-      }
+      if (ok) clearAcceptedDraft();
     });
     if (sent && mounted && _scroll.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -427,9 +436,12 @@ class _DemoChatPageState extends State<DemoChatPage> {
     ),
   );
 
+  final _expandedActivityIds = <String>{};
+
   Widget _message(BuildContext context, DemoMessage message) {
     final localizations = AppLocalizations.of(context)!;
     final question = message.question;
+    final activity = _conversation.activityFor(message);
     final text = message.text.isNotEmpty
         ? message.text
         : switch (message.status) {
@@ -445,7 +457,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
         .toList();
     final batch =
         media.length > 1 && media.every((a) => a.kind == DemoAssetKind.image);
-    if (text.isEmpty && media.isEmpty && question == null) {
+    if (text.isEmpty && media.isEmpty && question == null && activity == null) {
       return const SizedBox.shrink();
     }
     final memberId = message.memberId.trim().isEmpty
@@ -471,7 +483,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
             ? MainAxisAlignment.end
             : MainAxisAlignment.start,
         children: [
-          if (!message.user) ...[
+          if (!message.user && activity == null) ...[
             KeyedSubtree(
               key: ValueKey('demo-message-avatar-${message.id}-$memberId'),
               child: DemoAvatar(
@@ -488,14 +500,14 @@ class _DemoChatPageState extends State<DemoChatPage> {
               constraints: BoxConstraints(
                 maxWidth: widget.desktopLayout
                     ? 760
-                    : question != null
+                    : question != null || activity != null
                     ? MediaQuery.sizeOf(context).width - 64
                     : MediaQuery.sizeOf(context).width * .72,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!message.user) ...[
+                  if (!message.user && activity == null) ...[
                     Padding(
                       padding: const EdgeInsets.only(left: 2, bottom: 4),
                       child: Text(
@@ -510,6 +522,21 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         ),
                       ),
                     ),
+                  ],
+                  if (activity != null) ...[
+                    DemoActivityIndicator(
+                      key: ValueKey('demo-activity-${message.id}'),
+                      activity: activity,
+                      memberName: memberName,
+                      expanded: _expandedActivityIds.contains(message.id),
+                      onToggle: () => setState(() {
+                        if (!_expandedActivityIds.add(message.id)) {
+                          _expandedActivityIds.remove(message.id);
+                        }
+                      }),
+                    ),
+                    if (text.isNotEmpty || question != null || media.isNotEmpty)
+                      const SizedBox(height: 10),
                   ],
                   if (text.isNotEmpty)
                     Semantics(
@@ -639,6 +666,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
             .where((session) => session.id == widget.sessionId)
             .firstOrNull;
         if (s == null) return const SizedBox.shrink();
+        final hasMessages = _conversation.chatController.messages.isNotEmpty;
         final loadingSnapshot =
             widget.repository.isSessionLoading(widget.sessionId) &&
             !_conversation.running;
@@ -668,14 +696,15 @@ class _DemoChatPageState extends State<DemoChatPage> {
                   Expanded(
                     child:
                         widget.repository.isSessionLoading(widget.sessionId) &&
-                            s.messages.isEmpty
+                            !hasMessages &&
+                            !_conversation.waitingForResponse
                         ? Padding(
                             padding: EdgeInsets.only(top: headerInset),
                             child: const Center(
                               child: CircularProgressIndicator(),
                             ),
                           )
-                        : s.messages.isEmpty && s.members.length == 1
+                        : !hasMessages && s.members.length == 1
                         ? Padding(
                             padding: EdgeInsets.only(top: headerInset),
                             child: DemoNewSessionRoleGuide(
@@ -773,8 +802,22 @@ class _DemoChatPageState extends State<DemoChatPage> {
                           if (asset.id == id)
                             LibraryWork(
                               id: asset.id,
-                              previewUrl: asset.cover,
+                              previewUrl: asset.kind == DemoAssetKind.video
+                                  ? asset.posterUrl.isNotEmpty
+                                        ? asset.posterUrl
+                                        : asset.cover
+                                  : asset.thumbnailUrl.isNotEmpty
+                                  ? asset.thumbnailUrl
+                                  : asset.cover,
                               isVideo: asset.kind == DemoAssetKind.video,
+                              videoUrl: asset.kind == DemoAssetKind.video
+                                  ? asset.contentUrl
+                                  : '',
+                              imageUrls:
+                                  asset.kind == DemoAssetKind.image &&
+                                      asset.contentUrl.isNotEmpty
+                                  ? [asset.contentUrl]
+                                  : const [],
                               createdAt: null,
                             ),
                     ],

@@ -26,11 +26,17 @@ class DemoChatController extends ChangeNotifier {
   bool _syncRequested = false;
   String? _pendingClientRequestId;
   String? _pendingBody;
+  DemoMessage? _provisionalActivityMessage;
+  Set<String> _messageIdsBeforeSend = const {};
+  bool _serverReplyObserved = false;
   final Set<String> _respondingQuestionKeys = {};
   final Set<String> _submittedQuestionKeys = {};
   bool get sending => _sending;
   bool get running => repository.isSessionRunning(sessionId);
   bool get busy => sending || running || repository.isSessionLoading(sessionId);
+  bool get waitingForResponse =>
+      sending || running || _provisionalActivityMessage != null;
+  bool get hasVisibleMessages => chatController.messages.isNotEmpty;
   DemoSession get session => repository.session(sessionId);
 
   void _sync() {
@@ -49,6 +55,7 @@ class DemoChatController extends ChangeNotifier {
       while (_syncRequested && !_disposed) {
         _syncRequested = false;
         await _syncMessages();
+        if (!_disposed) notifyListeners();
       }
     } finally {
       _syncing = false;
@@ -69,10 +76,25 @@ class DemoChatController extends ChangeNotifier {
     _submittedQuestionKeys.removeWhere(
       (key) => !pendingQuestionKeys.contains(key),
     );
-    final next = currentSession.messages
+    final persisted = currentSession.messages
         .where(_hasVisibleContent)
-        .map(_chatMessage)
         .toList();
+    if (!_serverReplyObserved && _provisionalActivityMessage != null) {
+      _serverReplyObserved = persisted.any(
+        (message) =>
+            !message.user &&
+            !_messageIdsBeforeSend.contains(message.id) &&
+            (message.activity != null ||
+                message.question != null ||
+                message.text.trim().isNotEmpty ||
+                message.assetIds.isNotEmpty),
+      );
+    }
+    final next = <chat.TextMessage>[
+      ...persisted.map(_chatMessage),
+      if (_provisionalActivityMessage case final provisional?)
+        if (!_serverReplyObserved) _chatMessage(provisional),
+    ];
     final current = List<chat.Message>.of(chatController.messages);
     final currentById = {for (final message in current) message.id: message};
     for (final message in next) {
@@ -117,6 +139,8 @@ class DemoChatController extends ChangeNotifier {
         oldDemo.configRevision == nextDemo.configRevision &&
         jsonEncode(oldDemo.question?.toJson()) ==
             jsonEncode(nextDemo.question?.toJson()) &&
+        jsonEncode(oldDemo.activity?.toJson()) ==
+            jsonEncode(nextDemo.activity?.toJson()) &&
         listEquals(oldDemo.assetIds, nextDemo.assetIds);
   }
 
@@ -124,7 +148,116 @@ class DemoChatController extends ChangeNotifier {
     if (message.status == 'skipped') return false;
     return message.text.trim().isNotEmpty ||
         message.assetIds.isNotEmpty ||
-        message.question != null;
+        message.question != null ||
+        message.activity != null;
+  }
+
+  /// Reconciles a completed assistant turn with asynchronous media workers.
+  ///
+  /// A model reply can finish before its image, video, or audio job. Matching
+  /// run jobs therefore remain visible as real generation progress until the
+  /// worker and asset ingestion reach a terminal state.
+  DemoActivity? activityFor(DemoMessage message) {
+    final activity = message.activity;
+    if (activity == null ||
+        message.question != null ||
+        message.runId.isEmpty ||
+        activity.status != 'completed') {
+      return activity;
+    }
+    final mediaAnchor = session.messages.reversed
+        .where(
+          (candidate) =>
+              !candidate.user &&
+              candidate.question == null &&
+              candidate.activity != null &&
+              candidate.runId == message.runId &&
+              (candidate.memberId.isEmpty ||
+                  message.memberId.isEmpty ||
+                  candidate.memberId == message.memberId),
+        )
+        .firstOrNull;
+    if (mediaAnchor?.id != message.id) return activity;
+    final jobs = session.mediaJobs
+        .where(
+          (job) =>
+              job.runId == message.runId &&
+              (job.memberId.isEmpty ||
+                  message.memberId.isEmpty ||
+                  job.memberId == message.memberId),
+        )
+        .toList();
+    if (jobs.isEmpty) return activity;
+
+    final jobSteps = jobs.map(
+      (job) => DemoActivityStep(
+        id: 'media-job:${job.jobId}',
+        kind: _activityKindForJob(job),
+        status: _activityStatusForJob(job),
+      ),
+    );
+    final allSteps = <DemoActivityStep>[
+      ...activity.steps.where(
+        (step) => !jobSteps.any((jobStep) => jobStep.id == step.id),
+      ),
+      ...jobSteps,
+    ];
+    final mergedSteps = allSteps.length <= 12
+        ? allSteps
+        : allSteps.sublist(allSteps.length - 12);
+    final pending = jobs.where((job) => job.isPending).firstOrNull;
+    if (pending != null) {
+      return activity.copyWith(
+        kind: _activityKindForJob(pending),
+        status: 'running',
+        steps: mergedSteps,
+      );
+    }
+    final failed = jobs.where((job) {
+      return const {'failed', 'unknown', 'error'}.contains(job.state) ||
+          job.ingestionState == 'failed';
+    }).firstOrNull;
+    if (failed != null) {
+      return activity.copyWith(
+        kind: _activityKindForJob(failed),
+        status: 'failed',
+        steps: mergedSteps,
+      );
+    }
+    final stopped = jobs.where((job) {
+      return const {'canceled', 'cancelled', 'stopped'}.contains(job.state);
+    }).firstOrNull;
+    if (stopped != null) {
+      return activity.copyWith(
+        kind: _activityKindForJob(stopped),
+        status: 'stopped',
+        steps: mergedSteps,
+      );
+    }
+    return activity.copyWith(status: 'completed', steps: mergedSteps);
+  }
+
+  String _activityKindForJob(DemoMediaJob job) {
+    final operation = job.operation.toLowerCase();
+    for (final kind in const ['image', 'video']) {
+      if (operation.contains(kind)) return kind;
+    }
+    if (const ['audio', 'tts', 'music', 'speech'].any(operation.contains)) {
+      return 'audio';
+    }
+    return 'tool';
+  }
+
+  String _activityStatusForJob(DemoMediaJob job) {
+    if (job.isPending) return 'running';
+    if (const {'failed', 'unknown', 'error'}.contains(job.state) ||
+        job.ingestionState == 'failed') {
+      return 'failed';
+    }
+    if (const {'canceled', 'cancelled', 'stopped'}.contains(job.state)) {
+      return 'stopped';
+    }
+    return 'completed';
   }
 
   chat.User resolveUser(String id, AppLocalizations localizations) {
@@ -163,6 +296,7 @@ class DemoChatController extends ChangeNotifier {
     List<String> assets,
     AppLocalizations l, {
     List<String> contextRoleIds = const [],
+    VoidCallback? onAccepted,
   }) async {
     if (busy || (text.trim().isEmpty && assets.isEmpty)) return false;
     _sending = true;
@@ -179,6 +313,8 @@ class DemoChatController extends ChangeNotifier {
           _pendingBody = body;
           _pendingClientRequestId = const Uuid().v4();
         }
+        await _showProvisionalActivity(_pendingClientRequestId!);
+        var acceptedNotified = false;
         try {
           await repository.sendHarnessMessage(
             sessionId,
@@ -187,8 +323,11 @@ class DemoChatController extends ChangeNotifier {
             mediaIds: assets,
             contextRoleIds: contextRoleIds,
             onAccepted: () {
+              if (acceptedNotified) return;
+              acceptedNotified = true;
               _sending = false;
               if (!_disposed) notifyListeners();
+              onAccepted?.call();
             },
           );
           _clearPendingRequest();
@@ -263,13 +402,19 @@ class DemoChatController extends ChangeNotifier {
       return true;
     } finally {
       _sending = false;
+      _clearProvisionalActivity();
       if (!_disposed) _sync();
     }
   }
 
   Future<void> stop() async {
     if (!repository.isHarness || !running) return;
-    await repository.stopHarnessSession(sessionId);
+    try {
+      await repository.stopHarnessSession(sessionId);
+    } finally {
+      _clearProvisionalActivity();
+      if (!_disposed) _sync();
+    }
   }
 
   bool questionBusy(String questionId) => {
@@ -327,6 +472,47 @@ class DemoChatController extends ChangeNotifier {
   void _clearPendingRequest() {
     _pendingBody = null;
     _pendingClientRequestId = null;
+  }
+
+  Future<void> _showProvisionalActivity(String clientRequestId) async {
+    final currentSession = session;
+    final memberId =
+        currentSession.members.contains(currentSession.activeMemberId)
+        ? currentSession.activeMemberId
+        : currentSession.members.firstOrNull ?? 'popi';
+    final provisional = DemoMessage(
+      id: 'local-activity:$clientRequestId',
+      text: '',
+      status: 'pending',
+      memberId: memberId,
+      memberName: currentSession.memberNames[memberId] ?? '',
+      configRevision: currentSession.configRevision,
+      activity: const DemoActivity(
+        kind: 'thinking',
+        status: 'running',
+        steps: [
+          DemoActivityStep(id: 'thinking', kind: 'thinking', status: 'running'),
+        ],
+      ),
+    );
+    _messageIdsBeforeSend = currentSession.messages
+        .map((message) => message.id)
+        .toSet();
+    _serverReplyObserved = false;
+    _provisionalActivityMessage = provisional;
+    if (!chatController.messages.any(
+      (message) => message.id == provisional.id,
+    )) {
+      await chatController.insertMessage(_chatMessage(provisional));
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  void _clearProvisionalActivity() {
+    if (_provisionalActivityMessage == null) return;
+    _provisionalActivityMessage = null;
+    _messageIdsBeforeSend = const {};
+    _serverReplyObserved = false;
   }
 
   @override

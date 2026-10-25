@@ -443,6 +443,37 @@ class NetworkAgentApi {
     return resolved.toString();
   }
 
+  /// Resolves only an owned image thumbnail on the configured Agent origin.
+  String resolveAssetThumbnailUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null ||
+        candidate.hasScheme ||
+        candidate.hasAuthority ||
+        candidate.pathSegments.contains('.') ||
+        candidate.pathSegments.contains('..')) {
+      throw const FormatException('Asset thumbnail URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(
+      r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/thumbnail$',
+    );
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException(
+        'Asset thumbnail URL is outside the Agent origin',
+      );
+    }
+    return resolved.toString();
+  }
+
   Uri _ownedAssetContentUri(String value) {
     final base = Uri.parse(dio.options.baseUrl);
     if (!base.hasScheme || base.host.isEmpty) {

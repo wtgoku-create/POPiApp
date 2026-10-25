@@ -294,6 +294,108 @@ class DemoQuestion {
   );
 }
 
+/// Public, user-facing progress for one assistant turn.
+///
+/// Harness deliberately exposes only this bounded summary. Provider reasoning,
+/// tool inputs, and tool outputs never enter the Flutter message model.
+@immutable
+class DemoActivityStep {
+  const DemoActivityStep({
+    required this.id,
+    required this.kind,
+    required this.status,
+  });
+
+  final String id;
+  final String kind;
+  final String status;
+
+  Map<String, Object?> toJson() => {'id': id, 'kind': kind, 'status': status};
+
+  factory DemoActivityStep.fromJson(Map<String, Object?> json) =>
+      DemoActivityStep(
+        id: json['id']?.toString() ?? '',
+        kind: DemoActivity.normalizeKind(json['kind']),
+        status: DemoActivity.normalizeStatus(json['status']),
+      );
+}
+
+@immutable
+class DemoActivity {
+  const DemoActivity({
+    required this.kind,
+    required this.status,
+    this.steps = const [],
+  });
+
+  static const kinds = {
+    'thinking',
+    'model',
+    'search',
+    'fetch',
+    'image',
+    'video',
+    'script',
+    'audio',
+    'vision',
+    'reply',
+    'tool',
+  };
+  static const statuses = {
+    'running',
+    'completed',
+    'failed',
+    'stopped',
+    'waiting_user',
+  };
+
+  final String kind;
+  final String status;
+  final List<DemoActivityStep> steps;
+
+  bool get isActive => status == 'running' || status == 'waiting_user';
+
+  DemoActivity copyWith({
+    String? kind,
+    String? status,
+    List<DemoActivityStep>? steps,
+  }) => DemoActivity(
+    kind: kind ?? this.kind,
+    status: status ?? this.status,
+    steps: steps ?? this.steps,
+  );
+
+  Map<String, Object?> toJson() => {
+    'kind': kind,
+    'status': status,
+    if (steps.isNotEmpty) 'steps': steps.map((step) => step.toJson()).toList(),
+  };
+
+  factory DemoActivity.fromJson(Map<String, Object?> json) => DemoActivity(
+    kind: normalizeKind(json['kind']),
+    status: normalizeStatus(json['status']),
+    steps: ((json['steps'] as List?) ?? const [])
+        .whereType<Map>()
+        .take(12)
+        .map(
+          (value) =>
+              DemoActivityStep.fromJson(Map<String, Object?>.from(value)),
+        )
+        .where((step) => step.id.isNotEmpty)
+        .toList(),
+  );
+
+  static String normalizeKind(Object? value) {
+    final kind = value?.toString() ?? '';
+    return kinds.contains(kind) ? kind : 'tool';
+  }
+
+  static String normalizeStatus(Object? value) {
+    final status = value?.toString() ?? '';
+    return statuses.contains(status) ? status : 'completed';
+  }
+}
+
 @immutable
 class DemoMessage {
   const DemoMessage({
@@ -307,6 +409,7 @@ class DemoMessage {
     this.runId = '',
     this.configRevision = 0,
     this.question,
+    this.activity,
   });
   final String id;
   final String text;
@@ -318,6 +421,7 @@ class DemoMessage {
   final String runId;
   final int configRevision;
   final DemoQuestion? question;
+  final DemoActivity? activity;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -330,6 +434,7 @@ class DemoMessage {
     if (runId.isNotEmpty) 'runId': runId,
     if (configRevision != 0) 'configRevision': configRevision,
     if (question != null) 'question': question!.toJson(),
+    if (activity != null) 'activity': activity!.toJson(),
   };
   factory DemoMessage.fromJson(Map<String, Object?> json) => DemoMessage(
     id: json['id']?.toString() ?? '',
@@ -344,6 +449,11 @@ class DemoMessage {
     question: json['question'] is Map
         ? DemoQuestion.fromJson(
             Map<String, Object?>.from(json['question'] as Map),
+          )
+        : null,
+    activity: json['activity'] is Map
+        ? DemoActivity.fromJson(
+            Map<String, Object?>.from(json['activity'] as Map),
           )
         : null,
   );
@@ -574,6 +684,7 @@ class DemoAsset {
     this.media = '',
     this.contentUrl = '',
     this.posterUrl = '',
+    this.thumbnailUrl = '',
     this.jobId = '',
     this.runId = '',
     this.memberId = '',
@@ -596,6 +707,7 @@ class DemoAsset {
   final String media;
   final String contentUrl;
   final String posterUrl;
+  final String thumbnailUrl;
   final String jobId;
   final String runId;
   final String memberId;
@@ -621,6 +733,7 @@ class DemoAsset {
     media: media,
     contentUrl: contentUrl,
     posterUrl: posterUrl,
+    thumbnailUrl: thumbnailUrl,
     jobId: jobId,
     runId: runId,
     memberId: memberId,
@@ -644,6 +757,7 @@ class DemoAsset {
     'media': media,
     if (contentUrl.isNotEmpty) 'contentUrl': contentUrl,
     if (posterUrl.isNotEmpty) 'posterUrl': posterUrl,
+    if (thumbnailUrl.isNotEmpty) 'thumbnailUrl': thumbnailUrl,
     if (jobId.isNotEmpty) 'jobId': jobId,
     if (runId.isNotEmpty) 'runId': runId,
     if (memberId.isNotEmpty) 'memberId': memberId,
@@ -669,6 +783,7 @@ class DemoAsset {
     media: json['media']?.toString() ?? '',
     contentUrl: json['contentUrl']?.toString() ?? '',
     posterUrl: json['posterUrl']?.toString() ?? '',
+    thumbnailUrl: json['thumbnailUrl']?.toString() ?? '',
     jobId: json['jobId']?.toString() ?? '',
     runId: json['runId']?.toString() ?? '',
     memberId: json['memberId']?.toString() ?? '',

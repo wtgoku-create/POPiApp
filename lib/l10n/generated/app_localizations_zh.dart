@@ -3447,6 +3447,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoDisclaimer => 'AI 生成结果可能有误，仅供参考';
 
   @override
+  String demoActivityTitle(String name, String activity) {
+    return '$name · $activity';
+  }
+
+  @override
+  String get demoActivityThinking => '正在思考你的内容';
+
+  @override
+  String get demoActivityModel => '正在调用模型';
+
+  @override
+  String get demoActivitySearching => '正在搜索资料';
+
+  @override
+  String get demoActivityReadingWeb => '正在阅读网页';
+
+  @override
+  String get demoActivityVision => '正在查看参考图片';
+
+  @override
   String get demoThinking => 'POPi 正在思考…';
 
   @override

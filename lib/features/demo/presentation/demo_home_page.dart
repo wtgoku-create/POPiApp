@@ -104,8 +104,6 @@ class _DemoHomePageState extends State<DemoHomePage>
     if (_openingSession) return;
     _openingSession = true;
     try {
-      final pendingRefresh = _refreshInFlight;
-      if (pendingRefresh != null) await pendingRefresh;
       if (!mounted) return;
       final current = widget.repository.sessions
           .where((session) => session.id == s.id)
@@ -119,7 +117,7 @@ class _DemoHomePageState extends State<DemoHomePage>
           ),
         ),
       );
-      if (mounted) await _refreshHarness();
+      if (mounted) unawaited(_refreshHarness());
     } finally {
       _openingSession = false;
     }

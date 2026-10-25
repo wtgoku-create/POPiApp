@@ -22,6 +22,7 @@ class AppVideoPlayer extends StatefulWidget {
     this.onFullscreen,
     this.controlsKeyPrefix = 'video-player',
     this.httpHeaders = const {},
+    this.placeholder,
     super.key,
   });
 
@@ -32,6 +33,7 @@ class AppVideoPlayer extends StatefulWidget {
   final Future<void> Function(Uri)? onFullscreen;
   final String controlsKeyPrefix;
   final Map<String, String> httpHeaders;
+  final ImageProvider? placeholder;
 
   @override
   State<AppVideoPlayer> createState() => _AppVideoPlayerState();
@@ -309,6 +311,20 @@ class _AppVideoPlayerState extends State<AppVideoPlayer>
     return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
   }
 
+  Widget _loadingSurface() => Stack(
+    fit: StackFit.expand,
+    children: [
+      if (widget.placeholder case final image?)
+        Image(
+          key: _key('placeholder'),
+          image: image,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      const Center(child: CircularProgressIndicator(color: Colors.white)),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
@@ -333,9 +349,7 @@ class _AppVideoPlayerState extends State<AppVideoPlayer>
                   ],
                 ),
               )
-            : const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+            : _loadingSurface(),
       );
     }
     return ValueListenableBuilder<VideoPlayerValue>(
@@ -369,9 +383,7 @@ class _AppVideoPlayerState extends State<AppVideoPlayer>
                   ),
                 )
               : !ready
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                )
+              ? _loadingSurface()
               : Stack(
                   fit: StackFit.expand,
                   children: [

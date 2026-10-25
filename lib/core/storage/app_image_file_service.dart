@@ -7,4 +7,8 @@ import 'app_image_file_service_stub.dart'
 FileService createAppImageFileService({
   required void Function(String url, Map<String, String> headers)
   onUnauthorized,
-}) => platform.createAppImageFileService(onUnauthorized: onUnauthorized);
+  Duration timeout = const Duration(seconds: 15),
+}) => platform.createAppImageFileService(
+  onUnauthorized: onUnauthorized,
+  timeout: timeout,
+);

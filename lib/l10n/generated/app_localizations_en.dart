@@ -3601,6 +3601,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoDisclaimer => 'AI-generated results may contain errors';
 
   @override
+  String demoActivityTitle(String name, String activity) {
+    return '$name · $activity';
+  }
+
+  @override
+  String get demoActivityThinking => 'Thinking about your request';
+
+  @override
+  String get demoActivityModel => 'Calling the model';
+
+  @override
+  String get demoActivitySearching => 'Searching the web';
+
+  @override
+  String get demoActivityReadingWeb => 'Reading a web page';
+
+  @override
+  String get demoActivityVision => 'Reviewing reference images';
+
+  @override
   String get demoThinking => 'POPi is thinking…';
 
   @override

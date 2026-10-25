@@ -334,7 +334,7 @@ String? harnessAccessCacheKeyFor(
   final uri = _sameOriginUri(url, baseUrl, session.origin);
   if (uri == null || uri.hasQuery || uri.hasFragment) return null;
   final ownedAsset = RegExp(
-    r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/(?:content|poster)$',
+    r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/(?:content|poster|thumbnail)$',
   );
   if (!ownedAsset.hasMatch(uri.path)) return null;
   return '${uri.toString()}::${session.cacheNamespace}';

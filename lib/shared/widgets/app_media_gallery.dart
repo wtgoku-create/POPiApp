@@ -549,6 +549,7 @@ class _VideoGalleryPage extends StatelessWidget {
                   url: item.url,
                   autoplay: true,
                   controlsKeyPrefix: 'video-preview',
+                  placeholder: item.thumbnail,
                 )
               : item.thumbnail != null
               ? Image(

@@ -71,7 +71,10 @@ journalctl -u popi-harness -u popi-access
 页面摘要与构建一致、一次文字回复、上传读取/HEAD/Range，以及服务重启后的原会话和文件
 恢复。测试文字不会触发图片、视频或音频生成。
 
-所有 Web 入口、脚本和素材采用 `Cache-Control: no-store`，避免更新后仍展示旧页面。
+Web 入口、脚本和可变 API 采用 `Cache-Control: no-store`，避免更新后仍展示旧页面。
+内容寻址的原始素材、图片缩略图与视频首帧沿用 Harness 返回的
+`private, max-age=31536000, immutable`，
+使同一登录缓存命名空间可以复用本机文件；登录会话变化时客户端使用新的缓存键，不复用旧会话内容。
 服务由 systemd 开机启动。原 Caddy 配置及发布记录保留，回滚不要删除独立状态目录。
 
 这是单用户共享测试环境，尚不提供生产账户隔离。原生远程 Harness 构建使用独立登录页，

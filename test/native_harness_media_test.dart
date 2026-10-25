@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:popi_ai_app/core/storage/gallery_video_storage.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/harness_access_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
+import 'package:video_player/video_player.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import 'support/fake_video_player.dart';
@@ -127,6 +129,57 @@ void main() {
       await tester.pump();
     },
   );
+
+  testWidgets('protected video keeps its poster visible while downloading', (
+    tester,
+  ) async {
+    final original = VideoPlayerPlatform.instance;
+    VideoPlayerPlatform.instance = FakeVideoPlayer();
+    addTearDown(() => VideoPlayerPlatform.instance = original);
+    final download = Completer<String>();
+    GalleryVideoStorage.debugPlaybackDownload =
+        (url, headers, onUnauthorized, extension) => download.future;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          harnessAccessHeadersProvider.overrideWith(
+            (ref, url) => const {'Cookie': 'popi_access=test'},
+          ),
+          harnessAccessCacheKeyProvider.overrideWith(
+            (ref, url) => '$url::test',
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: AppVideoPlayer(
+              url: Uri.parse(
+                'https://harness.test/api_agent/v2/assets/a/content',
+              ),
+              placeholder: const AssetImage(
+                'assets/icons/common_user_avatar.png',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('video-player-placeholder')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    download.complete('/tmp/protected-poster.mp4');
+    await tester.pumpAndSettle();
+    expect(find.byType(VideoPlayer), findsOneWidget);
+    expect(find.byKey(const Key('video-player-placeholder')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 
   test('native video download forwards access headers', () async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -291,6 +344,60 @@ void main() {
     expect(denied.statusCode, HttpStatus.unauthorized);
     await denied.content.drain<void>();
     expect(unauthorized, 1);
+  });
+
+  test('image requests stop waiting for a stalled response body', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    final keepOpen = Completer<void>();
+    addTearDown(() {
+      if (!keepOpen.isCompleted) keepOpen.complete();
+    });
+    server.listen((request) async {
+      request.response
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType('image', 'png')
+        ..write([1, 2, 3]);
+      await request.response.flush();
+      await keepOpen.future;
+      await request.response.close();
+    });
+    final service = createAppImageFileService(
+      onUnauthorized: (_, __) {},
+      timeout: const Duration(milliseconds: 50),
+    );
+
+    final response = await HttpOverrides.runWithHttpOverrides(
+      () => service.get('http://127.0.0.1:${server.port}/stalled.png'),
+      _LoopbackHttpOverrides(),
+    );
+
+    await expectLater(
+      response.content.drain<void>(),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
+
+  test('image requests stop waiting for response headers', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    final keepOpen = Completer<void>();
+    addTearDown(() {
+      if (!keepOpen.isCompleted) keepOpen.complete();
+    });
+    server.listen((request) => keepOpen.future);
+    final service = createAppImageFileService(
+      onUnauthorized: (_, __) {},
+      timeout: const Duration(milliseconds: 50),
+    );
+
+    await expectLater(
+      HttpOverrides.runWithHttpOverrides(
+        () => service.get('http://127.0.0.1:${server.port}/no-headers.png'),
+        _LoopbackHttpOverrides(),
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
   });
 }
 

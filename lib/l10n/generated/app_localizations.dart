@@ -6697,6 +6697,42 @@ abstract class AppLocalizations {
   /// **'AI-generated results may contain errors'**
   String get demoDisclaimer;
 
+  /// No description provided for @demoActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {activity}'**
+  String demoActivityTitle(String name, String activity);
+
+  /// No description provided for @demoActivityThinking.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking about your request'**
+  String get demoActivityThinking;
+
+  /// No description provided for @demoActivityModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calling the model'**
+  String get demoActivityModel;
+
+  /// No description provided for @demoActivitySearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching the web'**
+  String get demoActivitySearching;
+
+  /// No description provided for @demoActivityReadingWeb.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading a web page'**
+  String get demoActivityReadingWeb;
+
+  /// No description provided for @demoActivityVision.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewing reference images'**
+  String get demoActivityVision;
+
   /// No description provided for @demoThinking.
   ///
   /// In en, this message translates to:

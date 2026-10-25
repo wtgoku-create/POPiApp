@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,9 @@ import 'package:popi_ai_app/features/demo/presentation/demo_chat_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_remote_media.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_settings_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/providers/harness_access_provider.dart';
+import 'package:popi_ai_app/core/storage/app_image_cache.dart';
+import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
@@ -23,8 +27,10 @@ const _remoteAsset = DemoAsset(
   id: 'owned-image-1',
   title: '南极猫角色图',
   kind: DemoAssetKind.image,
-  cover: 'http://127.0.0.1:3084/api_agent/assets/owned-image-1/content',
-  contentUrl: 'http://127.0.0.1:3084/api_agent/assets/owned-image-1/content',
+  cover: 'http://127.0.0.1:3084/api_agent/v2/assets/owned-image-1/content',
+  contentUrl: 'http://127.0.0.1:3084/api_agent/v2/assets/owned-image-1/content',
+  thumbnailUrl:
+      'http://127.0.0.1:3084/api_agent/v2/assets/owned-image-1/thumbnail',
   sessionId: 'server-session',
   jobId: 'job-1',
   runId: 'run-1',
@@ -176,6 +182,68 @@ void main() {
     expect(find.text('正在保存到资产库'), findsOneWidget);
     expect(find.textContaining('受理配置 v4'), findsOneWidget);
     expect(find.byKey(const ValueKey('demo-media-job-job-1')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selected owned image uses authenticated cached thumbnail', (
+    tester,
+  ) async {
+    final repository = await _repository();
+    addTearDown(repository.dispose);
+    final cacheKey = '${_remoteAsset.thumbnailUrl}::composer-session';
+    await AppImageCache.manager.putFile(
+      cacheKey,
+      File('assets/icons/common_user_avatar.png').readAsBytesSync(),
+    );
+    tester.view.physicalSize = const Size(375, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          harnessAccessHeadersProvider.overrideWith(
+            (ref, url) => const {
+              'Cookie': '__Host-popi-test=private-session',
+              'Origin': 'https://harness.test',
+            },
+          ),
+          harnessAccessCacheKeyProvider.overrideWith(
+            (ref, url) => '$url::composer-session',
+          ),
+          harnessAccessUnauthorizedProvider.overrideWith((ref, url) => () {}),
+        ],
+        child: ToastificationWrapper(
+          child: MaterialApp(
+            theme: AppTheme.light,
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: DemoChatPage(
+              repository: repository,
+              sessionId: 'server-session',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('添加附件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('owned-image-1')));
+    await tester.pumpAndSettle();
+
+    final selected = find.byKey(
+      const ValueKey('popi-selected-asset-owned-image-1'),
+    );
+    expect(selected, findsOneWidget);
+    final image = tester.widget<Image>(
+      find.descendant(of: selected, matching: find.byType(Image)),
+    );
+    final provider = image.image as CachedNetworkImageProvider;
+    expect(provider.url, _remoteAsset.thumbnailUrl);
+    expect(provider.cacheKey, cacheKey);
+    expect(provider.headers, containsPair('Origin', 'https://harness.test'));
     expect(tester.takeException(), isNull);
   });
 
@@ -410,6 +478,10 @@ void main() {
     expect(find.byKey(const Key('asset-preview-video')), findsOneWidget);
     expect(platform.sources, hasLength(1));
     expect(platform.sources.single.uri, _remoteVideoPosterAsset.contentUrl);
+    expect(
+      tester.widget<AppVideoPlayer>(find.byType(AppVideoPlayer)).placeholder,
+      isNotNull,
+    );
     expect(tester.takeException(), isNull);
   });
 
