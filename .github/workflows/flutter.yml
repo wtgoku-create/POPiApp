@@ -565,7 +565,7 @@ jobs:
     name: Notarize Signed macOS Harness DMG
     if: github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url != '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -589,7 +589,7 @@ jobs:
             --proto '=https' \
             --tlsv1.2 \
             --connect-timeout 30 \
-            --max-time 300 \
+            --max-time 900 \
             --output "$dmg_path" \
             --write-out '%{http_code}' \
             "$MACOS_NOTARIZE_URL")
