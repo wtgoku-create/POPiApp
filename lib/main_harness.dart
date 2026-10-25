@@ -91,6 +91,7 @@ class _HarnessContentState extends ConsumerState<_HarnessContent> {
         return;
       }
       setState(() => _repository = repository);
+      LaunchDiagnostics.mark(LaunchStage.repositorySetStateDone);
     } on Object catch (error) {
       if (mounted) setState(() => _loadError = error);
     }
@@ -106,6 +107,7 @@ class _HarnessContentState extends ConsumerState<_HarnessContent> {
   Widget build(BuildContext context) {
     final repository = _repository;
     if (repository != null) {
+      LaunchDiagnostics.mark(LaunchStage.harnessContentBuild);
       return DemoApp(repository: repository, bootstrapUser: false);
     }
     return _HarnessRepositoryLoadingApp(

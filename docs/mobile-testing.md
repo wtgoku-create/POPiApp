@@ -1,5 +1,23 @@
 # 手机安装测试版
 
+## 2026-10-25 登录恢复后的 Toast 容器冲突
+
+5201 真机仍被 `per-process-limit` 终止：Repository 恢复后约 60.5 MiB，约 1.4 秒后
+达到 3252.9 MiB；malloc in-use 仅约 8 MiB、Metal 资源约 4.6 MiB。系统画面缓冲对照
+未解决退出，不能将 5201 描述为修复版。
+
+真实的 `HarnessAccessGate → DemoApp → MaterialApp.router` 组合测试复现了重复
+`ToastificationWrapper` 的全局 Key 冲突。toastification 3.2.0 的 wrapper 共用一个 overlay
+Key；Gate 与业务应用各创建一次会触发组件树反复卸载和重挂载。修复为 DemoApp 优先复用
+祖先中的 wrapper，独立运行时仍创建一个。测试覆盖加载转首页、首次刷新、登录失效保留页面
+以及重新认证，真机是否恢复正常仍须用新包验证。
+
+旧诊断 channel 默认将消息派发到主队列；Flutter 合并平台/UI 线程被同步工作占用时，
+已发送的页面检查点也可能无法被处理。因此“没有 Home 检查点”不能排除 Home 代码。
+诊断接收改用 Flutter 后台 task queue，加入挂载与路由阶段标记，并复用同一次 `TASK_VM_INFO`
+采样追加 graphics/media ledger 和压缩内存。字段不可用时记录 `-1`，这些指标不可直接相加。
+诊断仍限定启动后 15 秒、只记录固定阶段和数值，不读取堆栈或用户内容，不上传设备日志。
+
 ## iPhone 系统画面缓冲对照
 
 5001 的四次真机复现均显示：登录恢复与 Repository 恢复完成时约 60 MiB，随后首条

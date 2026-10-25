@@ -4,6 +4,7 @@ import 'package:toastification/toastification.dart';
 
 import '../../../app/theme.dart';
 import '../../../app/router.dart';
+import '../../../core/diagnostics/launch_diagnostics.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/storage_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
@@ -33,8 +34,18 @@ class _DemoAppState extends ConsumerState<DemoApp> {
       widget.repository ??
       (DemoRepository(ref.read(preferencesStorageProvider))..restore());
   late final _router = createAppRouter(
-    homeBuilder: (_, _) => DemoHomePage(repository: _repository),
+    homeBuilder: (_, _) {
+      LaunchDiagnostics.mark(LaunchStage.routerHomeBuilder);
+      return DemoHomePage(repository: _repository);
+    },
   );
+
+  @override
+  void initState() {
+    super.initState();
+    LaunchDiagnostics.mark(LaunchStage.demoAppInit);
+  }
+
   @override
   void dispose() {
     _router.dispose();
@@ -44,25 +55,30 @@ class _DemoAppState extends ConsumerState<DemoApp> {
 
   @override
   Widget build(BuildContext context) {
+    LaunchDiagnostics.mark(LaunchStage.demoAppBuildBegin);
     if (widget.bootstrapUser) ref.watch(userBootstrapProvider);
-    return ToastificationWrapper(
-      child: MaterialApp.router(
-        routerConfig: _router,
-        title: 'POPi',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light.copyWith(
-          scaffoldBackgroundColor: AppColors.profileBackground,
-          appBarTheme: AppTheme.light.appBarTheme.copyWith(
-            backgroundColor: AppColors.profileBackground,
-          ),
+    final router = _router;
+    LaunchDiagnostics.mark(LaunchStage.routerReady);
+    final app = MaterialApp.router(
+      routerConfig: router,
+      title: 'POPi',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light.copyWith(
+        scaffoldBackgroundColor: AppColors.profileBackground,
+        appBarTheme: AppTheme.light.appBarTheme.copyWith(
+          backgroundColor: AppColors.profileBackground,
         ),
-        darkTheme: AppTheme.dark,
-        themeMode: ref.watch(themeModeProvider),
-        locale: ref.watch(localeProvider) ?? widget.locale,
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        builder: (_, child) => AppKeyboardDismiss(child: child!),
       ),
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
+      locale: ref.watch(localeProvider) ?? widget.locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      builder: (_, child) => AppKeyboardDismiss(child: child!),
     );
+    // Toastification shares one global overlay key across all wrappers.
+    final toastHost = context
+        .findAncestorWidgetOfExactType<ToastificationWrapper>();
+    return toastHost == null ? ToastificationWrapper(child: app) : app;
   }
 }
