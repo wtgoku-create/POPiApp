@@ -6,6 +6,24 @@ import '../domain/demo_models.dart';
 /// public three-view image remains in [DemoRoleProfile.referenceImageUrls] so
 /// the selected character can be supplied as generation context.
 abstract final class DemoWebsiteCharacterCatalog {
+  static const legacyProfiles = <String, DemoRoleProfile>{
+    'alice': DemoRoleProfile(
+      name: '爱丽丝',
+      instructions:
+          '性格：外在张扬直率，内心敏感，重视真挚的友情。\n'
+          '外观：棕色及肩短发、两枚红色蝴蝶结发夹，白色短袖上衣配黄色衣领；角色比例和配色以公开参考三视图为准。\n'
+          '参考图的多视角和表情均属于爱丽丝同一角色；生成时以用户要求的人物数量为准，不将多视图当作多个人物。',
+      revision: 'popi-art-651-af1b8f4b9b25',
+      referenceImageUrls: [
+        'https://static.popi.art/media/2026/0713/139187.png',
+      ],
+    ),
+  };
+
+  static const legacyAvatarAssets = <String, String>{
+    'alice': 'assets/images/demo_role_1.png',
+  };
+
   static const characters = [
     DemoCharacter(
       'popi-character-1058',
@@ -60,5 +78,13 @@ abstract final class DemoWebsiteCharacterCatalog {
     ),
   };
 
-  static DemoRoleProfile? profile(String roleId) => profiles[roleId];
+  static DemoRoleProfile? profile(String roleId) =>
+      profiles[roleId] ?? legacyProfiles[roleId];
+
+  static String? bundledAvatar(String roleId) =>
+      characters
+          .where((character) => character.id == roleId)
+          .firstOrNull
+          ?.image ??
+      legacyAvatarAssets[roleId];
 }

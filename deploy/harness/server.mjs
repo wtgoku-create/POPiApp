@@ -15,6 +15,7 @@ const service = await startLocalApi({
   host: '127.0.0.1',
   port: 3084,
   stateRoot,
+  providerReferenceOrigin: publicOrigin.origin,
   allowedOrigins: new Set([publicOrigin.origin, 'http://127.0.0.1:7357']),
 });
 console.log(`[popi-harness] ready on loopback:${service.port}`);

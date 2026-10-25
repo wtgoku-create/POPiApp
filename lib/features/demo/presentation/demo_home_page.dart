@@ -234,7 +234,7 @@ class _DemoHomePageState extends State<DemoHomePage>
                   shape: CircleBorder(),
                 ),
                 child: const Center(
-                  child: DemoIcon('upload', size: 20, color: AppColors.brand),
+                  child: DemoIcon('plus', size: 20, color: AppColors.brand),
                 ),
               ),
             ),
@@ -247,74 +247,84 @@ class _DemoHomePageState extends State<DemoHomePage>
           padding: const EdgeInsets.only(top: 8),
           child: Center(
             heightFactor: 1,
-            child: ClipRRect(
-              key: const Key('demo-bottom-tabs'),
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                key: const Key('demo-bottom-tabs-glass'),
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  width: 236,
-                  height: 48,
-                  padding: const EdgeInsets.all(4),
-                  decoration: ShapeDecoration(
-                    color: demoSurface(context),
-                    shape: StadiumBorder(
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.surface,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: ClipRRect(
+                  key: const Key('demo-bottom-tabs'),
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    key: const Key('demo-bottom-tabs-glass'),
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
+                      width: double.infinity,
+                      height: 56,
+                      padding: const EdgeInsets.all(4),
+                      decoration: ShapeDecoration(
+                        color: demoSurface(context),
+                        shape: StadiumBorder(
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.surface,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < 2; i++)
-                        Expanded(
-                          child: Semantics(
-                            selected: _tab == i,
-                            button: true,
-                            child: Material(
-                              key: Key('demo-tab-$i'),
-                              color: _tab == i ? demoTint : Colors.transparent,
-                              shape: const StadiumBorder(),
-                              child: InkWell(
-                                customBorder: const StadiumBorder(),
-                                onTap: () => _selectTab(i),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    DemoIcon(
-                                      i == 0 ? 'chat' : 'folder',
-                                      size: 20,
-                                      color: _tab == i
-                                          ? AppColors.brand
-                                          : AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 7),
-                                    Flexible(
-                                      child: Text(
-                                        i == 0
-                                            ? l.demoConversations
-                                            : l.demoMaterials,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: _tab == i
-                                              ? FontWeight.w600
-                                              : FontWeight.w400,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (var i = 0; i < 2; i++)
+                            Expanded(
+                              child: Semantics(
+                                selected: _tab == i,
+                                button: true,
+                                child: Material(
+                                  key: Key('demo-tab-$i'),
+                                  color: _tab == i
+                                      ? AppColors.brand.withValues(alpha: .09)
+                                      : Colors.transparent,
+                                  shape: const StadiumBorder(),
+                                  child: InkWell(
+                                    customBorder: const StadiumBorder(),
+                                    onTap: () => _selectTab(i),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        DemoIcon(
+                                          i == 0 ? 'chat' : 'folder',
+                                          size: 20,
                                           color: _tab == i
                                               ? AppColors.brand
-                                              : AppColors.textSecondary,
+                                              : AppColors.textTertiary,
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            i == 0
+                                                ? l.demoConversation
+                                                : l.demoAssets,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: _tab == i
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w400,
+                                              color: _tab == i
+                                                  ? AppColors.brand
+                                                  : AppColors.textTertiary,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

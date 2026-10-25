@@ -12,6 +12,7 @@ import 'package:popi_ai_app/features/demo/presentation/demo_settings_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_activity_indicator.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_chat_header.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
+import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -50,6 +51,7 @@ Future<DemoRepository> _repository(DemoSession session) async {
 Future<void> _pumpChat(
   WidgetTester tester,
   DemoSession session, {
+  DemoRepository? repositoryOverride,
   Size size = const Size(390, 844),
   Locale locale = const Locale('zh'),
   ThemeData? theme,
@@ -60,7 +62,7 @@ Future<void> _pumpChat(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  final repository = await _repository(session);
+  final repository = repositoryOverride ?? await _repository(session);
   addTearDown(repository.dispose);
 
   await tester.pumpWidget(
@@ -104,6 +106,75 @@ Future<void> _pumpChat(
   await tester.pumpAndSettle();
 }
 
+Future<_ReferenceRepository> _referenceRepository({
+  required bool publishingConfigured,
+}) async {
+  const roleId = 'custom:nanji';
+  const assetId = '5f98a0c9-1111-4111-8111-111111111111';
+  final session = _session().copyWith(
+    roles: const [roleId],
+    roleProfiles: const {
+      roleId: DemoRoleProfile(name: '南极', referenceAssetIds: [assetId]),
+    },
+  );
+  const asset = DemoAsset(
+    id: assetId,
+    title: '南极三视图.png',
+    kind: DemoAssetKind.image,
+    cover: '/api_agent/v2/assets/$assetId/content',
+    contentUrl: '/api_agent/v2/assets/$assetId/content',
+    mimeType: 'image/png',
+    sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    sizeBytes: 1024,
+    width: 32,
+    height: 32,
+    createdAt: '2026-10-25T00:00:00.000Z',
+  );
+  SharedPreferences.setMockInitialValues({});
+  return _ReferenceRepository(
+    PreferencesStorage(await SharedPreferences.getInstance()),
+    publishingConfigured: publishingConfigured,
+    sessionValue: session,
+    assetValue: asset,
+  );
+}
+
+class _ReferenceRepository extends DemoRepository {
+  _ReferenceRepository(
+    super.storage, {
+    required this.publishingConfigured,
+    required this.sessionValue,
+    required this.assetValue,
+  });
+
+  final bool publishingConfigured;
+  final DemoSession sessionValue;
+  final DemoAsset assetValue;
+
+  @override
+  List<DemoSession> get sessions => [sessionValue];
+
+  @override
+  DemoSession session(String id) => sessionValue;
+
+  @override
+  List<DemoAsset> get assets => [assetValue];
+
+  @override
+  bool get isHarness => true;
+
+  @override
+  Future<void> resumeHarnessSession(String id) async {}
+
+  @override
+  Future<DemoCapabilityCatalog> loadCapabilityCatalog({
+    String? sessionId,
+  }) async => DemoCapabilityCatalog(
+    referencePublishingConfigured: publishingConfigured,
+    referencePublishingTtlSeconds: publishingConfigured ? 86400 : null,
+  );
+}
+
 Finder _inTitle(Finder matching) => find.descendant(
   of: find.byKey(const Key('demo-chat-title')),
   matching: matching,
@@ -119,6 +190,27 @@ Size _glassSize(WidgetTester tester, Key buttonKey) {
 }
 
 void main() {
+  testWidgets(
+    'mention picker reports uploaded references ready when publishing is configured',
+    (tester) async {
+      final repository = await _referenceRepository(publishingConfigured: true);
+      await _pumpChat(
+        tester,
+        repository.session('header-session'),
+        repositoryOverride: repository,
+      );
+
+      tester
+          .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+          .onCastRequested!();
+      await tester.pumpAndSettle();
+
+      expect(find.text('南极'), findsWidgets);
+      expect(find.text('参考图片'), findsOneWidget);
+      expect(find.text('本地参考图（云端暂不可用）'), findsNothing);
+    },
+  );
+
   for (final desktop in [false, true]) {
     testWidgets(
       '${desktop ? 'desktop' : 'mobile'} single chat uses the given Bot name everywhere',

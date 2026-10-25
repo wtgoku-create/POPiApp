@@ -6433,6 +6433,48 @@ abstract class AppLocalizations {
   /// **'Account preferences'**
   String get demoPreferences;
 
+  /// No description provided for @demoCreativeMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Creative preferences'**
+  String get demoCreativeMemory;
+
+  /// No description provided for @demoEditCreativeMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit creative preferences'**
+  String get demoEditCreativeMemory;
+
+  /// No description provided for @demoCreativeMemoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'AI can summarize the visual style, specific model preferences, and aspect ratios from the conversation, or you can enter them manually.'**
+  String get demoCreativeMemoryEmpty;
+
+  /// No description provided for @demoCreativeMemoryScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Used only in this conversation. AI will not overwrite manual edits.'**
+  String get demoCreativeMemoryScope;
+
+  /// No description provided for @demoCreativeMemoryEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This text is the creative memory for this conversation. Name the visual style, specific image and video model preferences, and aspect ratios.'**
+  String get demoCreativeMemoryEditorHint;
+
+  /// No description provided for @demoCreativeMemoryAfterSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Future creations will automatically use this memory after you save it.'**
+  String get demoCreativeMemoryAfterSave;
+
+  /// No description provided for @demoSaveToCurrentSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to this conversation'**
+  String get demoSaveToCurrentSession;
+
   /// No description provided for @demoDirection.
   ///
   /// In en, this message translates to:

@@ -27,6 +27,19 @@ https://124.222.185.31 {
 		handle @access {
 			reverse_proxy 127.0.0.1:3085
 		}
+		# BEGIN POPI MODEL REFERENCES
+		@popi_model_reference {
+			method GET HEAD
+			path_regexp popi_model_reference ^/api_agent/v2/media-references/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{64}/[1-9][0-9]{0,12}/[0-9a-f]{64}$
+		}
+		handle @popi_model_reference {
+			reverse_proxy 127.0.0.1:3084 {
+				header_up Host 127.0.0.1:3084
+				header_up -Authorization
+				header_up -Cookie
+			}
+		}
+		# END POPI MODEL REFERENCES
 		# BEGIN POPI MOBILE DOWNLOADS
 		# Deny by default. publish-mobile.py replaces only this bounded block
 		# with exact matchers for the currently published APK and metadata.

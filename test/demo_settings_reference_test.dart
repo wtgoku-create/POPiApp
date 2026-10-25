@@ -299,6 +299,56 @@ void main() {
     },
   );
 
+  testWidgets('legacy Alice association saves its verified website profile', (
+    tester,
+  ) async {
+    final repository = await _pumpSettings(tester);
+    expect(repository.session('inspiration').roleProfiles['alice'], isNull);
+
+    await tester.tap(find.byKey(const Key('demo-settings-roles')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-roles-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.session('inspiration').roleProfiles['alice']?.toJson(),
+      DemoWebsiteCharacterCatalog.profile('alice')?.toJson(),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('saved Alice edits remain ahead of website defaults', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = DemoRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    const edited = DemoRoleProfile(
+      name: '我的爱丽丝',
+      instructions: '用户保存的角色设定',
+      revision: 'user-alice-revision',
+    );
+    await repository.updateSession(
+      'inspiration',
+      (session) => session.copyWith(
+        roleProfiles: {...session.roleProfiles, 'alice': edited},
+      ),
+    );
+    await _pumpSettings(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('demo-settings-roles')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-roles-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.session('inspiration').roleProfiles['alice']?.toJson(),
+      edited.toJson(),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('existing website character edits override catalog defaults', (
     tester,
   ) async {

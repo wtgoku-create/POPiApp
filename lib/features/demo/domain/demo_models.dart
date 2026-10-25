@@ -472,6 +472,29 @@ class DemoMessage {
 }
 
 @immutable
+class DemoCreativeMemory {
+  const DemoCreativeMemory({this.text = '', this.source = 'ai'})
+    : assert(source == 'ai' || source == 'user');
+
+  final String text;
+  final String source;
+
+  bool get isUserEdited => source == 'user';
+
+  Map<String, Object?> toJson() => {'text': text, 'source': source};
+
+  factory DemoCreativeMemory.fromJson(Object? value) {
+    final json = value is Map
+        ? Map<String, Object?>.from(value)
+        : const <String, Object?>{};
+    return DemoCreativeMemory(
+      text: json['text']?.toString() ?? '',
+      source: json['source'] == 'user' ? 'user' : 'ai',
+    );
+  }
+}
+
+@immutable
 class DemoSession {
   static const defaultCapabilities = [
     'character',
@@ -496,6 +519,7 @@ class DemoSession {
     this.positioning = '',
     this.capabilities = defaultCapabilities,
     this.accountPreferences = const {},
+    this.creativeMemory = const DemoCreativeMemory(),
     this.memberNames = const {},
     this.memberInstructions = const {},
     this.memberAvatars = const {},
@@ -528,6 +552,7 @@ class DemoSession {
   final String direction;
   final String positioning;
   final Map<String, String> accountPreferences;
+  final DemoCreativeMemory creativeMemory;
   final List<String> capabilities;
   final Map<String, String> memberNames;
   final Map<String, String> memberInstructions;
@@ -583,6 +608,7 @@ class DemoSession {
     String? direction,
     String? positioning,
     Map<String, String>? accountPreferences,
+    DemoCreativeMemory? creativeMemory,
     List<String>? capabilities,
     Map<String, String>? memberNames,
     Map<String, String>? memberInstructions,
@@ -616,6 +642,7 @@ class DemoSession {
     direction: direction ?? this.direction,
     positioning: positioning ?? this.positioning,
     accountPreferences: accountPreferences ?? this.accountPreferences,
+    creativeMemory: creativeMemory ?? this.creativeMemory,
     capabilities: capabilities ?? this.capabilities,
     memberNames: memberNames ?? this.memberNames,
     memberInstructions: memberInstructions ?? this.memberInstructions,
@@ -650,6 +677,7 @@ class DemoSession {
     'direction': direction,
     'positioning': positioning,
     'accountPreferences': accountPreferences,
+    'creativeMemory': creativeMemory.toJson(),
     'capabilities': capabilities,
     'memberNames': memberNames,
     'memberInstructions': memberInstructions,
@@ -696,6 +724,7 @@ class DemoSession {
     accountPreferences: Map<String, String>.from(
       json['accountPreferences'] as Map? ?? {},
     ),
+    creativeMemory: DemoCreativeMemory.fromJson(json['creativeMemory']),
     capabilities: List<String>.from(
       json['capabilities'] as List? ?? defaultCapabilities,
     ),
@@ -891,6 +920,46 @@ class DemoAsset {
     hasAudio: json['hasAudio'] as bool? ?? false,
     createdAt: json['createdAt']?.toString() ?? '',
   );
+}
+
+enum DemoRoleReferenceAvailability { pending, localOnly, ready }
+
+/// Reports whether every linked visual reference can reach a cloud model.
+///
+/// Uploaded assets stay private in the product. A configured Harness can mint
+/// a bounded provider URL for them at generation time without persisting that
+/// temporary URL in the role profile.
+DemoRoleReferenceAvailability demoRoleReferenceAvailability({
+  required DemoRoleProfile? profile,
+  required Iterable<DemoAsset> assets,
+  required bool referencePublishingConfigured,
+}) {
+  if (profile == null) return DemoRoleReferenceAvailability.pending;
+  final publicUrls = profile.referenceImageUrls
+      .map((url) => url.trim())
+      .where((url) => url.isNotEmpty)
+      .toList();
+  final byId = {for (final asset in assets) asset.id: asset};
+  final referencedAssets = [
+    for (final id in profile.referenceAssetIds)
+      if (byId[id] case final asset?) asset,
+  ];
+  if (referencedAssets.length != profile.referenceAssetIds.length) {
+    return DemoRoleReferenceAvailability.pending;
+  }
+  if (publicUrls.isEmpty && referencedAssets.isEmpty) {
+    return DemoRoleReferenceAvailability.pending;
+  }
+  final assetsReady = referencedAssets.every(
+    (asset) =>
+        asset.jobId.trim().isNotEmpty ||
+        (referencePublishingConfigured &&
+            asset.kind == DemoAssetKind.image &&
+            asset.isRemote &&
+            asset.sha256.trim().isNotEmpty),
+  );
+  if (assetsReady) return DemoRoleReferenceAvailability.ready;
+  return DemoRoleReferenceAvailability.localOnly;
 }
 
 @immutable

@@ -3315,6 +3315,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoPreferences => '账号偏好';
 
   @override
+  String get demoCreativeMemory => '创作偏好';
+
+  @override
+  String get demoEditCreativeMemory => '编辑创作偏好';
+
+  @override
+  String get demoCreativeMemoryEmpty => 'AI 会根据对话整理画面风格、具体模型偏好与比例，也可以手动填写。';
+
+  @override
+  String get demoCreativeMemoryScope => '仅用于当前会话，手动修改后 AI 不会自动覆盖。';
+
+  @override
+  String get demoCreativeMemoryEditorHint =>
+      '这段内容会作为当前会话的创作记忆。请写明画面风格、图片/视频的具体模型偏好和比例。';
+
+  @override
+  String get demoCreativeMemoryAfterSave => '保存后，后续创作会自动使用这段记忆。';
+
+  @override
+  String get demoSaveToCurrentSession => '保存到当前会话';
+
+  @override
   String get demoDirection => '内容方向';
 
   @override

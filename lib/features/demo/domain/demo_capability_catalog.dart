@@ -48,23 +48,42 @@ class DemoCapabilityCatalog {
     this.tools = const [],
     this.skills = const [],
     this.mcp = const [],
+    this.referencePublishingConfigured = false,
+    this.referencePublishingTtlSeconds,
     this.isDemo = false,
   });
 
   final List<DemoRuntimeCapability> tools;
   final List<DemoRuntimeCapability> skills;
   final List<DemoRuntimeCapability> mcp;
+  final bool referencePublishingConfigured;
+  final int? referencePublishingTtlSeconds;
   final bool isDemo;
 
   /// Offline fixtures do not imply a connection to any runtime services.
   static const offline = DemoCapabilityCatalog(isDemo: true);
 
   factory DemoCapabilityCatalog.fromResponse(Map<String, Object?> response) {
+    final multimodal = response['multimodal'];
+    final referencePublishing = multimodal is Map
+        ? multimodal['referencePublishing']
+        : null;
+    final referencePublishingMap = referencePublishing is Map
+        ? referencePublishing
+        : const <Object?, Object?>{};
+    final ttl = referencePublishingMap['ttlSeconds'];
+    final referencePublishingTtlSeconds = ttl is num && ttl.toInt() > 0
+        ? ttl.toInt()
+        : null;
+    final referencePublishingConfigured =
+        referencePublishingMap['configured'] == true;
     if (response['catalog'] case final Map catalog) {
       return DemoCapabilityCatalog(
         tools: _entries(catalog['tools']),
         skills: _entries(catalog['skills']),
         mcp: _entries(catalog['mcp']),
+        referencePublishingConfigured: referencePublishingConfigured,
+        referencePublishingTtlSeconds: referencePublishingTtlSeconds,
       );
     }
     // Older Harness versions expose their registered tools by provider.
@@ -89,7 +108,11 @@ class DemoCapabilityCatalog {
         );
       }
     }
-    return DemoCapabilityCatalog(tools: List.unmodifiable(tools));
+    return DemoCapabilityCatalog(
+      tools: List.unmodifiable(tools),
+      referencePublishingConfigured: referencePublishingConfigured,
+      referencePublishingTtlSeconds: referencePublishingTtlSeconds,
+    );
   }
 
   static List<DemoRuntimeCapability> _entries(Object? value) {

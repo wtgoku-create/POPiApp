@@ -28,13 +28,23 @@ String demoContentRoleAvatarSource(
   if (reference != null) {
     return reference.isRemote ? reference.contentUrl : reference.cover;
   }
+  final catalogProfile = DemoWebsiteCharacterCatalog.profile(roleId);
+  final customReferenceUrl =
+      DemoWebsiteCharacterCatalog.legacyProfiles.containsKey(roleId)
+      ? profile?.referenceImageUrls
+            .map((url) => url.trim())
+            .where(
+              (url) =>
+                  url.isNotEmpty &&
+                  !(catalogProfile?.referenceImageUrls.contains(url) ?? false),
+            )
+            .firstOrNull
+      : null;
+  if (customReferenceUrl != null) return customReferenceUrl;
   // Website catalog characters keep a bundled avatar for stable/offline list
   // rendering. Their public three-view URL remains in the role profile and is
   // still supplied to the generation context after the role is associated.
-  final websiteAvatar = DemoWebsiteCharacterCatalog.characters
-      .where((character) => character.id == roleId)
-      .firstOrNull
-      ?.image;
+  final websiteAvatar = DemoWebsiteCharacterCatalog.bundledAvatar(roleId);
   if (websiteAvatar != null) return websiteAvatar;
   final referenceUrl = profile?.referenceImageUrls
       .map((url) => url.trim())

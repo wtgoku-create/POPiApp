@@ -151,6 +151,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
   final Map<String, int> _imagePages = {};
   final Set<String> _dismissingMediaJobs = {};
   bool _taskBriefOpen = false;
+  bool? _referencePublishingConfigured;
   @override
   void initState() {
     super.initState();
@@ -192,27 +193,31 @@ class _DemoChatPageState extends State<DemoChatPage> {
   }
 
   String _roleReferenceStatus(DemoRoleProfile? profile, AppLocalizations l) {
-    if (profile == null) return l.demoReferencePending;
-    if (profile.referenceImageUrls.any((url) => url.trim().isNotEmpty)) {
-      return l.chatReferenceImage;
-    }
-    final referencedAssets = profile.referenceAssetIds
-        .map(
-          (id) => widget.repository.assets
-              .where((asset) => asset.id == id)
-              .firstOrNull,
-        )
-        .toList();
-    if (referencedAssets.whereType<DemoAsset>().any(
-      (asset) => asset.jobId.trim().isNotEmpty,
+    return switch (demoRoleReferenceAvailability(
+      profile: profile,
+      assets: widget.repository.assets,
+      referencePublishingConfigured: _referencePublishingConfigured == true,
     )) {
-      return l.chatReferenceImage;
+      DemoRoleReferenceAvailability.ready => l.chatReferenceImage,
+      DemoRoleReferenceAvailability.localOnly => l.demoLocalReferenceOnly,
+      DemoRoleReferenceAvailability.pending => l.demoReferencePending,
+    };
+  }
+
+  Future<void> _loadReferencePublishingCapability() async {
+    if (_referencePublishingConfigured != null) return;
+    if (!widget.repository.isHarness) {
+      _referencePublishingConfigured = false;
+      return;
     }
-    if (referencedAssets.whereType<DemoAsset>().isNotEmpty &&
-        referencedAssets.every((asset) => asset != null)) {
-      return l.demoLocalReferenceOnly;
+    try {
+      final catalog = await widget.repository.loadCapabilityCatalog(
+        sessionId: widget.sessionId,
+      );
+      _referencePublishingConfigured = catalog.referencePublishingConfigured;
+    } catch (_) {
+      _referencePublishingConfigured = false;
     }
-    return l.demoReferencePending;
   }
 
   void _settings({int initialTab = 0}) => Navigator.of(context).push(
@@ -382,6 +387,8 @@ class _DemoChatPageState extends State<DemoChatPage> {
         await showDemoRoleSheet(context, widget.repository, widget.sessionId);
         return;
       }
+      await _loadReferencePublishingCapability();
+      if (!mounted) return;
       final selectedId = await DemoSheet.show<String>(
         context: context,
         builder: (sheetContext) => DemoSheetBody(

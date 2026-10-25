@@ -84,7 +84,10 @@ void main() {
 
     final profile = find.byTooltip('个人资料');
     final upload = find.byKey(const Key('demo-create'));
-    final title = find.text('资产');
+    final title = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.text('资产'),
+    );
     expect(tester.getSize(profile), const Size.square(40));
     expect(tester.getSize(upload), const Size.square(40));
     expect(tester.getCenter(profile).dx, closeTo(36, 0.1));
@@ -125,8 +128,52 @@ void main() {
     expect(firstTitle.style?.fontWeight, FontWeight.w600);
     expect(
       tester.getSize(find.byKey(const Key('demo-bottom-tabs'))).height,
-      48,
+      56,
     );
+    final navigation = tester.getRect(
+      find.byKey(const Key('demo-bottom-tabs')),
+    );
+    expect(navigation.left, closeTo(18, .1));
+    expect(navigation.width, closeTo(354, .1));
+    for (final index in [0, 1]) {
+      expect(
+        tester.getSize(find.byKey(Key('demo-tab-$index'))).height,
+        greaterThanOrEqualTo(44),
+      );
+    }
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('demo-tab-0')),
+        matching: find.text('对话'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('demo-tab-1')),
+        matching: find.text('资产'),
+      ),
+      findsOneWidget,
+    );
+    final addIcon = tester.widget<DemoIcon>(
+      find.descendant(of: upload, matching: find.byType(DemoIcon)),
+    );
+    expect(addIcon.name, 'plus');
+
+    final scrollable = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(DemoAssetsView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final lastCard = tester.getRect(
+      find.byKey(ValueKey(repository.assets.last.id)),
+    );
+    expect(lastCard.bottom, lessThanOrEqualTo(navigation.top));
     expect(tester.takeException(), isNull);
   });
 

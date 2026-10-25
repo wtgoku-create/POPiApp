@@ -332,7 +332,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       final upload = find.byKey(const Key('demo-create'));
-      final title = find.text('资产');
+      final title = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('资产'),
+      );
       expect(tester.getCenter(profile).dx, lessThan(size.width * .25));
       expect(tester.getCenter(upload).dx, greaterThan(size.width * .75));
       expect(tester.getCenter(title).dx, closeTo(size.width / 2, 1));

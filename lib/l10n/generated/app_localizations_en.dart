@@ -3468,6 +3468,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoPreferences => 'Account preferences';
 
   @override
+  String get demoCreativeMemory => 'Creative preferences';
+
+  @override
+  String get demoEditCreativeMemory => 'Edit creative preferences';
+
+  @override
+  String get demoCreativeMemoryEmpty =>
+      'AI can summarize the visual style, specific model preferences, and aspect ratios from the conversation, or you can enter them manually.';
+
+  @override
+  String get demoCreativeMemoryScope =>
+      'Used only in this conversation. AI will not overwrite manual edits.';
+
+  @override
+  String get demoCreativeMemoryEditorHint =>
+      'This text is the creative memory for this conversation. Name the visual style, specific image and video model preferences, and aspect ratios.';
+
+  @override
+  String get demoCreativeMemoryAfterSave =>
+      'Future creations will automatically use this memory after you save it.';
+
+  @override
+  String get demoSaveToCurrentSession => 'Save to this conversation';
+
+  @override
   String get demoDirection => 'Content direction';
 
   @override

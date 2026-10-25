@@ -321,7 +321,7 @@ void main() {
       expect(find.text(l.demoPinnedConversations), findsOneWidget);
       expect(find.text(l.demoRecentConversations), findsOneWidget);
       expect(find.text(l.demoConversations), findsWidgets);
-      expect(find.text(l.demoMaterials), findsOneWidget);
+      expect(find.text(l.demoAssets), findsOneWidget);
       expect(find.byType(AppContextMenu), findsWidgets);
       final list = tester.widget<ListView>(
         find.byKey(const PageStorageKey('demo-conversations')),

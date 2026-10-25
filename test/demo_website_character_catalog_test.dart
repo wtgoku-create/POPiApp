@@ -62,6 +62,34 @@ void main() {
     }
   });
 
+  test(
+    'legacy Alice keeps its stable ID and gains the verified website profile',
+    () {
+      final alice = DemoWebsiteCharacterCatalog.profile('alice')!;
+      expect(alice.name, '爱丽丝');
+      expect(alice.revision, 'popi-art-651-af1b8f4b9b25');
+      expect(alice.instructions, contains('外在张扬直率'));
+      expect(alice.instructions, contains('不将多视图当作多个人物'));
+      expect(alice.referenceImageUrls, [
+        'https://static.popi.art/media/2026/0713/139187.png',
+      ]);
+      expect(
+        DemoWebsiteCharacterCatalog.bundledAvatar('alice'),
+        'assets/images/demo_role_1.png',
+      );
+      expect(
+        DemoWebsiteCharacterCatalog.characters.where(
+          (role) => role.id == 'alice',
+        ),
+        isEmpty,
+      );
+      expect(
+        DemoFixtures.characters.where((role) => role.id == 'alice'),
+        hasLength(1),
+      );
+    },
+  );
+
   test('selected website profile survives the session cache contract', () {
     final source = DemoWebsiteCharacterCatalog.profile('popi-character-1058')!;
     final session = DemoSession(

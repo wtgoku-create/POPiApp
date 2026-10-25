@@ -73,6 +73,97 @@ void main() {
       expect(cleared.toJson()['referenceImageUrls'], isEmpty);
     });
 
+    test(
+      'role reference readiness follows the server publishing capability',
+      () {
+        const uploaded = DemoAsset(
+          id: 'uploaded',
+          title: '南极三视图.png',
+          kind: DemoAssetKind.image,
+          cover: '/api_agent/v2/assets/uploaded/content',
+          contentUrl: '/api_agent/v2/assets/uploaded/content',
+          mimeType: 'image/png',
+          sha256: 'abc123',
+        );
+        const generated = DemoAsset(
+          id: 'generated',
+          title: '生成图.png',
+          kind: DemoAssetKind.image,
+          cover: '/api_agent/v2/assets/generated/content',
+          contentUrl: '/api_agent/v2/assets/generated/content',
+          jobId: 'job-1',
+        );
+
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '南极',
+              referenceAssetIds: ['uploaded'],
+            ),
+            assets: const [uploaded],
+            referencePublishingConfigured: true,
+          ),
+          DemoRoleReferenceAvailability.ready,
+        );
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '南极',
+              referenceAssetIds: ['uploaded'],
+            ),
+            assets: const [uploaded],
+            referencePublishingConfigured: false,
+          ),
+          DemoRoleReferenceAvailability.localOnly,
+        );
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '混合参考角色',
+              referenceAssetIds: ['uploaded'],
+              referenceImageUrls: ['https://cdn.example.com/role.png'],
+            ),
+            assets: const [uploaded],
+            referencePublishingConfigured: false,
+          ),
+          DemoRoleReferenceAvailability.localOnly,
+        );
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '生成角色',
+              referenceAssetIds: ['generated'],
+            ),
+            assets: const [generated],
+            referencePublishingConfigured: false,
+          ),
+          DemoRoleReferenceAvailability.ready,
+        );
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '网站角色',
+              referenceImageUrls: ['https://cdn.example.com/role.png'],
+            ),
+            assets: const [],
+            referencePublishingConfigured: false,
+          ),
+          DemoRoleReferenceAvailability.ready,
+        );
+        expect(
+          demoRoleReferenceAvailability(
+            profile: const DemoRoleProfile(
+              name: '缺图角色',
+              referenceAssetIds: ['missing'],
+            ),
+            assets: const [],
+            referencePublishingConfigured: true,
+          ),
+          DemoRoleReferenceAvailability.pending,
+        );
+      },
+    );
+
     test('account preferences round trip and clear without stale values', () {
       final configured = _session().copyWith(
         direction: '治愈系图文和短视频',
@@ -144,6 +235,9 @@ void main() {
   group('DSH capability catalog', () {
     test('parses the real catalog without inventing Skill or MCP entries', () {
       final catalog = DemoCapabilityCatalog.fromResponse({
+        'multimodal': {
+          'referencePublishing': {'configured': true, 'ttlSeconds': 86400},
+        },
         'catalog': {
           'tools': [
             {
@@ -165,6 +259,8 @@ void main() {
       expect(catalog.skills, isEmpty);
       expect(catalog.mcp, isEmpty);
       expect(catalog.isDemo, isFalse);
+      expect(catalog.referencePublishingConfigured, isTrue);
+      expect(catalog.referencePublishingTtlSeconds, 86400);
     });
 
     test('keeps binding, grant, and runtime availability independent', () {
@@ -233,6 +329,14 @@ void main() {
       expect(DemoCapabilityCatalog.offline.tools, isEmpty);
       expect(DemoCapabilityCatalog.offline.skills, isEmpty);
       expect(DemoCapabilityCatalog.offline.mcp, isEmpty);
+      expect(
+        DemoCapabilityCatalog.offline.referencePublishingConfigured,
+        isFalse,
+      );
+      expect(
+        DemoCapabilityCatalog.offline.referencePublishingTtlSeconds,
+        isNull,
+      );
     });
   });
 

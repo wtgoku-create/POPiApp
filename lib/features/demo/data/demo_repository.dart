@@ -1663,6 +1663,7 @@ class DemoRepository extends ChangeNotifier {
       direction: fallback.direction,
       positioning: fallback.positioning,
       accountPreferences: fallback.accountPreferences,
+      creativeMemory: fallback.creativeMemory,
       capabilities: fallback.capabilities,
       memberNames: fallback.memberNames,
       memberInstructions: fallback.memberInstructions,
@@ -1799,6 +1800,9 @@ class DemoRepository extends ChangeNotifier {
       accountPreferences: configured
           ? _stringMap(configuration['accountPreferences'])
           : fallback?.accountPreferences ?? const {},
+      creativeMemory: configured
+          ? DemoCreativeMemory.fromJson(configuration['creativeMemory'])
+          : fallback?.creativeMemory ?? const DemoCreativeMemory(),
       capabilities: configured
           ? _stringList(configuration['capabilities'])
           : fallback?.capabilities ?? DemoSession.defaultCapabilities,
@@ -2074,6 +2078,9 @@ class DemoRepository extends ChangeNotifier {
       'direction': session.direction,
       'positioning': session.positioning,
       'accountPreferences': session.accountPreferences,
+      if (session.creativeMemory.text.isNotEmpty ||
+          session.creativeMemory.isUserEdited)
+        'creativeMemory': session.creativeMemory.toJson(),
       'roleProfiles': {
         for (final entry in session.roleProfiles.entries)
           if (roles.contains(entry.key)) entry.key: entry.value.toJson(),

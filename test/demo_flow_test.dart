@@ -130,7 +130,7 @@ void main() {
     expect(tester.getSize(backdrop.first).width, 390);
     expect(tester.getSize(backdrop.first).height, greaterThan(0));
     final tabs = find.byKey(const Key('demo-bottom-tabs'));
-    expect(tester.getSize(tabs).height, 48);
+    expect(tester.getSize(tabs).height, 56);
     expect(tester.getRect(tabs).bottom, closeTo(844 - 34, .01));
     tester.view.padding = FakeViewPadding.zero;
     await tester.pumpAndSettle();

@@ -401,6 +401,11 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
           ),
         ],
       ),
+      const SizedBox(height: 16),
+      _CreativeMemoryCard(
+        memory: session.creativeMemory,
+        onEdit: () => _editCreativeMemory(context, session),
+      ),
     ],
   );
 
@@ -669,6 +674,15 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       DemoSheet.show<void>(
         context: context,
         builder: (_) => _PreferencesSheet(
+          repository: widget.repository,
+          sessionId: session.id,
+        ),
+      );
+
+  Future<void> _editCreativeMemory(BuildContext context, DemoSession session) =>
+      DemoSheet.show<void>(
+        context: context,
+        builder: (_) => _CreativeMemorySheet(
           repository: widget.repository,
           sessionId: session.id,
         ),
@@ -1976,6 +1990,217 @@ class _PreferencesSheet extends StatefulWidget {
 
   @override
   State<_PreferencesSheet> createState() => _PreferencesSheetState();
+}
+
+class _CreativeMemoryCard extends StatelessWidget {
+  const _CreativeMemoryCard({required this.memory, required this.onEdit});
+
+  final DemoCreativeMemory memory;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final text = memory.text.trim();
+    return Container(
+      key: const Key('demo-creative-memory-card'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        color: demoSurface(context),
+        borderRadius: BorderRadius.circular(_cardRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.demoCreativeMemory,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              IconButton(
+                key: const Key('demo-creative-memory-edit'),
+                tooltip: l.demoEditCreativeMemory,
+                visualDensity: VisualDensity.compact,
+                onPressed: onEdit,
+                icon: const RotatedBox(
+                  quarterTurns: 1,
+                  child: DemoIcon('edit', size: 18),
+                ),
+              ),
+            ],
+          ),
+          Container(
+            key: const Key('demo-creative-memory-background'),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest.withValues(alpha: .7)
+                  : const Color(0xFFF3F0FA),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              text.isEmpty ? l.demoCreativeMemoryEmpty : text,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.65,
+                color: text.isEmpty
+                    ? AppColors.textTertiary
+                    : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            l.demoCreativeMemoryScope,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreativeMemorySheet extends StatefulWidget {
+  const _CreativeMemorySheet({
+    required this.repository,
+    required this.sessionId,
+  });
+
+  final DemoRepository repository;
+  final String sessionId;
+
+  @override
+  State<_CreativeMemorySheet> createState() => _CreativeMemorySheetState();
+}
+
+class _CreativeMemorySheetState extends State<_CreativeMemorySheet> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.repository.session(widget.sessionId).creativeMemory.text,
+  );
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return PopScope(
+      canPop: !_busy,
+      child: DemoSheetBody(
+        title: l.demoEditCreativeMemory,
+        footer: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DemoPrimaryButton(
+              key: const Key('demo-creative-memory-confirm'),
+              label: l.demoSaveToCurrentSession,
+              busy: _busy,
+              onPressed: _busy ? null : _save,
+            ),
+            TextButton(
+              key: const Key('demo-creative-memory-cancel'),
+              onPressed: _busy ? null : () => Navigator.of(context).pop(),
+              child: Text(l.cancel),
+            ),
+          ],
+        ),
+        child: ListView(
+          key: const Key('demo-creative-memory-form'),
+          padding: const EdgeInsets.only(bottom: 128),
+          children: [
+            Text(
+              l.demoCreativeMemoryEditorHint,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              key: const Key('demo-creative-memory-input'),
+              controller: _text,
+              enabled: !_busy,
+              autofocus: false,
+              minLines: 7,
+              maxLines: 12,
+              maxLength: 4000,
+              textAlignVertical: TextAlignVertical.top,
+              decoration: InputDecoration(
+                hintText: l.demoCreativeMemoryEmpty,
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                          .withValues(alpha: .7)
+                    : const Color(0xFFF3F0FA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(18),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              l.demoCreativeMemoryAfterSave,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    final saved = await demoPerform(
+      context,
+      () => widget.repository.updateSession(
+        widget.sessionId,
+        (session) => session.copyWith(
+          creativeMemory: DemoCreativeMemory(
+            text: _text.text.trim(),
+            source: 'user',
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (saved) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() => _busy = false);
+    }
+  }
 }
 
 class _PreferencesSheetState extends State<_PreferencesSheet> {
