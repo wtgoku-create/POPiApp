@@ -8,9 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_activity_indicator.dart';
+import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:popi_ai_app/shared/widgets/app_generation_indicator.dart';
-import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
 
 final _captureKey = GlobalKey();
 final _capturesEnabled =
@@ -28,12 +29,10 @@ Future<void> _pump(
     status: 'running',
     steps: _steps,
   ),
-  bool expanded = false,
   bool dark = false,
   bool reducedMotion = true,
   double scale = 1,
   Size size = const Size(440, 956),
-  VoidCallback? onToggle,
   bool scene = false,
 }) async {
   tester.view.physicalSize = size;
@@ -98,24 +97,32 @@ Future<void> _pump(
                       ),
                       const SizedBox(height: 30),
                     ],
+                    if (scene) ...[
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerLow,
+                          borderRadius: const BorderRadius.all(
+                            Radius.circular(20),
+                          ),
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: _CaptureAssistantReply(),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     DemoActivityIndicator(
                       activity: activity,
-                      memberName: 'POPi',
-                      expanded: expanded,
-                      onToggle: () {
-                        onToggle?.call();
-                        setState(() => expanded = !expanded);
-                      },
-                    ),
-                    if (scene) ...[
-                      const SizedBox(height: 16),
-                      const Text(
-                        '收到，我会根据兜兜的人物与人设，围绕当前选题整理创作方案。'
-                        '采用安静认真、反应慢但责任心强的表达风格，'
-                        '用具体行动完成承诺，陪它发现不起眼的温柔。',
-                        style: TextStyle(fontSize: 18, height: 1.65),
+                      memberName: '兜兜',
+                      avatar: const DemoAvatar(
+                        image: 'assets/animations/bot_avatars/rabbit.png',
+                        background: Color(0xFFFFE9B8),
+                        size: 32,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -126,6 +133,21 @@ Future<void> _pump(
     ),
   );
   await tester.pump();
+}
+
+class _CaptureAssistantReply extends StatelessWidget {
+  const _CaptureAssistantReply();
+
+  @override
+  Widget build(BuildContext context) => Text(
+    '收到，我会根据兜兜的人物与人设，围绕当前选题整理创作方案。'
+    '我先整理剧本与分镜，再给你确认。',
+    style: TextStyle(
+      fontSize: 16,
+      height: 1.5,
+      color: Theme.of(context).colorScheme.onSurface,
+    ),
+  );
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
@@ -158,75 +180,66 @@ void main() {
         'ActivityCapture',
       )..addFont(fontFile.readAsBytes().then(ByteData.sublistView))).load();
     }
-    await (FontLoader(
-      'MaterialIcons',
-    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
   });
 
-  testWidgets('each public stage uses its matching artwork', (tester) async {
-    for (final (kind, asset) in [
-      ('thinking', null),
-      ('search', 'demo_search'),
-      ('fetch', 'demo_search'),
-      ('image', 'demo_image'),
-      ('video', 'demo_video'),
-      ('script', 'session_artifact_script'),
-      ('audio', 'demo_audio'),
+  testWidgets('every public stage keeps the supplied assistant avatar', (
+    tester,
+  ) async {
+    for (final (kind, label) in [
+      ('thinking', '正在思考你的内容'),
+      ('search', '正在搜索资料'),
+      ('fetch', '正在阅读网页'),
+      ('image', '正在生成图片'),
+      ('video', '正在生成视频'),
+      ('script', '编写剧本'),
+      ('audio', '正在生成音频'),
     ]) {
       await _pump(
         tester,
         activity: DemoActivity(kind: kind, status: 'running'),
       );
-      if (asset == null) {
-        expect(find.byType(AppGenerationIndicator), findsOneWidget);
-      } else {
-        expect(
-          tester
-              .widgetList<AppSvgIcon>(find.byType(AppSvgIcon))
-              .map((icon) => icon.assetName),
-          contains(asset),
-        );
-      }
+      final avatar = tester.widget<DemoAvatar>(find.byType(DemoAvatar));
+      expect(avatar.image, BotAvatarCharacter.rabbit.stillAsset);
+      expect(find.text(label), findsOneWidget);
+      expect(find.byType(AppGenerationIndicator), findsNothing);
       expect(find.byKey(const Key('demo-activity-toggle')), findsNothing);
+      expect(find.byKey(const Key('demo-activity-steps')), findsNothing);
       expect(tester.takeException(), isNull);
     }
   });
 
-  testWidgets('steps expand and collapse using mouse or keyboard', (
+  testWidgets('private execution steps never become an expandable chain', (
     tester,
   ) async {
-    var toggles = 0;
-    await _pump(tester, onToggle: () => toggles++);
+    await _pump(tester);
     expect(find.byKey(const Key('demo-activity-steps')), findsNothing);
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pump();
-    expect(toggles, 1);
-    expect(find.text('正在调用模型'), findsOneWidget);
-    expect(find.text('编写剧本'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('demo-activity-toggle')));
-    await tester.pump();
-    expect(toggles, 2);
-    expect(find.byKey(const Key('demo-activity-steps')), findsNothing);
+    expect(find.byKey(const Key('demo-activity-toggle')), findsNothing);
+    expect(find.text('正在调用模型'), findsNothing);
+    final label = tester.widget<Text>(
+      find.byKey(const Key('demo-activity-label')),
+    );
+    expect(label.maxLines, 1);
+    expect(label.overflow, TextOverflow.ellipsis);
+    expect(label.style?.fontSize, 14);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('finished and waiting stages never retain running animation', (
+  testWidgets('finished and waiting stages keep a compact public status', (
     tester,
   ) async {
-    for (final status in ['completed', 'failed', 'stopped', 'waiting_user']) {
+    for (final (status, label) in [
+      ('completed', '已完成'),
+      ('failed', '执行失败'),
+      ('stopped', '已停止回复'),
+      ('waiting_user', '等待你补充或确认…'),
+    ]) {
       await _pump(
         tester,
         activity: DemoActivity(kind: 'thinking', status: status, steps: _steps),
-        expanded: true,
         reducedMotion: false,
       );
-      expect(
-        tester
-            .widget<AppGenerationIndicator>(find.byType(AppGenerationIndicator))
-            .animated,
-        isFalse,
-      );
+      expect(find.text(label), findsOneWidget);
+      expect(find.byType(AppGenerationIndicator), findsNothing);
       await tester.pumpAndSettle(
         const Duration(milliseconds: 100),
         EnginePhase.sendSemanticsUpdate,
@@ -237,24 +250,23 @@ void main() {
     }
   });
 
-  for (final (name, kind, expanded, dark, size, scale) in [
-    ('thinking', 'thinking', true, false, const Size(440, 956), 1.0),
-    ('search', 'search', false, false, const Size(440, 380), 1.0),
-    ('image', 'image', false, false, const Size(440, 380), 1.0),
-    ('video', 'video', false, false, const Size(440, 380), 1.0),
-    ('script', 'script', false, false, const Size(440, 380), 1.0),
-    ('dark', 'thinking', true, true, const Size(440, 956), 1.0),
-    ('mobile', 'thinking', true, false, const Size(320, 844), 1.5),
+  for (final (name, kind, dark, size, scale) in [
+    ('desktop', 'thinking', false, const Size(440, 956), 1.0),
+    ('search', 'search', false, const Size(440, 380), 1.0),
+    ('image', 'image', false, const Size(440, 380), 1.0),
+    ('video', 'video', false, const Size(440, 380), 1.0),
+    ('script', 'script', false, const Size(440, 380), 1.0),
+    ('dark', 'thinking', true, const Size(440, 956), 1.0),
+    ('mobile', 'thinking', false, const Size(320, 844), 1.5),
   ]) {
     testWidgets('$name layout and reduced motion', (tester) async {
       await _pump(
         tester,
         activity: DemoActivity(kind: kind, status: 'running', steps: _steps),
-        expanded: expanded,
         dark: dark,
         size: size,
         scale: scale,
-        scene: expanded,
+        scene: name == 'desktop' || name == 'dark' || name == 'mobile',
       );
       await tester.pumpAndSettle();
       expect(tester.binding.hasScheduledFrame, isFalse);

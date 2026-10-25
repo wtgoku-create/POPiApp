@@ -50,7 +50,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final colorScheme = Theme.of(context).colorScheme;
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
-        : user?.id ?? '--';
+        : user?.id ?? displayedLocalProfile?.uid ?? '--';
     final l10n = AppLocalizations.of(context)!;
     final initialName = user?.name ?? displayedLocalProfile?.name;
     if (!_hasHydratedName && initialName != null) {

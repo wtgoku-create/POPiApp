@@ -93,11 +93,15 @@ void main() {
     final first = container(sharedPreferences);
     final avatar = Uint8List.fromList([1, 2, 3, 4]);
 
-    expect(first.read(localProfileProvider), isNull);
+    expect(first.read(localProfileProvider)?.name, 'PPP Art');
+    expect(first.read(localProfileProvider)?.uid, '303180');
+    expect(first.read(localProfileProvider)?.points, 10000);
     await first
         .read(localProfileProvider.notifier)
         .updateProfile(name: '  本地昵称  ', avatarBytes: avatar);
     expect(first.read(localProfileProvider)?.name, '本地昵称');
+    expect(first.read(localProfileProvider)?.uid, '303180');
+    expect(first.read(localProfileProvider)?.points, 10000);
     expect(first.read(localProfileProvider)?.avatarBytes, avatar);
     expect(first.read(userStatusProvider).name, 'guest');
     first.dispose();
@@ -110,12 +114,16 @@ void main() {
         .updateProfile(name: '第二个名字');
     expect(restored.read(localProfileProvider)?.avatarBytes, avatar);
     await restored.read(localProfileProvider.notifier).clearProfile();
-    expect(restored.read(localProfileProvider), isNull);
+    expect(restored.read(localProfileProvider)?.name, 'PPP Art');
+    expect(restored.read(localProfileProvider)?.uid, '303180');
+    expect(restored.read(localProfileProvider)?.points, 10000);
     restored.dispose();
 
     final afterClear = container(sharedPreferences);
     addTearDown(afterClear.dispose);
-    expect(afterClear.read(localProfileProvider), isNull);
+    expect(afterClear.read(localProfileProvider)?.name, 'PPP Art');
+    expect(afterClear.read(localProfileProvider)?.uid, '303180');
+    expect(afterClear.read(localProfileProvider)?.points, 10000);
   });
 
   test('publishes only after persistence succeeds', () async {
@@ -128,7 +136,7 @@ void main() {
         .read(localProfileProvider.notifier)
         .updateProfile(name: '稍后保存');
     await Future<void>.delayed(Duration.zero);
-    expect(scope.read(localProfileProvider), isNull);
+    expect(scope.read(localProfileProvider)?.name, 'PPP Art');
 
     storage.gate.complete();
     await saving;
@@ -170,10 +178,10 @@ void main() {
       storage.releaseFirst.complete();
       await Future.wait([saving, clearing]);
 
-      expect(scope.read(localProfileProvider), isNull);
+      expect(scope.read(localProfileProvider)?.name, 'PPP Art');
       expect(
         sharedPreferences.getString(LocalProfileRepository.storageKey),
-        isNull,
+        contains('"name":"PPP Art"'),
       );
     },
   );
@@ -197,4 +205,43 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test(
+    'upgrades legacy profile storage without replacing user edits',
+    () async {
+      final sharedPreferences = await preferences({
+        LocalProfileRepository.storageKey: '{"name":"保留昵称","avatar":"AQID"}',
+      });
+      final scope = container(sharedPreferences);
+      addTearDown(scope.dispose);
+
+      final restored = scope.read(localProfileProvider)!;
+      expect(restored.name, '保留昵称');
+      expect(restored.uid, '303180');
+      expect(restored.points, 10000);
+      expect(restored.avatarBytes, [1, 2, 3]);
+      await Future<void>.delayed(Duration.zero);
+      final encoded = sharedPreferences.getString(
+        LocalProfileRepository.storageKey,
+      )!;
+      expect(encoded, contains('"uid":"303180"'));
+      expect(encoded, contains('"points":10000'));
+    },
+  );
+
+  test(
+    'rejects corrupt UID and points then falls back to fixture profile',
+    () async {
+      final sharedPreferences = await preferences({
+        LocalProfileRepository.storageKey:
+            '{"name":"错误资料","uid":"123","points":-1}',
+      });
+      final scope = container(sharedPreferences);
+      addTearDown(scope.dispose);
+
+      expect(scope.read(localProfileProvider)?.name, 'PPP Art');
+      expect(scope.read(localProfileProvider)?.uid, '303180');
+      expect(scope.read(localProfileProvider)?.points, 10000);
+    },
+  );
 }

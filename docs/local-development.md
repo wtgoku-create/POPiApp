@@ -14,21 +14,34 @@
 仓库已跟踪 Android、iOS、Web、macOS、Linux 和 Windows 平台目录，不需要执行
 `flutter create .`。`setup` 会安装 Dart 依赖并生成国际化代码。
 
-## 统一的 macOS 与 Web Harness
+## 服务器环境与本地环境
 
-日常本机开发默认使用同一个 `lib/main_harness.dart` 和 `config/env/harness.json`，两端均读取
-`127.0.0.1:3084` 的权威会话与自有图片、视频，不复制各自的离线样例数据。先按下方说明
-启动 Agent 服务，再选择客户端：
+Mac 默认与手机测试包、服务器网页连接同一台测试服务器。本地网页连接本机 Agent 服务，
+用于独立测试；本地会话和素材不会自动复制到服务器。
+
+| 客户端 | 启动命令或地址 | Agent 后端 |
+| --- | --- | --- |
+| 服务器 Web | `./tool/dev.sh` 或 `./tool/dev.sh web-remote`；`https://124.222.185.31/` | 测试服务器 |
+| Mac | `./tool/dev.sh macos` | 测试服务器，与手机一致 |
+| 本地 Web | `./tool/dev.sh web-local`；`http://127.0.0.1:7357/` | 本机 `http://127.0.0.1:3084` |
+| 本地 Mac（可选） | `./tool/dev.sh macos-local` | 本机 `http://127.0.0.1:3084` |
+
+服务器环境复用 `config/env/harness_remote.json`；本地环境使用 `config/env/harness.json`。
+服务器 Web 命令打开已经部署的网页；调试本地源代码使用本地 Web 或 Mac。
+本地 Web 启动前，先按下方说明启动 Agent 服务。两个网页可以同时打开：
 
 ```bash
-./tool/dev.sh                 # 默认 Web，127.0.0.1:7357
-./tool/dev.sh harness         # 同上
-./tool/dev.sh macos           # 原生 macOS POPi，同一入口与数据
-./tool/dev.sh build-web       # 构建 Harness Web
+./tool/dev.sh web-remote      # 打开服务器网页
+./tool/dev.sh web-local       # 启动本地 Web，127.0.0.1:7357
+./tool/dev.sh harness         # web-local 的兼容入口
+./tool/dev.sh macos           # 原生 macOS，连接服务器
+./tool/dev.sh macos-local     # 原生 macOS，连接本机服务
+./tool/dev.sh build-web       # 构建服务器 Web，仍需另行部署
+./tool/dev.sh build-web-local # 构建本地后端版本
 ```
 
-VS Code 使用 `POPi - macOS Harness` 或 `POPi - Web Harness`。两者使用同一套配置；
-原生端发送配置中的允许 Origin，Web 由浏览器自动发送 Origin。macOS 只为本机资源开启
+VS Code 中按配置名称选择服务器 Mac 或本地 Mac/Web。原生端发送配置中的允许 Origin，
+Web 由浏览器自动发送 Origin。macOS 只为本机资源开启
 `NSAllowsLocalNetworking`，未开启全局任意 HTTP 访问。回到前台、切换会话/素材页签、
 从聊天返回时会刷新服务端数据；聊天或设置覆盖首页期间暂停首页自动同步，打开会话前
 等待已有同步完成并重新核实会话仍存在。客户端本地缓存用于显示恢复，不承担跨端数据同步。
@@ -36,8 +49,37 @@ VS Code 使用 `POPi - macOS Harness` 或 `POPi - Web Harness`。两者使用同
 这是进入首页时的同步，不是所有已打开页面的实时推送。另一端更新后，可返回首页、
 切换会话/素材页签或重新将客户端切到前台以读取最新数据。
 
-macOS 与 Web 的 SharedPreferences 属于各自平台，服务器的 session/asset ID 才是共同
+macOS 与 Web 的 SharedPreferences 属于各自平台，同一后端的 session/asset ID 才是共同
 依据。切换后原 `popi_ui_demo_v1` 及其备份仍保留；需要离线展示时显式运行以下 Demo。
+
+## 界面修改如何影响各端
+
+Web、macOS、iOS 和 Android 的 Harness 使用同一个 `lib/main_harness.dart`、`DemoApp`
+和业务页面。公共组件、聊天页、主题等修改会影响使用它们的各端。Mac 和宽度至少 900px
+的 Web 使用桌面工作区，窄屏 Web 与手机使用移动布局，因此桌面侧栏等改动主要影响桌面端。
+语音、下载、分享和视频等系统能力另有平台适配，需要在对应设备上验证。
+
+本地保存代码后，开发中的客户端通过热重载或重启看到变化；服务器 Web 必须重新构建并
+部署，已经安装的 Mac/手机包必须更新。连接同一后端只共享服务端数据，不会自动更新客户端界面。
+`main_demo.dart` 是离线样例，`main.dart` 是另一主应用入口；与手机测试版对齐时使用 Harness。
+
+会话列表的手机布局与桌面侧栏复用同一行组件，显示保存的单助手/组合头像、会话名、
+带发言者的最新消息摘要及实际执行状态。时间来自最新服务端消息的 `createdAt`，没有消息时间时
+使用会话 `updatedAt`，按设备本地日期显示时分、昨天或日期；未知时间留空，不统一填“刚刚”。
+置顶与最近会话分组保持按需构建，搜索同时匹配显示的助手名和消息摘要。
+
+POPi 是可为用户工作的 Agent/Bot/助手的通称。单助手命名后，列表、聊天标题、消息署名、
+执行状态、设置和输入框统一使用其名字；已配置的成员名优先，旧记录可以从非默认会话标题
+或历史署名恢复名字。单助手显式改名时同步会话标题与成员名，旧记录首次继续聊天前将名字
+补入服务端配置，使新回合身份一致。群名与每个成员的名字各自保留，历史回复正文保持原记录。
+
+Harness 资料页提供公开测试默认资料：PPP Art、固定六位 UID 303180、10,000 测试积分。
+这些默认值在本地与服务器客户端共用，只填补测试资料；用户编辑过的头像/名字与正式登录账户
+的真实 UID、积分继续优先，不生成充值订单或交易记录。
+
+Mac 本地 Debug/Profile 包使用 ad-hoc 签名，安全存储采用系统 Keychain；正式签名的 Release
+包继续使用 Data Protection Keychain，由现有打包脚本加入所需签名权限。服务器已经接受登录后，
+钥匙串暂时不可用不会再撤销当前会话；这时重启后可能需要重新登录，无需重启服务器。
 
 ## 运行离线 Demo
 
@@ -103,7 +145,7 @@ cd /Users/jiajia/Documents/ChatGPT/PAPP
 # Flutter 终端（Web/macOS 选择其一，或各开一个终端同时运行）
 cd /Users/jiajia/NewPopiApp
 ./tool/dev.sh harness
-# 另一终端：./tool/dev.sh macos
+# 另一终端：./tool/dev.sh macos-local
 ```
 
 Web 地址仍是 `http://127.0.0.1:7357/`，本地 Agent API 是
@@ -122,6 +164,27 @@ DeepSeek 模型。浏览器通过短轮询观察实际运行状态和已提交�
 刷新或关闭页面不会取消服务端任务；返回同一会话可继续查看。每次执行使用该会话独立的
 工作目录和 Harness home。单成员对话按成员身份通过官方 `resumeSession` 续接私有历史；
 群聊回合从服务端的公开历史构建上下文。
+
+聊天输入框的 `+` 将设备上传与已有素材库分开。设备上传使用手机/电脑的系统文件选择器，
+复用资产库的文件验证、上传与断点重试行为；每个成功上传的文件立即加入当前草稿附件，
+后续文件失败时保留成功附件及待上传文件。上传后不自动发送消息。
+输入框上方的附件缩略图可双击/双点预览，键盘聚焦后也可按 Enter 或 Space；移除按钮独立操作，
+预览返回后保留草稿。当前支持 PNG/JPG/WebP、MP4、TXT/MD、MP3/WAV/M4A，
+图片、视频、音频和脚本均使用已有鉴权预览。显式离线 Demo 继续使用样例素材，不显示设备上传入口。
+
+发送给助手的消息附件目前支持 PNG/JPEG/WebP 与 TXT/MD。服务端会校验所属资产、内容摘要和大小，
+将图片的真实字节传入官方 SDK 图片输入，将脚本文字作为有界附件上下文；历史附件超出预算时明确说明省略。
+当前与恢复附件共用 10 项、20 MiB 原始图片预算。音视频仍能上传和预览，但当前运行时尚无读取通道，
+发送前会明确提示类型限制并保留草稿。模型看见上传图片，不等同于生成服务已获得可公开访问的参考 URL。
+
+发送后聊天流会立即显示当前成员的头像与一行执行状态，头像使用该会话配置的形象和颜色，
+状态位于回复或素材下方。服务端接受消息后清空本次输入，未接受的失败请求保留草稿和附件。
+状态随真实 Harness 事件更新，不再显示通用任务图标或可展开的执行步骤。状态与消息一同恢复，
+不展示原始模型推理或私有工具内容。媒体提交后继续跟踪同成员的
+实际后台任务，文字完成不会提前将尚未完成的媒体标为成品。
+
+聊天输入栏不再显示 AI 免责声明或保留该行占位。底部采用安全区加 8px 的紧凑间距，
+键盘出现后保留 8px；Harness 页面由宿主处理安全区，输入组件不再重复叠加。
 
 新建会话、发送消息、停止、刷新后恢复以及历史续接继续走真实 Harness 路径。成员、角色
 设定、全局与成员能力、工作方式、当前成员、创作方向和定位改为由服务端保存，客户端缓存
@@ -231,14 +294,15 @@ dart run tool/flutter_env.dart config/env/development.local.json run -t lib/main
 ./tool/dev.sh test
 ```
 
-构建本机 Harness Web 包：
+构建服务器 Harness Web 包：
 
 ```bash
 ./tool/dev.sh build-web
 ```
 
-`test` 先运行静态检查，再使用选定的环境配置运行测试；`build-web` 使用 Harness 环境构建
-`main_harness.dart`，产物位于 `build/web/`；离线 Demo 使用 `build-demo-web`。已经把 Flutter
+`test` 先运行静态检查，再使用选定的环境配置运行测试；`build-web` 使用 `harness_remote`，
+`build-web-local` 使用 `harness`，均构建 `main_harness.dart`，产物位于 `build/web/`。
+构建完成后不会自动部署；离线 Demo 使用 `build-demo-web`。已经把 Flutter
 加入 `PATH` 时，也可以直接执行或排查：
 
 ```bash

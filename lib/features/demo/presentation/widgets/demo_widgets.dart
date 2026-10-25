@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/agent_api_exception.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/type/bot_avatar_type.dart';
 import '../../../../shared/widgets/app_dialog.dart';
@@ -564,11 +565,23 @@ Future<bool> demoPerform(
     if (error is DioException && CancelToken.isCancel(error)) return false;
     if (context.mounted) {
       final l = AppLocalizations.of(context)!;
+      final attachmentError = error is AgentApiException
+          ? switch (error.code) {
+              'message_attachment_unsupported' ||
+              'media_not_supported' => l.demoAttachmentUnsupported,
+              'message_attachment_not_found' => l.demoAttachmentNotFound,
+              'message_attachment_too_large' => l.demoAttachmentTooLarge,
+              'message_attachment_limit' => l.demoAttachmentLimit,
+              'message_attachment_invalid' => l.demoAttachmentInvalid,
+              _ => null,
+            }
+          : null;
       AppToast.error(
         context,
-        error is DioException || error is ApiException
-            ? l.networkRequestFailed
-            : l.demoStorageError,
+        attachmentError ??
+            (error is DioException || error is ApiException
+                ? l.networkRequestFailed
+                : l.demoStorageError),
       );
     }
     return false;

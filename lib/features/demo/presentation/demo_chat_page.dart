@@ -7,6 +7,7 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../assets/domain/library_work.dart';
 import '../../assets/domain/library_role.dart';
@@ -17,11 +18,16 @@ import '../../session/domain/conversation_snapshot.dart'
 import '../../session/presentation/widgets/conversation_question_card.dart';
 import '../../session/presentation/widgets/popi_message_composer.dart';
 import '../data/demo_repository.dart';
+import '../data/demo_file_picker.dart';
+import '../domain/demo_assistant_identity.dart';
 import '../domain/demo_models.dart';
 import '../domain/demo_role_mentions.dart';
+import '../domain/demo_upload_file.dart';
+import 'demo_assistant_display.dart';
 import 'demo_assets_page.dart';
 import 'demo_chat_controller.dart';
 import 'demo_diy_role_sheet.dart';
+import 'demo_file_import_sheet.dart';
 import 'demo_settings_page.dart';
 import 'demo_task_brief_sheet.dart';
 import 'demo_remote_media.dart';
@@ -32,18 +38,97 @@ import 'widgets/demo_content_role_avatar.dart';
 import 'widgets/demo_new_session_role_guide.dart';
 import 'widgets/demo_widgets.dart';
 
+enum _AttachmentSource { device, library }
+
+class _AttachmentSourceSheet extends StatelessWidget {
+  const _AttachmentSourceSheet({
+    required this.onSelected,
+    required this.allowDevice,
+  });
+
+  final ValueChanged<_AttachmentSource> onSelected;
+  final bool allowDevice;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    Widget option({
+      required Key key,
+      required String label,
+      required IconData icon,
+      required _AttachmentSource source,
+    }) => Material(
+      key: key,
+      color: demoSurface(context),
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => onSelected(source),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.brand),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textTertiary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return DemoSheetBody(
+      title: l.demoAttachments,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          if (allowDevice) ...[
+            option(
+              key: const Key('demo-attachment-device'),
+              label: l.demoUploadFromDevice,
+              icon: Icons.upload_file_outlined,
+              source: _AttachmentSource.device,
+            ),
+            const SizedBox(height: 10),
+          ],
+          option(
+            key: const Key('demo-attachment-library'),
+            label: l.demoSelectFromLibrary,
+            icon: Icons.folder_outlined,
+            source: _AttachmentSource.library,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class DemoChatPage extends StatefulWidget {
   const DemoChatPage({
     required this.repository,
     required this.sessionId,
     this.desktopLayout = false,
     this.active = true,
+    this.pickAttachmentFiles,
     super.key,
   });
   final DemoRepository repository;
   final String sessionId;
   final bool desktopLayout;
   final bool active;
+  final Future<List<DemoUploadFile>> Function()? pickAttachmentFiles;
   @override
   State<DemoChatPage> createState() => _DemoChatPageState();
 }
@@ -169,10 +254,9 @@ class _DemoChatPageState extends State<DemoChatPage> {
               statusIcon: presentation.icon,
               statusColor: presentation.color,
               requestText: request,
-              memberName: job.memberId.isEmpty
+              memberName: session == null
                   ? null
-                  : session?.memberNames[job.memberId] ??
-                        demoMemberName(l, job.memberId),
+                  : _jobMemberName(l, session, job),
               onViewOutputs: presentation.hasOutputs && session != null
                   ? () {
                       if (openedOutputs ||
@@ -410,33 +494,89 @@ class _DemoChatPageState extends State<DemoChatPage> {
     }
   }
 
-  Future<void> _attach() => DemoSheet.show<void>(
-    context: context,
-    builder: (sheetContext) => Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: Column(
-        children: [
-          Text(
-            AppLocalizations.of(context)!.demoAttachments,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+  void _addAttachments(Iterable<DemoAsset> assets) {
+    if (!mounted || !widget.active) return;
+    final existing = _attachments.toSet();
+    final added = assets
+        .map((asset) => asset.id)
+        .where((id) => existing.add(id))
+        .toList();
+    if (added.isNotEmpty) setState(() => _attachments.addAll(added));
+  }
+
+  Future<void> _attach() async {
+    if (!mounted || !widget.active || _conversation.busy) return;
+    final source = await AppSheet.show<_AttachmentSource>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      maxHeightFraction: .5,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      builder: (sheetContext) => SizedBox(
+        height: (MediaQuery.sizeOf(sheetContext).height * .38).clamp(
+          260.0,
+          320.0,
+        ),
+        child: _AttachmentSourceSheet(
+          allowDevice: widget.repository.isHarness,
+          onSelected: (value) => Navigator.of(sheetContext).pop(value),
+        ),
+      ),
+    );
+    if (!mounted || source == null || !widget.active || _conversation.busy) {
+      return;
+    }
+    switch (source) {
+      case _AttachmentSource.device:
+        if (!widget.repository.isHarness) {
+          return;
+        }
+        await DemoSheet.show<void>(
+          context: context,
+          builder: (_) => DemoFileImportSheet(
+            repository: widget.repository,
+            pickFiles: widget.pickAttachmentFiles ?? pickDemoAssetFiles,
+            onImported: _addAttachments,
           ),
-          Expanded(
-            child: DemoAssetsView(
-              repository: widget.repository,
-              onSelect: (asset) {
-                if (!_attachments.contains(asset.id)) {
-                  setState(() => _attachments.add(asset.id));
-                }
-                Navigator.of(sheetContext).pop();
-              },
+        );
+        return;
+      case _AttachmentSource.library:
+        await DemoSheet.show<void>(
+          context: context,
+          builder: (sheetContext) => Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: Column(
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.demoAttachments,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Expanded(
+                  child: DemoAssetsView(
+                    repository: widget.repository,
+                    onSelect: (asset) {
+                      _addAttachments([asset]);
+                      Navigator.of(sheetContext).pop();
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    ),
-  );
+        );
+        return;
+    }
+  }
 
-  final _expandedActivityIds = <String>{};
+  void _previewAttachment(DemoAsset asset) {
+    if (!mounted || !widget.active || _conversation.busy) return;
+    openDemoAsset(context, asset, repository: widget.repository);
+  }
 
   Widget _message(BuildContext context, DemoMessage message) {
     final localizations = AppLocalizations.of(context)!;
@@ -460,16 +600,24 @@ class _DemoChatPageState extends State<DemoChatPage> {
     if (text.isEmpty && media.isEmpty && question == null && activity == null) {
       return const SizedBox.shrink();
     }
-    final memberId = message.memberId.trim().isEmpty
-        ? 'popi'
-        : message.memberId;
-    final configuredName = _conversation.session.memberNames[memberId]?.trim();
+    final session = _conversation.session;
+    final fallbackMemberId = session.members.length == 1
+        ? DemoAssistantIdentity.primaryMemberId(session)
+        : activity != null
+        ? session.members.contains(session.activeMemberId)
+              ? session.activeMemberId
+              : session.members.firstOrNull ?? 'popi'
+        : 'popi';
+    final memberId = message.memberId.trim().isNotEmpty
+        ? message.memberId
+        : fallbackMemberId;
     final snapshotName = message.memberName.trim();
-    final memberName = configuredName?.isNotEmpty == true
-        ? configuredName!
-        : snapshotName.isNotEmpty && snapshotName != memberId
-        ? snapshotName
-        : demoMemberName(localizations, memberId);
+    final memberName = demoSessionMemberName(
+      localizations,
+      session,
+      memberId,
+      snapshotName: snapshotName,
+    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         widget.desktopLayout ? 24 : 16,
@@ -522,21 +670,6 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         ),
                       ),
                     ),
-                  ],
-                  if (activity != null) ...[
-                    DemoActivityIndicator(
-                      key: ValueKey('demo-activity-${message.id}'),
-                      activity: activity,
-                      memberName: memberName,
-                      expanded: _expandedActivityIds.contains(message.id),
-                      onToggle: () => setState(() {
-                        if (!_expandedActivityIds.add(message.id)) {
-                          _expandedActivityIds.remove(message.id);
-                        }
-                      }),
-                    ),
-                    if (text.isNotEmpty || question != null || media.isNotEmpty)
-                      const SizedBox(height: 10),
                   ],
                   if (text.isNotEmpty)
                     Semantics(
@@ -647,6 +780,24 @@ class _DemoChatPageState extends State<DemoChatPage> {
                           ),
                         ),
                   ],
+                  if (activity != null) ...[
+                    if (text.isNotEmpty || question != null || media.isNotEmpty)
+                      const SizedBox(height: 10),
+                    DemoActivityIndicator(
+                      key: ValueKey('demo-activity-${message.id}'),
+                      activity: activity,
+                      memberName: memberName,
+                      avatar: TickerMode(
+                        enabled: activity.status == 'running',
+                        child: DemoAvatar(
+                          members: [memberId],
+                          memberAvatars: _conversation.session.memberAvatars,
+                          memberColors: _conversation.session.memberColors,
+                          size: 32,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -670,6 +821,11 @@ class _DemoChatPageState extends State<DemoChatPage> {
         final loadingSnapshot =
             widget.repository.isSessionLoading(widget.sessionId) &&
             !_conversation.running;
+        final selectedAttachments = [
+          for (final id in _attachments)
+            for (final asset in widget.repository.assets)
+              if (asset.id == id) asset,
+        ];
         return DemoScaffold(
           maxContentWidth: widget.desktopLayout ? 1120 : 640,
           backgroundColor: widget.desktopLayout
@@ -782,7 +938,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                 .isMediaJobNoticeDismissed(s.id, job.jobId),
                           )
                           .toList(),
-                      memberNames: s.memberNames,
+                      session: s,
                       dismissingJobIds: _dismissingMediaJobs,
                       onOpenOutputs: () => _settings(initialTab: 2),
                       onShowBrief: _showTaskBrief,
@@ -793,40 +949,105 @@ class _DemoChatPageState extends State<DemoChatPage> {
                     maxWidth: widget.desktopLayout ? 1000 : null,
                     conversationMode: true,
                     sessionLayout: true,
-                    bottomPadding: 4,
+                    bottomPadding: PopiMessageComposer.bottomGap,
                     controller: _composer,
+                    placeholderText: l.composerNamedPlaceholder(
+                      demoSessionDisplayName(l, s),
+                    ),
                     selectedImages: const [],
                     selectedAssets: [
-                      for (final id in _attachments)
-                        for (final asset in widget.repository.assets)
-                          if (asset.id == id)
-                            LibraryWork(
-                              id: asset.id,
-                              previewUrl: asset.kind == DemoAssetKind.video
-                                  ? asset.posterUrl.isNotEmpty
-                                        ? asset.posterUrl
-                                        : asset.cover
-                                  : asset.thumbnailUrl.isNotEmpty
-                                  ? asset.thumbnailUrl
-                                  : asset.cover,
-                              isVideo: asset.kind == DemoAssetKind.video,
-                              videoUrl: asset.kind == DemoAssetKind.video
-                                  ? asset.contentUrl
-                                  : '',
-                              imageUrls:
-                                  asset.kind == DemoAssetKind.image &&
-                                      asset.contentUrl.isNotEmpty
-                                  ? [asset.contentUrl]
-                                  : const [],
-                              createdAt: null,
-                            ),
+                      for (final asset in selectedAttachments)
+                        LibraryWork(
+                          id: asset.id,
+                          previewUrl: asset.kind == DemoAssetKind.video
+                              ? asset.posterUrl.isNotEmpty
+                                    ? asset.posterUrl
+                                    : asset.cover
+                              : asset.thumbnailUrl.isNotEmpty
+                              ? asset.thumbnailUrl
+                              : asset.cover,
+                          isVideo: asset.kind == DemoAssetKind.video,
+                          videoUrl: asset.kind == DemoAssetKind.video
+                              ? asset.contentUrl
+                              : '',
+                          imageUrls:
+                              asset.kind == DemoAssetKind.image &&
+                                  asset.contentUrl.isNotEmpty
+                              ? [asset.contentUrl]
+                              : const [],
+                          createdAt: null,
+                        ),
                     ],
+                    selectedAssetThumbnailBuilder: (context, index) {
+                      if (index < 0 || index >= selectedAttachments.length) {
+                        return null;
+                      }
+                      final asset = selectedAttachments[index];
+                      if (asset.kind == DemoAssetKind.image ||
+                          asset.kind == DemoAssetKind.video) {
+                        return null;
+                      }
+                      return Semantics(
+                        label: asset.title,
+                        image: true,
+                        child: ExcludeSemantics(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    demoAssetIcon(asset.kind),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    size: 26,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    asset.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      height: 1.15,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                     onAttachment: () {
                       if (!_conversation.busy) _attach();
                     },
                     onRemoveImage: (_) {},
-                    onRemoveAsset: (index) =>
-                        setState(() => _attachments.removeAt(index)),
+                    onRemoveAsset: (index) {
+                      if (index < 0 || index >= selectedAttachments.length) {
+                        return;
+                      }
+                      setState(
+                        () =>
+                            _attachments.remove(selectedAttachments[index].id),
+                      );
+                    },
+                    onPreviewAsset: (index) {
+                      if (index < 0 || index >= selectedAttachments.length) {
+                        return;
+                      }
+                      _previewAttachment(selectedAttachments[index]);
+                    },
                     onHeightChanged: (_) {},
                     onSubmitted: _send,
                     enableMentions: true,
@@ -863,7 +1084,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
 class _DemoMediaJobsPanel extends StatelessWidget {
   const _DemoMediaJobsPanel({
     required this.jobs,
-    required this.memberNames,
+    required this.session,
     required this.dismissingJobIds,
     required this.onOpenOutputs,
     required this.onShowBrief,
@@ -871,7 +1092,7 @@ class _DemoMediaJobsPanel extends StatelessWidget {
   });
 
   final List<DemoMediaJob> jobs;
-  final Map<String, String> memberNames;
+  final DemoSession session;
   final Set<String> dismissingJobIds;
   final VoidCallback onOpenOutputs;
   final ValueChanged<DemoMediaJob> onShowBrief;
@@ -893,7 +1114,11 @@ class _DemoMediaJobsPanel extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: _DemoMediaJobRow(
                 job: job,
-                memberName: memberNames[job.memberId],
+                memberName: _jobMemberName(
+                  AppLocalizations.of(context)!,
+                  session,
+                  job,
+                ),
                 onOpenOutputs: onOpenOutputs,
                 onShowBrief: () => onShowBrief(job),
                 dismissing: dismissingJobIds.contains(job.jobId),
@@ -904,6 +1129,21 @@ class _DemoMediaJobsPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _jobMemberName(
+  AppLocalizations localizations,
+  DemoSession session,
+  DemoMediaJob job,
+) {
+  final memberId = job.memberId.isNotEmpty
+      ? job.memberId
+      : session.members.length == 1
+      ? DemoAssistantIdentity.primaryMemberId(session)
+      : null;
+  return memberId == null
+      ? null
+      : demoSessionMemberName(localizations, session, memberId);
 }
 
 class _DemoMediaJobRow extends StatelessWidget {
@@ -927,9 +1167,9 @@ class _DemoMediaJobRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final presentation = _jobPresentation(l, job);
-    final resolvedMemberName = job.memberId.isEmpty
-        ? null
-        : memberName ?? demoMemberName(l, job.memberId);
+    final resolvedMemberName =
+        memberName ??
+        (job.memberId.isEmpty ? null : demoMemberName(l, job.memberId));
     final borderRadius = BorderRadius.circular(16);
     return Material(
       key: ValueKey('demo-media-job-${job.jobId}'),

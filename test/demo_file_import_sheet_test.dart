@@ -71,11 +71,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
-  Widget launcher(Future<List<DemoUploadFile>> Function() pickFiles) => Builder(
+  Widget launcher(
+    Future<List<DemoUploadFile>> Function() pickFiles, {
+    ValueChanged<List<DemoAsset>>? onImported,
+  }) => Builder(
     builder: (context) => Scaffold(
       body: TextButton(
-        onPressed: () =>
-            showDemoImport(context, repository, pickFiles: pickFiles),
+        onPressed: () => showDemoImport(
+          context,
+          repository,
+          pickFiles: pickFiles,
+          onImported: onImported,
+        ),
         child: const Text('Import'),
       ),
     ),
@@ -197,7 +204,11 @@ void main() {
       final first = _imageFile('first-request', 'first.png');
       final second = _scriptFile('second-request', 'second.md', 'second');
       api.failOnceRequestId = second.clientRequestId;
-      await pump(tester, launcher(() async => [first, second]));
+      final imported = <List<DemoAsset>>[];
+      await pump(
+        tester,
+        launcher(() async => [first, second], onImported: imported.add),
+      );
       await tester.tap(find.text('Import'));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('demo-import-picker')));
@@ -211,6 +222,8 @@ void main() {
       expect(repository.assets.map((asset) => asset.title), ['first.png']);
       expect(find.text('已上传'), findsOneWidget);
       expect(find.text('已选择 2 个文件'), findsOneWidget);
+      expect(imported, hasLength(1));
+      expect(imported.single.single.title, 'first.png');
 
       await tester.pump(const Duration(seconds: 4));
       await tester.pump(const Duration(milliseconds: 300));
@@ -232,6 +245,11 @@ void main() {
         'first.png',
         'second.md',
       });
+      expect(imported, hasLength(2));
+      expect(imported.expand((assets) => assets).map((asset) => asset.title), [
+        'first.png',
+        'second.md',
+      ]);
       expect(find.text('上传素材'), findsNothing);
     },
   );

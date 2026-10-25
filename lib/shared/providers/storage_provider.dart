@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,7 +16,11 @@ final preferencesStorageProvider = Provider<PreferencesStorage>(
 );
 
 final flutterSecureStorageProvider = Provider<FlutterSecureStorage>(
-  (ref) => const FlutterSecureStorage(),
+  (ref) => const FlutterSecureStorage(
+    // Ad-hoc macOS development builds cannot claim Data Protection Keychain
+    // entitlements; release builds remain on the modern protected keychain.
+    mOptions: MacOsOptions(useDataProtectionKeyChain: kReleaseMode),
+  ),
 );
 
 final secureStorageProvider = Provider<TokenStorage>(

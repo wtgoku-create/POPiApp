@@ -25,6 +25,9 @@ DemoSession _session(String id, String title) => DemoSession(
   messages: const [DemoMessage(id: 'message', text: '来自 Harness')],
 );
 
+Finder _sessionRow(String id) =>
+    find.byKey(ValueKey<String>('demo-session-$id'));
+
 class _HarnessSyncRepository extends DemoRepository {
   _HarnessSyncRepository(
     super.storage, {
@@ -435,8 +438,8 @@ void main() {
     await tester.pump();
     expect(repository.refreshCalls, 2);
 
-    await tester.tap(find.text('瓦特'));
-    await tester.tap(find.text('瓦特'), warnIfMissed: false);
+    await tester.tap(_sessionRow('first'));
+    await tester.tap(_sessionRow('first'), warnIfMissed: false);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -474,7 +477,7 @@ void main() {
         addTearDown(repository.dispose);
         await _pumpHome(tester, repository);
 
-        await tester.tap(find.text('瓦特'));
+        await tester.tap(_sessionRow('first'));
         await tester.pumpAndSettle();
         expect(find.byType(DemoChatPage), findsOneWidget);
 
@@ -486,8 +489,8 @@ void main() {
         expect(repository.refreshCalls, 2);
         expect(find.byType(DemoHomePage), findsOneWidget);
 
-        await tester.tap(find.text('瓦特'));
-        await tester.tap(find.text('瓦特'), warnIfMissed: false);
+        await tester.tap(_sessionRow('first'));
+        await tester.tap(_sessionRow('first'), warnIfMissed: false);
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 

@@ -10,6 +10,7 @@ import '../../../core/network/network_agent_api.dart';
 import '../../../core/storage/preferences_storage.dart';
 import '../../../shared/type/bot_avatar_type.dart';
 import '../domain/demo_assistant_profile.dart';
+import '../domain/demo_assistant_identity.dart';
 import '../domain/demo_models.dart';
 import '../domain/demo_upload_file.dart';
 import '../domain/demo_capability_catalog.dart';
@@ -569,14 +570,18 @@ class DemoRepository extends ChangeNotifier {
       return _commit(
         () => (
           sessions: _sessions
-              .map((session) => session.id == id ? update(session) : session)
+              .map(
+                (session) => session.id == id
+                    ? _normalizeSingleAssistantRename(session, update(session))
+                    : session,
+              )
               .toList(),
           assets: _assets,
         ),
       );
     }
     final current = session(id);
-    final next = update(current);
+    final next = _normalizeSingleAssistantRename(current, update(current));
     final api = _api;
     final currentConfiguration = _configurationJson(current);
     final nextConfiguration = _configurationJson(next);
@@ -665,6 +670,47 @@ class DemoRepository extends ChangeNotifier {
     );
   }
 
+  DemoSession _normalizeSingleAssistantRename(
+    DemoSession current,
+    DemoSession next,
+  ) {
+    if (current.members.length != 1 ||
+        next.members.length != 1 ||
+        current.members.single != next.members.single) {
+      return next;
+    }
+    final memberId = current.members.single;
+    final currentName = current.memberNames[memberId]?.trim() ?? '';
+    final nextName = next.memberNames[memberId]?.trim() ?? '';
+    final nameChanged = nextName != currentName;
+    final titleChanged = next.title.trim() != current.title.trim();
+    if (nameChanged && nextName.isNotEmpty) {
+      return next.copyWith(title: nextName);
+    }
+    if (titleChanged && next.title.trim().isNotEmpty) {
+      return next.copyWith(
+        memberNames: {...next.memberNames, memberId: next.title.trim()},
+      );
+    }
+    return next;
+  }
+
+  Future<void> _persistLegacySingleAssistantName(String sessionId) async {
+    final current = session(sessionId);
+    if (current.members.length != 1) return;
+    final memberId = current.members.single;
+    final resolved = DemoAssistantIdentity.singleName(current);
+    if (resolved == null || current.memberNames[memberId]?.trim() == resolved) {
+      return;
+    }
+    await updateSession(
+      sessionId,
+      (session) => session.copyWith(
+        memberNames: {...session.memberNames, memberId: resolved},
+      ),
+    );
+  }
+
   Future<void> sendHarnessMessage(
     String sessionId, {
     required String clientRequestId,
@@ -681,6 +727,7 @@ class DemoRepository extends ChangeNotifier {
         contextRoleIds.any((id) => !selectedRoles.contains(id))) {
       throw ArgumentError.value(contextRoleIds, 'contextRoleIds');
     }
+    await _persistLegacySingleAssistantName(sessionId);
     final accepted = await api.sendSessionMessage(
       sessionId,
       clientRequestId: clientRequestId,
@@ -1135,9 +1182,18 @@ class DemoRepository extends ChangeNotifier {
   }) async {
     final requestOrder = ++_snapshotRequestSerial;
     final response = await _api!.sessionSnapshot(id);
-    final messages = _mapList(
-      response['messages'],
-    ).map(_messageFromRecord).toList();
+    final fallbackMessages = {
+      for (final message in fallback?.messages ?? const <DemoMessage>[])
+        message.id: message,
+    };
+    final messages = _mapList(response['messages'])
+        .map(
+          (record) => _messageFromRecord(
+            record,
+            fallback: fallbackMessages[record['id']?.toString()],
+          ),
+        )
+        .toList();
     var nextSession = _sessionFromRecord(
       _map(response['session']),
       fallback: fallback,
@@ -1302,7 +1358,10 @@ class DemoRepository extends ChangeNotifier {
     }
   }
 
-  DemoMessage _messageFromRecord(Map<String, Object?> message) => DemoMessage(
+  DemoMessage _messageFromRecord(
+    Map<String, Object?> message, {
+    DemoMessage? fallback,
+  }) => DemoMessage(
     id: message['id']?.toString() ?? '',
     text: message['text']?.toString() ?? '',
     user: message['role'] == 'user',
@@ -1312,6 +1371,7 @@ class DemoRepository extends ChangeNotifier {
     memberName: message['memberName']?.toString() ?? '',
     runId: message['runId']?.toString() ?? '',
     configRevision: _int(message['configRevision'], fallback: 0),
+    createdAt: _dateTime(message['createdAt']) ?? fallback?.createdAt,
     question: message['question'] is Map
         ? DemoQuestion.fromJson(_map(message['question']))
         : null,
@@ -1360,6 +1420,10 @@ class DemoRepository extends ChangeNotifier {
       messages: messages ?? fallback?.messages ?? const [],
       unread: 0,
       time: '',
+      updatedAt:
+          _dateTime(record['updatedAt']) ??
+          fallback?.updatedAt ??
+          _dateTime(record['createdAt']),
       direction: configured
           ? configuration['direction']?.toString() ?? ''
           : fallback?.direction ?? '',
@@ -1413,6 +1477,11 @@ class DemoRepository extends ChangeNotifier {
       mediaJobs: mediaJobs ?? fallback?.mediaJobs ?? const [],
       pinned: record['pinned'] as bool? ?? fallback?.pinned ?? false,
     );
+  }
+
+  DateTime? _dateTime(Object? value) {
+    if (value is! String || value.trim().isEmpty) return null;
+    return DateTime.tryParse(value)?.toUtc();
   }
 
   DemoAsset _assetFromRecord(Map<String, Object?> record) {

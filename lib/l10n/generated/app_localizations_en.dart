@@ -1731,10 +1731,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePromptUnsure => 'I\'m not sure what to create yet';
 
   @override
-  String get aiDisclaimer =>
-      'AI-generated results may be inaccurate and are for reference only';
-
-  @override
   String get composerPlaceholder => 'Say something to POPi...';
 
   @override
@@ -3598,9 +3594,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoGreetingDetail => 'What would you like to create?';
 
   @override
-  String get demoDisclaimer => 'AI-generated results may contain errors';
-
-  @override
   String demoActivityTitle(String name, String activity) {
     return '$name · $activity';
   }
@@ -4194,4 +4187,88 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get harnessAccessUnavailable =>
       'The test environment is unavailable. Try again later';
+
+  @override
+  String get demoPinnedConversations => 'Pinned';
+
+  @override
+  String get demoRecentConversations => 'Recent conversations';
+
+  @override
+  String get demoListNoMessages => 'No messages yet';
+
+  @override
+  String get demoListYou => 'You';
+
+  @override
+  String get demoListAttachment => '[Attachment]';
+
+  @override
+  String get demoListQuestion => 'Waiting for your answer';
+
+  @override
+  String demoListMessagePreview(String sender, String message) {
+    return '$sender: $message';
+  }
+
+  @override
+  String demoListTime(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.Hm(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListFullDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get demoMaterials => 'Materials';
+
+  @override
+  String composerNamedPlaceholder(String name) {
+    return 'Say something to $name...';
+  }
+
+  @override
+  String get demoUploadFromDevice => 'Upload from device';
+
+  @override
+  String get demoSelectFromLibrary => 'Choose from library';
+
+  @override
+  String get previewAttachment => 'Double-click to preview attachment';
+
+  @override
+  String get demoAttachmentUnsupported =>
+      'This assistant cannot read this attachment type yet. Choose images or text scripts.';
+
+  @override
+  String get demoAttachmentNotFound =>
+      'An attachment is no longer available. Remove it and upload it again.';
+
+  @override
+  String get demoAttachmentTooLarge =>
+      'The attachments are too large together. Use fewer or smaller files.';
+
+  @override
+  String get demoAttachmentLimit =>
+      'There are too many or duplicate attachments. Adjust them before sending.';
+
+  @override
+  String get demoAttachmentInvalid =>
+      'An attachment cannot be read or has changed. Upload it again.';
 }

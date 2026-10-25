@@ -27,7 +27,12 @@ class LocalProfileController extends Notifier<LocalProfile?> {
   @override
   LocalProfile? build() {
     if (!ref.watch(localProfileEnabledProvider)) return null;
-    return ref.watch(localProfileRepositoryProvider).restore();
+    final repository = ref.watch(localProfileRepositoryProvider);
+    final profile = repository.restore() ?? LocalProfile.harnessDefault;
+    _pendingWrite = _pendingWrite
+        .then((_) => repository.ensureStored(profile))
+        .catchError((Object _) {});
+    return profile;
   }
 
   Future<void> updateProfile({required String name, Uint8List? avatarBytes}) =>
@@ -47,8 +52,7 @@ class LocalProfileController extends Notifier<LocalProfile?> {
     if (!ref.read(localProfileEnabledProvider)) {
       throw StateError('Local profile is disabled');
     }
-    await ref.read(localProfileRepositoryProvider).clear();
-    state = null;
+    state = await ref.read(localProfileRepositoryProvider).resetToDefaults();
   });
 
   Future<void> _enqueueWrite(Future<void> Function() operation) {

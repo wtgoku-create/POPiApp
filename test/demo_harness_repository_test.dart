@@ -83,10 +83,84 @@ void main() {
       'Hello',
       'Hi from DeepSeek',
     ]);
+    expect(repository.sessions.single.updatedAt, DateTime.utc(2026, 10, 23));
+    expect(
+      repository.sessions.single.messages.last.createdAt,
+      DateTime.utc(2026, 10, 23),
+    );
 
     final restored = DemoRepository.harness(storage, api)..restore();
     addTearDown(restored.dispose);
     expect(restored.sessions.single.messages, hasLength(2));
+    expect(restored.sessions.single.updatedAt, DateTime.utc(2026, 10, 23));
+    expect(
+      restored.sessions.single.messages.last.createdAt,
+      DateTime.utc(2026, 10, 23),
+    );
+  });
+
+  test(
+    'invalid or omitted server timestamps retain cached valid values',
+    () async {
+      api.records = [_record('s1')];
+      api.snapshots['s1'] = [
+        _snapshot('s1', messages: [_message('a1', 'assistant', 'First')]),
+        _snapshot(
+          's1',
+          sessionRecord: _record('s1', includeTimestamps: false),
+          messages: [
+            _message('a1', 'assistant', 'Updated', createdAt: 'not-a-date'),
+          ],
+        ),
+      ];
+      final repository = DemoRepository.harness(storage, api)..restore();
+      addTearDown(repository.dispose);
+
+      await repository.refreshSessions();
+      final original = repository.session('s1');
+      api.records = [_record('s1', includeTimestamps: false)];
+      await repository.refreshSessions();
+
+      final refreshed = repository.session('s1');
+      expect(refreshed.updatedAt, original.updatedAt);
+      expect(refreshed.messages.single.text, 'Updated');
+      expect(
+        refreshed.messages.single.createdAt,
+        original.messages.single.createdAt,
+      );
+    },
+  );
+
+  test('server timestamp offsets map to UTC instants', () async {
+    final record = _record('s1', updatedAt: '2026-10-25T11:10:00+08:00');
+    api.records = [record];
+    api.snapshots['s1'] = [
+      _snapshot(
+        's1',
+        sessionRecord: record,
+        messages: [
+          _message(
+            'a1',
+            'assistant',
+            'Ready',
+            createdAt: '2026-10-25T10:48:00+08:00',
+          ),
+        ],
+      ),
+    ];
+    final repository = DemoRepository.harness(storage, api)..restore();
+    addTearDown(repository.dispose);
+
+    await repository.refreshSessions();
+
+    expect(
+      repository.session('s1').updatedAt,
+      DateTime.utc(2026, 10, 25, 3, 10),
+    );
+    expect(
+      repository.session('s1').messages.single.createdAt,
+      DateTime.utc(2026, 10, 25, 2, 48),
+    );
   });
 
   test('server snapshots preserve assistant member identity', () async {
@@ -137,10 +211,182 @@ void main() {
     );
     expect(api.renamedTitles, ['Renamed']);
     expect(repository.session(id).title, 'Renamed');
+    expect(repository.session(id).memberNames['popi'], 'Renamed');
+    expect(api.updatedConfigurations.last['memberNames'], {'popi': 'Renamed'});
 
     await repository.deleteSession(id);
     expect(api.archivedIds, [id]);
     expect(repository.sessions, isEmpty);
+  });
+
+  test(
+    'single assistant member rename also updates its conversation title',
+    () async {
+      api.records = [
+        _record(
+          's1',
+          title: '旧名字',
+          configuration: {
+            ..._configuration(),
+            'memberNames': <String, String>{'popi': '旧名字'},
+          },
+        ),
+      ];
+      api.snapshots['s1'] = [
+        _snapshot(
+          's1',
+          title: '旧名字',
+          sessionRecord: _record(
+            's1',
+            title: '旧名字',
+            configuration: {
+              ..._configuration(),
+              'memberNames': <String, String>{'popi': '旧名字'},
+            },
+          ),
+        ),
+      ];
+      final repository = DemoRepository.harness(storage, api)..restore();
+      addTearDown(repository.dispose);
+      await repository.refreshSessions();
+
+      await repository.updateSession(
+        's1',
+        (session) => session.copyWith(
+          memberNames: {...session.memberNames, 'popi': '哈哈'},
+        ),
+      );
+
+      expect(repository.session('s1').title, '哈哈');
+      expect(repository.session('s1').memberNames['popi'], '哈哈');
+      expect(api.renamedTitles.last, '哈哈');
+      expect(api.updatedConfigurations.last['memberNames'], {'popi': '哈哈'});
+    },
+  );
+
+  test(
+    'legacy sole title is persisted before the next accepted message',
+    () async {
+      final wattConfiguration = {
+        ..._configuration(),
+        'memberNames': <String, String>{},
+      };
+      final namedConfiguration = {
+        ..._configuration(),
+        'memberNames': <String, String>{'popi': 'Watt'},
+      };
+      api.records = [
+        _record('s1', title: 'Watt', configuration: wattConfiguration),
+      ];
+      api.snapshots['s1'] = [
+        _snapshot(
+          's1',
+          title: 'Watt',
+          sessionRecord: _record(
+            's1',
+            title: 'Watt',
+            configuration: wattConfiguration,
+          ),
+        ),
+        _snapshot(
+          's1',
+          title: 'Watt',
+          sessionRecord: _record(
+            's1',
+            title: 'Watt',
+            configuration: namedConfiguration,
+          ),
+          messages: [_message('u1', 'user', 'Hello')],
+          runState: 'completed',
+        ),
+      ];
+      final repository = DemoRepository.harness(
+        storage,
+        api,
+        pollInterval: Duration.zero,
+        maxPollAttempts: 1,
+      )..restore();
+      addTearDown(repository.dispose);
+      await repository.refreshSessions();
+
+      await repository.sendHarnessMessage(
+        's1',
+        clientRequestId: 'send-watt',
+        text: 'Hello',
+      );
+
+      expect(api.updatedConfigurations, hasLength(1));
+      expect(api.updatedConfigurations.single['memberNames'], {'popi': 'Watt'});
+      expect(api.sendRequestIds, ['send-watt']);
+      expect(repository.session('s1').memberNames['popi'], 'Watt');
+    },
+  );
+
+  test('invalid role context cannot persist a legacy alias', () async {
+    final configuration = {
+      ..._configuration(),
+      'memberNames': <String, String>{},
+    };
+    api.records = [_record('s1', title: 'Watt', configuration: configuration)];
+    api.snapshots['s1'] = [
+      _snapshot(
+        's1',
+        title: 'Watt',
+        sessionRecord: _record(
+          's1',
+          title: 'Watt',
+          configuration: configuration,
+        ),
+      ),
+    ];
+    final repository = DemoRepository.harness(storage, api)..restore();
+    addTearDown(repository.dispose);
+    await repository.refreshSessions();
+
+    await expectLater(
+      repository.sendHarnessMessage(
+        's1',
+        clientRequestId: 'invalid-context',
+        text: 'Hello',
+        contextRoleIds: const ['not-selected'],
+      ),
+      throwsArgumentError,
+    );
+
+    expect(api.updatedConfigurations, isEmpty);
+    expect(api.sendRequestIds, isEmpty);
+    expect(repository.session('s1').memberNames, isEmpty);
+  });
+
+  test('group title and member names remain independent', () async {
+    final group = {
+      ..._configuration(),
+      'members': <String>['writer', 'designer'],
+      'memberNames': <String, String>{'writer': '编剧', 'designer': '设计师'},
+      'activeMemberId': 'writer',
+    };
+    api.records = [_record('s1', title: '创作组', configuration: group)];
+    api.snapshots['s1'] = [
+      _snapshot(
+        's1',
+        title: '创作组',
+        sessionRecord: _record('s1', title: '创作组', configuration: group),
+      ),
+    ];
+    final repository = DemoRepository.harness(storage, api)..restore();
+    addTearDown(repository.dispose);
+    await repository.refreshSessions();
+
+    await repository.updateSession(
+      's1',
+      (session) => session.copyWith(title: '新群名'),
+    );
+
+    expect(repository.session('s1').title, '新群名');
+    expect(repository.session('s1').memberNames, {
+      'writer': '编剧',
+      'designer': '设计师',
+    });
   });
 
   test(
@@ -545,6 +791,7 @@ class _HarnessApi extends NetworkAgentApi {
   final Map<String, List<Map<String, Object?>>> snapshots = {};
   final List<String> createdKinds = [];
   final List<String> renamedTitles = [];
+  final List<Map<String, Object?>> updatedConfigurations = [];
   final List<String> archivedIds = [];
   final List<String> sendRequestIds = [];
   final List<String> sendRunIds = [];
@@ -623,6 +870,9 @@ class _HarnessApi extends NetworkAgentApi {
     CancelToken? cancelToken,
   }) async {
     if (title != null) renamedTitles.add(title);
+    if (configuration != null) {
+      updatedConfigurations.add(Map<String, Object?>.from(configuration));
+    }
     return {
       'id': id,
       if (title != null) 'title': title,
@@ -693,13 +943,15 @@ Map<String, Object?> _record(
   String title = 'Session',
   String kind = 'conversation',
   Map<String, Object?>? configuration,
+  bool includeTimestamps = true,
+  Object? updatedAt = '2026-10-23T00:00:00.000Z',
 }) => {
   'id': id,
   'title': title,
   'kind': kind,
   'revision': 1,
-  'createdAt': '2026-10-23T00:00:00.000Z',
-  'updatedAt': '2026-10-23T00:00:00.000Z',
+  if (includeTimestamps) 'createdAt': '2026-10-23T00:00:00.000Z',
+  if (includeTimestamps) 'updatedAt': updatedAt,
   'archived': false,
   'bindingStatus': 'ready',
   'configuration': configuration ?? _configuration(),
@@ -734,6 +986,7 @@ Map<String, Object?> _message(
   String memberName = '',
   String runId = '',
   int configRevision = 0,
+  Object? createdAt = '2026-10-23T00:00:00.000Z',
 }) => {
   'id': id,
   'role': role,
@@ -743,7 +996,7 @@ Map<String, Object?> _message(
   if (memberName.isNotEmpty) 'memberName': memberName,
   if (runId.isNotEmpty) 'runId': runId,
   if (configRevision != 0) 'configRevision': configRevision,
-  'createdAt': '2026-10-23T00:00:00.000Z',
+  if (createdAt != null) 'createdAt': createdAt,
 };
 
 Future<void> _pumpChat(WidgetTester tester, DemoRepository repository) async {
@@ -766,10 +1019,11 @@ Map<String, Object?> _snapshot(
   String id, {
   String title = 'Session',
   List<Map<String, Object?>> messages = const [],
+  Map<String, Object?>? sessionRecord,
   String? runState,
   String runId = 'run-1',
 }) => {
-  'session': _record(id, title: title),
+  'session': sessionRecord ?? _record(id, title: title),
   'lastSeq': messages.length,
   'messages': messages,
   'runs': runState == null

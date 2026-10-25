@@ -22,12 +22,15 @@
 
 ```bash
 ./tool/dev.sh setup
-./tool/dev.sh          # 默认 Web Harness
-./tool/dev.sh macos    # macOS POPi，读取同一个 Harness
+./tool/dev.sh             # 打开服务器 Web，与手机共用服务器
+./tool/dev.sh macos       # macOS POPi，与手机共用服务器
+./tool/dev.sh web-local   # 本地 Web，连接本机 Agent 服务
 ```
 
-macOS 与 Web 默认共用 `lib/main_harness.dart`、`config/env/harness.json` 和本机 Agent 服务，
-会话、图片与视频以服务端为准。离线样例需显式运行 `./tool/dev.sh demo`。
+Mac、手机测试包和服务器 Web 共用 `config/env/harness_remote.json` 指定的服务器；
+本地 Web 使用 `config/env/harness.json`，连接本机 Agent 服务，两个环境的数据相互独立。
+所有 Harness 客户端共用 `lib/main_harness.dart` 和 Flutter 界面代码；公共页面修改需要各端
+重新运行或构建，服务器 Web 还需重新部署，已安装手机包需要更新。离线样例使用 `./tool/dev.sh demo`。
 
 本机环境检查、离线 Demo、正式入口、配置覆盖、测试和 Web 构建命令见
 [本地开发指南](docs/local-development.md)。

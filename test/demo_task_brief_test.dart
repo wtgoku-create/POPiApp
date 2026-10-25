@@ -22,13 +22,14 @@ DemoMediaJob _job({
   String state = 'pending',
   String runId = 'run-target',
   String operation = 'image',
+  String memberId = 'popi',
 }) => DemoMediaJob(
   jobId: 'task-1',
   state: state,
   operation: operation,
   model: 'image-2.5-official',
   runId: runId,
-  memberId: 'popi',
+  memberId: memberId,
   configRevision: 4,
   assetIds: state == 'completed' ? const ['asset-1'] : const [],
   ingestionState: state == 'completed' ? 'completed' : '',
@@ -37,15 +38,17 @@ DemoMediaJob _job({
 Future<DemoRepository> _repository({
   DemoMediaJob? job,
   bool includeRequest = true,
+  String title = '南极创作',
+  Map<String, String> memberNames = const {'popi': '创意搭档'},
 }) async {
   final session = DemoSession(
     id: 's1',
-    title: '南极创作',
+    title: title,
     kind: DemoSessionKind.conversation,
     members: const ['popi'],
     roles: const [],
     configRevision: 9,
-    memberNames: const {'popi': '创意搭档'},
+    memberNames: memberNames,
     messages: [
       if (includeRequest)
         const DemoMessage(
@@ -108,6 +111,32 @@ Finder get _sheet => find.byType(DemoTaskBriefSheet);
 Finder _within(Finder finder) => find.descendant(of: _sheet, matching: finder);
 
 void main() {
+  testWidgets('single legacy task without member id uses the named assistant', (
+    tester,
+  ) async {
+    final repository = await _repository(
+      job: _job(memberId: ''),
+      title: 'Watt',
+      memberNames: const {},
+    );
+    addTearDown(repository.dispose);
+    await _pump(tester, repository);
+
+    expect(
+      find.descendant(of: _card, matching: find.textContaining('Watt')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: _card, matching: find.textContaining('POPi')),
+      findsNothing,
+    );
+    await tester.tap(_card);
+    await tester.pumpAndSettle();
+    expect(_within(find.text('Watt')), findsOneWidget);
+    expect(_within(find.text('POPi')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('queued card opens a read-only brief for the correct request', (
     tester,
   ) async {

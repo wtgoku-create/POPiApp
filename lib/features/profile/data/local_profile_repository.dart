@@ -23,12 +23,23 @@ class LocalProfileRepository {
     try {
       final json = jsonDecode(stored) as Map<String, dynamic>;
       final name = _validateName(json['name'] as String);
+      final uid = _validateUid(
+        json['uid']?.toString() ?? LocalProfile.harnessDefault.uid,
+      );
+      final points = _validatePoints(
+        json['points'] ?? LocalProfile.harnessDefault.points,
+      );
       final encodedAvatar = json['avatar'] as String?;
       final avatarBytes = encodedAvatar == null || encodedAvatar.isEmpty
           ? null
           : base64Decode(encodedAvatar);
       _validateAvatar(avatarBytes);
-      return LocalProfile(name: name, avatarBytes: avatarBytes);
+      return LocalProfile(
+        name: name,
+        uid: uid,
+        points: points,
+        avatarBytes: avatarBytes,
+      );
     } on Object {
       return null;
     }
@@ -40,22 +51,37 @@ class LocalProfileRepository {
   }) async {
     final normalizedName = _validateName(name);
     _validateAvatar(avatarBytes);
+    final current = restore() ?? LocalProfile.harnessDefault;
     final profile = LocalProfile(
       name: normalizedName,
+      uid: current.uid,
+      points: current.points,
       avatarBytes: avatarBytes == null ? null : Uint8List.fromList(avatarBytes),
     );
-    await _storage.setString(
-      storageKey,
-      jsonEncode({
-        'name': profile.name,
-        if (profile.avatarBytes != null)
-          'avatar': base64Encode(profile.avatarBytes!),
-      }),
-    );
+    await _write(profile);
     return profile;
   }
 
+  Future<void> ensureStored(LocalProfile profile) => _write(profile);
+
+  Future<LocalProfile> resetToDefaults() async {
+    await _storage.remove(storageKey);
+    await _write(LocalProfile.harnessDefault);
+    return LocalProfile.harnessDefault;
+  }
+
   Future<void> clear() => _storage.remove(storageKey);
+
+  Future<void> _write(LocalProfile profile) => _storage.setString(
+    storageKey,
+    jsonEncode({
+      'name': profile.name,
+      'uid': profile.uid,
+      'points': profile.points,
+      if (profile.avatarBytes != null)
+        'avatar': base64Encode(profile.avatarBytes!),
+    }),
+  );
 
   static String _validateName(String value) {
     final name = value.trim();
@@ -70,5 +96,21 @@ class LocalProfileRepository {
     if (bytes != null && bytes.lengthInBytes > maxAvatarBytes) {
       throw const FormatException('Avatar is too large');
     }
+  }
+
+  static String _validateUid(String value) {
+    final uid = value.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(uid)) {
+      throw const FormatException('UID must contain six digits');
+    }
+    return uid;
+  }
+
+  static int _validatePoints(Object value) {
+    final points = value is num ? value.toInt() : int.tryParse('$value');
+    if (points == null || points < 0) {
+      throw const FormatException('Points must be a non-negative integer');
+    }
+    return points;
   }
 }

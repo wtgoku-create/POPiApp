@@ -9,7 +9,9 @@ import '../../../shared/widgets/app_skeleton.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/demo_fixtures.dart';
 import '../data/demo_repository.dart';
+import '../data/demo_website_character_catalog.dart';
 import '../domain/demo_models.dart';
+import 'demo_assistant_display.dart';
 import 'demo_assets_page.dart';
 import 'demo_diy_role_sheet.dart';
 import 'demo_remote_media.dart';
@@ -202,7 +204,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  session.title,
+                  demoSessionDisplayName(l, session),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -215,10 +217,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                   Text(
                     session.members
                         .take(2)
-                        .map(
-                          (id) =>
-                              session.memberNames[id] ?? demoMemberName(l, id),
-                        )
+                        .map((id) => demoSessionMemberName(l, session, id))
                         .join(' × '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -237,7 +236,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
             onPressed: () => demoEditText(
               context,
               title: l.demoRename,
-              value: session.title,
+              value: demoSessionDisplayName(l, session),
               onSave: (value) => widget.repository.updateSession(
                 session.id,
                 (session) => session.copyWith(title: value),
@@ -829,8 +828,7 @@ class _MemberRow extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      session.memberNames[memberId] ??
-                          demoMemberName(l, memberId),
+                      demoSessionMemberName(l, session, memberId),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -1171,7 +1169,8 @@ class _RoleSheetState extends State<_RoleSheet> {
       widget.repository.session(widget.session.id);
 
   DemoRoleProfile? _sourceProfile(String roleId) =>
-      _sourceSession(roleId).roleProfiles[roleId];
+      _sourceSession(roleId).roleProfiles[roleId] ??
+      DemoWebsiteCharacterCatalog.profile(roleId);
 
   @override
   Widget build(BuildContext context) {
@@ -1290,8 +1289,18 @@ class _RoleSheetState extends State<_RoleSheet> {
                                             ),
                                           ),
                                           GestureDetector(
-                                            onTap: () =>
-                                                _profile(context, role, l),
+                                            key: ValueKey(
+                                              'demo-role-profile-link-$roleId',
+                                            ),
+                                            onTap: () => _profile(
+                                              context,
+                                              role,
+                                              profile ??
+                                                  DemoWebsiteCharacterCatalog.profile(
+                                                    roleId,
+                                                  ),
+                                              l,
+                                            ),
                                             child: Text(
                                               '${l.demoProfileLink} ›',
                                               style: const TextStyle(
@@ -1378,30 +1387,38 @@ class _RoleSheetState extends State<_RoleSheet> {
     }
   }
 
-  void _profile(BuildContext context, DemoCharacter role, AppLocalizations l) =>
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => DemoScaffold(
-            title: Text(l.demoRoleProfile),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Image.asset(role.image, height: 300, fit: BoxFit.contain),
-                const SizedBox(height: 20),
-                Text(
-                  role.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(l.demoRoleBio, style: const TextStyle(height: 1.5)),
-              ],
+  void _profile(
+    BuildContext context,
+    DemoCharacter role,
+    DemoRoleProfile? profile,
+    AppLocalizations l,
+  ) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => DemoScaffold(
+        title: Text(l.demoRoleProfile),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Image.asset(role.image, height: 300, fit: BoxFit.contain),
+            const SizedBox(height: 20),
+            Text(
+              profile?.name.trim().isNotEmpty == true
+                  ? profile!.name
+                  : role.name,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
             ),
-          ),
+            const SizedBox(height: 20),
+            Text(
+              profile?.instructions.trim().isNotEmpty == true
+                  ? profile!.instructions
+                  : l.demoRoleBio,
+              style: const TextStyle(height: 1.5),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _RoleProfileSheet extends StatefulWidget {
@@ -1422,6 +1439,7 @@ class _RoleProfileSheet extends StatefulWidget {
 class _RoleProfileSheetState extends State<_RoleProfileSheet> {
   late final DemoRoleProfile _original =
       widget.repository.session(widget.sessionId).roleProfiles[widget.roleId] ??
+      DemoWebsiteCharacterCatalog.profile(widget.roleId) ??
       DemoRoleProfile(name: demoCharacter(widget.roleId).name);
   late final TextEditingController _name = TextEditingController(
     text: _original.name.isNotEmpty
@@ -2031,8 +2049,11 @@ class _WorkModeSheetState extends State<_WorkModeSheet> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                widget.session.memberNames[memberId] ??
-                                    demoMemberName(l, memberId),
+                                demoSessionMemberName(
+                                  l,
+                                  widget.session,
+                                  memberId,
+                                ),
                               ),
                             ),
                             DemoSelectionMark(
@@ -2143,9 +2164,11 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_initialized) return;
-    _name.text =
-        _session.memberNames[widget.memberId] ??
-        demoMemberName(AppLocalizations.of(context)!, widget.memberId);
+    _name.text = demoSessionMemberName(
+      AppLocalizations.of(context)!,
+      _session,
+      widget.memberId,
+    );
     _initialized = true;
   }
 
@@ -2186,7 +2209,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  demoMemberName(l, widget.memberId),
+                  demoSessionMemberName(l, _session, widget.memberId),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20,

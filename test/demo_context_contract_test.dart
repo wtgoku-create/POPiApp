@@ -19,6 +19,7 @@ DemoSession _session({
   members: const ['popi'],
   roles: roles,
   messages: const [],
+  memberNames: const {'popi': 'Context session'},
   capabilities: capabilities ?? DemoSession.defaultCapabilities,
 );
 

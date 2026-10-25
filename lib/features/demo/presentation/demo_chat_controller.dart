@@ -9,6 +9,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../data/demo_fixtures.dart';
 import '../data/demo_repository.dart';
 import '../domain/demo_models.dart';
+import 'demo_assistant_display.dart';
 
 /// Keeps send lifecycle and chat synchronization outside the widget tree.
 class DemoChatController extends ChangeNotifier {
@@ -262,7 +263,6 @@ class DemoChatController extends ChangeNotifier {
 
   chat.User resolveUser(String id, AppLocalizations localizations) {
     if (id == 'demo-user') return chat.User(id: id);
-    final currentName = session.memberNames[id]?.trim();
     final snapshotName = session.messages.reversed
         .where((message) => message.memberId == id)
         .map((message) => message.memberName.trim())
@@ -271,25 +271,23 @@ class DemoChatController extends ChangeNotifier {
     final knownMember = DemoFixtures.memberImages.containsKey(id);
     return chat.User(
       id: id,
-      name: currentName?.isNotEmpty == true
-          ? currentName
-          : snapshotName ??
-                (knownMember ? _defaultMemberName(localizations, id) : id),
+      name:
+          knownMember ||
+              snapshotName != null ||
+              session.memberNames.containsKey(id)
+          ? demoSessionMemberName(
+              localizations,
+              session,
+              id,
+              snapshotName: snapshotName,
+            )
+          : id,
       imageSource: DemoFixtures.memberImage(
         id,
         savedImage: session.memberAvatars[id],
       ),
     );
   }
-
-  String _defaultMemberName(AppLocalizations localizations, String id) =>
-      switch (id) {
-        'designer' => localizations.demoDesigner,
-        'writer' => localizations.demoWriter,
-        'director' => localizations.demoDirector,
-        'sound' => localizations.demoSound,
-        _ => localizations.demoPopi,
-      };
 
   Future<bool> send(
     String text,
@@ -313,7 +311,7 @@ class DemoChatController extends ChangeNotifier {
           _pendingBody = body;
           _pendingClientRequestId = const Uuid().v4();
         }
-        await _showProvisionalActivity(_pendingClientRequestId!);
+        await _showProvisionalActivity(_pendingClientRequestId!, l);
         var acceptedNotified = false;
         try {
           await repository.sendHarnessMessage(
@@ -353,7 +351,7 @@ class DemoChatController extends ChangeNotifier {
       final memberId = session.members.contains(session.activeMemberId)
           ? session.activeMemberId
           : session.members.firstOrNull ?? 'popi';
-      final memberName = session.memberNames[memberId] ?? '';
+      final memberName = demoSessionMemberName(l, session, memberId);
       var temporary = chat.TextMessage(
         id: const Uuid().v4(),
         authorId: memberId,
@@ -474,7 +472,10 @@ class DemoChatController extends ChangeNotifier {
     _pendingClientRequestId = null;
   }
 
-  Future<void> _showProvisionalActivity(String clientRequestId) async {
+  Future<void> _showProvisionalActivity(
+    String clientRequestId,
+    AppLocalizations localizations,
+  ) async {
     final currentSession = session;
     final memberId =
         currentSession.members.contains(currentSession.activeMemberId)
@@ -485,7 +486,11 @@ class DemoChatController extends ChangeNotifier {
       text: '',
       status: 'pending',
       memberId: memberId,
-      memberName: currentSession.memberNames[memberId] ?? '',
+      memberName: demoSessionMemberName(
+        localizations,
+        currentSession,
+        memberId,
+      ),
       configRevision: currentSession.configRevision,
       activity: const DemoActivity(
         kind: 'thinking',

@@ -610,7 +610,7 @@ Map<String, Object?> _configuration({String workMode = 'onDemand'}) => {
   'memberCapabilities': {
     'designer': ['image'],
   },
-  'memberNames': <String, String>{},
+  'memberNames': <String, String>{'designer': 'Harness assistant'},
   'memberInstructions': <String, String>{},
   'memberAvatars': <String, String>{},
   'memberColors': <String, int>{},

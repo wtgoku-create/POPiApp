@@ -1656,9 +1656,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePromptUnsure => '我还不知道做什么';
 
   @override
-  String get aiDisclaimer => 'AI生成结果可能有误，仅供参考';
-
-  @override
   String get composerPlaceholder => '跟POPi说点什么...';
 
   @override
@@ -3444,9 +3441,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoGreetingDetail => '告诉我，你现在最想做什么？';
 
   @override
-  String get demoDisclaimer => 'AI 生成结果可能有误，仅供参考';
-
-  @override
   String demoActivityTitle(String name, String activity) {
     return '$name · $activity';
   }
@@ -4012,4 +4006,83 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get harnessAccessUnavailable => '暂时无法连接测试环境，请稍后重试';
+
+  @override
+  String get demoPinnedConversations => '置顶';
+
+  @override
+  String get demoRecentConversations => '最近会话';
+
+  @override
+  String get demoListNoMessages => '暂无消息';
+
+  @override
+  String get demoListYou => '你';
+
+  @override
+  String get demoListAttachment => '[附件]';
+
+  @override
+  String get demoListQuestion => '等待你的回答';
+
+  @override
+  String demoListMessagePreview(String sender, String message) {
+    return '$sender：$message';
+  }
+
+  @override
+  String demoListTime(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.Hm(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListFullDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get demoMaterials => '素材';
+
+  @override
+  String composerNamedPlaceholder(String name) {
+    return '跟$name说点什么...';
+  }
+
+  @override
+  String get demoUploadFromDevice => '从设备上传';
+
+  @override
+  String get demoSelectFromLibrary => '从素材库选择';
+
+  @override
+  String get previewAttachment => '双击预览附件';
+
+  @override
+  String get demoAttachmentUnsupported => '当前助手暂不支持读取这类附件，请选择图片或文本脚本。';
+
+  @override
+  String get demoAttachmentNotFound => '附件已不存在，请移除后重新上传。';
+
+  @override
+  String get demoAttachmentTooLarge => '本次附件总大小过大，请减少附件或选择较小的文件。';
+
+  @override
+  String get demoAttachmentLimit => '附件数量过多或包含重复项，请调整后再发送。';
+
+  @override
+  String get demoAttachmentInvalid => '附件无法读取或已发生变化，请重新上传。';
 }

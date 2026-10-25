@@ -3217,12 +3217,6 @@ abstract class AppLocalizations {
   /// **'I\'m not sure what to create yet'**
   String get homePromptUnsure;
 
-  /// No description provided for @aiDisclaimer.
-  ///
-  /// In en, this message translates to:
-  /// **'AI-generated results may be inaccurate and are for reference only'**
-  String get aiDisclaimer;
-
   /// No description provided for @composerPlaceholder.
   ///
   /// In en, this message translates to:
@@ -6691,12 +6685,6 @@ abstract class AppLocalizations {
   /// **'What would you like to create?'**
   String get demoGreetingDetail;
 
-  /// No description provided for @demoDisclaimer.
-  ///
-  /// In en, this message translates to:
-  /// **'AI-generated results may contain errors'**
-  String get demoDisclaimer;
-
   /// No description provided for @demoActivityTitle.
   ///
   /// In en, this message translates to:
@@ -7776,6 +7764,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The test environment is unavailable. Try again later'**
   String get harnessAccessUnavailable;
+
+  /// No description provided for @demoPinnedConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get demoPinnedConversations;
+
+  /// No description provided for @demoRecentConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent conversations'**
+  String get demoRecentConversations;
+
+  /// No description provided for @demoListNoMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'No messages yet'**
+  String get demoListNoMessages;
+
+  /// No description provided for @demoListYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get demoListYou;
+
+  /// No description provided for @demoListAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'[Attachment]'**
+  String get demoListAttachment;
+
+  /// No description provided for @demoListQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your answer'**
+  String get demoListQuestion;
+
+  /// No description provided for @demoListMessagePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'{sender}: {message}'**
+  String demoListMessagePreview(String sender, String message);
+
+  /// No description provided for @demoListTime.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String demoListTime(DateTime date);
+
+  /// No description provided for @demoListDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String demoListDate(DateTime date);
+
+  /// No description provided for @demoListFullDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String demoListFullDate(DateTime date);
+
+  /// No description provided for @demoMaterials.
+  ///
+  /// In en, this message translates to:
+  /// **'Materials'**
+  String get demoMaterials;
+
+  /// No description provided for @composerNamedPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Say something to {name}...'**
+  String composerNamedPlaceholder(String name);
+
+  /// No description provided for @demoUploadFromDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload from device'**
+  String get demoUploadFromDevice;
+
+  /// No description provided for @demoSelectFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose from library'**
+  String get demoSelectFromLibrary;
+
+  /// No description provided for @previewAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Double-click to preview attachment'**
+  String get previewAttachment;
+
+  /// No description provided for @demoAttachmentUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This assistant cannot read this attachment type yet. Choose images or text scripts.'**
+  String get demoAttachmentUnsupported;
+
+  /// No description provided for @demoAttachmentNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'An attachment is no longer available. Remove it and upload it again.'**
+  String get demoAttachmentNotFound;
+
+  /// No description provided for @demoAttachmentTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'The attachments are too large together. Use fewer or smaller files.'**
+  String get demoAttachmentTooLarge;
+
+  /// No description provided for @demoAttachmentLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'There are too many or duplicate attachments. Adjust them before sending.'**
+  String get demoAttachmentLimit;
+
+  /// No description provided for @demoAttachmentInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'An attachment cannot be read or has changed. Upload it again.'**
+  String get demoAttachmentInvalid;
 }
 
 class _AppLocalizationsDelegate

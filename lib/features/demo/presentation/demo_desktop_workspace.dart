@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../profile/presentation/widgets/profile_chrome.dart';
 import '../data/demo_repository.dart';
 import '../domain/demo_models.dart';
+import 'demo_assistant_display.dart';
 import 'demo_assets_page.dart';
 import 'demo_chat_page.dart';
 import 'demo_create_session_sheet.dart';
@@ -195,7 +196,7 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
           context,
           title: l.demoRename,
           label: l.demoSessionName,
-          value: session.title,
+          value: demoSessionDisplayName(l, session),
           onSave: (title) => widget.repository.updateSession(
             session.id,
             (current) => current.copyWith(title: title),

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:extended_text_field/extended_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../../app/theme.dart';
@@ -175,6 +175,9 @@ class PopiMessageComposerController {
 }
 
 class PopiMessageComposer extends ConsumerStatefulWidget {
+  /// Visual space above the safe edge or keyboard, shared by composer hosts.
+  static const bottomGap = 8.0;
+
   const PopiMessageComposer({
     required this.controller,
     required this.selectedImages,
@@ -186,6 +189,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.onRemoveRole,
     this.selectedAssets = const [],
     this.onRemoveAsset,
+    this.onPreviewAsset,
+    this.selectedAssetThumbnailBuilder,
     this.onRetryImage,
     this.attachmentsReady = true,
     this.onModelParametersRequested,
@@ -198,6 +203,7 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.sessionLayout = false,
     this.bottomPadding,
     this.maxWidth,
+    this.placeholderText,
     this.active = true,
     this.onStop,
     this.onVoiceInput,
@@ -213,6 +219,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
   final ValueChanged<int>? onRemoveRole;
   final List<LibraryWork> selectedAssets;
   final ValueChanged<int>? onRemoveAsset;
+  final ValueChanged<int>? onPreviewAsset;
+  final Widget? Function(BuildContext context, int index)?
+  selectedAssetThumbnailBuilder;
   final VoidCallback onAttachment;
   final ValueChanged<int> onRemoveImage;
   final ValueChanged<int>? onRetryImage;
@@ -239,6 +248,9 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   /// Lets a desktop conversation use the width of its content pane.
   final double? maxWidth;
+
+  /// Lets the host address the named assistant instead of the generic brand.
+  final String? placeholderText;
 
   /// Cached desktop editors must release input when another session is active.
   final bool active;
@@ -616,9 +628,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final bottomPadding =
         widget.bottomPadding ??
-        (widget.sessionLayout && keyboardHeight > 0
-            ? 10.0
-            : math.max(safeArea.bottom - keyboardHeight, 20).toDouble());
+        (math.max(safeArea.bottom - keyboardHeight, 0).toDouble() +
+            PopiMessageComposer.bottomGap);
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImages = widget.selectedImages.isNotEmpty;
@@ -692,13 +703,61 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                         separatorBuilder: (_, _) => const SizedBox(width: 8),
                         itemBuilder: (context, index) {
                           final work = widget.selectedAssets[index];
+                          final onPreview = widget.onPreviewAsset == null
+                              ? null
+                              : () => widget.onPreviewAsset!(index);
+                          final thumbnail =
+                              widget.selectedAssetThumbnailBuilder?.call(
+                                context,
+                                index,
+                              ) ??
+                              LibraryWorkThumbnail(work: work);
                           return SizedBox.square(
                             key: ValueKey('popi-selected-asset-${work.id}'),
                             dimension: 92,
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                LibraryWorkThumbnail(work: work),
+                                if (onPreview == null)
+                                  thumbnail
+                                else
+                                  Positioned.fill(
+                                    child: Tooltip(
+                                      message: l10n.previewAttachment,
+                                      child: Semantics(
+                                        button: true,
+                                        label: l10n.previewAttachment,
+                                        onTap: onPreview,
+                                        child: FocusableActionDetector(
+                                          key: ValueKey(
+                                            'popi-preview-selected-asset-${work.id}',
+                                          ),
+                                          shortcuts: const {
+                                            SingleActivator(
+                                              LogicalKeyboardKey.enter,
+                                            ): ActivateIntent(),
+                                            SingleActivator(
+                                              LogicalKeyboardKey.space,
+                                            ): ActivateIntent(),
+                                          },
+                                          actions: {
+                                            ActivateIntent:
+                                                CallbackAction<ActivateIntent>(
+                                                  onInvoke: (_) {
+                                                    onPreview();
+                                                    return null;
+                                                  },
+                                                ),
+                                          },
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onDoubleTap: onPreview,
+                                            child: thumbnail,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 Positioned(
                                   top: 0,
                                   right: 0,
@@ -937,17 +996,6 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                       );
                     },
                   ),
-                  if (!widget.sessionLayout || keyboardHeight == 0) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      l10n.aiDisclaimer,
-                      style: TextStyle(
-                        color: colorScheme.onSurfaceVariant,
-                        fontSize: widget.sessionLayout ? 14 : 11,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -1023,7 +1071,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
             enabledBorder: InputBorder.none,
             disabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
-            hintText: l10n.composerPlaceholder,
+            hintText: widget.placeholderText ?? l10n.composerPlaceholder,
             hintStyle: placeholderStyle,
           ),
         ),

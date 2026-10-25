@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/app_network_image.dart';
 import '../../data/demo_fixtures.dart';
 import '../../data/demo_repository.dart';
+import '../../data/demo_website_character_catalog.dart';
 import '../../domain/demo_models.dart';
 import '../demo_remote_media.dart';
 import 'demo_widgets.dart';
@@ -27,6 +28,14 @@ String demoContentRoleAvatarSource(
   if (reference != null) {
     return reference.isRemote ? reference.contentUrl : reference.cover;
   }
+  // Website catalog characters keep a bundled avatar for stable/offline list
+  // rendering. Their public three-view URL remains in the role profile and is
+  // still supplied to the generation context after the role is associated.
+  final websiteAvatar = DemoWebsiteCharacterCatalog.characters
+      .where((character) => character.id == roleId)
+      .firstOrNull
+      ?.image;
+  if (websiteAvatar != null) return websiteAvatar;
   final referenceUrl = profile?.referenceImageUrls
       .map((url) => url.trim())
       .where((url) => url.isNotEmpty)

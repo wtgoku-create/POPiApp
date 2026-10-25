@@ -196,7 +196,7 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
       if (revision != _revision) return;
       await baselinePersistence;
       if (revision != _revision) return;
-      await _scheduleStorage(() => _storage.writeSession(session));
+      await _persistBestEffort(session);
       if (revision != _revision) return;
       _publishAuthenticated(session);
     } on HarnessAccessException {

@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/storage/harness_access_storage.dart';
 import 'package:popi_ai_app/features/demo/data/harness_access_repository.dart';
 import 'package:popi_ai_app/features/demo/domain/harness_access_session.dart';
 import 'package:popi_ai_app/shared/providers/harness_access_provider.dart';
+import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 
 void main() {
   final now = DateTime.utc(2026, 10, 24, 6);
@@ -16,6 +18,15 @@ void main() {
     expiresAt: DateTime.utc(2099),
     cacheNamespace: '123e4567-e89b-42d3-a456-426614174000',
   );
+
+  test('development storage uses the ad-hoc compatible macOS keychain', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final storage = container.read(flutterSecureStorageProvider);
+
+    expect(storage.mOptions.toMap()['useDataProtectionKeyChain'], 'false');
+  });
 
   test('initializes, restores, and clears the persisted session', () async {
     final storage = _MemoryStorage()..session = session;
@@ -133,6 +144,27 @@ void main() {
       expect(controller.state.loading, isFalse);
       expect(controller.state.authenticating, isFalse);
       expect(controller.state.authenticated, isFalse);
+    },
+  );
+
+  test(
+    'secure storage failure does not discard a successful live login',
+    () async {
+      final storage = _MemoryStorage()..writeError = StateError('keychain');
+      final controller = HarnessAccessController(
+        storage: storage,
+        repository: _StubRepository(session: session),
+        required: true,
+        expectedOrigin: 'https://harness.example',
+        now: () => now,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.signIn('tester', 'password');
+
+      expect(controller.state.authenticated, isTrue);
+      expect(controller.state.session, same(session));
+      expect(storage.session, isNull);
     },
   );
 
@@ -426,6 +458,7 @@ void main() {
 class _MemoryStorage implements HarnessAccessStorage {
   HarnessAccessSession? session;
   Object? readError;
+  Object? writeError;
   int deletes = 0;
 
   @override
@@ -442,6 +475,7 @@ class _MemoryStorage implements HarnessAccessStorage {
 
   @override
   Future<void> writeSession(HarnessAccessSession value) async {
+    if (writeError case final Object error) throw error;
     session = value;
   }
 }

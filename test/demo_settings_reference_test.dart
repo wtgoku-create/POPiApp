@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
+import 'package:popi_ai_app/features/demo/data/demo_website_character_catalog.dart';
+import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_settings_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -12,6 +14,7 @@ import 'package:toastification/toastification.dart';
 Future<DemoRepository> _pumpSettings(
   WidgetTester tester, {
   DemoRepository? repository,
+  String sessionId = 'inspiration',
 }) async {
   tester.view.physicalSize = const Size(375, 812);
   tester.view.devicePixelRatio = 1;
@@ -32,7 +35,7 @@ Future<DemoRepository> _pumpSettings(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         home: DemoSettingsPage(
           repository: resolvedRepository,
-          sessionId: 'inspiration',
+          sessionId: sessionId,
         ),
       ),
     ),
@@ -132,6 +135,39 @@ class _RefreshFailingCatalogRepository extends DemoRepository {
 }
 
 void main() {
+  testWidgets('settings use the single assistant given name consistently', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = DemoRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    final original = repository.session('alice');
+    await repository.updateSession(
+      original.id,
+      (session) => session.copyWith(
+        title: '新建会话',
+        memberNames: {...session.memberNames, 'popi': '哈哈'},
+      ),
+    );
+    await _pumpSettings(tester, repository: repository, sessionId: 'alice');
+
+    expect(find.text('哈哈'), findsOneWidget);
+    expect(find.text('新建会话'), findsNothing);
+    await tester.tap(find.text('能力'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('demo-edit-member-popi')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('demo-member-name')))
+          .controller!
+          .text,
+      '哈哈',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings use the compact 375px reference hierarchy', (
     tester,
   ) async {
@@ -219,6 +255,74 @@ void main() {
       'hua',
       'qiqi',
     ]);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'website character association saves its complete source profile',
+    (tester) async {
+      final repository = await _pumpSettings(tester);
+      const roleId = 'popi-character-1058';
+      expect(repository.session('inspiration').roles, isNot(contains(roleId)));
+
+      await tester.tap(find.byKey(const Key('demo-settings-roles')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('demo-role-profile-link-$roleId')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('性格：活泼开朗'), findsOneWidget);
+      expect(find.textContaining('不将多视图当作多个人物'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('demo-role-option-$roleId')));
+      await tester.tap(find.byKey(const Key('demo-roles-confirm')));
+      await tester.pumpAndSettle();
+
+      final saved = repository.session('inspiration');
+      expect(saved.roles, contains(roleId));
+      expect(
+        saved.roleProfiles[roleId]?.toJson(),
+        DemoWebsiteCharacterCatalog.profile(roleId)?.toJson(),
+      );
+      expect(saved.roleProfiles[roleId]?.isReady, isTrue);
+      expect(saved.members, contains('popi'));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('existing website character edits override catalog defaults', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = DemoRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    const roleId = 'popi-character-655';
+    const edited = DemoRoleProfile(
+      name: '我的康欣',
+      instructions: '用户自定义设定',
+      revision: 'user-revision',
+      referenceImageUrls: ['https://example.test/user-kangxin.png'],
+    );
+    await repository.updateSession(
+      'inspiration',
+      (session) => session.copyWith(
+        roles: [...session.roles, roleId],
+        roleProfiles: {...session.roleProfiles, roleId: edited},
+      ),
+    );
+    await _pumpSettings(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('demo-settings-roles')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-roles-confirm')));
+    await tester.pumpAndSettle();
+
+    expect(
+      repository.session('inspiration').roleProfiles[roleId]?.toJson(),
+      edited.toJson(),
+    );
     expect(tester.takeException(), isNull);
   });
 

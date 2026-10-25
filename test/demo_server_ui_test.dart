@@ -230,6 +230,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('添加附件'));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-attachment-library')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('owned-image-1')));
     await tester.pumpAndSettle();
 

@@ -408,6 +408,7 @@ class DemoMessage {
     this.memberName = '',
     this.runId = '',
     this.configRevision = 0,
+    this.createdAt,
     this.question,
     this.activity,
   });
@@ -420,6 +421,7 @@ class DemoMessage {
   final String memberName;
   final String runId;
   final int configRevision;
+  final DateTime? createdAt;
   final DemoQuestion? question;
   final DemoActivity? activity;
 
@@ -433,6 +435,7 @@ class DemoMessage {
     if (memberName.isNotEmpty) 'memberName': memberName,
     if (runId.isNotEmpty) 'runId': runId,
     if (configRevision != 0) 'configRevision': configRevision,
+    if (createdAt != null) 'createdAt': createdAt!.toUtc().toIso8601String(),
     if (question != null) 'question': question!.toJson(),
     if (activity != null) 'activity': activity!.toJson(),
   };
@@ -446,6 +449,7 @@ class DemoMessage {
     memberName: json['memberName']?.toString() ?? '',
     runId: json['runId']?.toString() ?? '',
     configRevision: (json['configRevision'] as num?)?.toInt() ?? 0,
+    createdAt: _parseDateTime(json['createdAt']),
     question: json['question'] is Map
         ? DemoQuestion.fromJson(
             Map<String, Object?>.from(json['question'] as Map),
@@ -479,6 +483,7 @@ class DemoSession {
     required this.messages,
     this.unread = 0,
     this.time = '',
+    this.updatedAt,
     this.direction = '',
     this.positioning = '',
     this.capabilities = defaultCapabilities,
@@ -506,6 +511,7 @@ class DemoSession {
   final List<DemoMessage> messages;
   final int unread;
   final String time;
+  final DateTime? updatedAt;
   final String direction;
   final String positioning;
   final Map<String, String> accountPreferences;
@@ -539,6 +545,7 @@ class DemoSession {
     List<DemoMessage>? messages,
     int? unread,
     String? time,
+    DateTime? updatedAt,
     String? direction,
     String? positioning,
     Map<String, String>? accountPreferences,
@@ -566,6 +573,7 @@ class DemoSession {
     messages: messages ?? this.messages,
     unread: unread ?? this.unread,
     time: time ?? this.time,
+    updatedAt: updatedAt ?? this.updatedAt,
     direction: direction ?? this.direction,
     positioning: positioning ?? this.positioning,
     accountPreferences: accountPreferences ?? this.accountPreferences,
@@ -594,6 +602,7 @@ class DemoSession {
     'messages': messages.map((m) => m.toJson()).toList(),
     'unread': unread,
     'time': time,
+    if (updatedAt != null) 'updatedAt': updatedAt!.toUtc().toIso8601String(),
     'direction': direction,
     'positioning': positioning,
     'accountPreferences': accountPreferences,
@@ -626,6 +635,7 @@ class DemoSession {
         .toList(),
     unread: json['unread'] as int,
     time: json['time'] as String,
+    updatedAt: _parseDateTime(json['updatedAt']),
     direction: json['direction'] as String,
     positioning: json['positioning'] as String,
     accountPreferences: Map<String, String>.from(
@@ -670,6 +680,11 @@ class DemoSession {
         .toList(),
     pinned: json['pinned'] as bool? ?? false,
   );
+}
+
+DateTime? _parseDateTime(Object? value) {
+  if (value is! String || value.trim().isEmpty) return null;
+  return DateTime.tryParse(value)?.toUtc();
 }
 
 @immutable

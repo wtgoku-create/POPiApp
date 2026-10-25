@@ -1,8 +1,10 @@
 import '../domain/demo_models.dart';
+import 'demo_website_character_catalog.dart';
 
 /// Bundled design assets keep the entire demo usable without a backend.
 abstract final class DemoFixtures {
   static const characters = [
+    ...DemoWebsiteCharacterCatalog.characters,
     DemoCharacter('alice', '爱丽丝', 'assets/images/demo_role_1.png'),
     DemoCharacter('er', '尔尔', 'assets/images/demo_role_2.png'),
     DemoCharacter('hua', '花西冷少', 'assets/images/demo_role_3.png'),

@@ -83,12 +83,14 @@ Future<void> showDemoImport(
   BuildContext context,
   DemoRepository repository, {
   Future<List<DemoUploadFile>> Function()? pickFiles,
+  ValueChanged<List<DemoAsset>>? onImported,
 }) => DemoSheet.show<void>(
   context: context,
   builder: (_) => repository.isHarness
       ? DemoFileImportSheet(
           repository: repository,
           pickFiles: pickFiles ?? pickDemoAssetFiles,
+          onImported: onImported,
         )
       : _ImportSheet(repository: repository),
 );

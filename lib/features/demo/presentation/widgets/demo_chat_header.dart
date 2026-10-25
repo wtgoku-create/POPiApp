@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../domain/demo_models.dart';
+import '../demo_assistant_display.dart';
 import 'demo_widgets.dart';
 
 /// Glass chat controls with a centered member title and fixed side anchors.
@@ -29,18 +30,7 @@ class DemoChatHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-    final memberId = session.members.isNotEmpty
-        ? session.members.first
-        : session.activeMemberId;
-    final resolvedMemberId = memberId.isEmpty ? 'popi' : memberId;
-    final configuredName = session.memberNames[resolvedMemberId]?.trim();
-    final title = desktopLayout
-        ? session.title
-        : session.members.length <= 1
-        ? configuredName == null || configuredName.isEmpty
-              ? demoMemberName(localizations, resolvedMemberId)
-              : configuredName
-        : localizations.demoBotGroupTitle(session.members.length);
+    final title = demoSessionDisplayName(localizations, session);
 
     return AppBar(
       automaticallyImplyLeading: false,

@@ -5,6 +5,9 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_menu.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../domain/demo_models.dart';
+import '../demo_assistant_display.dart';
+import '../demo_session_list_presentation.dart';
+import 'demo_conversation_list_item.dart';
 import 'demo_widgets.dart';
 
 /// Conversation navigation used by the wide desktop workspace.
@@ -141,7 +144,6 @@ class _DemoDesktopSidebarState extends State<DemoDesktopSidebar> {
                 query: widget.query,
                 onSelectSession: widget.onSelectSession,
                 sessionMenuBuilder: widget.sessionMenuBuilder,
-                emptySummary: l.demoGreetingDetail,
               ),
             ),
             const Divider(height: 1),
@@ -279,7 +281,6 @@ class _SessionList extends StatelessWidget {
     required this.query,
     required this.onSelectSession,
     required this.sessionMenuBuilder,
-    required this.emptySummary,
   });
 
   final List<DemoSession> sessions;
@@ -288,37 +289,97 @@ class _SessionList extends StatelessWidget {
   final String query;
   final ValueChanged<DemoSession> onSelectSession;
   final List<AppMenuEntry> Function(DemoSession)? sessionMenuBuilder;
-  final String emptySummary;
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final normalizedQuery = query.trim().toLowerCase();
     final visibleSessions = normalizedQuery.isEmpty
         ? sessions
         : sessions
               .where((session) {
-                final summary = session.messages.lastOrNull?.text ?? '';
-                return '${session.title} $summary'.toLowerCase().contains(
-                  normalizedQuery,
-                );
+                final summary = DemoSessionListPresentation.fromSession(
+                  session,
+                  l,
+                ).summary;
+                return '${demoSessionDisplayName(l, session)} $summary'
+                    .toLowerCase()
+                    .contains(normalizedQuery);
               })
               .toList(growable: false);
 
+    if (expanded) {
+      final entries = <({String? section, DemoSession? session})>[];
+      void appendSection(String label, Iterable<DemoSession> sectionSessions) {
+        final values = sectionSessions.toList(growable: false);
+        if (values.isEmpty) return;
+        entries.add((section: label, session: null));
+        entries.addAll(
+          values.map((session) => (section: null, session: session)),
+        );
+      }
+
+      appendSection(
+        l.demoPinnedConversations,
+        visibleSessions.where((session) => session.pinned),
+      );
+      appendSection(
+        l.demoRecentConversations,
+        visibleSessions.where((session) => !session.pinned),
+      );
+
+      return ListView.builder(
+        key: const PageStorageKey('demo-desktop-sessions'),
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 12),
+        itemCount: entries.length,
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          final session = entry.session;
+          if (session == null) {
+            final pinned = entry.section == l.demoPinnedConversations;
+            return Padding(
+              key: Key(
+                pinned
+                    ? 'demo-desktop-section-pinned'
+                    : 'demo-desktop-section-recent',
+              ),
+              padding: EdgeInsets.fromLTRB(10, index == 0 ? 8 : 16, 10, 5),
+              child: Text(
+                entry.section!,
+                style: const TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            );
+          }
+          return _sessionMenu(
+            session,
+            demoSessionDisplayName(l, session),
+            DemoConversationListItem(
+              session: session,
+              dense: true,
+              selected: session.id == selectedSessionId,
+              onTap: () => onSelectSession(session),
+            ),
+          );
+        },
+      );
+    }
+
     return ListView.builder(
       key: const PageStorageKey('demo-desktop-sessions'),
-      padding: EdgeInsets.fromLTRB(expanded ? 10 : 8, 2, expanded ? 10 : 8, 12),
-      itemExtent: expanded ? 66 : 56,
+      padding: const EdgeInsets.fromLTRB(8, 2, 8, 12),
+      itemExtent: 56,
       itemCount: visibleSessions.length,
       itemBuilder: (context, index) {
         final session = visibleSessions[index];
         final selected = session.id == selectedSessionId;
-        final summary =
-            session.messages.lastOrNull?.text.replaceAll('\n', ' ').trim() ??
-            '';
         final tile = Semantics(
           selected: selected,
           button: true,
-          label: session.title,
+          label: demoSessionDisplayName(l, session),
           child: Material(
             color: selected
                 ? Theme.of(context).colorScheme.onSurface.withValues(alpha: .08)
@@ -328,14 +389,9 @@ class _SessionList extends StatelessWidget {
             child: InkWell(
               onTap: () => onSelectSession(session),
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: expanded ? 10 : 8,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
-                  mainAxisAlignment: expanded
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     DemoAvatar(
                       members: session.members,
@@ -343,54 +399,29 @@ class _SessionList extends StatelessWidget {
                       memberAvatars: session.memberAvatars,
                       memberColors: session.memberColors,
                     ),
-                    if (expanded) ...[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              session.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                height: 1.2,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              summary.isEmpty ? emptySummary : summary,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                height: 1.2,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ),
           ),
         );
-        final menus =
-            sessionMenuBuilder?.call(session) ?? const <AppMenuEntry>[];
-        return AppContextMenu(
-          key: Key('demo-desktop-session-${session.id}'),
-          label: session.title,
-          entries: menus,
-          enabled: menus.isNotEmpty,
-          child: expanded ? tile : Tooltip(message: session.title, child: tile),
+        return _sessionMenu(
+          session,
+          demoSessionDisplayName(l, session),
+          Tooltip(message: demoSessionDisplayName(l, session), child: tile),
         );
       },
+    );
+  }
+
+  Widget _sessionMenu(DemoSession session, String label, Widget child) {
+    final menus = sessionMenuBuilder?.call(session) ?? const <AppMenuEntry>[];
+    return AppContextMenu(
+      key: Key('demo-desktop-session-${session.id}'),
+      label: label,
+      entries: menus,
+      enabled: menus.isNotEmpty,
+      child: child,
     );
   }
 }

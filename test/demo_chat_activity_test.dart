@@ -10,8 +10,10 @@ import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_chat_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_activity_indicator.dart';
+import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
@@ -82,7 +84,7 @@ void main() {
   });
 
   testWidgets(
-    'an activity-only server message survives restore and can expand',
+    'an activity-only server message survives restore without exposing steps',
     (tester) async {
       api.messages = [_message(kind: 'search', steps: true)];
       final repository = await _repository(api);
@@ -90,15 +92,15 @@ void main() {
       await _pump(tester, repository);
 
       expect(find.byType(DemoActivityIndicator), findsOneWidget);
-      expect(find.text('POPi · 正在搜索资料'), findsOneWidget);
+      expect(find.text('正在搜索资料'), findsOneWidget);
       expect(find.byKey(const Key('demo-activity-steps')), findsNothing);
-      await tester.tap(find.byKey(const Key('demo-activity-toggle')));
-      await tester.pumpAndSettle();
-      expect(find.text('正在调用模型'), findsOneWidget);
+      expect(find.byKey(const Key('demo-activity-toggle')), findsNothing);
+      expect(find.text('正在调用模型'), findsNothing);
 
       await repository.resumeHarnessSession('activity-session');
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('demo-activity-steps')), findsOneWidget);
+      expect(find.byKey(const Key('demo-activity-steps')), findsNothing);
+      expect(find.text('正在搜索资料'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -128,7 +130,7 @@ void main() {
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.byType(DemoActivityIndicator), findsOneWidget);
-    expect(find.text('POPi · 正在搜索资料'), findsOneWidget);
+    expect(find.text('正在搜索资料'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -146,15 +148,16 @@ void main() {
       await tester.tap(find.byKey(const Key('popi-send-button')));
       await tester.pump();
       await tester.pump();
+      expect(api.updateCalls, 1);
       expect(api.sendCalls, 1);
-      expect(find.text('POPi · 正在思考你的内容'), findsOneWidget);
+      expect(find.text('正在思考你的内容'), findsOneWidget);
       expect(_composer(tester).controller.markdown, '生成一段生日视频');
 
       api.sendGate!.complete({'runId': 'run-1', 'state': 'queued'});
       await tester.pump();
       await tester.pump();
       expect(_composer(tester).controller.markdown, isEmpty);
-      expect(find.text('POPi · 正在思考你的内容'), findsOneWidget);
+      expect(find.text('正在思考你的内容'), findsOneWidget);
 
       api.snapshotGate!.complete(
         api.snapshot(
@@ -166,7 +169,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('POPi · 正在思考你的内容'), findsNothing);
+      expect(find.text('正在思考你的内容'), findsNothing);
       expect(find.byType(DemoActivityIndicator), findsOneWidget);
       expect(find.text('方案已整理好。'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -228,11 +231,46 @@ void main() {
       );
       expect(indicator.activity.kind, 'video');
       expect(indicator.activity.status, 'running');
-      expect(find.text('POPi · 正在生成视频'), findsOneWidget);
+      expect(find.text('正在生成视频'), findsOneWidget);
       expect(find.text('视频已提交，完成后会出现在这里。'), findsOneWidget);
+      expect(
+        tester
+            .getTopLeft(find.byKey(const ValueKey('demo-activity-assistant-1')))
+            .dy,
+        greaterThan(tester.getBottomLeft(find.text('视频已提交，完成后会出现在这里。')).dy),
+      );
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('activity uses the current chat assistant avatar and color', (
+    tester,
+  ) async {
+    api.record = _recordWithAssistant(
+      memberId: 'writer',
+      name: '闪闪',
+      avatar: BotAvatarCharacter.rabbit.stillAsset,
+      color: 0xFFFFE9B8,
+    );
+    api.messages = [_message(kind: 'search', memberId: '')];
+    final repository = await _repository(api);
+    addTearDown(repository.dispose);
+    await _pump(tester, repository);
+
+    final activity = find.byKey(const ValueKey('demo-activity-assistant-1'));
+    final avatar = tester.widget<DemoAvatar>(
+      find.descendant(of: activity, matching: find.byType(DemoAvatar)),
+    );
+    expect(avatar.members, ['writer']);
+    expect(
+      avatar.memberAvatars['writer'],
+      BotAvatarCharacter.rabbit.stillAsset,
+    );
+    expect(avatar.memberColors['writer'], 0xFFFFE9B8);
+    expect(find.text('正在搜索资料'), findsOneWidget);
+    expect(find.textContaining('POPi ·'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Map<String, Object?> _message({
@@ -240,11 +278,12 @@ Map<String, Object?> _message({
   String kind = 'thinking',
   String status = 'running',
   bool steps = false,
+  String memberId = 'popi',
 }) => {
   'id': 'assistant-1',
   'role': 'assistant',
   'text': text,
-  'memberId': 'popi',
+  'memberId': memberId,
   'runId': 'run-1',
   'status': status,
   'createdAt': '2026-10-25T00:00:00.000Z',
@@ -262,18 +301,20 @@ Map<String, Object?> _message({
 class _ActivityApi extends NetworkAgentApi {
   _ActivityApi(super.dio);
 
+  Map<String, Object?> record = _record;
   List<Map<String, Object?>> messages = [];
   List<Map<String, Object?>> mediaJobs = [];
   Completer<Map<String, dynamic>>? sendGate;
   Completer<Map<String, dynamic>>? snapshotGate;
   bool accepted = false;
   int sendCalls = 0;
+  int updateCalls = 0;
 
   Map<String, dynamic> snapshot({
     List<Map<String, Object?>>? messages,
     String? runState,
   }) => {
-    'session': _record,
+    'session': record,
     'lastSeq': accepted ? 2 : 1,
     'messages': messages ?? this.messages,
     'mediaJobs': mediaJobs,
@@ -296,7 +337,7 @@ class _ActivityApi extends NetworkAgentApi {
     String? accountId,
     CancelToken? cancelToken,
   }) async => {
-    'list': [_record],
+    'list': [record],
     'pageInfo': {'page': 1, 'pageSize': 20, 'pageCount': 1, 'total': 1},
   };
 
@@ -305,6 +346,32 @@ class _ActivityApi extends NetworkAgentApi {
     String id, {
     CancelToken? cancelToken,
   }) async => snapshotGate != null ? snapshotGate!.future : snapshot();
+
+  @override
+  Future<Map<String, dynamic>> updateSession(
+    String id, {
+    String? clientRequestId,
+    String? title,
+    bool? archived,
+    bool? pinned,
+    Map<String, Object?>? configuration,
+    int? expectedConfigRevision,
+    CancelToken? cancelToken,
+  }) async {
+    updateCalls++;
+    final revision = (record['configRevision'] as num?)?.toInt() ?? 0;
+    expect(expectedConfigRevision, revision);
+    record = {
+      ...record,
+      if (title != null) 'title': title,
+      if (pinned != null) 'pinned': pinned,
+      if (configuration != null) 'configuration': configuration,
+      'configurationStatus': 'configured',
+      'configRevision': configuration == null ? revision : revision + 1,
+      'revision': ((record['revision'] as num?)?.toInt() ?? 0) + 1,
+    };
+    return Map<String, dynamic>.from(record);
+  }
 
   @override
   Future<Map<String, dynamic>> sendSessionMessage(
@@ -345,5 +412,22 @@ final _record = <String, Object?>{
     'memberCapabilities': <String, Object?>{},
     'workMode': 'onDemand',
     'activeMemberId': 'popi',
+  },
+};
+
+Map<String, Object?> _recordWithAssistant({
+  required String memberId,
+  required String name,
+  required String avatar,
+  required int color,
+}) => {
+  ..._record,
+  'configuration': {
+    ...(_record['configuration']! as Map<String, Object?>),
+    'members': [memberId],
+    'activeMemberId': memberId,
+    'memberNames': {memberId: name},
+    'memberAvatars': {memberId: avatar},
+    'memberColors': {memberId: color},
   },
 };

@@ -290,6 +290,8 @@ void main() {
     tester,
   ) async {
     await _pump(tester, size: const Size(360, 740));
+    await tester.tap(find.byKey(const Key('demo-search-toggle')));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '爱丽丝视频');
     await tester.pumpAndSettle();
     expect(
@@ -488,9 +490,9 @@ void main() {
     await tester.pump();
     await tester.tap(create);
     await tester.pumpAndSettle();
-    final disclaimer = find.text('AI生成结果可能有误，仅供参考');
-    final bottom = tester.getBottomLeft(disclaimer).dy;
-    expect(844 - bottom, closeTo(38, 1));
+    expect(find.text('AI生成结果可能有误，仅供参考'), findsNothing);
+    final frame = find.byKey(const Key('popi-message-composer'));
+    expect(844 - tester.getBottomLeft(frame).dy, closeTo(42, 1));
     expect(tester.takeException(), isNull);
   });
 
@@ -513,6 +515,10 @@ void main() {
     expect(find.text('嗨，用户～'), findsOneWidget);
     final attachment = repository.assets.first;
     await tester.tap(find.byTooltip('添加附件'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-attachment-device')), findsNothing);
+    expect(find.byKey(const Key('demo-attachment-library')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('demo-attachment-library')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(ValueKey(attachment.id)));
     await tester.pumpAndSettle();

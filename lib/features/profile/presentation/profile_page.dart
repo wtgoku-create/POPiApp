@@ -68,7 +68,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         : displayedLocalProfile?.name ?? '--';
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
-        : user?.id ?? '--';
+        : user?.id ?? displayedLocalProfile?.uid ?? '--';
     final displayPhone = user?.phone.isNotEmpty == true
         ? _maskedPhone(user!.phone)
         : '--';
@@ -420,12 +420,16 @@ class MembershipCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userProvider);
+    final localProfile = user == null && ref.watch(localProfileEnabledProvider)
+        ? ref.watch(localProfileProvider)
+        : null;
     final points = ref.watch(userPointsProvider).valueOrNull;
     final colorScheme = Theme.of(context).colorScheme;
     final memberLabel = user?.isMember == true
         ? l10n.memberLevel(user!.memberName.trim())
         : l10n.regularUser;
-    final totalPoints = user?.allCoins ?? points?.availableTotalPoints;
+    final totalPoints =
+        user?.allCoins ?? points?.availableTotalPoints ?? localProfile?.points;
 
     return Container(
       height: 124,

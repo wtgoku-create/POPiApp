@@ -188,7 +188,7 @@ void main() {
     );
     expect(field.controller?.text, 'PPP');
     expect(find.text('UID'), findsOneWidget);
-    expect(find.text('--'), findsOneWidget);
+    expect(find.text('303180'), findsOneWidget);
     toastification.dismissAll(delayForAnimation: false);
     await tester.pump(const Duration(milliseconds: 700));
   });
@@ -232,6 +232,7 @@ void main() {
     await pumpProfileApp(tester, repository: repository);
     await openEditor(tester);
 
+    await tester.enterText(find.byKey(const Key('profile-name')), '');
     await tester.tap(find.byKey(const Key('save-profile-button')));
     await tester.pump();
     await tester.pumpAndSettle(

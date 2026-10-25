@@ -9,6 +9,7 @@ import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_chat_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_settings_page.dart';
+import 'package:popi_ai_app/features/demo/presentation/widgets/demo_activity_indicator.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_chat_header.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
@@ -18,12 +19,13 @@ import 'package:toastification/toastification.dart';
 const _singleTitle = '这是一个会在窄屏上截断的非常长的角色名称';
 
 DemoSession _session({
+  String title = '头部测试会话',
   List<String> members = const ['popi'],
   Map<String, String> memberNames = const {'popi': _singleTitle},
   List<DemoMessage>? messages,
 }) => DemoSession(
   id: 'header-session',
-  title: '头部测试会话',
+  title: title,
   kind: DemoSessionKind.project,
   members: members,
   roles: const [],
@@ -52,6 +54,7 @@ Future<void> _pumpChat(
   Locale locale = const Locale('zh'),
   ThemeData? theme,
   double textScale = 1,
+  bool desktopLayout = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -84,6 +87,7 @@ Future<void> _pumpChat(
                       builder: (_) => DemoChatPage(
                         repository: repository,
                         sessionId: session.id,
+                        desktopLayout: desktopLayout,
                       ),
                     ),
                   ),
@@ -115,6 +119,88 @@ Size _glassSize(WidgetTester tester, Key buttonKey) {
 }
 
 void main() {
+  for (final desktop in [false, true]) {
+    testWidgets(
+      '${desktop ? 'desktop' : 'mobile'} single chat uses the given Bot name everywhere',
+      (tester) async {
+        await _pumpChat(
+          tester,
+          _session(
+            title: '新建会话',
+            memberNames: const {'popi': '哈哈'},
+            messages: const [
+              DemoMessage(
+                id: 'named-reply',
+                text: '我是你的创作助手。',
+                memberId: 'popi',
+              ),
+              DemoMessage(
+                id: 'named-activity',
+                text: '',
+                memberId: 'popi',
+                activity: DemoActivity(kind: 'thinking', status: 'running'),
+              ),
+            ],
+          ),
+          desktopLayout: desktop,
+          size: desktop ? const Size(900, 760) : const Size(390, 844),
+        );
+
+        expect(_inTitle(find.text('哈哈')), findsOneWidget);
+        expect(find.text('跟哈哈说点什么...'), findsOneWidget);
+        expect(find.text('哈哈'), findsWidgets);
+        final activity = tester.widget<DemoActivityIndicator>(
+          find.byType(DemoActivityIndicator),
+        );
+        expect(activity.memberName, '哈哈');
+        expect(find.text('POPi'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('legacy single chat title becomes the assistant identity', (
+    tester,
+  ) async {
+    await _pumpChat(
+      tester,
+      _session(
+        title: 'Watt',
+        memberNames: const {},
+        messages: const [
+          DemoMessage(id: 'legacy-reply', text: '历史回复', memberId: 'popi'),
+        ],
+      ),
+    );
+
+    expect(_inTitle(find.text('Watt')), findsOneWidget);
+    expect(find.text('跟Watt说点什么...'), findsOneWidget);
+    expect(find.text('Watt'), findsWidgets);
+    expect(find.text('POPi'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'single non-popi assistant owns legacy messages without a member id',
+    (tester) async {
+      await _pumpChat(
+        tester,
+        _session(
+          title: 'Watt',
+          members: const ['writer'],
+          memberNames: const {},
+          messages: const [DemoMessage(id: 'legacy-empty-id', text: '由我继续整理。')],
+        ),
+      );
+
+      expect(_inTitle(find.text('Watt')), findsOneWidget);
+      expect(find.text('Watt'), findsWidgets);
+      expect(find.text('POPi'), findsNothing);
+      expect(find.text('特级编导'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('single chat header follows the reference control proportions', (
     tester,
   ) async {
@@ -175,7 +261,7 @@ void main() {
       expect(rects[2].left - rects[1].left, closeTo(17, .01));
       expect(rects[0].right, greaterThan(rects[1].left));
       expect(tester.getCenter(title).dx, closeTo(195, .01));
-      expect(find.text('POPi等3人'), findsOneWidget);
+      expect(find.text('头部测试会话'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -224,9 +310,9 @@ void main() {
         textScale: 1.5,
       );
 
-      expect(find.text('POPi + 4 Bots'), findsOneWidget);
+      expect(find.text('头部测试会话'), findsOneWidget);
       expect(_inTitle(find.byType(DemoAvatar)), findsNWidgets(3));
-      final text = tester.widget<Text>(_inTitle(find.text('POPi + 4 Bots')));
+      final text = tester.widget<Text>(_inTitle(find.text('头部测试会话')));
       expect(text.style?.color, AppTheme.dark.colorScheme.onSurface);
       expect(find.byType(DemoChatHeader), findsOneWidget);
       expect(tester.takeException(), isNull);

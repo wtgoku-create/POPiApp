@@ -17,11 +17,13 @@ class DemoFileImportSheet extends StatefulWidget {
   const DemoFileImportSheet({
     required this.repository,
     this.pickFiles = pickDemoAssetFiles,
+    this.onImported,
     super.key,
   });
 
   final DemoRepository repository;
   final Future<List<DemoUploadFile>> Function() pickFiles;
+  final ValueChanged<List<DemoAsset>>? onImported;
 
   @override
   State<DemoFileImportSheet> createState() => _DemoFileImportSheetState();
@@ -169,9 +171,14 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
           continue;
         }
         setState(() => _uploadingId = file.clientRequestId);
-        await widget.repository.uploadFile(file);
+        final asset = await widget.repository.uploadFile(file);
         if (!mounted) return;
-        setState(() => _uploaded.add(file.clientRequestId));
+        setState(() {
+          _uploaded.add(file.clientRequestId);
+        });
+        // Publish each accepted upload immediately. If a later file fails, the
+        // successful item remains selected while the failed draft can retry.
+        widget.onImported?.call([asset]);
       }
       if (!mounted) return;
       final l = AppLocalizations.of(context)!;

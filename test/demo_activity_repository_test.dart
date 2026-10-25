@@ -616,7 +616,7 @@ Map<String, dynamic> _sessionRecord() => {
     'roles': <String>[],
     'capabilities': DemoSession.defaultCapabilities,
     'memberCapabilities': {'popi': DemoSession.defaultCapabilities},
-    'memberNames': <String, String>{},
+    'memberNames': <String, String>{'popi': 'Activity'},
     'memberInstructions': <String, String>{},
     'memberAvatars': <String, String>{},
     'memberColors': <String, int>{},

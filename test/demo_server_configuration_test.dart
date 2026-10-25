@@ -6,6 +6,7 @@ import 'package:popi_ai_app/core/network/agent_api_exception.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
+import 'package:popi_ai_app/features/demo/data/demo_website_character_catalog.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -150,6 +151,33 @@ void main() {
       expect(api.lastExpectedConfigRevision, 2);
     },
   );
+
+  test('website character profile is sent as fixed server context', () async {
+    final api = _ConfigurationApi(dio)
+      ..record = _configuredRecord(
+        configuration: _configuration(),
+        configRevision: 2,
+      );
+    final repository = DemoRepository.harness(storage, api)..restore();
+    addTearDown(repository.dispose);
+    await repository.refreshSessions();
+    const roleId = 'popi-character-653';
+    final source = DemoWebsiteCharacterCatalog.profile(roleId)!;
+
+    await repository.updateSession(
+      's1',
+      (session) => session.copyWith(
+        roles: const [roleId],
+        roleProfiles: {roleId: source},
+      ),
+    );
+
+    final saved = api.lastUpdatedConfiguration!;
+    expect(saved['roles'], [roleId]);
+    expect((saved['roleProfiles'] as Map)[roleId], source.toJson());
+    expect(api.lastExpectedConfigRevision, 2);
+    expect(repository.session('s1').members, ['popi']);
+  });
 
   test(
     'legacy cached configuration migrates once from revision zero',
