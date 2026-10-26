@@ -7,8 +7,9 @@ import '../../domain/demo_models.dart';
 
 /// Figma's square document/audio cover, shared by grid and list assets.
 class DemoDocumentCover extends StatelessWidget {
-  const DemoDocumentCover({required this.kind, super.key});
+  const DemoDocumentCover({required this.kind, this.format = '', super.key});
   final DemoAssetKind kind;
+  final String format;
   static const _waveHeights = [
     8.0,
     13.0,
@@ -50,10 +51,37 @@ class DemoDocumentCover extends StatelessWidget {
       builder: (context, constraints) {
         final extent = math.min(constraints.maxWidth, constraints.maxHeight);
         if (kind == DemoAssetKind.script) {
+          final label = format.trim().toUpperCase();
           return Center(
-            child: AppSvgIcon.asset(
-              'demo_script_cover',
-              size: math.min(50, extent * .5),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AppSvgIcon.asset(
+                  'demo_script_cover',
+                  size: math.min(50, extent * .5),
+                ),
+                if (label.isNotEmpty)
+                  Positioned(
+                    bottom: extent * .16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: ShapeDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           );
         }

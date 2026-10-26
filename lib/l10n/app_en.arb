@@ -32,26 +32,62 @@
   "roleCreateProject": "Create project",
   "roleConfirmSelection": "Confirm selection",
   "roleSelectionLimit": "Choose up to {count} characters",
-  "@roleSelectionLimit": {"placeholders": {"count": {"type": "int"}}},
+  "@roleSelectionLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "removeRole": "Remove role",
   "removeAsset": "Remove asset",
   "assetSelectionLimit": "Choose up to {count} media items",
-  "@assetSelectionLimit": {"placeholders": {"count": {"type": "int"}}},
+  "@assetSelectionLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatRolePrompt": "Create using the selected characters.",
   "roleGuideViewMore": "View more",
   "roleSelectedCount": " ({count} selected)",
-  "@roleSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleChooseCast": "Use this cast",
   "roleSelectProjectFirst": "Choose characters for your project first",
   "roleSelectCastFirst": "Choose your cast first",
   "roleProjectLimit": "Choose up to 5 project characters",
   "roleCastLimit": "Choose up to 3 cast members",
   "roleProjectName": "{name}'s project",
-  "@roleProjectName": {"placeholders": {"name": {"type": "String"}}},
+  "@roleProjectName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "roleProjectCount": "{count} project characters",
-  "@roleProjectCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleProjectCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleCastCount": "{count} cast members",
-  "@roleCastCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleCastCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleChooseStory": "Choose this story",
   "roleRefreshStories": "Try another set",
   "roleReconfirmVideo": "Confirm video again",
@@ -63,11 +99,26 @@
   "roleEditProjectRoles": "Edit project characters",
   "roleViewProfiles": "View character profiles",
   "roleProfilePage": "Character profile {index}/{total}",
-  "@roleProfilePage": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}}},
+  "@roleProfilePage": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "roleFullProfile": "View full character profile",
   "roleCollapseProfile": "Collapse full character profile",
   "roleFullProfileVersion": "View full character profile {version}",
-  "@roleFullProfileVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@roleFullProfileVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "rolePreviousProfile": "Previous character profile",
   "roleNextProfile": "Next character profile",
   "roleDetailedStory": "Full story",
@@ -113,7 +164,16 @@
   "chatStageInspectResult": "Inspect result",
   "roleStoryboardContent": "Storyboard video prompt",
   "roleStoryboardShot": "Shot {index} · {duration} s",
-  "@roleStoryboardShot": {"placeholders": {"index": {"type": "int"}, "duration": {"type": "String"}}},
+  "@roleStoryboardShot": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "roleVideoModelPrompt": "Video model prompt",
   "videoFullscreen": "Play fullscreen",
   "rolePreviewNotice": "Interaction preview · No points charged",
@@ -121,7 +181,16 @@
   "roleEstimatePending": "Choose a model and settings to see a points estimate",
   "roleEstimatePreview": "The final quote applies when production is connected",
   "roleStoryPosition": "{index}/{total}",
-  "@roleStoryPosition": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}}},
+  "@roleStoryPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "roleExampleDevelopment1": "An unwritten graduation plan leads to a friend's sketchbook and a decision to make a short film. Revisiting those memories helps the character find a passion.",
   "roleExampleDevelopment2": "A roommate's strange behavior prompts a secret investigation. A series of comic misunderstandings ends with a surprise farewell party in their classroom.",
   "roleExampleDevelopment3": "A setback breaks through her usual brave face. Her friends support her in small everyday ways until she feels ready to share how tired she is.",
@@ -147,11 +216,23 @@
   "roleDurationAutomatic": "Automatic",
   "roleDurationCustom": "Custom",
   "roleDurationSeconds": "{seconds}s",
-  "@roleDurationSeconds": {"placeholders": {"seconds": {"type": "String"}}},
+  "@roleDurationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "roleDimensions": "Dimensions",
   "roleQuantity": "Quantity",
   "roleEstimatedPoints": "Estimated points: {points}",
-  "@roleEstimatedPoints": {"placeholders": {"points": {"type": "int"}}},
+  "@roleEstimatedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "roleModelSoraDescription": "OpenAI media generation with synchronized audio and video",
   "roleModelVeoDescription": "Google video model with cinematic quality and precise camera control",
   "roleModelJimengDescription": "ByteDance video model with consistent motion and image-to-video generation",
@@ -159,7 +240,37 @@
   "roleModelViduDescription": "ShengShu model with reference-based effects and material transfer",
   "roleModelDiscount": "50% off",
   "roleVideoPlanPrompt": "Create a video using this plan.\nProject: {project}\nProject characters: {roles}\nCast: {cast}\nTopic: {title}\nStory overview: {story}\nVideo model: {model}\nVideo settings: {video}\nImage settings: {image}\nQuantity: {quantity}",
-  "@roleVideoPlanPrompt": {"placeholders": {"project": {"type": "String"}, "roles": {"type": "String"}, "cast": {"type": "String"}, "title": {"type": "String"}, "story": {"type": "String"}, "model": {"type": "String"}, "video": {"type": "String"}, "image": {"type": "String"}, "quantity": {"type": "int"}}},
+  "@roleVideoPlanPrompt": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      },
+      "roles": {
+        "type": "String"
+      },
+      "cast": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      },
+      "story": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      },
+      "video": {
+        "type": "String"
+      },
+      "image": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
   "roleExampleAlice": "Alice",
   "roleExampleErer": "Erer",
   "roleExampleHua": "Hua Xileng",
@@ -213,9 +324,21 @@
   "deleteRoleDescription": "This role will be removed from your personal and community libraries. This cannot be undone.",
   "roleDeleteUnavailable": "This role cannot be deleted",
   "improveRolePrompt": "Help enrich the personality, expression and creative direction of {title}.",
-  "@improveRolePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@improveRolePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "createRolePrompt": "Recommend creative topics featuring {title}.",
-  "@createRolePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@createRolePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "roleDescription": "About this role",
   "noRoleDescription": "No description yet",
   "myRoles": "My roles",
@@ -238,9 +361,21 @@
   "assetDownloadUnavailable": "No source file is available to download",
   "deleteAssetsTitle": "Delete assets?",
   "deleteAssetsDescription": "Delete {count} selected assets? This cannot be undone.",
-  "@deleteAssetsDescription": {"placeholders": {"count": {"type": "int"}}},
+  "@deleteAssetsDescription": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectedAssets": "{count} selected",
-  "@selectedAssets": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedAssets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "myIpAccounts": "My IP accounts",
   "ipProjects": "IP projects",
   "teachingCenter": "Learning center",
@@ -276,7 +411,9 @@
   "accountRenameConfirm": "Change the account nickname to:\n{title}",
   "@accountRenameConfirm": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "accountArchives": "Creation archives",
@@ -331,9 +468,27 @@
   "imageShareFailed": "Could not share image. Please try again",
   "mediaShareFailed": "Could not share media. Please try again",
   "mediaPreviewPosition": "Item {index} of {count}",
-  "@mediaPreviewPosition": {"placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
+  "@mediaPreviewPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "imagePreviewPosition": "Image {index} of {count}",
-  "@imagePreviewPosition": {"placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
+  "@imagePreviewPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "item": "Item",
   "welcome": "Your new project starts here.",
   "theme": "Theme",
@@ -371,7 +526,9 @@
   "resendCountdown": "Resend in {seconds}s",
   "@resendCountdown": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "phoneLogin": "Continue with phone",
@@ -412,9 +569,21 @@
   "activityOrderNumber": "Order number",
   "activityOrderPlaceholder": "Paste your Douyin order number",
   "activityMemberRestriction": "This activity is limited to {levels}",
-  "@activityMemberRestriction": {"placeholders": {"levels": {"type": "String"}}},
+  "@activityMemberRestriction": {
+    "placeholders": {
+      "levels": {
+        "type": "String"
+      }
+    }
+  },
   "activityMemberLevel": "Membership level {level}",
-  "@activityMemberLevel": {"placeholders": {"level": {"type": "int"}}},
+  "@activityMemberLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "activityExchangeSuccess": "Redeemed successfully",
   "activityExchangeFailed": "Unable to redeem. Please try again later",
   "activityRefreshFailed": "Redeemed successfully. Membership information could not refresh; check again later",
@@ -428,7 +597,13 @@
   "imageTooLarge": "Each image must be no larger than 6 MB",
   "imageReadFailed": "Unable to read the image. Try again later",
   "imageUploadProgress": "Uploading {percent}%",
-  "@imageUploadProgress": {"placeholders": {"percent": {"type": "int"}}},
+  "@imageUploadProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "imageUploadProcessing": "Processing",
   "imageUploadFailed": "Upload failed",
   "imageUploadComplete": "Uploaded",
@@ -437,13 +612,28 @@
   "homeGreetingTitle": "Hi, I'm POPi~\n",
   "homeWelcomeGuest": "Hi, I'm POPi~",
   "homeWelcomeUser": "Hi, {name}~",
-  "@homeWelcomeUser": {"placeholders": {"name": {"type": "String"}}},
+  "@homeWelcomeUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeWelcomeBody": "Let's create something today",
   "homeStartIp": "Create a new IP account",
   "homeStartRole": "Start with a character",
   "homeStartContent": "Start with a topic, content or script",
   "homeBannerPage": "Creative inspiration, image {page} of {total}",
-  "@homeBannerPage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@homeBannerPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "homeGreetingBody": "I'll help you\nbuild an account together!",
   "ipGuideIntroduction": "Introduction",
   "ipGuideIntroBefore": "Just ",
@@ -487,7 +677,13 @@
   "ipGuideIntroAfter": "\nto create your IP account",
   "ipGuideStart": "Start creating",
   "ipGuideStep": "Step {step}",
-  "@ipGuideStep": {"placeholders":{"step":{"type":"int"}}},
+  "@ipGuideStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
   "ipDirectionQuestion": "What would you like to share over time?",
   "ipFeelingQuestion": "How should your audience feel?",
   "ipPresentationQuestion": "How should your account appear?",
@@ -505,9 +701,21 @@
   "ipTargetAudienceValue": "People who want to share this feeling with you",
   "ipCustomHint": "Something else, in my own words",
   "ipPrimarySelection": "Primary: {label}",
-  "@ipPrimarySelection": {"placeholders":{"label":{"type":"String"}}},
+  "@ipPrimarySelection": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "ipSecondarySelection": "Secondary: {label}",
-  "@ipSecondarySelection": {"placeholders":{"label":{"type":"String"}}},
+  "@ipSecondarySelection": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "ipMaximumSelections": "Choose up to two: a primary and a secondary",
   "ipSelectDirection": "Choose a content direction or write your own",
   "ipSelectFeeling": "Choose an audience feeling or write your own",
@@ -548,21 +756,47 @@
   "ipFormatInteractiveDrama": "Interactive drama",
   "ipFormatTalkingHead": "Talking head",
   "ipGuideSessionPrompt": "Help me create a new IP account.\nAccount nickname: {name}\nContent direction: {direction}\nAudience feelings: {feelings}\nPresentation: {presentation}\nContent format: {format}\nTarget audience: {audience}",
-  "@ipGuideSessionPrompt": {"placeholders":{"name":{"type":"String"},"direction":{"type":"String"},"feelings":{"type":"String"},"presentation":{"type":"String"},"format":{"type":"String"},"audience":{"type":"String"}}},
+  "@ipGuideSessionPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "direction": {
+        "type": "String"
+      },
+      "feelings": {
+        "type": "String"
+      },
+      "presentation": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      },
+      "audience": {
+        "type": "String"
+      }
+    }
+  },
   "homePromptIntro": "First, tell me:",
   "homePromptQuestion": "What do you want to do most right now?",
   "homePromptCreateIp": "Create a new IP",
   "homePromptImproveAccount": "Improve my existing account",
   "homePromptHasReference": "I already have a reference account",
   "homePromptUnsure": "I'm not sure what to create yet",
-  "aiDisclaimer": "AI-generated results may be inaccurate and are for reference only",
   "composerPlaceholder": "Say something to POPi...",
   "composerRunning": "Session is running",
   "sessionWelcomeTitle": "Hi there!",
   "sessionWelcomeBody": "Tell me, what would you like to create?",
   "composerExpandInput": "Expand input",
   "selectedImageLabel": "Selected image: {name}",
-  "@selectedImageLabel": {"placeholders": {"name": {"type": "String"}}},
+  "@selectedImageLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "removeImage": "Remove image",
   "addAttachment": "Add attachment",
   "attachmentTitle": "Add",
@@ -577,6 +811,17 @@
   "galleryEmpty": "No accessible photos",
   "galleryLoadFailed": "Could not load photos. Please try again",
   "voiceInput": "Voice input",
+  "voiceInputStarting": "Preparing voice input…",
+  "voiceInputListening": "Listening. Tap the microphone to finish",
+  "voiceInputFinishing": "Transcribing…",
+  "voiceInputStop": "Finish voice input",
+  "voiceInputCancel": "Cancel voice input",
+  "voiceInputPermissionDenied": "Allow microphone and speech recognition access in system or browser settings",
+  "voiceInputUnavailable": "Voice input is not available on this device or browser",
+  "voiceInputNoSpeech": "No speech recognized. Please try again",
+  "voiceInputNetworkError": "Could not connect to speech recognition. Check your connection and try again",
+  "voiceInputAudioError": "Cannot access the microphone. Check the device and whether it is in use",
+  "voiceInputFailed": "Could not recognize speech. Please try again",
   "sendMessage": "Send message",
   "searchConversations": "Search conversations",
   "newIpProject": "New IP project",
@@ -585,10 +830,20 @@
   "drawerViewAll": "View all",
   "sessionItemOptions": "Options for conversation {name}",
   "@sessionItemOptions": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "projectCount": "Projects ({count})",
-  "@projectCount": {"placeholders": {"count": {"type": "int"}}},
+  "@projectCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "projectOptions": "Project options",
   "expandAllProjects": "Expand all projects",
   "collapseAllProjects": "Collapse all projects",
@@ -602,15 +857,33 @@
   "projectsLoadFailed": "Could not load projects",
   "projectSessionsLoadFailed": "Could not load conversations",
   "projectItemOptions": "Options for {name}",
-  "@projectItemOptions": {"placeholders": {"name": {"type": "String"}}},
+  "@projectItemOptions": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "renameProjectItem": "Rename",
   "projectItemName": "Name",
   "pinSession": "Pin conversation",
   "unpinSession": "Unpin conversation",
   "deleteProjectConfirm": "Delete {name} and all its conversations?",
-  "@deleteProjectConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteProjectConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteSessionConfirm": "Delete conversation {name}?",
-  "@deleteSessionConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteSessionConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "projectItemRenamed": "Renamed successfully",
   "projectItemDeleted": "Deleted successfully",
   "popiConversations": "POPi conversations",
@@ -636,7 +909,13 @@
   "notificationImageFailed": "Could not load image",
   "notificationViewImage": "View notification image",
   "notificationDaysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
-  "@notificationDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "@notificationDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "profileSettings": "Profile settings",
   "taskLifeStoryVlog": "Lifestyle story vlog",
   "taskDouyinAiDrama": "Douyin AI comic creator",
@@ -651,7 +930,13 @@
   "taskWeiboTrends": "Current Weibo trending topics",
   "taskComedyStoryVlog": "Comedy story vlog",
   "downloadedWorks": "Downloaded {count} works",
-  "@downloadedWorks": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadedWorks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "creationHistory": "History",
   "creationHistoryLoadFailed": "Unable to load creation history",
   "searchCreationHistory": "Search creation history",
@@ -677,10 +962,22 @@
   "goGenerate": "Create now",
   "yesterday": "Yesterday",
   "daysAgo": "{count} days ago",
-  "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sampleAccountQuestion": "Is there an account you like and want to learn from...",
   "pointsSpent": "Spent {points} points",
-  "@pointsSpent": {"placeholders": {"points": {"type": "int"}}},
+  "@pointsSpent": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "continueTask": "Continue",
   "download": "Download",
   "sessionArtifactExported": "Document exported",
@@ -719,7 +1016,13 @@
   "cancelAccountFailed": "Unable to delete your account. Try again later",
   "regularUser": "Regular user",
   "memberLevel": "{level} member",
-  "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
+  "@memberLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "upgradeMembership": "Upgrade",
   "goToLogin": "Sign in",
   "membershipStarter": "Starter Inspiration",
@@ -729,14 +1032,35 @@
   "limitedDiscount": "40% off",
   "perMonth": "/month",
   "membershipPointsValue": "Approx. ¥{value} per 100 points",
-  "@membershipPointsValue": {"placeholders": {"value": {"type": "String"}}},
+  "@membershipPointsValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "pointsPerMonth": "points/month",
   "membershipPointsBreakdown": "Includes {packagePoints} plan points + {giftPoints} bonus points",
-  "@membershipPointsBreakdown": {"placeholders": {"packagePoints": {"type": "int"}, "giftPoints": {"type": "int"}}},
+  "@membershipPointsBreakdown": {
+    "placeholders": {
+      "packagePoints": {
+        "type": "int"
+      },
+      "giftPoints": {
+        "type": "int"
+      }
+    }
+  },
   "membershipCoreBenefits": "Core membership benefits",
   "benefitVoiceClone": "Voice cloning enabled",
   "benefitConcurrentTasks": "Up to {count} concurrent tasks",
-  "@benefitConcurrentTasks": {"placeholders": {"count": {"type": "int"}}},
+  "@benefitConcurrentTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "benefitCharacters": "Free and member characters",
   "benefitWatermark": "Watermark-free downloads",
   "benefitVip": "Dedicated VIP channel",
@@ -754,7 +1078,9 @@
   "paymentGrantPoints": "Points granted: {points}",
   "@paymentGrantPoints": {
     "placeholders": {
-      "points": { "type": "int" }
+      "points": {
+        "type": "int"
+      }
     }
   },
   "paymentCatalogPrice": "Plan price. Your order determines the final charge",
@@ -783,7 +1109,13 @@
   "membershipCurrentPlan": "Current plan",
   "membershipBuyNow": "Buy now",
   "membershipAlreadyMember": "You're already {level}",
-  "@membershipAlreadyMember": {"placeholders": {"level": {"type": "String"}}},
+  "@membershipAlreadyMember": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "membershipPlansEmpty": "No membership plans available",
   "membershipPlansLoadFailed": "Unable to load membership plans",
   "rechargeAndPoints": "Top up | Points details",
@@ -871,10 +1203,22 @@
   "chatPlanModel": "Model",
   "chatPlanPoints": "Estimated points",
   "chatPlanCredits": "{points} points",
-  "@chatPlanCredits": {"placeholders": {"points": {"type": "String"}}},
+  "@chatPlanCredits": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
   "chatReviseContent": "Revise content",
   "chatRevisePrompt": "Please revise {title}: ",
-  "@chatRevisePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@chatRevisePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "chatBeforeChange": "Before",
   "chatAfterChange": "After",
   "chatCompleteRole": "Create character",
@@ -887,7 +1231,13 @@
   "chatCastRole": "Cast",
   "chatCastUnmatched": "Unmatched",
   "chatCastMultiple": "{count} roles",
-  "@chatCastMultiple": {"placeholders": {"count": {"type": "int"}}},
+  "@chatCastMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatConfirmCast": "Confirm cast",
   "chatCastRoleUnavailable": "This role is unavailable. Choose a readable role with a saved profile.",
   "chatRoleActive": "Published",
@@ -955,7 +1305,13 @@
   "redemptionBindingSuccess": "WeChat Official Account linked",
   "redemptionBindingCheck": "Check link status",
   "redemptionBindingWaiting": "Waiting for WeChat scan",
-  "@redemptionRewardDescription": {"placeholders": {"points": {"type": "int"}}},
+  "@redemptionRewardDescription": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "teachingAll": "All",
   "teachingCatalog": "Contents",
   "teachingRequiredMember": "membership",
@@ -970,9 +1326,21 @@
   "teachingMemberTitle": "Member offers",
   "teachingMemberDescription": "Unlock premium courses\nExplore more ways to create",
   "teachingMemberPrice": "From ¥{price}\nUnlock premium courses",
-  "@teachingMemberPrice": {"placeholders": {"price": {"type": "String"}}},
+  "@teachingMemberPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "teachingInstructor": "Tutor: {name}",
-  "@teachingInstructor": {"placeholders": {"name": {"type": "String"}}},
+  "@teachingInstructor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "teachingFree": "Free",
   "teachingUntitled": "Untitled course",
   "teachingLoading": "Loading courses",
@@ -1080,7 +1448,13 @@
   "chatMediaPrompt": "Please use these images as references",
   "chatHistoryLoadFailed": "Unable to load conversations",
   "chatEstimatedPoints": "Estimated cost: {points} points",
-  "@chatEstimatedPoints": {"placeholders": {"points": {"type": "String"}}},
+  "@chatEstimatedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
   "demoConversations": "Conversations",
   "demoAssets": "Assets",
   "demoSearchHistory": "Search conversations",
@@ -1110,6 +1484,13 @@
   "demoRename": "Rename conversation",
   "demoName": "Name",
   "demoPreferences": "Account preferences",
+  "demoCreativeMemory": "Creative preferences",
+  "demoEditCreativeMemory": "Edit creative preferences",
+  "demoCreativeMemoryEmpty": "AI can summarize the visual style, specific model preferences, and aspect ratios from the conversation, or you can enter them manually.",
+  "demoCreativeMemoryScope": "Used only in this conversation. AI will not overwrite manual edits.",
+  "demoCreativeMemoryEditorHint": "This text is the creative memory for this conversation. Name the visual style, specific image and video model preferences, and aspect ratios.",
+  "demoCreativeMemoryAfterSave": "Future creations will automatically use this memory after you save it.",
+  "demoSaveToCurrentSession": "Save to this conversation",
   "demoDirection": "Content direction",
   "demoFeeling": "Audience feeling",
   "demoFeelingValue": "Authentic, with a little tenderness",
@@ -1136,6 +1517,14 @@
   "demoEmptyConversations": "No conversations yet",
   "demoAll": "All",
   "demoImages": "Images",
+  "demoImageStackCount": "{count} images",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "demoVideos": "Videos",
   "demoScripts": "Scripts",
   "demoAudio": "Audio",
@@ -1152,7 +1541,22 @@
   "demoComposer": "Say something to POPi…",
   "demoGreeting": "Hi there",
   "demoGreetingDetail": "What would you like to create?",
-  "demoDisclaimer": "AI-generated results may contain errors",
+  "demoActivityTitle": "{name} · {activity}",
+  "@demoActivityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "demoActivityThinking": "Thinking about your request",
+  "demoActivityModel": "Calling the model",
+  "demoActivitySearching": "Searching the web",
+  "demoActivityReadingWeb": "Reading a web page",
+  "demoActivityVision": "Reviewing reference images",
   "demoThinking": "POPi is thinking…",
   "demoVoice": "Let Alice meet an old friend at a cafe.",
   "demoQuickImage": "Generate five scene images",
@@ -1183,6 +1587,17 @@
   "demoReplay": "Replay",
   "demoReference": "Image / Reference",
   "demoImageMeta": "Image / 9:16",
+  "demoOwnedImageMeta": "Image / {width}×{height}",
+  "@demoOwnedImageMeta": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "demoScriptMeta": "Script/MD",
   "demoAudioMeta": "Audio/00:24",
   "demoVideoMeta": "Video / 00:08",
@@ -1196,7 +1611,7 @@
   "demoGenerating": "Creating",
   "demoNewRoleName": "Character name",
   "demoSend": "Send",
-"demoSessionName": "Conversation name",
+  "demoSessionName": "Conversation name",
   "demoRoleCount": "{count} characters",
   "demoSelectedCount": "Selected {count}/{total}",
   "demoSelectMembers": "Select members",
@@ -1216,6 +1631,39 @@
   "demoUploadLibrary": "Upload to asset library",
   "demoSelectFiles": "Select files",
   "demoFileTypes": "Images, videos, scripts, audio",
+  "demoUploadFiles": "Upload to library",
+  "demoFileUploaded": "Uploaded",
+  "demoFileSelectionFailed": "Could not select files. Please try again",
+  "demoUploadFailed": "Could not upload files. Please try again",
+  "demoUploadEmptyFile": "Empty files cannot be uploaded",
+  "demoUploadTooLarge": "This file exceeds the upload size limit. Choose a smaller file",
+  "demoUploadUnsupported": "Unsupported file type. Choose an image, MP4 video, text script or audio file",
+  "demoUploadInvalidFile": "This file is invalid or has changed. Please select it again",
+  "demoAssetLoadFailed": "Could not load the file. Please reopen it later",
+  "demoFileSizeMb": "{size} MB",
+  "@demoFileSizeMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeKb": "{size} KB",
+  "@demoFileSizeKb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeBytes": "{size} B",
+  "@demoFileSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "demoSelectedFiles": "{count} files selected",
   "@demoRoleCount": {
     "placeholders": {
@@ -1247,5 +1695,313 @@
         "type": "int"
       }
     }
-  }
+  },
+  "demoChooseBots": "Choose Bots",
+  "demoChooseAssistant": "Choose an assistant",
+  "demoCreateAssistant": "Create a new Popi",
+  "demoAssistantName": "Popi name",
+  "demoAssistantInstructions": "Role and personality",
+  "demoAssistantInstructionsHint": "Describe Popi’s responsibilities, communication style, and preferences (optional)",
+  "demoSingleAssistantNotice": "Only one assistant can be selected for now",
+  "demoDiyRoleTitle": "Create a content character",
+  "demoUploadDiyRole": "Upload a DIY character",
+  "demoSelectRoleImages": "Choose character references",
+  "demoDiyRoleNameHint": "Character name",
+  "demoDiyRoleDescriptionHint": "Personality and appearance (optional)",
+  "demoDiyRoleSave": "Save character",
+  "demoDiyRoleLimit": "Up to 5 reference images",
+  "demoNewSessionRoleTitle": "Add your content character first",
+  "demoNewSessionRoleHint": "Link an existing character or upload your DIY references so the assistant knows who you want to create.",
+  "demoLinkContentRole": "Link a character",
+  "demoRoleContextReady": "Content characters linked",
+  "demoStartCreating": "Start creating",
+  "demoCreateSessionAction": "Create",
+  "demoPinSession": "Pin",
+  "demoUnpinSession": "Unpin",
+  "demoPopiAssistant": "POPi assistant",
+  "demoCurrentConversationOnly": "Only for this conversation",
+  "demoEditWorkMode": "Working mode",
+  "demoWorkModeAutomatic": "Automatic collaboration",
+  "demoWorkModeManual": "Choose manually",
+  "demoWorkModeOnDemand": "On demand",
+  "demoVoiceUnavailable": "Voice input is not connected yet",
+  "demoBotGroupTitle": "POPi + {count} Bots",
+  "@demoBotGroupTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoGlobalCapabilities": "Conversation skills",
+  "demoServerConfigRevision": "Server configuration v{revision}",
+  "@demoServerConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "demoLocalConfig": "Local demo configuration",
+  "demoVisionSkill": "Visual understanding",
+  "demoVisionDetail": "Understand images and use them in creative decisions",
+  "demoCurrentTaskConfigNotice": "The current task keeps its accepted configuration; changes apply to later tasks",
+  "demoActiveMember": "Assigned member",
+  "demoRolePending": "Persona needs configuration",
+  "demoRoleConfigured": "Persona configured",
+  "demoRoleInstructions": "Persona instructions",
+  "demoRoleInstructionsHint": "Describe the character's appearance, personality, and creative constraints for content generation",
+  "demoContextRolesHint": "Characters and reference images for image, text, and video creation. Reference them with @ in your prompt.",
+  "demoContextPreferencesHint": "Default context for future content. You can specify different preferences in the current prompt.",
+  "demoReferenceImages": "Character reference images",
+  "demoAddReferenceImage": "Add reference image",
+  "demoReferenceImageUrls": "Public image links",
+  "demoReferenceImageUrlsHint": "One public image link per line, up to 5",
+  "demoReferenceImagesHint": "Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.",
+  "demoDshCapabilitiesHint": "Provided by DSH and enabled by default. Availability reflects the services actually connected.",
+  "demoDshTools": "Tools",
+  "demoDshSkills": "Skills",
+  "demoDshMcp": "MCP",
+  "demoDshNotConnected": "Not connected",
+  "demoDshNotGranted": "Not enabled in this conversation",
+  "demoDshUnavailable": "Currently unavailable",
+  "demoDshUnconfirmed": "Status not confirmed",
+  "demoLocalReferenceOnly": "Local reference (unavailable to cloud models)",
+  "demoReferencePending": "Reference image not loaded yet",
+  "demoNotConfigured": "Not set",
+  "demoMentionRole": "Reference character",
+  "demoMentionRoleHint": "Choose a linked content character to include its profile and reference images in this request.",
+  "demoTaskQueued": "Task queued",
+  "demoTaskCreating": "Creating",
+  "demoTaskSaving": "Saving to the asset library",
+  "demoTaskSaved": "Saved to the asset library",
+  "demoViewOutputs": "View outputs",
+  "demoDismissTaskNotice": "Dismiss task notice",
+  "demoTaskFailed": "Task failed",
+  "demoTaskUnknown": "Task status needs verification",
+  "demoTaskBrief": "Task overview",
+  "demoTaskDescriptionMissing": "No written description was saved for this task",
+  "demoTaskExecutionMember": "Execution member",
+  "demoTaskModel": "Model",
+  "demoTaskConfiguration": "Task configuration",
+  "demoTaskIdentifier": "Task ID",
+  "demoTaskImage": "Image generation",
+  "demoTaskVideo": "Video generation",
+  "demoTaskTts": "Text-to-speech",
+  "demoTaskMusic": "Music generation",
+  "demoTaskVision": "Visual understanding",
+  "demoTaskAudio": "Audio generation",
+  "demoTaskText": "Text generation",
+  "demoTaskScript": "Script generation",
+  "demoTaskMedia": "Media task",
+  "demoTaskConfigRevision": "Accepted configuration v{revision}",
+  "@demoTaskConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessTitle": "Sign in to POPi Test",
+  "harnessAccessSubtitle": "Connect to the test environment and try the latest app features",
+  "harnessAccessUsername": "Account",
+  "harnessAccessUsernameHint": "Enter your test account",
+  "harnessAccessPassword": "Password",
+  "harnessAccessSignIn": "Sign in",
+  "harnessAccessSigningIn": "Signing in…",
+  "harnessAccessRequired": "Enter your account and password",
+  "harnessAccessInvalidCredentials": "The account or password is incorrect",
+  "harnessAccessRateLimited": "Too many attempts. Try again in {seconds} seconds",
+  "@harnessAccessRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessRateLimitedUnknown": "Too many attempts. Try again later",
+  "harnessAccessUnavailable": "The test environment is unavailable. Try again later",
+  "demoPinnedConversations": "Pinned",
+  "demoRecentConversations": "Recent conversations",
+  "demoListNoMessages": "No messages yet",
+  "demoListYou": "You",
+  "demoListAttachment": "[Attachment]",
+  "demoListQuestion": "Waiting for your answer",
+  "demoListMessagePreview": "{sender}: {message}",
+  "demoListTime": "{date}",
+  "demoListDate": "{date}",
+  "demoListFullDate": "{date}",
+  "@demoListMessagePreview": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@demoListTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "@demoListDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "@demoListFullDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "demoMaterials": "Materials",
+  "composerNamedPlaceholder": "Say something to {name}...",
+  "@composerNamedPlaceholder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoUploadFromDevice": "Upload from device",
+  "demoSelectFromLibrary": "Choose from library",
+  "previewAttachment": "Double-click to preview attachment",
+  "demoAttachmentUnsupported": "This assistant cannot read this attachment type yet. Choose images or text scripts.",
+  "demoAttachmentNotFound": "An attachment is no longer available. Remove it and upload it again.",
+  "demoAttachmentTooLarge": "The attachments are too large together. Use fewer or smaller files.",
+  "demoAttachmentLimit": "There are too many or duplicate attachments. Adjust them before sending.",
+  "demoAttachmentInvalid": "An attachment cannot be read or has changed. Upload it again.",
+  "demoStyleFilmCapabilityTitle": "Create styled short films",
+  "demoStyleFilmCapabilityDescription": "Enable style selection in the composer and the + menu.",
+  "demoStyleFilmSelect": "Choose style",
+  "demoStyleFilmChange": "Change style",
+  "demoStyleFilmClear": "Clear selected style",
+  "demoStyleFilmMenu": "Choose style",
+  "demoStyleFilmSheetTitle": "Film styles",
+  "demoStyleFilmSearchHint": "Search styles or uses",
+  "demoStyleFilmAllCategories": "All categories",
+  "demoStyleFilmUnavailable": "Not ready to create",
+  "demoStyleFilmDuration": "Duration",
+  "demoStyleFilmAspectRatio": "Aspect ratio",
+  "demoStyleFilmSoundtrack": "Soundtrack",
+  "demoStyleFilmSoundNone": "No audio",
+  "demoStyleFilmSoundMusic": "Original music",
+  "demoStyleFilmStoryboardReview": "Review the storyboard before rendering",
+  "demoStyleFilmCreate": "Use this style",
+  "demoStyleFilmConfirmTitle": "Confirm the film brief",
+  "demoStyleFilmConfirmDescription": "Style: {style}. Duration: {seconds} seconds. Aspect ratio: {ratio}. Review the storyboard before rendering the video.",
+  "@demoStyleFilmConfirmDescription": {
+    "placeholders": {
+      "style": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      },
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmCostPending": "Creation uses the current model and server resources. Model usage is billed by your service provider.",
+  "demoStyleFilmPreparingStoryboard": "Preparing storyboard",
+  "demoStyleFilmAwaitingStoryboard": "Storyboard awaiting your review",
+  "demoStyleFilmApproveStoryboard": "Approve storyboard and render",
+  "demoStyleFilmReviseStoryboard": "Revise storyboard",
+  "demoStyleFilmRevisionNotes": "How should the story and visuals change?",
+  "demoStyleFilmRevisionNotice": "Submitting creates a new complete storyboard. The video waits for your approval.",
+  "demoStyleFilmSubmitRevision": "Submit changes",
+  "demoStyleFilmCreating": "Creating your film",
+  "demoStyleFilmCompleted": "Film completed",
+  "demoStyleFilmFailed": "Film creation failed",
+  "demoStyleFilmViewOutput": "View film",
+  "demoStyleFilmNoReadyStyles": "No styles are ready for creation. You can still browse the catalog.",
+  "demoStyleFilmLoadFailed": "Could not load film styles. Open the picker again to try.",
+  "demoStyleFilmReviewFailed": "The storyboard action was not submitted. Your choices and notes are preserved.",
+  "demoStyleFilmSaveFailed": "Capability settings were not saved. Your changes are preserved.",
+  "demoStyleFilmRetry": "Create again",
+  "demoStyleFilmStyleCount": "{count} styles",
+  "@demoStyleFilmStyleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmPosterLabel": "{name} style example",
+  "@demoStyleFilmPosterLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmPreviewLabel": "Storyboard preview",
+  "demoStyleFilmNoStoryboard": "The storyboard is not ready yet. Progress stays in this conversation.",
+  "demoStyleFilmUpload": "Upload from device",
+  "demoStyleFilmLibrary": "Choose from library",
+  "demoStyleFilmReferencesUnsupported": "Style films currently support text prompts only. Remove attachments and content roles before creating.",
+  "demoStyleFilmBotContext": "For Bot: {name}",
+  "@demoStyleFilmBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmLoadingCatalog": "Loading style catalog",
+  "demoStyleFilmReadyCount": "{count} ready to create",
+  "@demoStyleFilmReadyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmBrowsePending": "Browse all styles now; creation unlocks after verification.",
+  "demoStyleFilmNoReadyFooter": "No verified style is ready to create yet",
+  "demoStyleFilmReasonUnsupportedStyle": "Not adapted yet",
+  "demoStyleFilmReasonUnverifiedStyle": "Awaiting verification",
+  "demoStyleFilmReasonRuntimeUnavailable": "Creation is temporarily unavailable",
+  "demoStyleFilmReasonModelUnavailable": "The current model is not ready",
+  "demoStyleFilmReasonUnknown": "Not available for creation yet",
+  "demoStyleFilmCapabilitiesHint": "DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.",
+  "demoPasteImage": "Paste image",
+  "demoPasteImageUnavailable": "No usable image is available on the clipboard",
+  "demoPasteImageFailed": "The image was not pasted. Your input and attachments are preserved.",
+  "demoPastingImages": "Adding clipboard images",
+  "demoDocuments": "Documents",
+  "demoDocumentParsing": "Parsing document",
+  "demoDocumentReady": "Document parsed and ready for the assistant",
+  "demoDocumentPages": "{count} pages",
+  "@demoDocumentPages": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentSlides": "{count} slides",
+  "@demoDocumentSlides": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentTruncated": "Content was truncated at the reading limit",
+  "demoDocumentOcrUsed": "OCR was used",
+  "demoDocumentPageCountEstimated": "Page count is estimated",
+  "demoDocumentTextEmpty": "No readable text was found in this document",
+  "demoDocumentOriginalAvailable": "Original file available to download",
+  "demoDocumentLimitHint": "Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.",
+  "demoAttachmentParsing": "Attachments are still being parsed. Wait before sending.",
+  "demoSkillBotContext": "For Bot: {name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill settings were not saved. Your choice is preserved."
 }

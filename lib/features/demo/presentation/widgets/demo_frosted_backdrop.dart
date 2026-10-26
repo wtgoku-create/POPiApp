@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Fades one native blur continuously, without slicing the backdrop into bands.
@@ -8,8 +9,14 @@ class DemoFrostedBackdrop extends StatefulWidget {
 
   static Future<ui.FragmentProgram>? _program;
 
+  // Isolate the reported iPhone login crash from this optional shader path.
+  // Widget tests use software rendering and cannot validate iPhone Metal.
+  static bool get _usesShaderFilter =>
+      (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) &&
+      ui.ImageFilter.isShaderFilterSupported;
+
   static Future<void> precache() async {
-    if (ui.ImageFilter.isShaderFilterSupported) {
+    if (_usesShaderFilter) {
       await (_program ??= ui.FragmentProgram.fromAsset(
         'assets/shaders/demo_backdrop_fade.frag',
       ));
@@ -30,7 +37,7 @@ class _DemoFrostedBackdropState extends State<DemoFrostedBackdrop> {
   }
 
   Future<void> _load() async {
-    if (!ui.ImageFilter.isShaderFilterSupported) return;
+    if (!DemoFrostedBackdrop._usesShaderFilter) return;
     await DemoFrostedBackdrop.precache();
     if (!mounted) return;
     final program = await DemoFrostedBackdrop._program!;

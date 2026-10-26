@@ -1,8 +1,11 @@
 import 'dart:ui';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/agent_api_exception.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/type/bot_avatar_type.dart';
 import '../../../../shared/widgets/app_dialog.dart';
@@ -68,10 +71,8 @@ class DemoAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget avatar(String path, double dimension, [Color? color]) {
-      // Older saved member settings can still contain the retired default path.
-      final character = path == 'assets/images/demo_avatar_popi.png'
-          ? BotAvatarCharacter.tiger
-          : BotAvatarCharacter.fromStillAsset(path);
+      final resolvedPath = DemoFixtures.normalizeAvatarAsset(path);
+      final character = BotAvatarCharacter.fromStillAsset(resolvedPath);
       return Container(
         width: dimension,
         height: dimension,
@@ -87,7 +88,7 @@ class DemoAvatar extends StatelessWidget {
         child: character != null
             ? AppBotAvatar(character: character, size: dimension)
             : Image.asset(
-                path,
+                resolvedPath,
                 fit: BoxFit.cover,
                 cacheWidth: (dimension * 3).ceil(),
               ),
@@ -97,12 +98,7 @@ class DemoAvatar extends StatelessWidget {
     if (image != null) return avatar(image!, size);
     final images = (members.isEmpty ? ['popi'] : members)
         .take(4)
-        .map(
-          (m) =>
-              memberAvatars[m] ??
-              DemoFixtures.memberImages[m] ??
-              DemoFixtures.memberImages['popi']!,
-        )
+        .map((m) => DemoFixtures.memberImage(m, savedImage: memberAvatars[m]))
         .toList();
     Color? memberColor(int i) {
       final ids = members.isEmpty ? ['popi'] : members;
@@ -144,59 +140,85 @@ class DemoAvatar extends StatelessWidget {
 
 class DemoScaffold extends StatelessWidget {
   const DemoScaffold({
-    required this.title,
+    this.title,
+    this.appBar,
     required this.child,
     this.actions,
     this.leading,
+    this.leadingWidth,
     this.bottom,
     this.floatingBottom = false,
+    this.extendBodyBehindAppBar = false,
+    this.frostedBottom = true,
+    this.actionsPadding = 12,
+    this.maxContentWidth = 640,
+    this.backgroundColor,
     super.key,
   });
-  final Widget title;
+  final Widget? title;
+  final PreferredSizeWidget? appBar;
   final Widget child;
   final List<Widget>? actions;
   final Widget? leading;
+  final double? leadingWidth;
   final Widget? bottom;
   final bool floatingBottom;
+  final bool extendBodyBehindAppBar;
+  final bool frostedBottom;
+  final double actionsPadding;
+  final double maxContentWidth;
+  final Color? backgroundColor;
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: backgroundColor,
     extendBody: floatingBottom,
-    appBar: AppBar(
-      centerTitle: true,
-      title: title,
-      titleTextStyle: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      leading:
-          leading ??
-          (Navigator.of(context).canPop()
-              ? IconButton(
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const RotatedBox(
-                    quarterTurns: 1,
-                    child: DemoIcon('back', size: 40),
-                  ),
-                )
-              : null),
-      actions: actions == null
-          ? null
-          : [...actions!, const SizedBox(width: 12)],
-    ),
+    extendBodyBehindAppBar: extendBodyBehindAppBar,
+    appBar:
+        appBar ??
+        AppBar(
+          leadingWidth: leadingWidth,
+          centerTitle: true,
+          title: title,
+          titleTextStyle: Theme.of(context).textTheme.titleMedium!.copyWith(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+          leading:
+              leading ??
+              (Navigator.of(context).canPop()
+                  ? IconButton(
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).backButtonTooltip,
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const RotatedBox(
+                        quarterTurns: 1,
+                        child: DemoIcon('back', size: 40),
+                      ),
+                    )
+                  : null),
+          actions: actions == null
+              ? null
+              : [...actions!, SizedBox(width: actionsPadding)],
+        ),
     body: SafeArea(
       top: false,
       bottom: bottom == null,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: BoxConstraints(maxWidth: maxContentWidth),
           child: child,
         ),
       ),
     ),
     bottomNavigationBar: floatingBottom && bottom != null
-        ? DemoBottomOverlay(child: bottom!)
+        ? frostedBottom
+              ? DemoBottomOverlay(child: bottom!)
+              : ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: bottom!,
+                )
         : bottom,
   );
 }
@@ -219,14 +241,20 @@ class DemoSegments extends StatelessWidget {
     required this.labels,
     required this.selected,
     required this.onChanged,
+    this.height = 34,
+    this.selectedFontWeight = FontWeight.w600,
+    this.unselectedColor,
     super.key,
   });
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onChanged;
+  final double height;
+  final FontWeight selectedFontWeight;
+  final Color? unselectedColor;
   @override
   Widget build(BuildContext context) => Container(
-    height: 40,
+    height: height,
     padding: const EdgeInsets.all(3),
     decoration: const ShapeDecoration(color: demoTint, shape: StadiumBorder()),
     child: Row(
@@ -241,15 +269,15 @@ class DemoSegments extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   foregroundColor: selected == i
                       ? Theme.of(context).colorScheme.onSurface
-                      : AppColors.textTertiary,
+                      : unselectedColor ?? AppColors.textTertiary,
                   backgroundColor: selected == i
                       ? Theme.of(context).colorScheme.surface
                       : Colors.transparent,
                   shape: const StadiumBorder(),
-                  textStyle: TextStyle(
+                  textStyle: Theme.of(context).textTheme.labelLarge!.copyWith(
                     fontSize: 14,
                     fontWeight: selected == i
-                        ? FontWeight.w600
+                        ? selectedFontWeight
                         : FontWeight.w400,
                   ),
                 ),
@@ -271,33 +299,52 @@ class DemoSearch extends StatelessWidget {
     required this.hint,
     required this.onChanged,
     this.controller,
+    this.height = 42,
+    this.outlined = false,
     super.key,
   });
   final String hint;
   final ValueChanged<String> onChanged;
   final TextEditingController? controller;
+  final double height;
+  final bool outlined;
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 50,
+    height: height,
     child: TextField(
       controller: controller,
       onChanged: onChanged,
       textInputAction: TextInputAction.search,
+      style: outlined ? const TextStyle(fontSize: 14) : null,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9994A6)),
-        prefixIcon: const Padding(
-          padding: EdgeInsets.all(16),
-          child: DemoIcon('search', size: 18),
+        fillColor: outlined ? demoSurface(context) : null,
+        prefixIconConstraints: outlined
+            ? BoxConstraints(minWidth: 38, minHeight: height)
+            : null,
+        prefixIcon: Padding(
+          padding: outlined
+              ? const EdgeInsets.fromLTRB(12, 12, 8, 12)
+              : const EdgeInsets.all(12),
+          child: DemoIcon(
+            'search',
+            size: 18,
+            color: outlined ? const Color(0xFF9994A6) : null,
+          ),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(outlined ? 18 : 16),
+          borderSide: outlined
+              ? BorderSide(color: Theme.of(context).colorScheme.surface)
+              : BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(outlined ? 18 : 16),
+          borderSide: outlined
+              ? BorderSide(color: Theme.of(context).colorScheme.surface)
+              : BorderSide.none,
         ),
       ),
     ),
@@ -317,7 +364,7 @@ class DemoPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: double.infinity,
-    height: 50,
+    height: 44,
     child: FilledButton(
       onPressed: busy ? null : onPressed,
       child: busy
@@ -338,17 +385,19 @@ abstract final class DemoSheet {
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
+    bool enableDrag = true,
   }) {
-    final top = MediaQuery.paddingOf(context).top + 66;
+    final top = MediaQuery.paddingOf(context).top + 60;
     return AppSheet.show<T>(
       context: context,
       useSafeArea: false,
       isScrollControlled: true,
+      enableDrag: enableDrag,
       maxHeightFraction: 1,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
       ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
@@ -361,7 +410,7 @@ abstract final class DemoSheet {
                       MediaQuery.viewInsetsOf(context).bottom)
                   .clamp(200.0, double.infinity),
           child: ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
               child: ColoredBox(
@@ -383,16 +432,20 @@ class DemoSheetBody extends StatelessWidget {
     required this.title,
     required this.child,
     this.footer,
+    this.uploadLayout = false,
     super.key,
   });
   final String title;
   final Widget child;
   final Widget? footer;
+  final bool uploadLayout;
   @override
   Widget build(BuildContext context) => Stack(
     children: [
       Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        padding: uploadLayout
+            ? const EdgeInsets.fromLTRB(18, 24, 18, 0)
+            : const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -400,12 +453,12 @@ class DemoSheetBody extends StatelessWidget {
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 18,
                 height: 1.4,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: uploadLayout ? 22 : 16),
             Expanded(child: child),
           ],
         ),
@@ -415,17 +468,27 @@ class DemoSheetBody extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          child: DemoBottomOverlay(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                0,
-                20,
-                MediaQuery.paddingOf(context).bottom.clamp(20, 40),
-              ),
-              child: footer!,
-            ),
-          ),
+          child: uploadLayout
+              ? Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    18,
+                    16,
+                    18,
+                    MediaQuery.paddingOf(context).bottom.clamp(17, 40),
+                  ),
+                  child: footer!,
+                )
+              : DemoBottomOverlay(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      0,
+                      16,
+                      MediaQuery.paddingOf(context).bottom.clamp(20, 40),
+                    ),
+                    child: footer!,
+                  ),
+                ),
         ),
     ],
   );
@@ -479,9 +542,12 @@ class DemoPinnedHeader extends SliverPersistentHeaderDelegate {
     BuildContext context,
     double shrinkOffset,
     bool overlapsContent,
-  ) => ColoredBox(
-    color: Theme.of(context).scaffoldBackgroundColor,
-    child: child,
+  ) => SizedBox(
+    height: height,
+    child: ColoredBox(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: child,
+    ),
   );
   @override
   bool shouldRebuild(DemoPinnedHeader oldDelegate) =>
@@ -495,9 +561,28 @@ Future<bool> demoPerform(
   try {
     await action();
     return true;
-  } catch (_) {
+  } catch (error) {
+    if (error is DioException && CancelToken.isCancel(error)) return false;
     if (context.mounted) {
-      AppToast.error(context, AppLocalizations.of(context)!.demoStorageError);
+      final l = AppLocalizations.of(context)!;
+      final attachmentError = error is AgentApiException
+          ? switch (error.code) {
+              'message_attachment_unsupported' ||
+              'media_not_supported' => l.demoAttachmentUnsupported,
+              'message_attachment_not_found' => l.demoAttachmentNotFound,
+              'message_attachment_too_large' => l.demoAttachmentTooLarge,
+              'message_attachment_limit' => l.demoAttachmentLimit,
+              'message_attachment_invalid' => l.demoAttachmentInvalid,
+              _ => null,
+            }
+          : null;
+      AppToast.error(
+        context,
+        attachmentError ??
+            (error is DioException || error is ApiException
+                ? l.networkRequestFailed
+                : l.demoStorageError),
+      );
     }
     return false;
   }

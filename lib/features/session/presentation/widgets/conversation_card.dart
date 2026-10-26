@@ -56,7 +56,10 @@ String conversationStatusLabel(String status, AppLocalizations l10n) =>
       'published' ||
       'active' => l10n.chatCompleted,
       'canceling' => l10n.chatCanceling,
-      'canceled' || 'interrupted' || 'aborted' => l10n.chatStopped,
+      'canceled' ||
+      'cancelled' ||
+      'interrupted' ||
+      'aborted' => l10n.chatStopped,
       'expired' || 'stale' => l10n.chatExpired,
       'failed' => l10n.chatRunFailed,
       'draft' => l10n.chatRoleDraft,

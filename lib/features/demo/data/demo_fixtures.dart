@@ -1,8 +1,10 @@
 import '../domain/demo_models.dart';
+import 'demo_website_character_catalog.dart';
 
 /// Bundled design assets keep the entire demo usable without a backend.
 abstract final class DemoFixtures {
   static const characters = [
+    ...DemoWebsiteCharacterCatalog.characters,
     DemoCharacter('alice', '爱丽丝', 'assets/images/demo_role_1.png'),
     DemoCharacter('er', '尔尔', 'assets/images/demo_role_2.png'),
     DemoCharacter('hua', '花西冷少', 'assets/images/demo_role_3.png'),
@@ -18,11 +20,36 @@ abstract final class DemoFixtures {
   ];
   static const memberImages = {
     'popi': 'assets/animations/bot_avatars/tiger.png',
-    'designer': 'assets/images/demo_avatar_designer.png',
-    'writer': 'assets/images/demo_avatar_writer.png',
-    'director': 'assets/images/demo_avatar_director.png',
-    'sound': 'assets/images/demo_avatar_sound.png',
+    'designer': 'assets/animations/bot_avatars/rabbit.png',
+    'writer': 'assets/animations/bot_avatars/monkey.png',
+    'director': 'assets/animations/bot_avatars/dragon.png',
+    'sound': 'assets/animations/bot_avatars/rooster.png',
   };
+
+  static const _retiredMemberImages = {
+    'assets/images/demo_avatar_popi.png': 'popi',
+    'assets/images/demo_avatar_designer.png': 'designer',
+    'assets/images/demo_avatar_writer.png': 'writer',
+    'assets/images/demo_avatar_director.png': 'director',
+    'assets/images/demo_avatar_sound.png': 'sound',
+  };
+
+  /// Resolve retired defaults at display time, preserving saved custom choices.
+  static String memberImage(String memberId, {String? savedImage}) {
+    if (savedImage != null &&
+        savedImage.trim().isNotEmpty &&
+        !_retiredMemberImages.containsKey(savedImage)) {
+      return savedImage;
+    }
+    return memberImages[memberId] ?? memberImages['popi']!;
+  }
+
+  /// Explicit image overrides may also contain a known retired Bot asset.
+  static String normalizeAvatarAsset(String path) {
+    final memberId = _retiredMemberImages[path];
+    return memberId == null ? path : memberImage(memberId);
+  }
+
   static const direction =
       '园艺种植加情绪疗愈，通过分享自家种植的花卉蔬果，了解自身如何通过劳作获得多巴胺以及对待万物生命循环的思考';
   static const positioning =

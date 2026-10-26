@@ -32,26 +32,62 @@
   "roleCreateProject": "创建项目",
   "roleConfirmSelection": "确认选择",
   "roleSelectionLimit": "最多选择{count}个角色",
-  "@roleSelectionLimit": {"placeholders": {"count": {"type": "int"}}},
+  "@roleSelectionLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "removeRole": "移除角色",
   "removeAsset": "移除资产",
   "assetSelectionLimit": "最多选择{count}个素材",
-  "@assetSelectionLimit": {"placeholders": {"count": {"type": "int"}}},
+  "@assetSelectionLimit": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatRolePrompt": "请参考所选角色进行创作。",
   "roleGuideViewMore": "查看更多",
   "roleSelectedCount": "（已选{count}个角色）",
-  "@roleSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleChooseCast": "选择TA们参演",
   "roleSelectProjectFirst": "请先选择项目角色",
   "roleSelectCastFirst": "请先选择出场角色",
   "roleProjectLimit": "至多选择5个项目角色",
   "roleCastLimit": "至多选择3个出场角色",
   "roleProjectName": "{name}的项目",
-  "@roleProjectName": {"placeholders": {"name": {"type": "String"}}},
+  "@roleProjectName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "roleProjectCount": "共有{count}个角色",
-  "@roleProjectCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleProjectCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleCastCount": "共{count}个角色",
-  "@roleCastCount": {"placeholders": {"count": {"type": "int"}}},
+  "@roleCastCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "roleChooseStory": "选择这个故事",
   "roleRefreshStories": "都不满意，换一批",
   "roleReconfirmVideo": "重新确认生成视频",
@@ -63,11 +99,26 @@
   "roleEditProjectRoles": "修改项目角色",
   "roleViewProfiles": "查看角色档案",
   "roleProfilePage": "角色档案 {index}/{total}",
-  "@roleProfilePage": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}}},
+  "@roleProfilePage": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "roleFullProfile": "查看完整角色档案",
   "roleCollapseProfile": "收起完整角色档案",
   "roleFullProfileVersion": "查看完整角色档案{version}",
-  "@roleFullProfileVersion": {"placeholders": {"version": {"type": "String"}}},
+  "@roleFullProfileVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "rolePreviousProfile": "上一个角色档案",
   "roleNextProfile": "下一个角色档案",
   "roleDetailedStory": "详细故事",
@@ -113,7 +164,16 @@
   "chatStageInspectResult": "检测结果",
   "roleStoryboardContent": "分镜视频提示词",
   "roleStoryboardShot": "镜头 {index} · {duration} 秒",
-  "@roleStoryboardShot": {"placeholders": {"index": {"type": "int"}, "duration": {"type": "String"}}},
+  "@roleStoryboardShot": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
   "roleVideoModelPrompt": "视频模型提示词",
   "videoFullscreen": "全屏播放",
   "rolePreviewNotice": "交互演示 · 不消耗积分",
@@ -121,7 +181,16 @@
   "roleEstimatePending": "选择模型与参数后查看积分预估",
   "roleEstimatePreview": "积分以正式生成时的报价为准",
   "roleStoryPosition": "{index}/{total}",
-  "@roleStoryPosition": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}}},
+  "@roleStoryPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "roleExampleDevelopment1": "从迟迟无法落笔的毕业计划，到翻开朋友送来的画册，再到决定拍摄短片，角色在一次次回忆中找到自己的热爱。",
   "roleExampleDevelopment2": "室友的反常举动引发调查，跟踪途中接连发生误会，最终在教室里的告别派对揭开惊喜。",
   "roleExampleDevelopment3": "一次挫折让她习惯性的坚强出现裂缝。朋友从日常小事开始接住她，直到她愿意坦诚说出自己的疲惫。",
@@ -147,11 +216,23 @@
   "roleDurationAutomatic": "智能选择",
   "roleDurationCustom": "自定义",
   "roleDurationSeconds": "{seconds}s",
-  "@roleDurationSeconds": {"placeholders": {"seconds": {"type": "String"}}},
+  "@roleDurationSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
   "roleDimensions": "尺寸",
   "roleQuantity": "生成数量",
   "roleEstimatedPoints": "预计消耗积分：{points}",
-  "@roleEstimatedPoints": {"placeholders": {"points": {"type": "int"}}},
+  "@roleEstimatedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "roleModelSoraDescription": "OpenAI 最新媒体生成模型,原生支持音视频同步输出",
   "roleModelVeoDescription": "谷歌顶级视频模型，电影级画质，镜头级精准控制",
   "roleModelJimengDescription": "字节跳动即梦AI，动态连贯，风格统一，图生视频高效出片",
@@ -159,7 +240,37 @@
   "roleModelViduDescription": "生数科技自研模型，万物可参考，特效 / 材质精准迁移",
   "roleModelDiscount": "限时5折",
   "roleVideoPlanPrompt": "请按以下配置制作视频。\n项目：{project}\n项目角色：{roles}\n出场角色：{cast}\n选题：{title}\n故事概况：{story}\n视频模型：{model}\n视频参数：{video}\n图片参数：{image}\n生成数量：{quantity}",
-  "@roleVideoPlanPrompt": {"placeholders": {"project": {"type": "String"}, "roles": {"type": "String"}, "cast": {"type": "String"}, "title": {"type": "String"}, "story": {"type": "String"}, "model": {"type": "String"}, "video": {"type": "String"}, "image": {"type": "String"}, "quantity": {"type": "int"}}},
+  "@roleVideoPlanPrompt": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      },
+      "roles": {
+        "type": "String"
+      },
+      "cast": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      },
+      "story": {
+        "type": "String"
+      },
+      "model": {
+        "type": "String"
+      },
+      "video": {
+        "type": "String"
+      },
+      "image": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
   "roleExampleAlice": "爱丽丝",
   "roleExampleErer": "尔尔",
   "roleExampleHua": "花西冷少",
@@ -213,9 +324,21 @@
   "deleteRoleDescription": "删除后，该角色将不会再出现在个人和社区角色库中，且无法恢复。",
   "roleDeleteUnavailable": "当前角色不可删除",
   "improveRolePrompt": "帮我完善角色“{title}”的性格、表达方式和创作方向。",
-  "@improveRolePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@improveRolePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "createRolePrompt": "围绕角色“{title}”创作，帮我推荐适合的选题。",
-  "@createRolePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@createRolePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "roleDescription": "角色介绍",
   "noRoleDescription": "暂无角色介绍",
   "myRoles": "我的角色",
@@ -238,9 +361,21 @@
   "assetDownloadUnavailable": "当前资产没有可下载的源文件",
   "deleteAssetsTitle": "确认删除资产？",
   "deleteAssetsDescription": "将删除选中的 {count} 个资产，此操作无法撤销。",
-  "@deleteAssetsDescription": {"placeholders": {"count": {"type": "int"}}},
+  "@deleteAssetsDescription": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectedAssets": "已选择 {count} 项",
-  "@selectedAssets": {"placeholders": {"count": {"type": "int"}}},
+  "@selectedAssets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "myIpAccounts": "我的IP账号",
   "ipProjects": "IP项目",
   "teachingCenter": "教学中心",
@@ -276,7 +411,9 @@
   "accountRenameConfirm": "确认修改账号昵称为：\n{title}",
   "@accountRenameConfirm": {
     "placeholders": {
-      "title": { "type": "String" }
+      "title": {
+        "type": "String"
+      }
     }
   },
   "accountArchives": "创作档案",
@@ -331,9 +468,27 @@
   "imageShareFailed": "图片分享失败，请稍后重试",
   "mediaShareFailed": "媒体分享失败，请稍后重试",
   "mediaPreviewPosition": "第 {index} 项，共 {count} 项",
-  "@mediaPreviewPosition": {"placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
+  "@mediaPreviewPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "imagePreviewPosition": "第 {index} 张，共 {count} 张",
-  "@imagePreviewPosition": {"placeholders": {"index": {"type": "int"}, "count": {"type": "int"}}},
+  "@imagePreviewPosition": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "item": "项目",
   "welcome": "你的新项目从这里开始。",
   "theme": "主题",
@@ -371,7 +526,9 @@
   "resendCountdown": "{seconds} 秒后重发",
   "@resendCountdown": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "phoneLogin": "手机号登录",
@@ -412,9 +569,21 @@
   "activityOrderNumber": "订单编号",
   "activityOrderPlaceholder": "请粘贴抖音订单编号",
   "activityMemberRestriction": "当前活动仅限{levels}参加",
-  "@activityMemberRestriction": {"placeholders": {"levels": {"type": "String"}}},
+  "@activityMemberRestriction": {
+    "placeholders": {
+      "levels": {
+        "type": "String"
+      }
+    }
+  },
   "activityMemberLevel": "会员等级{level}",
-  "@activityMemberLevel": {"placeholders": {"level": {"type": "int"}}},
+  "@activityMemberLevel": {
+    "placeholders": {
+      "level": {
+        "type": "int"
+      }
+    }
+  },
   "activityExchangeSuccess": "兑换成功",
   "activityExchangeFailed": "兑换失败，请稍后重试",
   "activityRefreshFailed": "兑换成功，会员信息暂未刷新，请稍后重新查看",
@@ -428,7 +597,13 @@
   "imageTooLarge": "单张图片不能超过6MB",
   "imageReadFailed": "无法读取图片，请稍后重试",
   "imageUploadProgress": "上传中 {percent}%",
-  "@imageUploadProgress": {"placeholders": {"percent": {"type": "int"}}},
+  "@imageUploadProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "imageUploadProcessing": "处理中",
   "imageUploadFailed": "上传失败",
   "imageUploadComplete": "上传完成",
@@ -437,13 +612,28 @@
   "homeGreetingTitle": "嗨，我是POPi~\n",
   "homeWelcomeGuest": "嗨，我是POPi～",
   "homeWelcomeUser": "嗨，{name}～",
-  "@homeWelcomeUser": {"placeholders": {"name": {"type": "String"}}},
+  "@homeWelcomeUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeWelcomeBody": "开始今天的创作吧",
   "homeStartIp": "做一个新IP账号",
   "homeStartRole": "从创建角色开始",
   "homeStartContent": "从选题/内容/脚本开始",
   "homeBannerPage": "创作灵感，第{page}张，共{total}张",
-  "@homeBannerPage": {"placeholders": {"page": {"type": "int"}, "total": {"type": "int"}}},
+  "@homeBannerPage": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "homeGreetingBody": "我来帮你一起\n把一个账号做起来！",
   "ipGuideIntroduction": "开始引导",
   "ipGuideIntroBefore": "简单",
@@ -486,7 +676,13 @@
   "ipGuideIntroAfter": "\n帮你创建IP账号",
   "ipGuideStart": "开始创建",
   "ipGuideStep": "第{step}步",
-  "@ipGuideStep": {"placeholders":{"step":{"type":"int"}}},
+  "@ipGuideStep": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
   "ipDirectionQuestion": "你想长期分享什么？",
   "ipFeelingQuestion": "你想让观众看完有什么感受？",
   "ipPresentationQuestion": "你的账号，想以什么样子呈现？",
@@ -505,9 +701,21 @@
   "ipTargetAudienceValue": "愿意与你分享这种感受的人",
   "ipCustomHint": "我要自己填写",
   "ipPrimarySelection": "主方向：{label}",
-  "@ipPrimarySelection": {"placeholders":{"label":{"type":"String"}}},
+  "@ipPrimarySelection": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "ipSecondarySelection": "辅助：{label}",
-  "@ipSecondarySelection": {"placeholders":{"label":{"type":"String"}}},
+  "@ipSecondarySelection": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "ipMaximumSelections": "最多选择两个，先选主方向，再选辅助方向",
   "ipSelectDirection": "请选择内容方向或填写自己的方向",
   "ipSelectFeeling": "请选择观众感受或填写自己的感受",
@@ -548,21 +756,47 @@
   "ipFormatInteractiveDrama": "互动剧",
   "ipFormatTalkingHead": "口播",
   "ipGuideSessionPrompt": "请帮我创建一个新的IP账号。\n账号昵称：{name}\n内容方向：{direction}\n观众感受：{feelings}\n呈现形态：{presentation}\n内容形式：{format}\n目标观众：{audience}",
-  "@ipGuideSessionPrompt": {"placeholders":{"name":{"type":"String"},"direction":{"type":"String"},"feelings":{"type":"String"},"presentation":{"type":"String"},"format":{"type":"String"},"audience":{"type":"String"}}},
+  "@ipGuideSessionPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "direction": {
+        "type": "String"
+      },
+      "feelings": {
+        "type": "String"
+      },
+      "presentation": {
+        "type": "String"
+      },
+      "format": {
+        "type": "String"
+      },
+      "audience": {
+        "type": "String"
+      }
+    }
+  },
   "homePromptIntro": "先告诉我：",
   "homePromptQuestion": "你现在最想做什么？",
   "homePromptCreateIp": "做一个新IP",
   "homePromptImproveAccount": "让我的老账号变好",
   "homePromptHasReference": "我已经有参考账号",
   "homePromptUnsure": "我还不知道做什么",
-  "aiDisclaimer": "AI生成结果可能有误，仅供参考",
   "composerPlaceholder": "跟POPi说点什么...",
   "composerRunning": "正在运行中",
   "sessionWelcomeTitle": "嗨，用户～",
   "sessionWelcomeBody": "告诉我，你现在最想做什么？",
   "composerExpandInput": "展开输入框",
   "selectedImageLabel": "已选择图片：{name}",
-  "@selectedImageLabel": {"placeholders": {"name": {"type": "String"}}},
+  "@selectedImageLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "removeImage": "移除图片",
   "addAttachment": "添加附件",
   "attachmentTitle": "添加",
@@ -577,6 +811,17 @@
   "galleryEmpty": "暂无可访问的照片",
   "galleryLoadFailed": "照片加载失败，请重试",
   "voiceInput": "语音输入",
+  "voiceInputStarting": "正在准备语音输入…",
+  "voiceInputListening": "正在聆听，点击麦克风结束",
+  "voiceInputFinishing": "正在识别…",
+  "voiceInputStop": "结束语音输入",
+  "voiceInputCancel": "取消语音输入",
+  "voiceInputPermissionDenied": "请在系统或浏览器设置中允许麦克风和语音识别权限",
+  "voiceInputUnavailable": "当前设备或浏览器暂不支持语音输入",
+  "voiceInputNoSpeech": "未识别到语音，请再试一次",
+  "voiceInputNetworkError": "语音识别连接失败，请检查网络后再试",
+  "voiceInputAudioError": "无法使用麦克风，请检查设备或是否被占用",
+  "voiceInputFailed": "语音识别失败，请再试一次",
   "sendMessage": "发送消息",
   "searchConversations": "搜索对话",
   "newIpProject": "新建IP项目",
@@ -585,10 +830,20 @@
   "drawerViewAll": "查看全部",
   "sessionItemOptions": "会话“{name}”的操作",
   "@sessionItemOptions": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "projectCount": "项目({count})",
-  "@projectCount": {"placeholders": {"count": {"type": "int"}}},
+  "@projectCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "projectOptions": "项目选项",
   "expandAllProjects": "展开全部项目",
   "collapseAllProjects": "收起全部项目",
@@ -602,15 +857,33 @@
   "projectsLoadFailed": "项目加载失败",
   "projectSessionsLoadFailed": "会话加载失败",
   "projectItemOptions": "{name}的选项",
-  "@projectItemOptions": {"placeholders": {"name": {"type": "String"}}},
+  "@projectItemOptions": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "renameProjectItem": "重命名",
   "projectItemName": "名称",
   "pinSession": "置顶会话",
   "unpinSession": "取消置顶",
   "deleteProjectConfirm": "删除「{name}」及其全部会话？",
-  "@deleteProjectConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteProjectConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "deleteSessionConfirm": "删除会话「{name}」？",
-  "@deleteSessionConfirm": {"placeholders": {"name": {"type": "String"}}},
+  "@deleteSessionConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "projectItemRenamed": "重命名成功",
   "projectItemDeleted": "删除成功",
   "popiConversations": "POPi对话",
@@ -636,7 +909,13 @@
   "notificationImageFailed": "图片加载失败",
   "notificationViewImage": "查看通知图片",
   "notificationDaysAgo": "{days}天前",
-  "@notificationDaysAgo": {"placeholders": {"days": {"type": "int"}}},
+  "@notificationDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "profileSettings": "个人设置",
   "taskLifeStoryVlog": "生活剧情Vlog",
   "taskDouyinAiDrama": "抖音AI漫剧博主",
@@ -651,7 +930,13 @@
   "taskWeiboTrends": "当前微博话题热度排行榜",
   "taskComedyStoryVlog": "搞笑剧情Vlog",
   "downloadedWorks": "已下载{count}个作品",
-  "@downloadedWorks": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadedWorks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "creationHistory": "创作历史",
   "creationHistoryLoadFailed": "创作历史加载失败",
   "searchCreationHistory": "搜索创作历史",
@@ -677,10 +962,22 @@
   "goGenerate": "去生成",
   "yesterday": "昨天",
   "daysAgo": "{count}天前",
-  "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sampleAccountQuestion": "有没有你喜欢、想学习的账号有...",
   "pointsSpent": "本次消耗{points}积分",
-  "@pointsSpent": {"placeholders": {"points": {"type": "int"}}},
+  "@pointsSpent": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "continueTask": "继续任务",
   "download": "下载",
   "sessionArtifactExported": "文档已导出",
@@ -719,7 +1016,13 @@
   "cancelAccountFailed": "注销失败，请稍后重试",
   "regularUser": "普通用户",
   "memberLevel": "{level}会员",
-  "@memberLevel": {"placeholders": {"level": {"type": "String"}}},
+  "@memberLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "upgradeMembership": "升级会员",
   "goToLogin": "前往登录",
   "membershipStarter": "Starter 灵感初启",
@@ -729,14 +1032,35 @@
   "limitedDiscount": "限时6折",
   "perMonth": "每月",
   "membershipPointsValue": "每100积分≈￥{value}元",
-  "@membershipPointsValue": {"placeholders": {"value": {"type": "String"}}},
+  "@membershipPointsValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "pointsPerMonth": "积分/月",
   "membershipPointsBreakdown": "包含：{packagePoints}/套餐积分+{giftPoints}/赠送积分",
-  "@membershipPointsBreakdown": {"placeholders": {"packagePoints": {"type": "int"}, "giftPoints": {"type": "int"}}},
+  "@membershipPointsBreakdown": {
+    "placeholders": {
+      "packagePoints": {
+        "type": "int"
+      },
+      "giftPoints": {
+        "type": "int"
+      }
+    }
+  },
   "membershipCoreBenefits": "会员核心权益",
   "benefitVoiceClone": "声音克隆功能开启",
   "benefitConcurrentTasks": "同时排队任务 ×{count}",
-  "@benefitConcurrentTasks": {"placeholders": {"count": {"type": "int"}}},
+  "@benefitConcurrentTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "benefitCharacters": "免费+部分会员角色",
   "benefitWatermark": "无水印下载",
   "benefitVip": "专属VIP通道",
@@ -754,7 +1078,9 @@
   "paymentGrantPoints": "本次到账 {points} 积分",
   "@paymentGrantPoints": {
     "placeholders": {
-      "points": { "type": "int" }
+      "points": {
+        "type": "int"
+      }
     }
   },
   "paymentCatalogPrice": "套餐价格，实际支付金额以订单为准",
@@ -783,7 +1109,13 @@
   "membershipCurrentPlan": "当前计划",
   "membershipBuyNow": "立即购买",
   "membershipAlreadyMember": "你已是{level}",
-  "@membershipAlreadyMember": {"placeholders": {"level": {"type": "String"}}},
+  "@membershipAlreadyMember": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
   "membershipPlansEmpty": "暂无可用会员方案",
   "membershipPlansLoadFailed": "会员方案加载失败",
   "rechargeAndPoints": "充值 | 积分详情",
@@ -871,10 +1203,22 @@
   "chatPlanModel": "模型",
   "chatPlanPoints": "预计消耗积分",
   "chatPlanCredits": "{points} 积分",
-  "@chatPlanCredits": {"placeholders": {"points": {"type": "String"}}},
+  "@chatPlanCredits": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
   "chatReviseContent": "修改内容",
   "chatRevisePrompt": "请修改《{title}》：",
-  "@chatRevisePrompt": {"placeholders": {"title": {"type": "String"}}},
+  "@chatRevisePrompt": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "chatBeforeChange": "修改前",
   "chatAfterChange": "修改后",
   "chatCompleteRole": "创建角色",
@@ -887,7 +1231,13 @@
   "chatCastRole": "出场角色",
   "chatCastUnmatched": "未匹配",
   "chatCastMultiple": "{count}个角色",
-  "@chatCastMultiple": {"placeholders": {"count": {"type": "int"}}},
+  "@chatCastMultiple": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "chatConfirmCast": "确认出场角色",
   "chatCastRoleUnavailable": "该角色暂不可用，请选择可读取且已保存档案的角色",
   "chatRoleActive": "已发布",
@@ -955,7 +1305,13 @@
   "redemptionBindingSuccess": "微信公众号绑定成功",
   "redemptionBindingCheck": "检查绑定状态",
   "redemptionBindingWaiting": "等待微信扫码绑定",
-  "@redemptionRewardDescription": {"placeholders": {"points": {"type": "int"}}},
+  "@redemptionRewardDescription": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
   "teachingAll": "全部",
   "teachingCatalog": "课程目录",
   "teachingRequiredMember": "会员",
@@ -970,9 +1326,21 @@
   "teachingMemberTitle": "会员特惠",
   "teachingMemberDescription": "解锁更多优质课程\n探索创作的无限可能",
   "teachingMemberPrice": "¥{price} 起\n解锁更多优质课程",
-  "@teachingMemberPrice": {"placeholders": {"price": {"type": "String"}}},
+  "@teachingMemberPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
   "teachingInstructor": "讲师：{name}",
-  "@teachingInstructor": {"placeholders": {"name": {"type": "String"}}},
+  "@teachingInstructor": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "teachingFree": "免费",
   "teachingUntitled": "未命名课程",
   "teachingLoading": "正在加载课程",
@@ -1080,7 +1448,13 @@
   "chatMediaPrompt": "请参考这些图片",
   "chatHistoryLoadFailed": "会话记录加载失败",
   "chatEstimatedPoints": "预计消耗 {points} 积分",
-  "@chatEstimatedPoints": {"placeholders": {"points": {"type": "String"}}},
+  "@chatEstimatedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
   "demoConversations": "会话",
   "demoAssets": "资产",
   "demoSearchHistory": "搜索对话历史",
@@ -1110,6 +1484,13 @@
   "demoRename": "重命名会话",
   "demoName": "名称",
   "demoPreferences": "账号偏好",
+  "demoCreativeMemory": "创作偏好",
+  "demoEditCreativeMemory": "编辑创作偏好",
+  "demoCreativeMemoryEmpty": "AI 会根据对话整理画面风格、具体模型偏好与比例，也可以手动填写。",
+  "demoCreativeMemoryScope": "仅用于当前会话，手动修改后 AI 不会自动覆盖。",
+  "demoCreativeMemoryEditorHint": "这段内容会作为当前会话的创作记忆。请写明画面风格、图片/视频的具体模型偏好和比例。",
+  "demoCreativeMemoryAfterSave": "保存后，后续创作会自动使用这段记忆。",
+  "demoSaveToCurrentSession": "保存到当前会话",
   "demoDirection": "内容方向",
   "demoFeeling": "观众感受",
   "demoFeelingValue": "主感受真实，次感受略带泪目",
@@ -1136,6 +1517,14 @@
   "demoEmptyConversations": "暂无会话",
   "demoAll": "全部",
   "demoImages": "图片",
+  "demoImageStackCount": "{count} 张图片",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "demoVideos": "视频",
   "demoScripts": "脚本",
   "demoAudio": "音频",
@@ -1152,7 +1541,22 @@
   "demoComposer": "跟 POPi 说点什么…",
   "demoGreeting": "嗨，用户～",
   "demoGreetingDetail": "告诉我，你现在最想做什么？",
-  "demoDisclaimer": "AI 生成结果可能有误，仅供参考",
+  "demoActivityTitle": "{name} · {activity}",
+  "@demoActivityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "demoActivityThinking": "正在思考你的内容",
+  "demoActivityModel": "正在调用模型",
+  "demoActivitySearching": "正在搜索资料",
+  "demoActivityReadingWeb": "正在阅读网页",
+  "demoActivityVision": "正在查看参考图片",
   "demoThinking": "POPi 正在思考…",
   "demoVoice": "让爱丽丝在奶茶店遇见一位老朋友。",
   "demoQuickImage": "批量生成五张场景图",
@@ -1183,6 +1587,17 @@
   "demoReplay": "重新播放",
   "demoReference": "图片 / 参考",
   "demoImageMeta": "图片 / 9:16",
+  "demoOwnedImageMeta": "图片 / {width}×{height}",
+  "@demoOwnedImageMeta": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
   "demoScriptMeta": "脚本/MD",
   "demoAudioMeta": "音频/00:24",
   "demoVideoMeta": "视频 / 00:08",
@@ -1196,7 +1611,7 @@
   "demoGenerating": "正在创作",
   "demoNewRoleName": "角色名称",
   "demoSend": "发送",
-"demoSessionName": "会话名称",
+  "demoSessionName": "会话名称",
   "demoRoleCount": "{count}人",
   "demoSelectedCount": "已选 {count}/{total}",
   "demoSelectMembers": "选择成员",
@@ -1216,6 +1631,39 @@
   "demoUploadLibrary": "上传到官方资产库",
   "demoSelectFiles": "点击选择文件",
   "demoFileTypes": "图片、视频、脚本、音频",
+  "demoUploadFiles": "上传到资产库",
+  "demoFileUploaded": "已上传",
+  "demoFileSelectionFailed": "无法选择文件，请再试一次",
+  "demoUploadFailed": "文件上传失败，请再试一次",
+  "demoUploadEmptyFile": "空文件无法上传",
+  "demoUploadTooLarge": "文件超过上传大小限制，请选择较小的文件",
+  "demoUploadUnsupported": "不支持该文件类型，请选择图片、MP4视频、文本脚本或音频",
+  "demoUploadInvalidFile": "文件无效或已发生变化，请重新选择",
+  "demoAssetLoadFailed": "文件加载失败，请稍后重新打开",
+  "demoFileSizeMb": "{size} MB",
+  "@demoFileSizeMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeKb": "{size} KB",
+  "@demoFileSizeKb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeBytes": "{size} 字节",
+  "@demoFileSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
   "demoSelectedFiles": "已选择 {count} 个文件",
   "@demoRoleCount": {
     "placeholders": {
@@ -1247,5 +1695,313 @@
         "type": "int"
       }
     }
-  }
+  },
+  "demoChooseBots": "选择Bot",
+  "demoChooseAssistant": "选择助理",
+  "demoCreateAssistant": "创建新的 Popi",
+  "demoAssistantName": "Popi 名称",
+  "demoAssistantInstructions": "职责与个性",
+  "demoAssistantInstructionsHint": "描述 Popi 的职责、表达风格与协作偏好，可选",
+  "demoSingleAssistantNotice": "当前仅支持选择一名助理",
+  "demoDiyRoleTitle": "创建内容角色",
+  "demoUploadDiyRole": "上传 DIY 角色",
+  "demoSelectRoleImages": "选择角色参考图",
+  "demoDiyRoleNameHint": "角色名称",
+  "demoDiyRoleDescriptionHint": "人设与外观描述，可选",
+  "demoDiyRoleSave": "保存角色",
+  "demoDiyRoleLimit": "最多 5 张参考图",
+  "demoNewSessionRoleTitle": "先添加你的创作角色",
+  "demoNewSessionRoleHint": "关联已有角色，或上传自己的 DIY 角色参考图，让助理了解你的创作主角。",
+  "demoLinkContentRole": "关联角色",
+  "demoRoleContextReady": "已关联创作角色",
+  "demoStartCreating": "开始创作",
+  "demoCreateSessionAction": "创建",
+  "demoPinSession": "置顶",
+  "demoUnpinSession": "取消置顶",
+  "demoPopiAssistant": "POPi助手",
+  "demoCurrentConversationOnly": "仅作用于当前会话",
+  "demoEditWorkMode": "工作方式",
+  "demoWorkModeAutomatic": "自动协作",
+  "demoWorkModeManual": "手动选择",
+  "demoWorkModeOnDemand": "按需调用",
+  "demoVoiceUnavailable": "语音输入尚未接入",
+  "demoBotGroupTitle": "POPi等{count}人",
+  "@demoBotGroupTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoGlobalCapabilities": "会话能力",
+  "demoServerConfigRevision": "服务端配置 v{revision}",
+  "@demoServerConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "demoLocalConfig": "本地演示配置",
+  "demoVisionSkill": "视觉理解",
+  "demoVisionDetail": "理解图片内容并用于创作判断",
+  "demoCurrentTaskConfigNotice": "当前任务沿用受理时的配置；修改仅对后续任务生效",
+  "demoActiveMember": "指定执行成员",
+  "demoRolePending": "人设待配置",
+  "demoRoleConfigured": "人设已配置",
+  "demoRoleInstructions": "人设说明",
+  "demoRoleInstructionsHint": "描述角色外观、性格及创作约束，生成内容时作为参考",
+  "demoContextRolesHint": "用于图文、视频创作的角色与参考图，可在输入中用 @ 引用。",
+  "demoContextPreferencesHint": "作为后续创作的默认上下文，也可在本次提示词中另作说明。",
+  "demoReferenceImages": "角色参考图",
+  "demoAddReferenceImage": "添加参考图",
+  "demoReferenceImageUrls": "公开图片链接",
+  "demoReferenceImageUrlsHint": "每行一个公开图片链接，最多 5 个",
+  "demoReferenceImagesHint": "为创作提供外观参考。云端生成需要可访问的图片链接；本地图片不会自动公开。",
+  "demoDshCapabilitiesHint": "由 DSH 提供并默认启用，可用状态以实际接入为准。",
+  "demoDshTools": "工具",
+  "demoDshSkills": "Skills",
+  "demoDshMcp": "MCP",
+  "demoDshNotConnected": "尚未接入",
+  "demoDshNotGranted": "本会话未启用",
+  "demoDshUnavailable": "暂不可用",
+  "demoDshUnconfirmed": "状态待确认",
+  "demoLocalReferenceOnly": "本地参考图（云端暂不可用）",
+  "demoReferencePending": "参考图待读取",
+  "demoNotConfigured": "未设置",
+  "demoMentionRole": "引用角色",
+  "demoMentionRoleHint": "选择已关联的创作角色，将人设与参考图加入本次上下文。",
+  "demoTaskQueued": "任务已排队",
+  "demoTaskCreating": "正在制作",
+  "demoTaskSaving": "正在保存到资产库",
+  "demoTaskSaved": "已保存到资产库",
+  "demoViewOutputs": "查看产物",
+  "demoDismissTaskNotice": "关闭任务提示",
+  "demoTaskFailed": "任务失败",
+  "demoTaskUnknown": "任务状态待核实",
+  "demoTaskBrief": "任务简介",
+  "demoTaskDescriptionMissing": "该任务未保存文字简介",
+  "demoTaskExecutionMember": "执行成员",
+  "demoTaskModel": "模型",
+  "demoTaskConfiguration": "任务配置",
+  "demoTaskIdentifier": "任务 ID",
+  "demoTaskImage": "图片生成",
+  "demoTaskVideo": "视频生成",
+  "demoTaskTts": "语音合成",
+  "demoTaskMusic": "音乐生成",
+  "demoTaskVision": "视觉理解",
+  "demoTaskAudio": "音频生成",
+  "demoTaskText": "文本生成",
+  "demoTaskScript": "脚本生成",
+  "demoTaskMedia": "媒体任务",
+  "demoTaskConfigRevision": "受理配置 v{revision}",
+  "@demoTaskConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessTitle": "登录 POPi 测试版",
+  "harnessAccessSubtitle": "登录后连接测试环境，体验最新的应用功能",
+  "harnessAccessUsername": "账号",
+  "harnessAccessUsernameHint": "请输入测试账号",
+  "harnessAccessPassword": "密码",
+  "harnessAccessSignIn": "登录",
+  "harnessAccessSigningIn": "正在登录…",
+  "harnessAccessRequired": "请输入账号和密码",
+  "harnessAccessInvalidCredentials": "账号或密码不正确",
+  "harnessAccessRateLimited": "尝试次数过多，请在 {seconds} 秒后重试",
+  "@harnessAccessRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessRateLimitedUnknown": "尝试次数过多，请稍后重试",
+  "harnessAccessUnavailable": "暂时无法连接测试环境，请稍后重试",
+  "demoPinnedConversations": "置顶",
+  "demoRecentConversations": "最近会话",
+  "demoListNoMessages": "暂无消息",
+  "demoListYou": "你",
+  "demoListAttachment": "[附件]",
+  "demoListQuestion": "等待你的回答",
+  "demoListMessagePreview": "{sender}：{message}",
+  "demoListTime": "{date}",
+  "demoListDate": "{date}",
+  "demoListFullDate": "{date}",
+  "@demoListMessagePreview": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@demoListTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "@demoListDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "@demoListFullDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "demoMaterials": "素材",
+  "composerNamedPlaceholder": "跟{name}说点什么...",
+  "@composerNamedPlaceholder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoUploadFromDevice": "从设备上传",
+  "demoSelectFromLibrary": "从素材库选择",
+  "previewAttachment": "双击预览附件",
+  "demoAttachmentUnsupported": "当前助手暂不支持读取这类附件，请选择图片或文本脚本。",
+  "demoAttachmentNotFound": "附件已不存在，请移除后重新上传。",
+  "demoAttachmentTooLarge": "本次附件总大小过大，请减少附件或选择较小的文件。",
+  "demoAttachmentLimit": "附件数量过多或包含重复项，请调整后再发送。",
+  "demoAttachmentInvalid": "附件无法读取或已发生变化，请重新上传。",
+  "demoStyleFilmCapabilityTitle": "制作风格短片",
+  "demoStyleFilmCapabilityDescription": "启用后，可在对话输入区和＋菜单中选择短片风格。",
+  "demoStyleFilmSelect": "选择风格",
+  "demoStyleFilmChange": "更换风格",
+  "demoStyleFilmClear": "清除已选风格",
+  "demoStyleFilmMenu": "选择风格",
+  "demoStyleFilmSheetTitle": "短片风格",
+  "demoStyleFilmSearchHint": "搜索风格或用途",
+  "demoStyleFilmAllCategories": "全部分类",
+  "demoStyleFilmUnavailable": "暂不可制作",
+  "demoStyleFilmDuration": "时长",
+  "demoStyleFilmAspectRatio": "画幅",
+  "demoStyleFilmSoundtrack": "声音",
+  "demoStyleFilmSoundNone": "无声短片",
+  "demoStyleFilmSoundMusic": "原创配乐",
+  "demoStyleFilmStoryboardReview": "先看分镜，确认后制作",
+  "demoStyleFilmCreate": "使用这个风格",
+  "demoStyleFilmConfirmTitle": "确认创作简报",
+  "demoStyleFilmConfirmDescription": "使用「{style}」制作 {seconds} 秒、{ratio} 的短片。先生成分镜，确认后再制作成片。",
+  "@demoStyleFilmConfirmDescription": {
+    "placeholders": {
+      "style": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      },
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmCostPending": "制作会使用当前模型和服务器算力，具体模型用量以服务账单为准。",
+  "demoStyleFilmPreparingStoryboard": "正在准备分镜",
+  "demoStyleFilmAwaitingStoryboard": "分镜待你确认",
+  "demoStyleFilmApproveStoryboard": "确认分镜，开始制作",
+  "demoStyleFilmReviseStoryboard": "调整分镜",
+  "demoStyleFilmRevisionNotes": "希望怎样调整故事与画面？",
+  "demoStyleFilmRevisionNotice": "提交后将重新生成整套分镜，确认前不会制作成片。",
+  "demoStyleFilmSubmitRevision": "提交调整",
+  "demoStyleFilmCreating": "正在制作短片",
+  "demoStyleFilmCompleted": "短片已完成",
+  "demoStyleFilmFailed": "短片制作失败",
+  "demoStyleFilmViewOutput": "查看成片",
+  "demoStyleFilmNoReadyStyles": "当前没有可制作的风格，可先浏览风格目录。",
+  "demoStyleFilmLoadFailed": "风格目录读取失败，请稍后再打开。",
+  "demoStyleFilmReviewFailed": "分镜操作未提交，已保留你的选择和输入。",
+  "demoStyleFilmSaveFailed": "能力设置未保存，已保留你的修改。",
+  "demoStyleFilmRetry": "重新制作",
+  "demoStyleFilmStyleCount": "{count} 种风格",
+  "@demoStyleFilmStyleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmPosterLabel": "{name}风格示例",
+  "@demoStyleFilmPosterLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmPreviewLabel": "分镜预览",
+  "demoStyleFilmNoStoryboard": "分镜尚未就绪，制作进展会保留在原会话中。",
+  "demoStyleFilmUpload": "从设备上传",
+  "demoStyleFilmLibrary": "从素材库选择",
+  "demoStyleFilmReferencesUnsupported": "当前风格短片仅支持文字主题，请先移除附件和内容角色。",
+  "demoStyleFilmBotContext": "适用于 Bot：{name}",
+  "@demoStyleFilmBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmLoadingCatalog": "正在加载风格目录",
+  "demoStyleFilmReadyCount": "可制作 {count} 种",
+  "@demoStyleFilmReadyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmBrowsePending": "可以浏览全部风格，完成验证后即可选择制作。",
+  "demoStyleFilmNoReadyFooter": "当前没有已验证可制作的风格",
+  "demoStyleFilmReasonUnsupportedStyle": "暂未适配",
+  "demoStyleFilmReasonUnverifiedStyle": "待验证",
+  "demoStyleFilmReasonRuntimeUnavailable": "暂时无法制作",
+  "demoStyleFilmReasonModelUnavailable": "当前模型未就绪",
+  "demoStyleFilmReasonUnknown": "暂不可制作",
+  "demoStyleFilmCapabilitiesHint": "能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。",
+  "demoPasteImage": "粘贴图片",
+  "demoPasteImageUnavailable": "剪贴板中没有可用图片",
+  "demoPasteImageFailed": "图片未粘贴，已保留当前输入和附件",
+  "demoPastingImages": "正在添加剪贴板图片",
+  "demoDocuments": "文档",
+  "demoDocumentParsing": "正在解析文档",
+  "demoDocumentReady": "文档已解析，可发送给助理读取",
+  "demoDocumentPages": "{count} 页",
+  "@demoDocumentPages": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentSlides": "{count} 张幻灯片",
+  "@demoDocumentSlides": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentTruncated": "内容已按读取上限截断",
+  "demoDocumentOcrUsed": "已使用 OCR 识别",
+  "demoDocumentPageCountEstimated": "页数为估算值",
+  "demoDocumentTextEmpty": "文档中没有可读取的文字",
+  "demoDocumentOriginalAvailable": "原文件可下载",
+  "demoDocumentLimitHint": "最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。",
+  "demoAttachmentParsing": "附件仍在解析，请稍候再发送",
+  "demoSkillBotContext": "适用于 Bot：{name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill 设置未保存，已保留你的选择。"
 }

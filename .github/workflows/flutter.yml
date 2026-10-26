@@ -7,12 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       build_environment:
-        description: Build variant (dev uses the test server; demo uses offline Mock UI)
+        description: Build variant (harness_remote uses the remote Harness; dev uses the test server; demo uses offline Mock UI)
         required: true
         default: production
         type: choice
         options:
           - production
+          - harness_remote
           - dev
           - demo
       build_android:
@@ -30,14 +31,39 @@ on:
         required: true
         default: false
         type: boolean
+      macos_notarize_url:
+        description: Approved HTTPS URL of an already signed POPi macOS DMG to notarize only
+        required: false
+        default: ''
+        type: string
+      macos_notarize_sha256:
+        description: SHA-256 of the macOS DMG (required when macos_notarize_url is set)
+        required: false
+        default: ''
+        type: string
+      ios_testflight_status_build:
+        description: Existing TestFlight build number to query without uploading an IPA
+        required: false
+        default: ''
+        type: string
+      ios_testflight_status_version:
+        description: Existing TestFlight marketing version to query without uploading an IPA
+        required: false
+        default: ''
+        type: string
+      read_ios_crashes:
+        description: Read privacy-filtered crash feedback for the selected TestFlight build
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 env:
-  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
-  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
-  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && 'harness_remote' || github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
+  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && 'lib/main_harness.dart' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote' && '-harness' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
@@ -48,7 +74,7 @@ jobs:
     name: Analyze and test
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes)
     runs-on: ubuntu-latest
 
     steps:
@@ -75,7 +101,7 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" test --coverage
+        run: dart run tool/flutter_env.dart development test --coverage --timeout 60s
 
       - name: Upload coverage
         if: always()
@@ -90,7 +116,7 @@ jobs:
     needs: verify
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.build_android)
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_android)
     runs-on: ubuntu-latest
 
     steps:
@@ -123,7 +149,42 @@ jobs:
           EOF
 
       - name: Build signed release APK
-        run: dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk --release --target="$BUILD_TARGET"
+        run: |
+          build_name=$(ruby -ryaml -e 'puts YAML.load_file("pubspec.yaml").fetch("version").split("+").first')
+          build_number=$((GITHUB_RUN_NUMBER * 100 + GITHUB_RUN_ATTEMPT))
+          echo "ANDROID_BUILD_NAME=$build_name" >> "$GITHUB_ENV"
+          echo "ANDROID_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "Building Android APK $build_name ($build_number)"
+          dart run tool/flutter_env.dart "$FLUTTER_ENV" build apk \
+            --release \
+            --target="$BUILD_TARGET" \
+            --build-name="$build_name" \
+            --build-number="$build_number"
+
+      - name: Verify signed APK and manifest metadata
+        run: |
+          python3 tool/ci_verify_android_apk.py \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --package com.popistudio.app \
+            --version "$ANDROID_BUILD_NAME" \
+            --build-number "$ANDROID_BUILD_NUMBER" \
+            --minimum-sdk 24 \
+            --maximum-sdk 30 \
+            --metadata-output build/metadata/android-verification.json
+
+      - name: Create remote Harness Android build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        run: |
+          python3 tool/ci_build_metadata.py \
+            build/app/outputs/flutter-apk/app-release.apk \
+            --output build/metadata/android-harness.json \
+            --platform android \
+            --version "$ANDROID_BUILD_NAME" \
+            --build-number "$ANDROID_BUILD_NUMBER" \
+            --environment "$FLUTTER_ENV" \
+            --target "$BUILD_TARGET" \
+            --commit "$GITHUB_SHA" \
+            --android-verification build/metadata/android-verification.json
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -132,12 +193,19 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
+      - name: Upload remote Harness Android build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-android-build-metadata-harness
+          path: build/metadata/android-harness.json
+          if-no-files-found: error
+
   build-ios:
     name: Build Signed iOS App
-    needs: verify
     if: >-
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-      (github.event_name == 'workflow_dispatch' && inputs.build_ios)
+      (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_ios)
     runs-on: macos-latest
 
     env:
@@ -301,6 +369,19 @@ jobs:
             --build-number "$IOS_BUILD_NUMBER" \
             --bundle-id "$IOS_BUNDLE_ID"
 
+      - name: Create remote Harness iOS build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        run: |
+          python3 tool/ci_build_metadata.py \
+            "$IOS_IPA_PATH" \
+            --output build/metadata/ios-harness.json \
+            --platform ios \
+            --version "$IOS_BUILD_NAME" \
+            --build-number "$IOS_BUILD_NUMBER" \
+            --environment "$FLUTTER_ENV" \
+            --target "$BUILD_TARGET" \
+            --commit "$GITHUB_SHA"
+
       - name: Upload signed IPA artifact
         uses: actions/upload-artifact@v4
         with:
@@ -308,19 +389,39 @@ jobs:
           path: build/ios/ipa/*.ipa
           if-no-files-found: error
 
+      - name: Retain remote Harness iOS crash symbols
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-debug-symbols-harness
+          path: build/ios/archive/*.xcarchive/dSYMs/
+          if-no-files-found: error
+
+      - name: Upload remote Harness iOS build metadata
+        if: github.event_name == 'workflow_dispatch' && inputs.build_environment == 'harness_remote'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-build-metadata-harness
+          path: build/metadata/ios-harness.json
+          if-no-files-found: error
+
   upload-ios-testflight:
     name: Upload iOS App to TestFlight
-    needs: build-ios
+    needs: [verify, build-ios]
     if: >-
+      needs.verify.result == 'success' &&
       needs.build-ios.result == 'success' &&
       (
         (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-        (github.event_name == 'workflow_dispatch' && inputs.build_ios && inputs.upload_testflight)
+        (github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url == '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes && inputs.build_ios && inputs.upload_testflight)
       )
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download signed IPA
         uses: actions/download-artifact@v4
         with:
@@ -335,6 +436,46 @@ jobs:
             exit 1
           fi
           echo "IOS_IPA_PATH=$ipa_path" >> "$GITHUB_ENV"
+
+      - name: Read uploaded IPA identity
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+        run: |
+          identity=$(python3 - "$IOS_IPA_PATH" <<'PY'
+          import plistlib
+          import re
+          import sys
+          import zipfile
+
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              candidates = [
+                  name for name in archive.namelist()
+                  if re.fullmatch(r'Payload/[^/]+\.app/Info\.plist', name)
+              ]
+              if len(candidates) != 1:
+                  raise SystemExit('Expected exactly one app Info.plist in the IPA.')
+              info = plistlib.loads(archive.read(candidates[0]))
+
+          values = [
+              info.get('CFBundleIdentifier'),
+              info.get('CFBundleShortVersionString'),
+              info.get('CFBundleVersion'),
+          ]
+          if not all(isinstance(value, str) and value for value in values):
+              raise SystemExit('IPA identity metadata is incomplete.')
+          if any('\t' in value or '\n' in value for value in values):
+              raise SystemExit('IPA identity metadata contains invalid whitespace.')
+          print('\t'.join(values))
+          PY
+          )
+          IFS=$'\t' read -r testflight_bundle_id testflight_version testflight_build_number <<< "$identity"
+          if [[ "$testflight_bundle_id" != "$IOS_BUNDLE_ID" ]]; then
+            echo 'Downloaded IPA Bundle ID does not match IOS_BUNDLE_ID.'
+            exit 1
+          fi
+          printf 'TESTFLIGHT_BUNDLE_ID=%s\n' "$testflight_bundle_id" >> "$GITHUB_ENV"
+          printf 'TESTFLIGHT_VERSION=%s\n' "$testflight_version" >> "$GITHUB_ENV"
+          printf 'TESTFLIGHT_BUILD_NUMBER=%s\n' "$testflight_build_number" >> "$GITHUB_ENV"
 
       - name: Upload build and wait for App Store processing
         env:
@@ -352,3 +493,389 @@ jobs:
             --api-issuer "$APPSTORE_ISSUER_ID" \
             --p8-file-path "$key_path" \
             --wait
+
+      - name: Query public TestFlight installation status
+        continue-on-error: true
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p build/metadata
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-status-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+
+          set +e
+          node tool/ci_testflight_status.mjs \
+            --private-key-file "$key_path" \
+            --bundle-id "$TESTFLIGHT_BUNDLE_ID" \
+            --version "$TESTFLIGHT_VERSION" \
+            --build-number "$TESTFLIGHT_BUILD_NUMBER" \
+            --wait-seconds 300 \
+            --poll-seconds 20 \
+            --output build/metadata/testflight-status.json
+          query_status=$?
+          set -e
+
+          if [[ $query_status -ne 0 || ! -s build/metadata/testflight-status.json ]]; then
+            python3 - "$query_status" <<'PY'
+          import json
+          import os
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          result = {
+              'schemaVersion': 1,
+              'status': 'error',
+              'queriedAt': datetime.now(timezone.utc).isoformat(),
+              'bundleId': os.environ.get('TESTFLIGHT_BUNDLE_ID'),
+              'requestedVersion': os.environ.get('TESTFLIGHT_VERSION'),
+              'requestedBuildNumber': os.environ.get('TESTFLIGHT_BUILD_NUMBER'),
+              'build': None,
+              'betaGroups': {
+                  'querySucceeded': False,
+                  'externalGroupCount': None,
+                  'publicLinkEnabledGroupCount': None,
+              },
+              'publicLinks': [],
+              'warnings': [],
+              'error': {
+                  'kind': 'status_script_failed',
+                  'exitCode': int(sys.argv[1]),
+              },
+          }
+          Path('build/metadata/testflight-status.json').write_text(
+              json.dumps(result, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+          fi
+
+      - name: Upload public TestFlight status
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-testflight-status${{ env.BUILD_ARTIFACT_SUFFIX }}
+          path: build/metadata/testflight-status.json
+          if-no-files-found: warn
+
+  notarize-macos:
+    name: Notarize Signed macOS Harness DMG
+    if: github.event_name == 'workflow_dispatch' && inputs.macos_notarize_url != '' && inputs.ios_testflight_status_build == '' && inputs.ios_testflight_status_version == '' && !inputs.read_ios_crashes
+    runs-on: macos-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate source and download without redirects
+        env:
+          MACOS_NOTARIZE_URL: ${{ inputs.macos_notarize_url }}
+          MACOS_NOTARIZE_SHA256: ${{ inputs.macos_notarize_sha256 }}
+        run: |
+          python3 tool/ci_macos_notarization.py validate-input \
+            --url "$MACOS_NOTARIZE_URL" \
+            --sha256 "$MACOS_NOTARIZE_SHA256"
+
+          dmg_path="$RUNNER_TEMP/POPi-harness.dmg"
+          http_code=$(curl \
+            --silent \
+            --show-error \
+            --location \
+            --max-redirs 0 \
+            --proto '=https' \
+            --tlsv1.2 \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --output "$dmg_path" \
+            --write-out '%{http_code}' \
+            "$MACOS_NOTARIZE_URL")
+          if [[ "$http_code" != '200' ]]; then
+            echo 'The approved macOS download did not return HTTP 200.'
+            exit 1
+          fi
+          normalized_sha=$(printf '%s' "$MACOS_NOTARIZE_SHA256" | tr '[:upper:]' '[:lower:]')
+          printf '%s  %s\n' "$normalized_sha" "$dmg_path" | shasum -a 256 --check
+          printf 'MACOS_DMG_PATH=%s\n' "$dmg_path" >> "$GITHUB_ENV"
+
+      - name: Verify DMG and Developer ID signatures
+        run: |
+          expected_team='84GT698GKX'
+          expected_bundle='com.popistudio.app.harness.remote'
+          hdiutil verify "$MACOS_DMG_PATH"
+          codesign --verify --strict --verbose=2 "$MACOS_DMG_PATH"
+
+          dmg_signature=$(codesign --display --verbose=4 "$MACOS_DMG_PATH" 2>&1)
+          dmg_team=$(printf '%s\n' "$dmg_signature" | sed -n 's/^TeamIdentifier=//p' | head -1)
+          if [[ "$dmg_team" != "$expected_team" ]] || ! printf '%s\n' "$dmg_signature" | grep -q '^Authority=Developer ID Application:'; then
+            echo 'DMG is not signed by the expected Developer ID team.'
+            exit 1
+          fi
+
+          mount_dir=$(mktemp -d "$RUNNER_TEMP/macos-dmg-mount.XXXXXX")
+          cleanup_mount() {
+            hdiutil detach "$mount_dir" -force >/dev/null 2>&1 || true
+            rmdir "$mount_dir" >/dev/null 2>&1 || true
+          }
+          trap cleanup_mount EXIT
+          hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$MACOS_DMG_PATH" >/dev/null
+          shopt -s nullglob
+          apps=("$mount_dir"/*.app)
+          if [[ ${#apps[@]} -ne 1 ]]; then
+            echo 'DMG must contain exactly one top-level app bundle.'
+            exit 1
+          fi
+          app_path=${apps[0]}
+          codesign --verify --deep --strict --all-architectures --verbose=2 "$app_path"
+          app_signature=$(codesign --display --verbose=4 "$app_path" 2>&1)
+          app_team=$(printf '%s\n' "$app_signature" | sed -n 's/^TeamIdentifier=//p' | head -1)
+          if [[ "$app_team" != "$expected_team" ]] || ! printf '%s\n' "$app_signature" | grep -q '^Authority=Developer ID Application:'; then
+            echo 'App is not signed by the expected Developer ID team.'
+            exit 1
+          fi
+
+          info_plist="$app_path/Contents/Info.plist"
+          bundle_id=$(/usr/libexec/PlistBuddy -c 'Print:CFBundleIdentifier' "$info_plist")
+          executable=$(/usr/libexec/PlistBuddy -c 'Print:CFBundleExecutable' "$info_plist")
+          if [[ "$bundle_id" != "$expected_bundle" ]] || [[ "$executable" == */* ]] || [[ -z "$executable" ]]; then
+            echo 'App bundle identity does not match the remote Harness package.'
+            exit 1
+          fi
+          architectures=$(lipo -archs "$app_path/Contents/MacOS/$executable")
+          if [[ " $architectures " != *' arm64 '* ]] || [[ " $architectures " != *' x86_64 '* ]]; then
+            echo 'App executable is not a universal arm64/x86_64 binary.'
+            exit 1
+          fi
+          echo 'Verified signed universal macOS Harness DMG.'
+
+      - name: Submit DMG to Apple notarization
+        id: notarize
+        continue-on-error: true
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          mkdir -p build/metadata
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-notary-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+
+          set +e
+          xcrun notarytool submit "$MACOS_DMG_PATH" \
+            --key "$key_path" \
+            --key-id "$APPSTORE_KEY_ID" \
+            --issuer "$APPSTORE_ISSUER_ID" \
+            --wait \
+            --timeout 15m \
+            --output-format json \
+            > build/metadata/notary-raw.json
+          notary_exit_code=$?
+          set -e
+
+          set +e
+          python3 tool/ci_macos_notarization.py result \
+            --input build/metadata/notary-raw.json \
+            --output build/metadata/macos-notarization.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --notary-exit-code "$notary_exit_code"
+          result_exit_code=$?
+          set -e
+          if [[ $notary_exit_code -ne 0 || $result_exit_code -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Fetch and sanitize rejected notarization log
+        if: steps.notarize.outputs.needs_log == 'true'
+        continue-on-error: true
+        env:
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+        run: |
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-notary-log-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          xcrun notarytool log \
+            "${{ steps.notarize.outputs.submission_id }}" \
+            build/metadata/notary-log-raw.json \
+            --key "$key_path" \
+            --key-id "$APPSTORE_KEY_ID" \
+            --issuer "$APPSTORE_ISSUER_ID"
+          python3 tool/ci_macos_notarization.py sanitize-log \
+            --input build/metadata/notary-log-raw.json \
+            --output build/metadata/macos-notarization-log.json
+
+      - name: Upload notarization result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-macos-notarization
+          path: build/metadata/macos-notarization.json
+          if-no-files-found: warn
+
+      - name: Upload sanitized rejected notarization log
+        if: always() && steps.notarize.outputs.needs_log == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-macos-notarization-log
+          path: build/metadata/macos-notarization-log.json
+          if-no-files-found: warn
+
+      - name: Require accepted notarization
+        if: always()
+        env:
+          NOTARIZATION_ACCEPTED: ${{ steps.notarize.outputs.accepted }}
+        run: |
+          if [[ "$NOTARIZATION_ACCEPTED" != 'true' ]]; then
+            echo 'Apple notarization was not accepted.'
+            exit 1
+          fi
+
+  reject-conflicting-dispatch-modes:
+    name: Reject Conflicting Dispatch Modes
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.macos_notarize_url != '' &&
+      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '' || inputs.read_ios_crashes)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Reject simultaneous notarization and TestFlight status modes
+        run: |
+          echo 'macOS notarization and TestFlight status-only mode cannot run together.'
+          exit 1
+
+  check-ios-testflight-status:
+    name: Check Existing iOS TestFlight Status
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.macos_notarize_url == '' &&
+      (inputs.ios_testflight_status_build != '' || inputs.ios_testflight_status_version != '' || inputs.read_ios_crashes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate requested TestFlight identity
+        env:
+          TESTFLIGHT_STATUS_BUILD: ${{ inputs.ios_testflight_status_build }}
+          TESTFLIGHT_STATUS_VERSION: ${{ inputs.ios_testflight_status_version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+
+          build = os.environ.get('TESTFLIGHT_STATUS_BUILD', '')
+          version = os.environ.get('TESTFLIGHT_STATUS_VERSION', '')
+          if re.fullmatch(r'[1-9][0-9]*', build) is None:
+              raise SystemExit('TestFlight status build must be a positive integer.')
+          if re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,2}', version) is None:
+              raise SystemExit('TestFlight status version must contain two or three numeric components.')
+          PY
+
+      - name: Query existing TestFlight build using read-only API requests
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          TESTFLIGHT_STATUS_BUILD: ${{ inputs.ios_testflight_status_build }}
+          TESTFLIGHT_STATUS_VERSION: ${{ inputs.ios_testflight_status_version }}
+        run: |
+          mkdir -p build/metadata
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-status-only-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          node tool/ci_testflight_status.mjs \
+            --private-key-file "$key_path" \
+            --bundle-id "$IOS_BUNDLE_ID" \
+            --version "$TESTFLIGHT_STATUS_VERSION" \
+            --build-number "$TESTFLIGHT_STATUS_BUILD" \
+            --wait-seconds 0 \
+            --poll-seconds 20 \
+            --output build/metadata/testflight-status-check.json
+
+      - name: Upload TestFlight status check
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-testflight-status-check
+          path: build/metadata/testflight-status-check.json
+          if-no-files-found: error
+
+      - name: Require successful App Store Connect query
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('build/metadata/testflight-status-check.json')
+          if not path.is_file():
+              raise SystemExit('TestFlight status artifact was not generated.')
+          result = json.loads(path.read_text(encoding='utf-8'))
+          if result.get('status') == 'error':
+              raise SystemExit('App Store Connect status query failed; inspect the status artifact.')
+          PY
+
+      - name: Read privacy-filtered crash feedback for selected build
+        id: crash_summary
+        if: inputs.read_ios_crashes
+        continue-on-error: true
+        env:
+          IOS_BUNDLE_ID: ${{ secrets.IOS_BUNDLE_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          TESTFLIGHT_STATUS_BUILD: ${{ inputs.ios_testflight_status_build }}
+          TESTFLIGHT_STATUS_VERSION: ${{ inputs.ios_testflight_status_version }}
+        run: |
+          key_dir=$(mktemp -d "$RUNNER_TEMP/appstore-crash-keys.XXXXXX")
+          trap 'rm -r "$key_dir"' EXIT
+          key_path="$key_dir/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          node tool/ci_testflight_crashes.mjs \
+            --private-key-file "$key_path" \
+            --bundle-id "$IOS_BUNDLE_ID" \
+            --version "$TESTFLIGHT_STATUS_VERSION" \
+            --build-number "$TESTFLIGHT_STATUS_BUILD" \
+            --output build/metadata/testflight-crash-summary.json
+
+      - name: Upload privacy-filtered crash summary
+        if: always() && inputs.read_ios_crashes
+        uses: actions/upload-artifact@v4
+        with:
+          name: popi-app-ios-crash-summary
+          path: build/metadata/testflight-crash-summary.json
+          if-no-files-found: error
+
+      - name: Require successful crash feedback query
+        if: always() && inputs.read_ios_crashes
+        env:
+          CRASH_QUERY_OUTCOME: ${{ steps.crash_summary.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('build/metadata/testflight-crash-summary.json')
+          if not path.is_file():
+              raise SystemExit('TestFlight crash summary artifact was not generated.')
+          result = json.loads(path.read_text(encoding='utf-8'))
+          if os.environ.get('CRASH_QUERY_OUTCOME') != 'success' or result.get('status') == 'error':
+              raise SystemExit('Crash feedback query failed; inspect the redacted summary artifact.')
+          PY

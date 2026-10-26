@@ -63,7 +63,7 @@ void main() {
       final restored = DemoRepository(storage)..restore();
       addTearDown(restored.dispose);
       final session = restored.session('alice');
-      expect(session.title, 'New title');
+      expect(session.title, 'My assistant');
       expect(session.roles, ['custom:Test']);
       expect(session.memberNames['popi'], 'My assistant');
       expect(session.memberInstructions['popi'], 'Make short films');

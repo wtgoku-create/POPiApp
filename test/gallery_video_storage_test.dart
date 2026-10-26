@@ -58,6 +58,8 @@ void main() {
   });
 
   tearDown(() async {
+    GalleryVideoStorage.debugWebDownload = null;
+    GalleryVideoStorage.debugMaxShareBytes = GalleryVideoStorage.maxShareBytes;
     await server.close(force: true);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
@@ -70,6 +72,84 @@ void main() {
     expect(requests.single.toString(), '/video.mov?signature=test');
     expect(savedPath, endsWith('.mov'));
     expect(await File(savedPath!).parent.exists(), isFalse);
+  });
+
+  test('web save delegates its URL without buffering or calling Gal', () async {
+    WebVideoDownload? download;
+    GalleryVideoStorage.debugWebDownload = (value) async {
+      download = value;
+    };
+
+    await save();
+
+    expect(requests, isEmpty);
+    expect(calls, isEmpty);
+    expect(download?.url, url);
+    expect(download?.name, matches(RegExp(r'^POPi_video_\d+\.mov$')));
+    expect(download?.mimeType, 'video/quicktime');
+  });
+
+  test('web share rejects a response above its byte limit', () async {
+    GalleryVideoStorage.debugMaxShareBytes = bytes.length - 1;
+
+    await expectLater(
+      HttpOverrides.runWithHttpOverrides(
+        () => GalleryVideoStorage.downloadForShare(url),
+        _LoopbackHttpOverrides(),
+      ),
+      throwsA(isA<GalleryVideoTooLarge>()),
+    );
+
+    expect(calls, isEmpty);
+  });
+
+  test('web share returns exact bounded bytes', () async {
+    final video = await HttpOverrides.runWithHttpOverrides(
+      () => GalleryVideoStorage.downloadForShare(url),
+      _LoopbackHttpOverrides(),
+    );
+
+    expect(video.bytes, bytes);
+    expect(video.name, matches(RegExp(r'^POPi_video_\d+\.mov$')));
+    expect(video.mimeType, 'video/quicktime');
+    expect(requests.single.toString(), '/video.mov?signature=test');
+    expect(calls, isEmpty);
+  });
+
+  test('cancelled web share never fetches bytes', () async {
+    final token = CancelToken()..cancel();
+
+    await expectLater(
+      HttpOverrides.runWithHttpOverrides(
+        () => GalleryVideoStorage.downloadForShare(url, cancelToken: token),
+        _LoopbackHttpOverrides(),
+      ),
+      throwsA(
+        isA<DioException>().having(CancelToken.isCancel, 'cancelled', isTrue),
+      ),
+    );
+
+    expect(requests, isEmpty);
+    expect(calls, isEmpty);
+  });
+
+  test('cancelled web save never delegates the URL', () async {
+    var delegated = false;
+    GalleryVideoStorage.debugWebDownload = (_) async {
+      delegated = true;
+    };
+    final token = CancelToken()..cancel();
+
+    await expectLater(
+      save(cancelToken: token),
+      throwsA(
+        isA<DioException>().having(CancelToken.isCancel, 'cancelled', isTrue),
+      ),
+    );
+
+    expect(requests, isEmpty);
+    expect(calls, isEmpty);
+    expect(delegated, isFalse);
   });
 
   test('denied permission does not download', () async {

@@ -1656,9 +1656,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePromptUnsure => '我还不知道做什么';
 
   @override
-  String get aiDisclaimer => 'AI生成结果可能有误，仅供参考';
-
-  @override
   String get composerPlaceholder => '跟POPi说点什么...';
 
   @override
@@ -1719,6 +1716,39 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get voiceInput => '语音输入';
+
+  @override
+  String get voiceInputStarting => '正在准备语音输入…';
+
+  @override
+  String get voiceInputListening => '正在聆听，点击麦克风结束';
+
+  @override
+  String get voiceInputFinishing => '正在识别…';
+
+  @override
+  String get voiceInputStop => '结束语音输入';
+
+  @override
+  String get voiceInputCancel => '取消语音输入';
+
+  @override
+  String get voiceInputPermissionDenied => '请在系统或浏览器设置中允许麦克风和语音识别权限';
+
+  @override
+  String get voiceInputUnavailable => '当前设备或浏览器暂不支持语音输入';
+
+  @override
+  String get voiceInputNoSpeech => '未识别到语音，请再试一次';
+
+  @override
+  String get voiceInputNetworkError => '语音识别连接失败，请检查网络后再试';
+
+  @override
+  String get voiceInputAudioError => '无法使用麦克风，请检查设备或是否被占用';
+
+  @override
+  String get voiceInputFailed => '语音识别失败，请再试一次';
 
   @override
   String get sendMessage => '发送消息';
@@ -3285,6 +3315,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoPreferences => '账号偏好';
 
   @override
+  String get demoCreativeMemory => '创作偏好';
+
+  @override
+  String get demoEditCreativeMemory => '编辑创作偏好';
+
+  @override
+  String get demoCreativeMemoryEmpty => 'AI 会根据对话整理画面风格、具体模型偏好与比例，也可以手动填写。';
+
+  @override
+  String get demoCreativeMemoryScope => '仅用于当前会话，手动修改后 AI 不会自动覆盖。';
+
+  @override
+  String get demoCreativeMemoryEditorHint =>
+      '这段内容会作为当前会话的创作记忆。请写明画面风格、图片/视频的具体模型偏好和比例。';
+
+  @override
+  String get demoCreativeMemoryAfterSave => '保存后，后续创作会自动使用这段记忆。';
+
+  @override
+  String get demoSaveToCurrentSession => '保存到当前会话';
+
+  @override
   String get demoDirection => '内容方向';
 
   @override
@@ -3363,6 +3415,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoImages => '图片';
 
   @override
+  String demoImageStackCount(int count) {
+    return '$count 张图片';
+  }
+
+  @override
   String get demoVideos => '视频';
 
   @override
@@ -3411,7 +3468,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoGreetingDetail => '告诉我，你现在最想做什么？';
 
   @override
-  String get demoDisclaimer => 'AI 生成结果可能有误，仅供参考';
+  String demoActivityTitle(String name, String activity) {
+    return '$name · $activity';
+  }
+
+  @override
+  String get demoActivityThinking => '正在思考你的内容';
+
+  @override
+  String get demoActivityModel => '正在调用模型';
+
+  @override
+  String get demoActivitySearching => '正在搜索资料';
+
+  @override
+  String get demoActivityReadingWeb => '正在阅读网页';
+
+  @override
+  String get demoActivityVision => '正在查看参考图片';
 
   @override
   String get demoThinking => 'POPi 正在思考…';
@@ -3503,6 +3577,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoImageMeta => '图片 / 9:16';
+
+  @override
+  String demoOwnedImageMeta(int width, int height) {
+    return '图片 / $width×$height';
+  }
 
   @override
   String get demoScriptMeta => '脚本/MD';
@@ -3610,7 +3689,665 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoFileTypes => '图片、视频、脚本、音频';
 
   @override
+  String get demoUploadFiles => '上传到资产库';
+
+  @override
+  String get demoFileUploaded => '已上传';
+
+  @override
+  String get demoFileSelectionFailed => '无法选择文件，请再试一次';
+
+  @override
+  String get demoUploadFailed => '文件上传失败，请再试一次';
+
+  @override
+  String get demoUploadEmptyFile => '空文件无法上传';
+
+  @override
+  String get demoUploadTooLarge => '文件超过上传大小限制，请选择较小的文件';
+
+  @override
+  String get demoUploadUnsupported => '不支持该文件类型，请选择图片、MP4视频、文本脚本或音频';
+
+  @override
+  String get demoUploadInvalidFile => '文件无效或已发生变化，请重新选择';
+
+  @override
+  String get demoAssetLoadFailed => '文件加载失败，请稍后重新打开';
+
+  @override
+  String demoFileSizeMb(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String demoFileSizeKb(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String demoFileSizeBytes(int size) {
+    return '$size 字节';
+  }
+
+  @override
   String demoSelectedFiles(int count) {
     return '已选择 $count 个文件';
   }
+
+  @override
+  String get demoChooseBots => '选择Bot';
+
+  @override
+  String get demoChooseAssistant => '选择助理';
+
+  @override
+  String get demoCreateAssistant => '创建新的 Popi';
+
+  @override
+  String get demoAssistantName => 'Popi 名称';
+
+  @override
+  String get demoAssistantInstructions => '职责与个性';
+
+  @override
+  String get demoAssistantInstructionsHint => '描述 Popi 的职责、表达风格与协作偏好，可选';
+
+  @override
+  String get demoSingleAssistantNotice => '当前仅支持选择一名助理';
+
+  @override
+  String get demoDiyRoleTitle => '创建内容角色';
+
+  @override
+  String get demoUploadDiyRole => '上传 DIY 角色';
+
+  @override
+  String get demoSelectRoleImages => '选择角色参考图';
+
+  @override
+  String get demoDiyRoleNameHint => '角色名称';
+
+  @override
+  String get demoDiyRoleDescriptionHint => '人设与外观描述，可选';
+
+  @override
+  String get demoDiyRoleSave => '保存角色';
+
+  @override
+  String get demoDiyRoleLimit => '最多 5 张参考图';
+
+  @override
+  String get demoNewSessionRoleTitle => '先添加你的创作角色';
+
+  @override
+  String get demoNewSessionRoleHint => '关联已有角色，或上传自己的 DIY 角色参考图，让助理了解你的创作主角。';
+
+  @override
+  String get demoLinkContentRole => '关联角色';
+
+  @override
+  String get demoRoleContextReady => '已关联创作角色';
+
+  @override
+  String get demoStartCreating => '开始创作';
+
+  @override
+  String get demoCreateSessionAction => '创建';
+
+  @override
+  String get demoPinSession => '置顶';
+
+  @override
+  String get demoUnpinSession => '取消置顶';
+
+  @override
+  String get demoPopiAssistant => 'POPi助手';
+
+  @override
+  String get demoCurrentConversationOnly => '仅作用于当前会话';
+
+  @override
+  String get demoEditWorkMode => '工作方式';
+
+  @override
+  String get demoWorkModeAutomatic => '自动协作';
+
+  @override
+  String get demoWorkModeManual => '手动选择';
+
+  @override
+  String get demoWorkModeOnDemand => '按需调用';
+
+  @override
+  String get demoVoiceUnavailable => '语音输入尚未接入';
+
+  @override
+  String demoBotGroupTitle(int count) {
+    return 'POPi等$count人';
+  }
+
+  @override
+  String get demoGlobalCapabilities => '会话能力';
+
+  @override
+  String demoServerConfigRevision(int revision) {
+    return '服务端配置 v$revision';
+  }
+
+  @override
+  String get demoLocalConfig => '本地演示配置';
+
+  @override
+  String get demoVisionSkill => '视觉理解';
+
+  @override
+  String get demoVisionDetail => '理解图片内容并用于创作判断';
+
+  @override
+  String get demoCurrentTaskConfigNotice => '当前任务沿用受理时的配置；修改仅对后续任务生效';
+
+  @override
+  String get demoActiveMember => '指定执行成员';
+
+  @override
+  String get demoRolePending => '人设待配置';
+
+  @override
+  String get demoRoleConfigured => '人设已配置';
+
+  @override
+  String get demoRoleInstructions => '人设说明';
+
+  @override
+  String get demoRoleInstructionsHint => '描述角色外观、性格及创作约束，生成内容时作为参考';
+
+  @override
+  String get demoContextRolesHint => '用于图文、视频创作的角色与参考图，可在输入中用 @ 引用。';
+
+  @override
+  String get demoContextPreferencesHint => '作为后续创作的默认上下文，也可在本次提示词中另作说明。';
+
+  @override
+  String get demoReferenceImages => '角色参考图';
+
+  @override
+  String get demoAddReferenceImage => '添加参考图';
+
+  @override
+  String get demoReferenceImageUrls => '公开图片链接';
+
+  @override
+  String get demoReferenceImageUrlsHint => '每行一个公开图片链接，最多 5 个';
+
+  @override
+  String get demoReferenceImagesHint => '为创作提供外观参考。云端生成需要可访问的图片链接；本地图片不会自动公开。';
+
+  @override
+  String get demoDshCapabilitiesHint => '由 DSH 提供并默认启用，可用状态以实际接入为准。';
+
+  @override
+  String get demoDshTools => '工具';
+
+  @override
+  String get demoDshSkills => 'Skills';
+
+  @override
+  String get demoDshMcp => 'MCP';
+
+  @override
+  String get demoDshNotConnected => '尚未接入';
+
+  @override
+  String get demoDshNotGranted => '本会话未启用';
+
+  @override
+  String get demoDshUnavailable => '暂不可用';
+
+  @override
+  String get demoDshUnconfirmed => '状态待确认';
+
+  @override
+  String get demoLocalReferenceOnly => '本地参考图（云端暂不可用）';
+
+  @override
+  String get demoReferencePending => '参考图待读取';
+
+  @override
+  String get demoNotConfigured => '未设置';
+
+  @override
+  String get demoMentionRole => '引用角色';
+
+  @override
+  String get demoMentionRoleHint => '选择已关联的创作角色，将人设与参考图加入本次上下文。';
+
+  @override
+  String get demoTaskQueued => '任务已排队';
+
+  @override
+  String get demoTaskCreating => '正在制作';
+
+  @override
+  String get demoTaskSaving => '正在保存到资产库';
+
+  @override
+  String get demoTaskSaved => '已保存到资产库';
+
+  @override
+  String get demoViewOutputs => '查看产物';
+
+  @override
+  String get demoDismissTaskNotice => '关闭任务提示';
+
+  @override
+  String get demoTaskFailed => '任务失败';
+
+  @override
+  String get demoTaskUnknown => '任务状态待核实';
+
+  @override
+  String get demoTaskBrief => '任务简介';
+
+  @override
+  String get demoTaskDescriptionMissing => '该任务未保存文字简介';
+
+  @override
+  String get demoTaskExecutionMember => '执行成员';
+
+  @override
+  String get demoTaskModel => '模型';
+
+  @override
+  String get demoTaskConfiguration => '任务配置';
+
+  @override
+  String get demoTaskIdentifier => '任务 ID';
+
+  @override
+  String get demoTaskImage => '图片生成';
+
+  @override
+  String get demoTaskVideo => '视频生成';
+
+  @override
+  String get demoTaskTts => '语音合成';
+
+  @override
+  String get demoTaskMusic => '音乐生成';
+
+  @override
+  String get demoTaskVision => '视觉理解';
+
+  @override
+  String get demoTaskAudio => '音频生成';
+
+  @override
+  String get demoTaskText => '文本生成';
+
+  @override
+  String get demoTaskScript => '脚本生成';
+
+  @override
+  String get demoTaskMedia => '媒体任务';
+
+  @override
+  String demoTaskConfigRevision(int revision) {
+    return '受理配置 v$revision';
+  }
+
+  @override
+  String get harnessAccessTitle => '登录 POPi 测试版';
+
+  @override
+  String get harnessAccessSubtitle => '登录后连接测试环境，体验最新的应用功能';
+
+  @override
+  String get harnessAccessUsername => '账号';
+
+  @override
+  String get harnessAccessUsernameHint => '请输入测试账号';
+
+  @override
+  String get harnessAccessPassword => '密码';
+
+  @override
+  String get harnessAccessSignIn => '登录';
+
+  @override
+  String get harnessAccessSigningIn => '正在登录…';
+
+  @override
+  String get harnessAccessRequired => '请输入账号和密码';
+
+  @override
+  String get harnessAccessInvalidCredentials => '账号或密码不正确';
+
+  @override
+  String harnessAccessRateLimited(int seconds) {
+    return '尝试次数过多，请在 $seconds 秒后重试';
+  }
+
+  @override
+  String get harnessAccessRateLimitedUnknown => '尝试次数过多，请稍后重试';
+
+  @override
+  String get harnessAccessUnavailable => '暂时无法连接测试环境，请稍后重试';
+
+  @override
+  String get demoPinnedConversations => '置顶';
+
+  @override
+  String get demoRecentConversations => '最近会话';
+
+  @override
+  String get demoListNoMessages => '暂无消息';
+
+  @override
+  String get demoListYou => '你';
+
+  @override
+  String get demoListAttachment => '[附件]';
+
+  @override
+  String get demoListQuestion => '等待你的回答';
+
+  @override
+  String demoListMessagePreview(String sender, String message) {
+    return '$sender：$message';
+  }
+
+  @override
+  String demoListTime(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.Hm(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListFullDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get demoMaterials => '素材';
+
+  @override
+  String composerNamedPlaceholder(String name) {
+    return '跟$name说点什么...';
+  }
+
+  @override
+  String get demoUploadFromDevice => '从设备上传';
+
+  @override
+  String get demoSelectFromLibrary => '从素材库选择';
+
+  @override
+  String get previewAttachment => '双击预览附件';
+
+  @override
+  String get demoAttachmentUnsupported => '当前助手暂不支持读取这类附件，请选择图片或文本脚本。';
+
+  @override
+  String get demoAttachmentNotFound => '附件已不存在，请移除后重新上传。';
+
+  @override
+  String get demoAttachmentTooLarge => '本次附件总大小过大，请减少附件或选择较小的文件。';
+
+  @override
+  String get demoAttachmentLimit => '附件数量过多或包含重复项，请调整后再发送。';
+
+  @override
+  String get demoAttachmentInvalid => '附件无法读取或已发生变化，请重新上传。';
+
+  @override
+  String get demoStyleFilmCapabilityTitle => '制作风格短片';
+
+  @override
+  String get demoStyleFilmCapabilityDescription => '启用后，可在对话输入区和＋菜单中选择短片风格。';
+
+  @override
+  String get demoStyleFilmSelect => '选择风格';
+
+  @override
+  String get demoStyleFilmChange => '更换风格';
+
+  @override
+  String get demoStyleFilmClear => '清除已选风格';
+
+  @override
+  String get demoStyleFilmMenu => '选择风格';
+
+  @override
+  String get demoStyleFilmSheetTitle => '短片风格';
+
+  @override
+  String get demoStyleFilmSearchHint => '搜索风格或用途';
+
+  @override
+  String get demoStyleFilmAllCategories => '全部分类';
+
+  @override
+  String get demoStyleFilmUnavailable => '暂不可制作';
+
+  @override
+  String get demoStyleFilmDuration => '时长';
+
+  @override
+  String get demoStyleFilmAspectRatio => '画幅';
+
+  @override
+  String get demoStyleFilmSoundtrack => '声音';
+
+  @override
+  String get demoStyleFilmSoundNone => '无声短片';
+
+  @override
+  String get demoStyleFilmSoundMusic => '原创配乐';
+
+  @override
+  String get demoStyleFilmStoryboardReview => '先看分镜，确认后制作';
+
+  @override
+  String get demoStyleFilmCreate => '使用这个风格';
+
+  @override
+  String get demoStyleFilmConfirmTitle => '确认创作简报';
+
+  @override
+  String demoStyleFilmConfirmDescription(
+    String style,
+    int seconds,
+    String ratio,
+  ) {
+    return '使用「$style」制作 $seconds 秒、$ratio 的短片。先生成分镜，确认后再制作成片。';
+  }
+
+  @override
+  String get demoStyleFilmCostPending => '制作会使用当前模型和服务器算力，具体模型用量以服务账单为准。';
+
+  @override
+  String get demoStyleFilmPreparingStoryboard => '正在准备分镜';
+
+  @override
+  String get demoStyleFilmAwaitingStoryboard => '分镜待你确认';
+
+  @override
+  String get demoStyleFilmApproveStoryboard => '确认分镜，开始制作';
+
+  @override
+  String get demoStyleFilmReviseStoryboard => '调整分镜';
+
+  @override
+  String get demoStyleFilmRevisionNotes => '希望怎样调整故事与画面？';
+
+  @override
+  String get demoStyleFilmRevisionNotice => '提交后将重新生成整套分镜，确认前不会制作成片。';
+
+  @override
+  String get demoStyleFilmSubmitRevision => '提交调整';
+
+  @override
+  String get demoStyleFilmCreating => '正在制作短片';
+
+  @override
+  String get demoStyleFilmCompleted => '短片已完成';
+
+  @override
+  String get demoStyleFilmFailed => '短片制作失败';
+
+  @override
+  String get demoStyleFilmViewOutput => '查看成片';
+
+  @override
+  String get demoStyleFilmNoReadyStyles => '当前没有可制作的风格，可先浏览风格目录。';
+
+  @override
+  String get demoStyleFilmLoadFailed => '风格目录读取失败，请稍后再打开。';
+
+  @override
+  String get demoStyleFilmReviewFailed => '分镜操作未提交，已保留你的选择和输入。';
+
+  @override
+  String get demoStyleFilmSaveFailed => '能力设置未保存，已保留你的修改。';
+
+  @override
+  String get demoStyleFilmRetry => '重新制作';
+
+  @override
+  String demoStyleFilmStyleCount(int count) {
+    return '$count 种风格';
+  }
+
+  @override
+  String demoStyleFilmPosterLabel(String name) {
+    return '$name风格示例';
+  }
+
+  @override
+  String get demoStyleFilmPreviewLabel => '分镜预览';
+
+  @override
+  String get demoStyleFilmNoStoryboard => '分镜尚未就绪，制作进展会保留在原会话中。';
+
+  @override
+  String get demoStyleFilmUpload => '从设备上传';
+
+  @override
+  String get demoStyleFilmLibrary => '从素材库选择';
+
+  @override
+  String get demoStyleFilmReferencesUnsupported => '当前风格短片仅支持文字主题，请先移除附件和内容角色。';
+
+  @override
+  String demoStyleFilmBotContext(String name) {
+    return '适用于 Bot：$name';
+  }
+
+  @override
+  String get demoStyleFilmLoadingCatalog => '正在加载风格目录';
+
+  @override
+  String demoStyleFilmReadyCount(int count) {
+    return '可制作 $count 种';
+  }
+
+  @override
+  String get demoStyleFilmBrowsePending => '可以浏览全部风格，完成验证后即可选择制作。';
+
+  @override
+  String get demoStyleFilmNoReadyFooter => '当前没有已验证可制作的风格';
+
+  @override
+  String get demoStyleFilmReasonUnsupportedStyle => '暂未适配';
+
+  @override
+  String get demoStyleFilmReasonUnverifiedStyle => '待验证';
+
+  @override
+  String get demoStyleFilmReasonRuntimeUnavailable => '暂时无法制作';
+
+  @override
+  String get demoStyleFilmReasonModelUnavailable => '当前模型未就绪';
+
+  @override
+  String get demoStyleFilmReasonUnknown => '暂不可制作';
+
+  @override
+  String get demoStyleFilmCapabilitiesHint =>
+      '能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。';
+
+  @override
+  String get demoPasteImage => '粘贴图片';
+
+  @override
+  String get demoPasteImageUnavailable => '剪贴板中没有可用图片';
+
+  @override
+  String get demoPasteImageFailed => '图片未粘贴，已保留当前输入和附件';
+
+  @override
+  String get demoPastingImages => '正在添加剪贴板图片';
+
+  @override
+  String get demoDocuments => '文档';
+
+  @override
+  String get demoDocumentParsing => '正在解析文档';
+
+  @override
+  String get demoDocumentReady => '文档已解析，可发送给助理读取';
+
+  @override
+  String demoDocumentPages(int count) {
+    return '$count 页';
+  }
+
+  @override
+  String demoDocumentSlides(int count) {
+    return '$count 张幻灯片';
+  }
+
+  @override
+  String get demoDocumentTruncated => '内容已按读取上限截断';
+
+  @override
+  String get demoDocumentOcrUsed => '已使用 OCR 识别';
+
+  @override
+  String get demoDocumentPageCountEstimated => '页数为估算值';
+
+  @override
+  String get demoDocumentTextEmpty => '文档中没有可读取的文字';
+
+  @override
+  String get demoDocumentOriginalAvailable => '原文件可下载';
+
+  @override
+  String get demoDocumentLimitHint =>
+      '最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。';
+
+  @override
+  String get demoAttachmentParsing => '附件仍在解析，请稍候再发送';
+
+  @override
+  String demoSkillBotContext(String name) {
+    return '适用于 Bot：$name';
+  }
+
+  @override
+  String get demoSkillSaveFailed => 'Skill 设置未保存，已保留你的选择。';
 }
