@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:toastification/toastification.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:popi_ai_app/app/theme.dart';
-import 'package:popi_ai_app/features/demo/data/demo_fixtures.dart';
-import 'package:popi_ai_app/features/demo/presentation/demo_assets_page.dart';
-import 'package:popi_ai_app/features/demo/presentation/demo_audio_detail.dart';
+import 'package:popi_ai_app/features/v2_shared/data/v2_fixtures.dart';
+import 'package:popi_ai_app/features/v2_assets/presentation/v2_assets_page.dart';
+import 'package:popi_ai_app/features/v2_assets/presentation/v2_audio_detail.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/widgets/app_video_player.dart';
@@ -47,10 +47,10 @@ void main() {
     testWidgets('audio waveform layout and bounded seeking at $width', (
       tester,
     ) async {
-      final asset = DemoFixtures.assets().firstWhere((a) => a.id == 'audio');
+      final asset = V2Fixtures.assets().firstWhere((a) => a.id == 'audio');
       await pump(
         tester,
-        Scaffold(body: DemoAudioDetail(asset: asset)),
+        Scaffold(body: V2AudioDetail(asset: asset)),
         Size(width, 838),
       );
       final player = find.byKey(const Key('demo-audio-player'));
@@ -93,13 +93,13 @@ void main() {
   testWidgets(
     'video opens existing detail and shared player with bundled source',
     (tester) async {
-      final asset = DemoFixtures.assets().firstWhere((a) => a.id == 'weekend');
+      final asset = V2Fixtures.assets().firstWhere((a) => a.id == 'weekend');
       await pump(
         tester,
         Builder(
           builder: (context) => Scaffold(
             body: TextButton(
-              onPressed: () => openDemoAsset(context, asset),
+              onPressed: () => openV2Asset(context, asset),
               child: const Text('Open'),
             ),
           ),

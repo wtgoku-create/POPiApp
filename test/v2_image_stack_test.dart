@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:popi_ai_app/features/demo/data/demo_fixtures.dart';
-import 'package:popi_ai_app/features/demo/presentation/widgets/demo_image_stack.dart';
+import 'package:popi_ai_app/features/v2_shared/data/v2_fixtures.dart';
+import 'package:popi_ai_app/features/v2_session/presentation/widgets/v2_image_stack.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 
 Future<void> _pumpDeck(
@@ -17,8 +17,8 @@ Future<void> _pumpDeck(
         data: MediaQueryData(disableAnimations: reduceMotion),
         child: Scaffold(
           body: Center(
-            child: DemoImageStack(
-              images: DemoFixtures.assets()
+            child: V2ImageStack(
+              images: V2Fixtures.assets()
                   .where((asset) => asset.id.startsWith('scene'))
                   .toList(),
               messageId: 'deck-test',
@@ -50,7 +50,7 @@ void main() {
   ) async {
     final changes = <int>[];
     await _pumpDeck(tester, changes);
-    final deck = find.byType(DemoImageStack);
+    final deck = find.byType(V2ImageStack);
     final size = tester.getSize(deck);
     final origin = tester.getTopLeft(_image(1));
     final gesture = await tester.startGesture(tester.getCenter(deck));
@@ -94,7 +94,7 @@ void main() {
     await _pumpDeck(tester, changes);
     final origin = tester.getTopLeft(_image(1));
     final gesture = await tester.startGesture(
-      tester.getCenter(find.byType(DemoImageStack)),
+      tester.getCenter(find.byType(V2ImageStack)),
     );
     await gesture.moveBy(const Offset(-20, 0));
     await gesture.moveBy(const Offset(-70, 0));
@@ -112,7 +112,7 @@ void main() {
   ) async {
     final changes = <int>[];
     await _pumpDeck(tester, changes, reduceMotion: true);
-    await tester.drag(find.byType(DemoImageStack), const Offset(-220, 0));
+    await tester.drag(find.byType(V2ImageStack), const Offset(-220, 0));
     await tester.pump();
     expect(changes, [1]);
     expect(find.text('2/5'), findsOneWidget);

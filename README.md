@@ -48,6 +48,26 @@ lib/
         └── user_type.dart
 ```
 
+### V2 页面模块
+
+原有业务模块继续保留，原 `features/demo/` 页面按业务拆分为：
+
+```text
+lib/
+├── app/v2_app.dart
+└── features/
+    ├── v2_home/         # 首页、会话列表、新建引导
+    ├── v2_session/      # 聊天、会话设置、聊天控制器
+    ├── v2_assets/       # 素材列表、音频详情、媒体导出
+    └── v2_shared/       # V2 共用组件、模型、本地仓库和样例数据
+```
+
+V2 仍通过 `lib/main_demo.dart` 启动，使用本地样例数据；沿用已有存储键和资源。
+
+```bash
+dart run tool/flutter_env.dart development run -t lib/main_demo.dart
+```
+
 ## 网络请求
 
 普通业务接口通过 `dioProvider` 和 `NetworkApi` 调用。开发环境 API 地址为

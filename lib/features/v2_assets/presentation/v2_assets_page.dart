@@ -9,61 +9,61 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../session/domain/session_artifact.dart';
 import '../../session/presentation/widgets/session_artifacts_sheet.dart';
-import '../data/demo_repository.dart';
-import '../data/demo_fixtures.dart';
-import '../domain/demo_models.dart';
-import 'widgets/demo_widgets.dart';
-import 'widgets/demo_document_cover.dart';
-import 'demo_audio_detail.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/data/v2_fixtures.dart';
+import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_shared/presentation/widgets/v2_widgets.dart';
+import 'widgets/v2_document_cover.dart';
+import 'v2_audio_detail.dart';
 
-String demoAssetMeta(AppLocalizations l, DemoAssetKind kind) => switch (kind) {
-  DemoAssetKind.image => l.demoImageMeta,
-  DemoAssetKind.video => l.demoVideoMeta,
-  DemoAssetKind.script => l.demoScriptMeta,
-  DemoAssetKind.audio => l.demoAudioMeta,
+String v2AssetMeta(AppLocalizations l, V2AssetKind kind) => switch (kind) {
+  V2AssetKind.image => l.demoImageMeta,
+  V2AssetKind.video => l.demoVideoMeta,
+  V2AssetKind.script => l.demoScriptMeta,
+  V2AssetKind.audio => l.demoAudioMeta,
 };
-IconData demoAssetIcon(DemoAssetKind kind) => switch (kind) {
-  DemoAssetKind.image => Icons.image_outlined,
-  DemoAssetKind.video => Icons.videocam_outlined,
-  DemoAssetKind.script => Icons.description_outlined,
-  DemoAssetKind.audio => Icons.music_note_outlined,
+IconData v2AssetIcon(V2AssetKind kind) => switch (kind) {
+  V2AssetKind.image => Icons.image_outlined,
+  V2AssetKind.video => Icons.videocam_outlined,
+  V2AssetKind.script => Icons.description_outlined,
+  V2AssetKind.audio => Icons.music_note_outlined,
 };
 
-Future<void> showDemoImport(BuildContext context, DemoRepository repository) =>
-    DemoSheet.show<void>(
+Future<void> showV2Import(BuildContext context, V2Repository repository) =>
+    V2Sheet.show<void>(
       context: context,
       builder: (_) => _ImportSheet(repository: repository),
     );
 
 class _ImportSheet extends StatefulWidget {
   const _ImportSheet({required this.repository});
-  final DemoRepository repository;
+  final V2Repository repository;
   @override
   State<_ImportSheet> createState() => _ImportSheetState();
 }
 
 class _ImportSheetState extends State<_ImportSheet> {
-  final _selected = DemoAssetKind.values.toList();
+  final _selected = V2AssetKind.values.toList();
   bool _busy = false;
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final examples = {
-      for (final kind in DemoAssetKind.values)
+      for (final kind in V2AssetKind.values)
         kind:
             widget.repository.assets.where((a) => a.kind == kind).firstOrNull ??
-            DemoFixtures.assets().firstWhere((a) => a.kind == kind),
+            V2Fixtures.assets().firstWhere((a) => a.kind == kind),
     };
-    return DemoSheetBody(
+    return V2SheetBody(
       title: l.demoUpload,
-      footer: DemoPrimaryButton(
+      footer: V2PrimaryButton(
         label: l.demoUploadLibrary,
         busy: _busy,
         onPressed: _selected.isEmpty
             ? null
             : () async {
                 setState(() => _busy = true);
-                final ok = await demoPerform(context, () async {
+                final ok = await v2Perform(context, () async {
                   for (final kind in List.of(_selected)) {
                     await widget.repository.importSample(kind);
                     if (mounted) setState(() => _selected.remove(kind));
@@ -82,14 +82,14 @@ class _ImportSheetState extends State<_ImportSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Material(
-            color: demoTint,
+            color: v2Tint,
             borderRadius: BorderRadius.circular(20),
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: _busy
                   ? null
                   : () => setState(() {
-                      for (final kind in DemoAssetKind.values) {
+                      for (final kind in V2AssetKind.values) {
                         if (!_selected.contains(kind)) _selected.add(kind);
                       }
                     }),
@@ -98,7 +98,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const DemoIcon('upload', size: 32, color: AppColors.brand),
+                    const V2Icon('upload', size: 32, color: AppColors.brand),
                     const SizedBox(height: 10),
                     Text(
                       l.demoSelectFiles,
@@ -139,7 +139,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                   key: ValueKey(kind),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: demoSurface(context),
+                    color: v2Surface(context),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -147,14 +147,14 @@ class _ImportSheetState extends State<_ImportSheet> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child:
-                            kind == DemoAssetKind.script ||
-                                kind == DemoAssetKind.audio
+                            kind == V2AssetKind.script ||
+                                kind == V2AssetKind.audio
                             ? Container(
                                 width: 50,
                                 height: 50,
-                                color: demoTint,
+                                color: v2Tint,
                                 child: Center(
-                                  child: DemoIcon(
+                                  child: V2Icon(
                                     kind.name,
                                     size: 24,
                                     color: AppColors.brand,
@@ -176,10 +176,10 @@ class _ImportSheetState extends State<_ImportSheet> {
                             Text(
                               asset.title +
                                   switch (kind) {
-                                    DemoAssetKind.image => '.png',
-                                    DemoAssetKind.video => '.mp4',
-                                    DemoAssetKind.script => '.md',
-                                    DemoAssetKind.audio => '.mp4',
+                                    V2AssetKind.image => '.png',
+                                    V2AssetKind.video => '.mp4',
+                                    V2AssetKind.script => '.md',
+                                    V2AssetKind.audio => '.mp4',
                                   },
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -190,7 +190,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                             ),
                             const SizedBox(height: 5),
                             Text(
-                              demoAssetMeta(l, kind),
+                              v2AssetMeta(l, kind),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: AppColors.textTertiary,
@@ -209,7 +209,7 @@ class _ImportSheetState extends State<_ImportSheet> {
                         onPressed: _busy
                             ? null
                             : () => setState(() => _selected.remove(kind)),
-                        icon: const DemoIcon(
+                        icon: const V2Icon(
                           'close',
                           size: 18,
                           color: AppColors.textTertiary,
@@ -227,23 +227,23 @@ class _ImportSheetState extends State<_ImportSheet> {
   }
 }
 
-class DemoAssetsView extends StatefulWidget {
-  const DemoAssetsView({
+class V2AssetsView extends StatefulWidget {
+  const V2AssetsView({
     required this.repository,
     this.sessionId,
     this.onSelect,
     this.compactHeader = false,
     super.key,
   });
-  final DemoRepository repository;
+  final V2Repository repository;
   final String? sessionId;
-  final ValueChanged<DemoAsset>? onSelect;
+  final ValueChanged<V2Asset>? onSelect;
   final bool compactHeader;
   @override
-  State<DemoAssetsView> createState() => _DemoAssetsViewState();
+  State<V2AssetsView> createState() => _V2AssetsViewState();
 }
 
-class _DemoAssetsViewState extends State<DemoAssetsView> {
+class _V2AssetsViewState extends State<V2AssetsView> {
   int _filter = 0;
   bool _list = false;
   String _query = '';
@@ -269,7 +269,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
           slivers: [
             SliverPersistentHeader(
               pinned: true,
-              delegate: DemoPinnedHeader(
+              delegate: V2PinnedHeader(
                 height: widget.compactHeader ? 120 : 140,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -280,7 +280,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                   ),
                   child: Column(
                     children: [
-                      DemoSearch(
+                      V2Search(
                         hint: l.demoSearchAssets,
                         onChanged: (q) => setState(() => _query = q),
                       ),
@@ -288,7 +288,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                       Row(
                         children: [
                           Expanded(
-                            child: DemoSegments(
+                            child: V2Segments(
                               labels: [
                                 l.demoAll,
                                 l.demoImages,
@@ -313,7 +313,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                             onPressed: () => setState(() => _list = !_list),
                             icon: _list
                                 ? const Icon(Icons.grid_view_outlined, size: 22)
-                                : const DemoIcon('list', size: 30),
+                                : const V2Icon('list', size: 30),
                           ),
                         ],
                       ),
@@ -351,15 +351,15 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            tileColor: demoSurface(context),
+                            tileColor: v2Surface(context),
                             leading: ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child:
-                                  items[i].kind == DemoAssetKind.audio ||
-                                      items[i].kind == DemoAssetKind.script
+                                  items[i].kind == V2AssetKind.audio ||
+                                      items[i].kind == V2AssetKind.script
                                   ? SizedBox.square(
                                       dimension: 54,
-                                      child: DemoDocumentCover(
+                                      child: V2DocumentCover(
                                         kind: items[i].kind,
                                       ),
                                     )
@@ -372,10 +372,10 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                                     ),
                             ),
                             title: Text(items[i].title),
-                            subtitle: Text(demoAssetMeta(l, items[i].kind)),
+                            subtitle: Text(v2AssetMeta(l, items[i].kind)),
                             onTap: () => widget.onSelect != null
                                 ? widget.onSelect!(items[i])
-                                : openDemoAsset(context, items[i]),
+                                : openV2Asset(context, items[i]),
                             trailing: widget.onSelect != null
                                 ? const Icon(Icons.add_circle_outline)
                                 : _assetMenu(
@@ -405,12 +405,12 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                                     72,
                               ),
                           itemCount: items.length,
-                          itemBuilder: (context, i) => DemoAssetCard(
+                          itemBuilder: (context, i) => V2AssetCard(
                             key: ValueKey(items[i].id),
                             asset: items[i],
                             onTap: () => widget.onSelect != null
                                 ? widget.onSelect!(items[i])
-                                : openDemoAsset(context, items[i]),
+                                : openV2Asset(context, items[i]),
                             trailing: widget.onSelect != null
                                 ? const Icon(Icons.add_circle_outline, size: 20)
                                 : _assetMenu(
@@ -431,21 +431,18 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
 
 Widget _assetMenu(
   BuildContext context,
-  DemoAsset asset,
-  DemoRepository repository,
+  V2Asset asset,
+  V2Repository repository,
 ) {
   final l = AppLocalizations.of(context)!;
   return AppMenuButton(
     tooltip: l.demoAssetDetails,
-    size:
-        asset.kind == DemoAssetKind.audio || asset.kind == DemoAssetKind.script
+    size: asset.kind == V2AssetKind.audio || asset.kind == V2AssetKind.script
         ? 24
         : 32,
-    icon: DemoIcon(
+    icon: V2Icon(
       'more',
-      size:
-          asset.kind == DemoAssetKind.audio ||
-              asset.kind == DemoAssetKind.script
+      size: asset.kind == V2AssetKind.audio || asset.kind == V2AssetKind.script
           ? 16
           : 18,
     ),
@@ -453,12 +450,12 @@ Widget _assetMenu(
       AppMenuItem(
         label: l.demoAssetDetails,
         icon: const Icon(Icons.info_outline),
-        onSelected: () => openDemoAsset(context, asset),
+        onSelected: () => openV2Asset(context, asset),
       ),
       AppMenuItem(
         label: l.renameProjectItem,
         icon: const Icon(Icons.edit_outlined),
-        onSelected: () => demoEditText(
+        onSelected: () => v2EditText(
           context,
           title: l.demoRenameAsset,
           label: l.demoName,
@@ -481,7 +478,7 @@ Widget _assetMenu(
             destructive: true,
           );
           if (yes == true && context.mounted) {
-            await demoPerform(context, () => repository.deleteAsset(asset.id));
+            await v2Perform(context, () => repository.deleteAsset(asset.id));
           }
         },
       ),
@@ -489,22 +486,22 @@ Widget _assetMenu(
   );
 }
 
-class DemoAssetCard extends StatelessWidget {
-  const DemoAssetCard({
+class V2AssetCard extends StatelessWidget {
+  const V2AssetCard({
     required this.asset,
     required this.onTap,
     this.trailing,
     super.key,
   });
-  final DemoAsset asset;
+  final V2Asset asset;
   final VoidCallback onTap;
   final Widget? trailing;
   @override
   Widget build(BuildContext context) =>
-      asset.kind == DemoAssetKind.audio || asset.kind == DemoAssetKind.script
+      asset.kind == V2AssetKind.audio || asset.kind == V2AssetKind.script
       ? _DocumentAssetCard(asset: asset, onTap: onTap, trailing: trailing)
       : Material(
-          color: demoSurface(context),
+          color: v2Surface(context),
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
@@ -525,27 +522,27 @@ class DemoAssetCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             cacheWidth: 800,
                           ),
-                          if (asset.kind == DemoAssetKind.video)
+                          if (asset.kind == V2AssetKind.video)
                             const Center(
-                              child: DemoIcon(
+                              child: V2Icon(
                                 'play',
                                 size: 40,
                                 color: Colors.white,
                               ),
                             )
-                          else if (asset.kind != DemoAssetKind.image)
+                          else if (asset.kind != V2AssetKind.image)
                             Center(
                               child: CircleAvatar(
                                 backgroundColor: Colors.black38,
                                 child: Icon(
-                                  asset.kind == DemoAssetKind.video
+                                  asset.kind == V2AssetKind.video
                                       ? Icons.play_arrow_rounded
-                                      : demoAssetIcon(asset.kind),
+                                      : v2AssetIcon(asset.kind),
                                   color: Colors.white,
                                 ),
                               ),
                             ),
-                          if (asset.kind == DemoAssetKind.video)
+                          if (asset.kind == V2AssetKind.video)
                             Positioned(
                               right: 8,
                               bottom: 8,
@@ -592,7 +589,7 @@ class DemoAssetCard extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        DemoIcon(
+                        V2Icon(
                           asset.kind.name,
                           size: 14,
                           color: AppColors.textTertiary,
@@ -600,7 +597,7 @@ class DemoAssetCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            demoAssetMeta(
+                            v2AssetMeta(
                               AppLocalizations.of(context)!,
                               asset.kind,
                             ),
@@ -632,13 +629,13 @@ class _DocumentAssetCard extends StatelessWidget {
     required this.onTap,
     this.trailing,
   });
-  final DemoAsset asset;
+  final V2Asset asset;
   final VoidCallback onTap;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) => Material(
-    color: demoSurface(context),
+    color: v2Surface(context),
     borderRadius: BorderRadius.circular(20),
     child: InkWell(
       onTap: onTap,
@@ -651,7 +648,7 @@ class _DocumentAssetCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: DemoDocumentCover(kind: asset.kind),
+                child: V2DocumentCover(kind: asset.kind),
               ),
             ),
             const SizedBox(height: 10),
@@ -676,7 +673,7 @@ class _DocumentAssetCard extends StatelessWidget {
                 child: Row(
                   children: [
                     AppSvgIcon.asset(
-                      asset.kind == DemoAssetKind.audio
+                      asset.kind == V2AssetKind.audio
                           ? 'demo_audio'
                           : 'demo_script_meta',
                       size: 14,
@@ -685,10 +682,7 @@ class _DocumentAssetCard extends StatelessWidget {
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        demoAssetMeta(
-                          AppLocalizations.of(context)!,
-                          asset.kind,
-                        ),
+                        v2AssetMeta(AppLocalizations.of(context)!, asset.kind),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -710,13 +704,13 @@ class _DocumentAssetCard extends StatelessWidget {
   );
 }
 
-void openDemoAsset(BuildContext context, DemoAsset asset) {
-  if (asset.kind != DemoAssetKind.audio) {
+void openV2Asset(BuildContext context, V2Asset asset) {
+  if (asset.kind != V2AssetKind.audio) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) => SessionArtifactDetailPage(
           actions: [
-            if (asset.kind == DemoAssetKind.script)
+            if (asset.kind == V2AssetKind.script)
               IconButton(
                 tooltip: AppLocalizations.of(context)!.copyAction,
                 onPressed: () async {
@@ -734,26 +728,26 @@ void openDemoAsset(BuildContext context, DemoAsset asset) {
           item: SessionArtifact(
             id: asset.id,
             type: switch (asset.kind) {
-              DemoAssetKind.image => SessionArtifactType.image,
-              DemoAssetKind.video => SessionArtifactType.video,
+              V2AssetKind.image => SessionArtifactType.image,
+              V2AssetKind.video => SessionArtifactType.video,
               _ => SessionArtifactType.script,
             },
             title: asset.title,
             summary: asset.body,
-            metadata: demoAssetMeta(AppLocalizations.of(context)!, asset.kind),
+            metadata: v2AssetMeta(AppLocalizations.of(context)!, asset.kind),
             previewAsset: asset.cover,
-            videoUrl: asset.kind == DemoAssetKind.video
+            videoUrl: asset.kind == V2AssetKind.video
                 ? Uri(scheme: 'asset', path: asset.media)
                 : null,
-            textKind: asset.kind == DemoAssetKind.script ? 'script' : null,
+            textKind: asset.kind == V2AssetKind.script ? 'script' : null,
           ),
         ),
       ),
     );
   } else {
-    DemoSheet.show<void>(
+    V2Sheet.show<void>(
       context: context,
-      builder: (_) => DemoAudioDetail(asset: asset),
+      builder: (_) => V2AudioDetail(asset: asset),
     );
   }
 }

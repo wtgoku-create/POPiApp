@@ -8,26 +8,26 @@ import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
-import '../data/demo_repository.dart';
-import '../domain/demo_models.dart';
-import 'demo_chat_page.dart';
-import 'widgets/demo_widgets.dart';
-import 'widgets/demo_welcome_character.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_session/presentation/v2_chat_page.dart';
+import '../../v2_shared/presentation/widgets/v2_widgets.dart';
+import 'widgets/v2_welcome_character.dart';
 
-class DemoWelcomePage extends StatelessWidget {
-  const DemoWelcomePage({required this.repository, super.key});
-  final DemoRepository repository;
+class V2WelcomePage extends StatelessWidget {
+  const V2WelcomePage({required this.repository, super.key});
+  final V2Repository repository;
   Future<void> _create(
     BuildContext context,
     String title,
-    DemoSessionKind kind,
+    V2SessionKind kind,
   ) async {
-    await demoPerform(context, () async {
+    await v2Perform(context, () async {
       final id = await repository.createSession(title, kind);
       if (context.mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
-            builder: (_) => DemoChatPage(repository: repository, sessionId: id),
+            builder: (_) => V2ChatPage(repository: repository, sessionId: id),
           ),
         );
       }
@@ -55,7 +55,7 @@ class DemoWelcomePage extends StatelessWidget {
             : const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFEDE9FD), demoBackground],
+                colors: [Color(0xFFEDE9FD), v2Background],
               ),
       ),
       child: Scaffold(
@@ -80,7 +80,7 @@ class DemoWelcomePage extends StatelessWidget {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const RotatedBox(
                       quarterTurns: 1,
-                      child: DemoIcon('back', size: 40),
+                      child: V2Icon('back', size: 40),
                     ),
                   ),
                 ),
@@ -142,7 +142,7 @@ class DemoWelcomePage extends StatelessWidget {
                                     key: const Key('demo-welcome-character'),
                                     width: characterWidth,
                                     height: characterWidth * 222 / 184,
-                                    child: const DemoWelcomeCharacter(),
+                                    child: const V2WelcomeCharacter(),
                                   ),
                                 ),
                                 Padding(
@@ -199,10 +199,10 @@ class DemoWelcomePage extends StatelessWidget {
                                           context,
                                           options[i],
                                           i == 0
-                                              ? DemoSessionKind.project
+                                              ? V2SessionKind.project
                                               : i == 2
-                                              ? DemoSessionKind.workflow
-                                              : DemoSessionKind.conversation,
+                                              ? V2SessionKind.workflow
+                                              : V2SessionKind.conversation,
                                         ),
                                       ),
                                       if (i < options.length - 1)
@@ -236,7 +236,7 @@ class DemoWelcomePage extends StatelessWidget {
       confirmLabel: l.confirm,
     );
     if (yes == true && context.mounted) {
-      await demoPerform(context, repository.reset);
+      await v2Perform(context, repository.reset);
     }
   }
 }
@@ -258,7 +258,7 @@ class _WelcomeEntry extends StatelessWidget {
     child: BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
       child: Material(
-        color: demoSurface(context),
+        color: v2Surface(context),
         child: InkWell(
           key: Key('demo-welcome-entry-$index'),
           onTap: onTap,

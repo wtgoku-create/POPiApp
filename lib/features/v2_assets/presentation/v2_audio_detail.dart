@@ -5,19 +5,19 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../data/demo_media_exporter.dart';
-import '../domain/demo_models.dart';
+import '../data/v2_media_exporter.dart';
+import '../../v2_shared/domain/v2_models.dart';
 
 /// Audio detail panel matching the Figma file information and waveform layout.
-class DemoAudioDetail extends StatefulWidget {
-  const DemoAudioDetail({required this.asset, super.key});
-  final DemoAsset asset;
+class V2AudioDetail extends StatefulWidget {
+  const V2AudioDetail({required this.asset, super.key});
+  final V2Asset asset;
 
   @override
-  State<DemoAudioDetail> createState() => _DemoAudioDetailState();
+  State<V2AudioDetail> createState() => _V2AudioDetailState();
 }
 
-class _DemoAudioDetailState extends State<DemoAudioDetail>
+class _V2AudioDetailState extends State<V2AudioDetail>
     with WidgetsBindingObserver {
   late final _player = VideoPlayerController.asset(widget.asset.media);
   int? _bytes;
@@ -34,7 +34,7 @@ class _DemoAudioDetailState extends State<DemoAudioDetail>
   Future<void> _initialize() async {
     if (!_loading) setState(() => _loading = true);
     try {
-      final bytes = await DemoMediaExporter.size(widget.asset);
+      final bytes = await V2MediaExporter.size(widget.asset);
       if (!mounted) return;
       await _player.initialize();
       if (mounted) setState(() => _bytes = bytes);
@@ -72,7 +72,7 @@ class _DemoAudioDetailState extends State<DemoAudioDetail>
     final box = context.findRenderObject()! as RenderBox;
     setState(() => _saving = true);
     try {
-      final saved = await DemoMediaExporter.save(
+      final saved = await V2MediaExporter.save(
         widget.asset,
         box.localToGlobal(Offset.zero) & box.size,
       );

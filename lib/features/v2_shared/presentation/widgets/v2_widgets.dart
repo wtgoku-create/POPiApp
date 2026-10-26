@@ -11,25 +11,25 @@ import '../../../../shared/widgets/app_bot_avatar.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
-import '../../data/demo_fixtures.dart';
-import 'demo_frosted_backdrop.dart';
+import '../../data/v2_fixtures.dart';
+import 'v2_frosted_backdrop.dart';
 
-const demoBackground = AppColors.profileBackground;
-const demoTint = Color(0x0D6F47F5);
+const v2Background = AppColors.profileBackground;
+const v2Tint = Color(0x0D6F47F5);
 
-Color demoSurface(BuildContext context) =>
+Color v2Surface(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
     ? Theme.of(context).colorScheme.surfaceContainer
     : Colors.white.withValues(alpha: .5);
 
-String demoMemberName(AppLocalizations l, String id) => switch (id) {
+String v2MemberName(AppLocalizations l, String id) => switch (id) {
   'designer' => l.demoDesigner,
   'writer' => l.demoWriter,
   'director' => l.demoDirector,
   'sound' => l.demoSound,
   _ => l.demoPopi,
 };
-String demoMemberDescription(AppLocalizations l, String id) => switch (id) {
+String v2MemberDescription(AppLocalizations l, String id) => switch (id) {
   'designer' => l.demoDesignerDescription,
   'writer' => l.demoWriterDescription,
   'director' => l.demoDirectorDescription,
@@ -37,8 +37,8 @@ String demoMemberDescription(AppLocalizations l, String id) => switch (id) {
   _ => l.demoPopiDescription,
 };
 
-class DemoIcon extends StatelessWidget {
-  const DemoIcon(this.name, {this.size = 22, this.color, super.key});
+class V2Icon extends StatelessWidget {
+  const V2Icon(this.name, {this.size = 22, this.color, super.key});
   final String name;
   final double size;
   final Color? color;
@@ -50,8 +50,8 @@ class DemoIcon extends StatelessWidget {
   );
 }
 
-class DemoAvatar extends StatelessWidget {
-  const DemoAvatar({
+class V2Avatar extends StatelessWidget {
+  const V2Avatar({
     this.members = const ['popi'],
     this.size = 70,
     this.image,
@@ -101,8 +101,8 @@ class DemoAvatar extends StatelessWidget {
         .map(
           (m) =>
               memberAvatars[m] ??
-              DemoFixtures.memberImages[m] ??
-              DemoFixtures.memberImages['popi']!,
+              V2Fixtures.memberImages[m] ??
+              V2Fixtures.memberImages['popi']!,
         )
         .toList();
     Color? memberColor(int i) {
@@ -143,8 +143,8 @@ class DemoAvatar extends StatelessWidget {
   }
 }
 
-class DemoScaffold extends StatelessWidget {
-  const DemoScaffold({
+class V2Scaffold extends StatelessWidget {
+  const V2Scaffold({
     required this.title,
     required this.child,
     this.actions,
@@ -197,7 +197,7 @@ class DemoScaffold extends StatelessWidget {
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const RotatedBox(
                             quarterTurns: 1,
-                            child: DemoIcon('back', size: 40),
+                            child: V2Icon('back', size: 40),
                           ),
                         ),
                   ),
@@ -224,7 +224,7 @@ class DemoScaffold extends StatelessWidget {
       ),
     ),
     bottomNavigationBar: floatingBottom && bottom != null
-        ? DemoBottomOverlay(
+        ? V2BottomOverlay(
             child: ExcludeSemantics(
               excluding: !floatingBottomVisible,
               child: IgnorePointer(
@@ -247,20 +247,20 @@ class DemoScaffold extends StatelessWidget {
 }
 
 /// A continuous mask fades the backdrop into the floating controls.
-class DemoBottomOverlay extends StatelessWidget {
-  const DemoBottomOverlay({required this.child, super.key});
+class V2BottomOverlay extends StatelessWidget {
+  const V2BottomOverlay({required this.child, super.key});
   final Widget child;
   @override
   Widget build(BuildContext context) => Stack(
     children: [
-      Positioned.fill(child: IgnorePointer(child: DemoFrostedBackdrop())),
+      Positioned.fill(child: IgnorePointer(child: V2FrostedBackdrop())),
       Padding(padding: const EdgeInsets.only(top: 20), child: child),
     ],
   );
 }
 
-class DemoSegments extends StatelessWidget {
-  const DemoSegments({
+class V2Segments extends StatelessWidget {
+  const V2Segments({
     required this.labels,
     required this.selected,
     required this.onChanged,
@@ -273,7 +273,7 @@ class DemoSegments extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     height: 40,
     padding: const EdgeInsets.all(3),
-    decoration: const ShapeDecoration(color: demoTint, shape: StadiumBorder()),
+    decoration: const ShapeDecoration(color: v2Tint, shape: StadiumBorder()),
     child: Row(
       children: [
         for (var i = 0; i < labels.length; i++)
@@ -311,8 +311,8 @@ class DemoSegments extends StatelessWidget {
   );
 }
 
-class DemoSearch extends StatelessWidget {
-  const DemoSearch({
+class V2Search extends StatelessWidget {
+  const V2Search({
     required this.hint,
     required this.onChanged,
     this.controller,
@@ -333,7 +333,7 @@ class DemoSearch extends StatelessWidget {
         hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF9994A6)),
         prefixIcon: const Padding(
           padding: EdgeInsets.all(16),
-          child: DemoIcon('search', size: 18),
+          child: V2Icon('search', size: 18),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         border: OutlineInputBorder(
@@ -349,8 +349,8 @@ class DemoSearch extends StatelessWidget {
   );
 }
 
-class DemoPrimaryButton extends StatelessWidget {
-  const DemoPrimaryButton({
+class V2PrimaryButton extends StatelessWidget {
+  const V2PrimaryButton({
     required this.label,
     required this.onPressed,
     this.busy = false,
@@ -379,7 +379,7 @@ class DemoPrimaryButton extends StatelessWidget {
 }
 
 /// The large selection sheets share the design's fixed heading and actions.
-abstract final class DemoSheet {
+abstract final class V2Sheet {
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -423,8 +423,8 @@ abstract final class DemoSheet {
   }
 }
 
-class DemoSheetBody extends StatelessWidget {
-  const DemoSheetBody({
+class V2SheetBody extends StatelessWidget {
+  const V2SheetBody({
     required this.title,
     required this.child,
     this.footer,
@@ -460,7 +460,7 @@ class DemoSheetBody extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          child: DemoBottomOverlay(
+          child: V2BottomOverlay(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 20,
@@ -476,8 +476,8 @@ class DemoSheetBody extends StatelessWidget {
   );
 }
 
-class DemoSelectionMark extends StatelessWidget {
-  const DemoSelectionMark({required this.selected, this.number, super.key});
+class V2SelectionMark extends StatelessWidget {
+  const V2SelectionMark({required this.selected, this.number, super.key});
   final bool selected;
   final int? number;
   @override
@@ -496,7 +496,7 @@ class DemoSelectionMark extends StatelessWidget {
       child: !selected
           ? null
           : number == null
-          ? const DemoIcon('check', size: 20, color: Colors.white)
+          ? const V2Icon('check', size: 20, color: Colors.white)
           : Center(
               child: Text(
                 '$number',
@@ -511,8 +511,8 @@ class DemoSelectionMark extends StatelessWidget {
   );
 }
 
-class DemoPinnedHeader extends SliverPersistentHeaderDelegate {
-  DemoPinnedHeader({required this.height, required this.child});
+class V2PinnedHeader extends SliverPersistentHeaderDelegate {
+  V2PinnedHeader({required this.height, required this.child});
   final double height;
   final Widget child;
   @override
@@ -529,11 +529,11 @@ class DemoPinnedHeader extends SliverPersistentHeaderDelegate {
     child: child,
   );
   @override
-  bool shouldRebuild(DemoPinnedHeader oldDelegate) =>
+  bool shouldRebuild(V2PinnedHeader oldDelegate) =>
       oldDelegate.height != height || oldDelegate.child != child;
 }
 
-Future<bool> demoPerform(
+Future<bool> v2Perform(
   BuildContext context,
   Future<void> Function() action,
 ) async {
@@ -548,7 +548,7 @@ Future<bool> demoPerform(
   }
 }
 
-Future<void> demoEditText(
+Future<void> v2EditText(
   BuildContext context, {
   required String title,
   required String value,
@@ -599,7 +599,7 @@ class _EditDialogState extends State<_EditDialog> {
   Future<void> _save() async {
     if (_busy || _text.text.trim().isEmpty) return;
     setState(() => _busy = true);
-    final saved = await demoPerform(
+    final saved = await v2Perform(
       context,
       () => widget.onSave(_text.text.trim()),
     );
@@ -650,7 +650,7 @@ class _EditDialogState extends State<_EditDialog> {
               decoration: InputDecoration(
                 counterText: '',
                 filled: true,
-                fillColor: demoTint,
+                fillColor: v2Tint,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
@@ -685,7 +685,7 @@ class _EditDialogState extends State<_EditDialog> {
                     height: 50,
                     child: TextButton(
                       style: TextButton.styleFrom(
-                        backgroundColor: demoTint,
+                        backgroundColor: v2Tint,
                         foregroundColor: Theme.of(
                           context,
                         ).colorScheme.onSurface,
@@ -701,7 +701,7 @@ class _EditDialogState extends State<_EditDialog> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: DemoPrimaryButton(
+                  child: V2PrimaryButton(
                     label: l.confirm,
                     busy: _busy,
                     onPressed: _text.text.trim().isEmpty ? null : _save,

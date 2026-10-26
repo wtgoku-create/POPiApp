@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../shared/widgets/app_svg_icon.dart';
-import '../../domain/demo_models.dart';
+import '../../../v2_shared/domain/v2_models.dart';
 
 /// Figma's square document/audio cover, shared by grid and list assets.
-class DemoDocumentCover extends StatelessWidget {
-  const DemoDocumentCover({required this.kind, super.key});
-  final DemoAssetKind kind;
+class V2DocumentCover extends StatelessWidget {
+  const V2DocumentCover({required this.kind, super.key});
+  final V2AssetKind kind;
   static const _waveHeights = [
     8.0,
     13.0,
@@ -49,7 +49,7 @@ class DemoDocumentCover extends StatelessWidget {
     child: LayoutBuilder(
       builder: (context, constraints) {
         final extent = math.min(constraints.maxWidth, constraints.maxHeight);
-        if (kind == DemoAssetKind.script) {
+        if (kind == V2AssetKind.script) {
           return Center(
             child: AppSvgIcon.asset(
               'demo_script_cover',

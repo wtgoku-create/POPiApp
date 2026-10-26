@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// The visible 2560:6666 body-sway track exported from the Figma welcome page.
-class DemoWelcomeCharacter extends StatefulWidget {
-  const DemoWelcomeCharacter({super.key});
+class V2WelcomeCharacter extends StatefulWidget {
+  const V2WelcomeCharacter({super.key});
   @override
-  State<DemoWelcomeCharacter> createState() => _DemoWelcomeCharacterState();
+  State<V2WelcomeCharacter> createState() => _V2WelcomeCharacterState();
 }
 
-class _DemoWelcomeCharacterState extends State<DemoWelcomeCharacter>
+class _V2WelcomeCharacterState extends State<V2WelcomeCharacter>
     with SingleTickerProviderStateMixin {
   late final _controller = AnimationController(
     vsync: this,

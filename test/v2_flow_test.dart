@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
-import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
-import 'package:popi_ai_app/features/demo/presentation/demo_home_page.dart';
-import 'package:popi_ai_app/features/demo/presentation/demo_app.dart';
+import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
+import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
+import 'package:popi_ai_app/app/v2_app.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
@@ -13,12 +13,12 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
-import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
+import 'package:popi_ai_app/features/v2_shared/presentation/widgets/v2_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
-Future<DemoRepository> _pump(
+Future<V2Repository> _pump(
   WidgetTester tester, {
   Size size = const Size(390, 844),
   Locale locale = const Locale('zh'),
@@ -29,7 +29,7 @@ Future<DemoRepository> _pump(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   SharedPreferences.setMockInitialValues({});
-  final repository = DemoRepository(
+  final repository = V2Repository(
     PreferencesStorage(await SharedPreferences.getInstance()),
   )..restore();
   addTearDown(repository.dispose);
@@ -47,7 +47,7 @@ Future<DemoRepository> _pump(
             ).copyWith(disableAnimations: disableAnimations),
             child: child!,
           ),
-          home: DemoHomePage(repository: repository),
+          home: V2HomePage(repository: repository),
         ),
       ),
     ),
@@ -94,7 +94,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(preferences),
             userBootstrapProvider.overrideWith((ref) async {}),
           ],
-          child: const DemoApp(),
+          child: const V2App(),
         ),
       );
       await tester.pumpAndSettle();
@@ -108,7 +108,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('profile-back')));
       await tester.pumpAndSettle();
-      expect(find.byType(DemoHomePage), findsOneWidget);
+      expect(find.byType(V2HomePage), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -122,7 +122,7 @@ void main() {
     await tester.tap(find.text('灵感到成片'));
     await tester.pumpAndSettle();
     final avatar = find.byWidgetPredicate(
-      (widget) => widget is DemoAvatar && widget.size == 32,
+      (widget) => widget is V2Avatar && widget.size == 32,
     );
     expect(
       tester.getTopLeft(avatar.first).dy,
@@ -142,9 +142,9 @@ void main() {
     final nav = tester.getRect(find.byKey(const Key('demo-tab-1')));
     final list = tester.getRect(find.byType(ListView).hitTestable().first);
     expect(list.bottom, greaterThan(nav.bottom));
-    expect(find.byType(DemoBottomOverlay), findsOneWidget);
+    expect(find.byType(V2BottomOverlay), findsOneWidget);
     final backdrop = find.descendant(
-      of: find.byType(DemoBottomOverlay),
+      of: find.byType(V2BottomOverlay),
       matching: find.byType(BackdropFilter),
     );
     // A collapsed backdrop leaves list text sharp behind the floating controls.
@@ -174,7 +174,7 @@ void main() {
       final navBounds = tester.getRect(tabs);
       final backdrop = find
           .descendant(
-            of: find.byType(DemoBottomOverlay),
+            of: find.byType(V2BottomOverlay),
             matching: find.byType(BackdropFilter),
           )
           .first;
@@ -214,7 +214,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('demo-settings')));
       await tester.pumpAndSettle();
-      final tabs = find.byType(DemoSegments).hitTestable();
+      final tabs = find.byType(V2Segments).hitTestable();
       final start = tester.getTopLeft(tabs).dy;
       await tester.drag(
         find.byType(ListView).hitTestable().first,
@@ -236,7 +236,7 @@ void main() {
       expect(find.text('添加成员').hitTestable(), findsOneWidget);
       await tester.tap(find.text('产物').hitTestable());
       await tester.pumpAndSettle();
-      final segments = find.byType(DemoSegments).hitTestable();
+      final segments = find.byType(V2Segments).hitTestable();
       final mainTabs = tester.getRect(segments.first);
       final filters = tester.getRect(segments.last);
       expect(mainTabs.top, closeTo(pinned, 1));
@@ -251,7 +251,7 @@ void main() {
     await _pump(tester, size: const Size(360, 740));
     await tester.tap(find.byKey(const Key('demo-tab-1')));
     await tester.pumpAndSettle();
-    final search = find.byType(DemoSearch).hitTestable();
+    final search = find.byType(V2Search).hitTestable();
     final y = tester.getTopLeft(search).dy;
     expect(find.text('爱丽丝的场景 5'), findsNothing);
     await tester.drag(
@@ -290,7 +290,7 @@ void main() {
       );
       expect(tester.getTopLeft(find.byType(BottomSheet)).dy, closeTo(66, 1));
       expect(
-        find.byWidgetPredicate((w) => w is DemoSelectionMark && w.number == 1),
+        find.byWidgetPredicate((w) => w is V2SelectionMark && w.number == 1),
         findsOneWidget,
       );
       final action = find.text('加入创作');
@@ -540,7 +540,7 @@ void main() {
     tester.view.padding = const FakeViewPadding(bottom: 34);
     addTearDown(tester.view.resetPadding);
     await _pump(tester);
-    final context = tester.element(find.byType(DemoHomePage));
+    final context = tester.element(find.byType(V2HomePage));
     ProviderScope.containerOf(context)
         .read(safeAreaInsetsProvider.notifier)
         .update(const EdgeInsets.only(bottom: 34));

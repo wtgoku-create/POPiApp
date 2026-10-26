@@ -9,28 +9,28 @@ import '../../assets/domain/library_work.dart';
 import '../../session/presentation/widgets/conversation_timeline.dart'
     show MarkdownMessage;
 import '../../session/presentation/widgets/popi_message_composer.dart';
-import '../data/demo_repository.dart';
-import '../domain/demo_models.dart';
-import 'demo_assets_page.dart';
-import 'demo_chat_controller.dart';
-import 'demo_settings_page.dart';
-import 'widgets/demo_image_stack.dart';
-import 'widgets/demo_widgets.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_assets/presentation/v2_assets_page.dart';
+import 'v2_chat_controller.dart';
+import 'v2_settings_page.dart';
+import 'widgets/v2_image_stack.dart';
+import '../../v2_shared/presentation/widgets/v2_widgets.dart';
 
-class DemoChatPage extends StatefulWidget {
-  const DemoChatPage({
+class V2ChatPage extends StatefulWidget {
+  const V2ChatPage({
     required this.repository,
     required this.sessionId,
     super.key,
   });
-  final DemoRepository repository;
+  final V2Repository repository;
   final String sessionId;
   @override
-  State<DemoChatPage> createState() => _DemoChatPageState();
+  State<V2ChatPage> createState() => _V2ChatPageState();
 }
 
-class _DemoChatPageState extends State<DemoChatPage> {
-  late final _conversation = DemoChatController(
+class _V2ChatPageState extends State<V2ChatPage> {
+  late final _conversation = V2ChatController(
     widget.repository,
     widget.sessionId,
   );
@@ -43,7 +43,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _conversation.session.unread > 0) {
-        demoPerform(
+        v2Perform(
           context,
           () => widget.repository.updateSession(
             widget.sessionId,
@@ -64,7 +64,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
 
   void _settings() => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) => DemoSettingsPage(
+      builder: (_) => V2SettingsPage(
         repository: widget.repository,
         sessionId: widget.sessionId,
       ),
@@ -75,7 +75,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
     final input = prompt ?? _composer.markdown;
     if (_conversation.sending) return;
     final l = AppLocalizations.of(context)!;
-    final sent = await demoPerform(context, () async {
+    final sent = await v2Perform(context, () async {
       final ok = await _conversation.send(input, List.of(_attachments), l);
       if (mounted && ok) {
         await _composer.setText('');
@@ -95,7 +95,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
     }
   }
 
-  Future<void> _attach() => DemoSheet.show<void>(
+  Future<void> _attach() => V2Sheet.show<void>(
     context: context,
     builder: (sheetContext) => Padding(
       padding: const EdgeInsets.only(top: 20),
@@ -106,7 +106,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           Expanded(
-            child: DemoAssetsView(
+            child: V2AssetsView(
               repository: widget.repository,
               onSelect: (asset) {
                 if (!_attachments.contains(asset.id)) {
@@ -121,15 +121,15 @@ class _DemoChatPageState extends State<DemoChatPage> {
     ),
   );
 
-  Widget _message(BuildContext context, DemoMessage message) {
+  Widget _message(BuildContext context, V2Message message) {
     final media = message.assetIds
         .map(
           (id) => widget.repository.assets.where((a) => a.id == id).firstOrNull,
         )
-        .whereType<DemoAsset>()
+        .whereType<V2Asset>()
         .toList();
     final batch =
-        media.length > 1 && media.every((a) => a.kind == DemoAssetKind.image);
+        media.length > 1 && media.every((a) => a.kind == V2AssetKind.image);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Row(
@@ -139,7 +139,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
             : MainAxisAlignment.start,
         children: [
           if (!message.user) ...[
-            DemoAvatar(
+            V2Avatar(
               members: _conversation.session.members.take(1).toList(),
               memberAvatars: _conversation.session.memberAvatars,
               memberColors: _conversation.session.memberColors,
@@ -161,7 +161,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: message.user ? demoTint : demoSurface(context),
+                          color: message.user ? v2Tint : v2Surface(context),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: MarkdownMessage(
@@ -177,7 +177,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                   if (media.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     if (batch)
-                      DemoImageStack(
+                      V2ImageStack(
                         key: ValueKey('demo-image-stack-${message.id}'),
                         images: media,
                         messageId: message.id,
@@ -189,15 +189,15 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         SizedBox(
                           width: 245,
                           height:
-                              asset.kind == DemoAssetKind.audio ||
-                                  asset.kind == DemoAssetKind.script
+                              asset.kind == V2AssetKind.audio ||
+                                  asset.kind == V2AssetKind.script
                               ? 327
                               : 310,
                           child: Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: DemoAssetCard(
+                            child: V2AssetCard(
                               asset: asset,
-                              onTap: () => asset.kind == DemoAssetKind.image
+                              onTap: () => asset.kind == V2AssetKind.image
                                   ? AppImagePreview.show(
                                       context: context,
                                       image: AssetImage(asset.cover),
@@ -205,7 +205,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                           'message-${message.id}-${asset.id}',
                                       label: asset.title,
                                     )
-                                  : openDemoAsset(context, asset),
+                                  : openV2Asset(context, asset),
                             ),
                           ),
                         ),
@@ -228,18 +228,18 @@ class _DemoChatPageState extends State<DemoChatPage> {
       listenable: _conversation,
       builder: (context, _) {
         final s = _conversation.session;
-        return DemoScaffold(
+        return V2Scaffold(
           extendBodyBehindAppBar: true,
           title: TextButton(
             onPressed: _settings,
             style: TextButton.styleFrom(
               foregroundColor: AppColors.textPrimary,
-              backgroundColor: demoSurface(context),
+              backgroundColor: v2Surface(context),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DemoAvatar(
+                V2Avatar(
                   members: s.members,
                   size: 34,
                   memberAvatars: s.memberAvatars,
@@ -249,7 +249,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                 Flexible(
                   child: Text(
                     s.members.length == 1
-                        ? demoMemberName(l, s.members.first)
+                        ? v2MemberName(l, s.members.first)
                         : '${l.demoPopi} · ${s.members.length}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -267,7 +267,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
               key: const Key('demo-settings'),
               tooltip: l.demoSettings,
               onPressed: _settings,
-              icon: const DemoIcon('profile', size: 24),
+              icon: const V2Icon('profile', size: 24),
             ),
           ],
           child: Column(
@@ -335,7 +335,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                 isRemoved,
                               }) => _message(
                                 context,
-                                message.metadata!['demo'] as DemoMessage,
+                                message.metadata!['demo'] as V2Message,
                               ),
                         ),
                       ),
@@ -353,7 +353,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         LibraryWork(
                           id: asset.id,
                           previewUrl: asset.cover,
-                          isVideo: asset.kind == DemoAssetKind.video,
+                          isVideo: asset.kind == V2AssetKind.video,
                           createdAt: null,
                         ),
                 ],

@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-enum DemoSessionKind { conversation, project, workflow }
+enum V2SessionKind { conversation, project, workflow }
 
-enum DemoAssetKind { image, video, script, audio }
+enum V2AssetKind { image, video, script, audio }
 
 @immutable
-class DemoMessage {
-  const DemoMessage({
+class V2Message {
+  const V2Message({
     required this.id,
     required this.text,
     this.user = false,
@@ -23,7 +23,7 @@ class DemoMessage {
     'user': user,
     'assets': assetIds,
   };
-  factory DemoMessage.fromJson(Map<String, Object?> json) => DemoMessage(
+  factory V2Message.fromJson(Map<String, Object?> json) => V2Message(
     id: json['id'] as String,
     text: json['text'] as String,
     user: json['user'] as bool,
@@ -32,8 +32,8 @@ class DemoMessage {
 }
 
 @immutable
-class DemoSession {
-  const DemoSession({
+class V2Session {
+  const V2Session({
     required this.id,
     required this.title,
     required this.kind,
@@ -52,10 +52,10 @@ class DemoSession {
   });
   final String id;
   final String title;
-  final DemoSessionKind kind;
+  final V2SessionKind kind;
   final List<String> members;
   final List<String> roles;
-  final List<DemoMessage> messages;
+  final List<V2Message> messages;
   final int unread;
   final String time;
   final String direction;
@@ -66,11 +66,11 @@ class DemoSession {
   final Map<String, String> memberAvatars;
   final Map<String, int> memberColors;
 
-  DemoSession copyWith({
+  V2Session copyWith({
     String? title,
     List<String>? members,
     List<String>? roles,
-    List<DemoMessage>? messages,
+    List<V2Message>? messages,
     int? unread,
     String? time,
     String? direction,
@@ -80,7 +80,7 @@ class DemoSession {
     Map<String, String>? memberInstructions,
     Map<String, String>? memberAvatars,
     Map<String, int>? memberColors,
-  }) => DemoSession(
+  }) => V2Session(
     id: id,
     title: title ?? this.title,
     kind: kind,
@@ -114,14 +114,14 @@ class DemoSession {
     'memberAvatars': memberAvatars,
     'memberColors': memberColors,
   };
-  factory DemoSession.fromJson(Map<String, Object?> json) => DemoSession(
+  factory V2Session.fromJson(Map<String, Object?> json) => V2Session(
     id: json['id'] as String,
     title: json['title'] as String,
-    kind: DemoSessionKind.values.byName(json['kind'] as String),
+    kind: V2SessionKind.values.byName(json['kind'] as String),
     members: (json['members'] as List).cast<String>(),
     roles: (json['roles'] as List).cast<String>(),
     messages: (json['messages'] as List)
-        .map((m) => DemoMessage.fromJson(Map<String, Object?>.from(m as Map)))
+        .map((m) => V2Message.fromJson(Map<String, Object?>.from(m as Map)))
         .toList(),
     unread: json['unread'] as int,
     time: json['time'] as String,
@@ -140,8 +140,8 @@ class DemoSession {
 }
 
 @immutable
-class DemoAsset {
-  const DemoAsset({
+class V2Asset {
+  const V2Asset({
     required this.id,
     required this.title,
     required this.kind,
@@ -152,12 +152,12 @@ class DemoAsset {
   });
   final String id;
   final String title;
-  final DemoAssetKind kind;
+  final V2AssetKind kind;
   final String cover;
   final String? sessionId;
   final String body;
   final String media;
-  DemoAsset copyWith({String? title}) => DemoAsset(
+  V2Asset copyWith({String? title}) => V2Asset(
     id: id,
     title: title ?? this.title,
     kind: kind,
@@ -175,10 +175,10 @@ class DemoAsset {
     'body': body,
     'media': media,
   };
-  factory DemoAsset.fromJson(Map<String, Object?> json) => DemoAsset(
+  factory V2Asset.fromJson(Map<String, Object?> json) => V2Asset(
     id: json['id'] as String,
     title: json['title'] as String,
-    kind: DemoAssetKind.values.byName(json['kind'] as String),
+    kind: V2AssetKind.values.byName(json['kind'] as String),
     cover: json['cover'] as String,
     sessionId: json['sessionId'] as String?,
     body: json['body'] as String,
@@ -187,8 +187,8 @@ class DemoAsset {
 }
 
 @immutable
-class DemoCharacter {
-  const DemoCharacter(this.id, this.name, this.image);
+class V2Character {
+  const V2Character(this.id, this.name, this.image);
   final String id;
   final String name;
   final String image;

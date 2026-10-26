@@ -1,20 +1,20 @@
-import '../domain/demo_models.dart';
+import '../domain/v2_models.dart';
 
 /// Bundled design assets keep the entire demo usable without a backend.
-abstract final class DemoFixtures {
+abstract final class V2Fixtures {
   static const characters = [
-    DemoCharacter('alice', '爱丽丝', 'assets/images/demo_role_1.png'),
-    DemoCharacter('er', '尔尔', 'assets/images/demo_role_2.png'),
-    DemoCharacter('hua', '花西冷少', 'assets/images/demo_role_3.png'),
-    DemoCharacter('dou', '水濑兜兜儿', 'assets/images/demo_role_4.png'),
-    DemoCharacter('qiqi', '奇奇蒂蒂', 'assets/images/demo_role_5.png'),
-    DemoCharacter('fish', '人鱼小姐', 'assets/images/demo_role_6.png'),
-    DemoCharacter('berry', '奇奇蒂蒂', 'assets/images/demo_role_7.png'),
-    DemoCharacter('rain', '奇奇蒂蒂', 'assets/images/demo_role_8.png'),
-    DemoCharacter('scarf', '人鱼小姐', 'assets/images/demo_role_9.png'),
-    DemoCharacter('girl', '小夏', 'assets/images/demo_role_10.png'),
-    DemoCharacter('ethan', 'Ethan', 'assets/images/demo_role_11.png'),
-    DemoCharacter('leo', 'Leo', 'assets/images/demo_role_12.png'),
+    V2Character('alice', '爱丽丝', 'assets/images/demo_role_1.png'),
+    V2Character('er', '尔尔', 'assets/images/demo_role_2.png'),
+    V2Character('hua', '花西冷少', 'assets/images/demo_role_3.png'),
+    V2Character('dou', '水濑兜兜儿', 'assets/images/demo_role_4.png'),
+    V2Character('qiqi', '奇奇蒂蒂', 'assets/images/demo_role_5.png'),
+    V2Character('fish', '人鱼小姐', 'assets/images/demo_role_6.png'),
+    V2Character('berry', '奇奇蒂蒂', 'assets/images/demo_role_7.png'),
+    V2Character('rain', '奇奇蒂蒂', 'assets/images/demo_role_8.png'),
+    V2Character('scarf', '人鱼小姐', 'assets/images/demo_role_9.png'),
+    V2Character('girl', '小夏', 'assets/images/demo_role_10.png'),
+    V2Character('ethan', 'Ethan', 'assets/images/demo_role_11.png'),
+    V2Character('leo', 'Leo', 'assets/images/demo_role_12.png'),
   ];
   static const memberImages = {
     'popi': 'assets/animations/bot_avatars/tiger.png',
@@ -30,82 +30,82 @@ abstract final class DemoFixtures {
   static const script =
       '## 奶茶店的午后\n\n**场景一 · 午后，街角**\n\n爱丽丝推开奶茶店的门，熟悉的风铃响起。窗边坐着一个许久未见的朋友。\n\n**场景二 · 重逢**\n\n「好久不见，你还是喜欢三分糖吗？」\n\n她笑着点头，阳光落在两杯奶茶之间。\n\n**镜头建议**\n\n1. 街角远景，缓慢推进。\n2. 风铃特写，切人物视线。\n3. 两人对坐，以暖色中景收尾。';
 
-  static List<DemoAsset> assets() => [
-    const DemoAsset(
+  static List<V2Asset> assets() => [
+    const V2Asset(
       id: 'milk',
       title: '奶茶店的午后',
-      kind: DemoAssetKind.image,
+      kind: V2AssetKind.image,
       cover: 'assets/images/demo_milk_tea.png',
       sessionId: 'alice',
     ),
-    const DemoAsset(
+    const V2Asset(
       id: 'sport',
       title: '运动与色彩',
-      kind: DemoAssetKind.image,
+      kind: V2AssetKind.image,
       cover: 'assets/images/demo_color_sport.png',
       sessionId: 'ding',
     ),
-    const DemoAsset(
+    const V2Asset(
       id: 'weekend',
       title: '周末出游成片',
-      kind: DemoAssetKind.video,
+      kind: V2AssetKind.video,
       cover: 'assets/images/demo_weekend.png',
       media: 'assets/images/demo_video.mp4',
       sessionId: 'alice',
     ),
-    const DemoAsset(
+    const V2Asset(
       id: 'weekend2',
       title: '午后的故事',
-      kind: DemoAssetKind.video,
+      kind: V2AssetKind.video,
       cover: 'assets/images/demo_weekend_2.png',
       media: 'assets/images/demo_video.mp4',
       sessionId: 'short',
     ),
-    const DemoAsset(
+    const V2Asset(
       id: 'script',
       title: '奶茶店的重逢',
-      kind: DemoAssetKind.script,
+      kind: V2AssetKind.script,
       cover: 'assets/images/demo_milk_tea.png',
       body: script,
       sessionId: 'alice',
     ),
-    const DemoAsset(
+    const V2Asset(
       id: 'audio',
       title: '午后轻音乐',
-      kind: DemoAssetKind.audio,
+      kind: V2AssetKind.audio,
       cover: 'assets/images/demo_weekend.png',
       media: 'assets/images/demo_audio.mp4',
       sessionId: 'alice',
     ),
     for (var i = 1; i <= 5; i++)
-      DemoAsset(
+      V2Asset(
         id: 'scene$i',
         title: '爱丽丝的场景 $i',
-        kind: DemoAssetKind.image,
+        kind: V2AssetKind.image,
         cover: 'assets/images/demo_scene_$i.png',
         sessionId: 'inspiration',
       ),
   ];
 
-  static List<DemoSession> sessions() => [
-    const DemoSession(
+  static List<V2Session> sessions() => [
+    const V2Session(
       id: 'ding',
       title: '叮叮制作组',
-      kind: DemoSessionKind.conversation,
+      kind: V2SessionKind.conversation,
       members: ['designer'],
       roles: ['alice', 'er', 'dou'],
       time: '15:57',
       direction: direction,
       positioning: positioning,
       messages: [
-        DemoMessage(id: 'ding0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
-        DemoMessage(id: 'ding1', text: '给这三个角色生成选题', user: true),
+        V2Message(id: 'ding0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
+        V2Message(id: 'ding1', text: '给这三个角色生成选题', user: true),
       ],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'alice',
       title: '爱丽丝视频',
-      kind: DemoSessionKind.project,
+      kind: V2SessionKind.project,
       members: ['popi'],
       roles: ['alice'],
       unread: 2,
@@ -113,68 +113,66 @@ abstract final class DemoFixtures {
       direction: direction,
       positioning: positioning,
       messages: [
-        DemoMessage(id: 'alice0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
-        DemoMessage(id: 'alice1', text: '让她在奶茶店遇见一个意想不到的老朋友。', user: true),
-        DemoMessage(id: 'alice2', text: '爱丽丝逛街的画面已生成', assetIds: ['milk']),
+        V2Message(id: 'alice0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
+        V2Message(id: 'alice1', text: '让她在奶茶店遇见一个意想不到的老朋友。', user: true),
+        V2Message(id: 'alice2', text: '爱丽丝逛街的画面已生成', assetIds: ['milk']),
       ],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'inspiration',
       title: '灵感到成片',
-      kind: DemoSessionKind.workflow,
+      kind: V2SessionKind.workflow,
       members: ['popi', 'writer', 'director'],
       roles: ['alice', 'er', 'dou'],
       time: '昨天',
       direction: direction,
       positioning: positioning,
       messages: [
-        DemoMessage(id: 'ins0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
-        DemoMessage(id: 'ins1', text: '帮我批量生成五张关于爱丽丝角色的场景图', user: true),
-        DemoMessage(
+        V2Message(id: 'ins0', text: '今天想让爱丽丝经历什么故事？\n也可以从上次的灵感继续。'),
+        V2Message(id: 'ins1', text: '帮我批量生成五张关于爱丽丝角色的场景图', user: true),
+        V2Message(
           id: 'ins2',
           text: '三视图已生成，你看看这个造型喜欢吗？',
           assetIds: ['scene1', 'scene2', 'scene3', 'scene4', 'scene5'],
         ),
       ],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'campus',
       title: '校园vlog',
-      kind: DemoSessionKind.conversation,
+      kind: V2SessionKind.conversation,
       members: ['director', 'popi', 'writer', 'designer'],
       roles: [],
       time: '12:14',
-      messages: [
-        DemoMessage(id: 'campus0', text: '制作一个戴眼镜的校园男孩形象', user: true),
-      ],
+      messages: [V2Message(id: 'campus0', text: '制作一个戴眼镜的校园男孩形象', user: true)],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'doudou',
       title: '豆豆的项目',
-      kind: DemoSessionKind.project,
+      kind: V2SessionKind.project,
       members: ['writer'],
       roles: ['dou'],
       unread: 1,
       time: '7天前',
-      messages: [DemoMessage(id: 'dou0', text: '让人设更加讨喜一点', user: true)],
+      messages: [V2Message(id: 'dou0', text: '让人设更加讨喜一点', user: true)],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'old',
       title: '爱丽丝的对话',
-      kind: DemoSessionKind.conversation,
+      kind: V2SessionKind.conversation,
       members: ['sound'],
       roles: ['alice'],
       time: '30天前',
-      messages: [DemoMessage(id: 'old0', text: '三视图已生成，你看看这个造型喜欢吗？')],
+      messages: [V2Message(id: 'old0', text: '三视图已生成，你看看这个造型喜欢吗？')],
     ),
-    const DemoSession(
+    const V2Session(
       id: 'short',
       title: '短片创作组',
-      kind: DemoSessionKind.project,
+      kind: V2SessionKind.project,
       members: ['popi', 'writer'],
       roles: ['alice', 'er'],
       time: '昨天',
-      messages: [DemoMessage(id: 'short0', text: '三视图已生成，你看看这个造型喜欢吗？')],
+      messages: [V2Message(id: 'short0', text: '三视图已生成，你看看这个造型喜欢吗？')],
     ),
   ];
 }

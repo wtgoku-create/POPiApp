@@ -3,8 +3,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 /// Fades one native blur continuously, without slicing the backdrop into bands.
-class DemoFrostedBackdrop extends StatefulWidget {
-  const DemoFrostedBackdrop({super.key});
+class V2FrostedBackdrop extends StatefulWidget {
+  const V2FrostedBackdrop({super.key});
 
   static Future<ui.FragmentProgram>? _program;
 
@@ -17,10 +17,10 @@ class DemoFrostedBackdrop extends StatefulWidget {
   }
 
   @override
-  State<DemoFrostedBackdrop> createState() => _DemoFrostedBackdropState();
+  State<V2FrostedBackdrop> createState() => _V2FrostedBackdropState();
 }
 
-class _DemoFrostedBackdropState extends State<DemoFrostedBackdrop> {
+class _V2FrostedBackdropState extends State<V2FrostedBackdrop> {
   ui.FragmentShader? _shader;
 
   @override
@@ -31,9 +31,9 @@ class _DemoFrostedBackdropState extends State<DemoFrostedBackdrop> {
 
   Future<void> _load() async {
     if (!ui.ImageFilter.isShaderFilterSupported) return;
-    await DemoFrostedBackdrop.precache();
+    await V2FrostedBackdrop.precache();
     if (!mounted) return;
-    final program = await DemoFrostedBackdrop._program!;
+    final program = await V2FrostedBackdrop._program!;
     if (!mounted) return;
     setState(() => _shader = program.fragmentShader());
   }

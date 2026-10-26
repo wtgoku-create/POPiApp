@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../domain/demo_models.dart';
+import '../../v2_shared/domain/v2_models.dart';
 
 /// Exports the original bundled demo file without making a backend request.
-abstract final class DemoMediaExporter {
-  static Future<int> size(DemoAsset asset) async =>
+abstract final class V2MediaExporter {
+  static Future<int> size(V2Asset asset) async =>
       (await rootBundle.load(asset.media)).lengthInBytes;
 
-  static Future<bool> save(DemoAsset asset, Rect origin) async {
+  static Future<bool> save(V2Asset asset, Rect origin) async {
     final data = await rootBundle.load(asset.media);
     final extension = asset.media.split('.').last;
     final stem = asset.title.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_');

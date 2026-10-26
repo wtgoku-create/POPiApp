@@ -8,21 +8,21 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
-import '../data/demo_repository.dart';
-import '../domain/demo_models.dart';
-import 'demo_assets_page.dart';
-import 'demo_chat_page.dart';
-import 'demo_welcome_page.dart';
-import 'widgets/demo_widgets.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_assets/presentation/v2_assets_page.dart';
+import '../../v2_session/presentation/v2_chat_page.dart';
+import 'v2_welcome_page.dart';
+import '../../v2_shared/presentation/widgets/v2_widgets.dart';
 
-class DemoHomePage extends StatefulWidget {
-  const DemoHomePage({required this.repository, super.key});
-  final DemoRepository repository;
+class V2HomePage extends StatefulWidget {
+  const V2HomePage({required this.repository, super.key});
+  final V2Repository repository;
   @override
-  State<DemoHomePage> createState() => _DemoHomePageState();
+  State<V2HomePage> createState() => _V2HomePageState();
 }
 
-class _DemoHomePageState extends State<DemoHomePage> {
+class _V2HomePageState extends State<V2HomePage> {
   int _tab = 0;
   bool _bottomVisible = true;
   String _query = '';
@@ -49,11 +49,11 @@ class _DemoHomePageState extends State<DemoHomePage> {
     }
   }
 
-  void _open(DemoSession s) {
+  void _open(V2Session s) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) =>
-            DemoChatPage(repository: widget.repository, sessionId: s.id),
+            V2ChatPage(repository: widget.repository, sessionId: s.id),
       ),
     );
   }
@@ -63,7 +63,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return DemoScaffold(
+    return V2Scaffold(
       floatingBottom: true,
       floatingBottomVisible: _bottomVisible,
       title: Text(_tab == 0 ? l.demoConversations : l.demoAssets),
@@ -71,7 +71,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
         tooltip: l.demoProfile,
         padding: EdgeInsets.zero,
         onPressed: _profile,
-        icon: const DemoAvatar(size: 40),
+        icon: const V2Avatar(size: 40),
       ),
       actions: [
         IconButton(
@@ -81,13 +81,13 @@ class _DemoHomePageState extends State<DemoHomePage> {
               ? Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) =>
-                        DemoWelcomePage(repository: widget.repository),
+                        V2WelcomePage(repository: widget.repository),
                   ),
                 )
-              : showDemoImport(context, widget.repository),
+              : showV2Import(context, widget.repository),
           icon: _tab == 0
-              ? const DemoIcon('plus', color: AppColors.brand)
-              : const DemoIcon('upload', size: 24, color: AppColors.brand),
+              ? const V2Icon('plus', color: AppColors.brand)
+              : const V2Icon('upload', size: 24, color: AppColors.brand),
         ),
       ],
       bottom: SafeArea(
@@ -107,7 +107,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                   width: 144,
                   height: 54,
                   padding: const EdgeInsets.all(5),
-                  color: demoSurface(context),
+                  color: v2Surface(context),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -116,7 +116,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                           selected: _tab == i,
                           child: Container(
                             decoration: ShapeDecoration(
-                              color: _tab == i ? demoTint : Colors.transparent,
+                              color: _tab == i ? v2Tint : Colors.transparent,
                               shape: const CircleBorder(),
                             ),
                             child: IconButton(
@@ -125,7 +125,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                   ? l.demoConversations
                                   : l.demoAssets,
                               onPressed: () => setState(() => _tab = i),
-                              icon: DemoIcon(
+                              icon: V2Icon(
                                 i == 0 ? 'chat' : 'folder',
                                 color: _tab == i
                                     ? AppColors.brand
@@ -151,7 +151,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                  child: DemoSearch(
+                  child: V2Search(
                     hint: l.demoSearchHistory,
                     onChanged: (q) => setState(() {
                       _query = q;
@@ -193,7 +193,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                               AppMenuItem(
                                 label: l.renameProjectItem,
                                 icon: const Icon(Icons.edit_outlined),
-                                onSelected: () => demoEditText(
+                                onSelected: () => v2EditText(
                                   context,
                                   title: l.demoRename,
                                   label: l.demoSessionName,
@@ -219,7 +219,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                     destructive: true,
                                   );
                                   if (yes == true && context.mounted) {
-                                    await demoPerform(
+                                    await v2Perform(
                                       context,
                                       () =>
                                           widget.repository.deleteSession(s.id),
@@ -230,7 +230,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                             ],
                             child: Material(
                               color: index == 0 && _query.isEmpty
-                                  ? demoTint
+                                  ? v2Tint
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(20),
                               child: InkWell(
@@ -245,7 +245,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                   ),
                                   child: Row(
                                     children: [
-                                      DemoAvatar(
+                                      V2Avatar(
                                         members: s.members,
                                         memberAvatars: s.memberAvatars,
                                         memberColors: s.memberColors,
@@ -288,19 +288,19 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                                               ),
                                                           decoration:
                                                               const ShapeDecoration(
-                                                                color: demoTint,
+                                                                color: v2Tint,
                                                                 shape:
                                                                     StadiumBorder(),
                                                               ),
                                                           child: Text(
                                                             switch (s.kind) {
-                                                              DemoSessionKind
+                                                              V2SessionKind
                                                                   .conversation =>
                                                                 l.demoConversation,
-                                                              DemoSessionKind
+                                                              V2SessionKind
                                                                   .project =>
                                                                 l.demoProject,
-                                                              DemoSessionKind
+                                                              V2SessionKind
                                                                   .workflow =>
                                                                 l.demoWorkflow,
                                                             },
@@ -308,7 +308,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                                                               fontSize: 12,
                                                               color:
                                                                   s.kind ==
-                                                                      DemoSessionKind
+                                                                      V2SessionKind
                                                                           .conversation
                                                                   ? AppColors
                                                                         .textPrimary
@@ -394,7 +394,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
                 ),
               ],
             ),
-            DemoAssetsView(repository: widget.repository),
+            V2AssetsView(repository: widget.repository),
           ],
         ),
       ),

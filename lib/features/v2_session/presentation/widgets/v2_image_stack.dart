@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
-import '../../domain/demo_models.dart';
+import '../../../v2_shared/domain/v2_models.dart';
 
 /// An image deck that draws a card out before inserting it on the other side.
-class DemoImageStack extends StatefulWidget {
-  const DemoImageStack({
+class V2ImageStack extends StatefulWidget {
+  const V2ImageStack({
     required this.images,
     required this.messageId,
     required this.initialIndex,
@@ -16,16 +16,16 @@ class DemoImageStack extends StatefulWidget {
     super.key,
   }) : assert(images.length > 1);
 
-  final List<DemoAsset> images;
+  final List<V2Asset> images;
   final String messageId;
   final int initialIndex;
   final ValueChanged<int> onChanged;
 
   @override
-  State<DemoImageStack> createState() => _DemoImageStackState();
+  State<V2ImageStack> createState() => _V2ImageStackState();
 }
 
-class _DemoImageStackState extends State<DemoImageStack>
+class _V2ImageStackState extends State<V2ImageStack>
     with SingleTickerProviderStateMixin {
   late int _index = widget.initialIndex.clamp(0, widget.images.length - 1);
   late final _motion = AnimationController(
@@ -104,7 +104,7 @@ class _DemoImageStackState extends State<DemoImageStack>
     );
   }
 
-  Widget _image(DemoAsset asset, double width, double height) => ClipRRect(
+  Widget _image(V2Asset asset, double width, double height) => ClipRRect(
     borderRadius: BorderRadius.circular(20),
     child: Image.asset(
       asset.cover,

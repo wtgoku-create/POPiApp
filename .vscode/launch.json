@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "POPi - Demo (Mock UI)",
+      "name": "POPi - V2 (Mock UI)",
       "request": "launch",
       "type": "dart",
       "program": "lib/main_demo.dart",

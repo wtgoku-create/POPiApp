@@ -5,22 +5,22 @@ import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:uuid/uuid.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
-import '../data/demo_repository.dart';
-import '../domain/demo_models.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/domain/v2_models.dart';
 
 /// Keeps simulated streaming and chat synchronization outside the widget tree.
-class DemoChatController extends ChangeNotifier {
-  DemoChatController(this.repository, this.sessionId) {
+class V2ChatController extends ChangeNotifier {
+  V2ChatController(this.repository, this.sessionId) {
     _sync();
     repository.addListener(_sync);
   }
-  final DemoRepository repository;
+  final V2Repository repository;
   final String sessionId;
   final chat.InMemoryChatController chatController =
       chat.InMemoryChatController();
   bool sending = false;
   bool _disposed = false;
-  DemoSession get session => repository.session(sessionId);
+  V2Session get session => repository.session(sessionId);
 
   void _sync() {
     if (_disposed) return;
@@ -51,7 +51,7 @@ class DemoChatController extends ChangeNotifier {
     try {
       await repository.addMessage(
         sessionId,
-        DemoMessage(
+        V2Message(
           id: const Uuid().v4(),
           text: text.trim(),
           user: true,
@@ -63,7 +63,7 @@ class DemoChatController extends ChangeNotifier {
         id: const Uuid().v4(),
         authorId: 'popi',
         text: l.demoThinking,
-        metadata: {'demo': DemoMessage(id: 'thinking', text: l.demoThinking)},
+        metadata: {'demo': V2Message(id: 'thinking', text: l.demoThinking)},
       );
       await chatController.insertMessage(temporary);
       await Future<void>.delayed(const Duration(milliseconds: 450));
@@ -73,7 +73,7 @@ class DemoChatController extends ChangeNotifier {
         final next = temporary.copyWith(
           text: preview.substring(0, i),
           metadata: {
-            'demo': DemoMessage(id: 'thinking', text: preview.substring(0, i)),
+            'demo': V2Message(id: 'thinking', text: preview.substring(0, i)),
           },
         );
         await chatController.updateMessage(temporary, next);

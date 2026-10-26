@@ -2,29 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:toastification/toastification.dart';
 
-import '../../../app/theme.dart';
-import '../../../app/router.dart';
-import '../../../l10n/generated/app_localizations.dart';
-import '../../../shared/providers/storage_provider.dart';
-import '../../../shared/providers/settings_provider.dart';
-import '../../../shared/providers/user_provider.dart';
-import '../../../shared/widgets/app_keyboard_dismiss.dart';
-import '../data/demo_repository.dart';
-import 'demo_home_page.dart';
+import 'theme.dart';
+import 'router.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../shared/providers/storage_provider.dart';
+import '../shared/providers/settings_provider.dart';
+import '../shared/providers/user_provider.dart';
+import '../shared/widgets/app_keyboard_dismiss.dart';
+import '../features/v2_shared/data/v2_repository.dart';
+import '../features/v2_home/presentation/v2_home_page.dart';
 
 /// Mock creation flows share the existing account pages and local preferences.
-class DemoApp extends ConsumerStatefulWidget {
-  const DemoApp({this.locale = const Locale('zh'), super.key});
+class V2App extends ConsumerStatefulWidget {
+  const V2App({this.locale = const Locale('zh'), super.key});
   final Locale locale;
   @override
-  ConsumerState<DemoApp> createState() => _DemoAppState();
+  ConsumerState<V2App> createState() => _V2AppState();
 }
 
-class _DemoAppState extends ConsumerState<DemoApp> {
-  late final _repository = DemoRepository(ref.read(preferencesStorageProvider))
+class _V2AppState extends ConsumerState<V2App> {
+  late final _repository = V2Repository(ref.read(preferencesStorageProvider))
     ..restore();
   late final _router = createAppRouter(
-    homeBuilder: (_, _) => DemoHomePage(repository: _repository),
+    homeBuilder: (_, _) => V2HomePage(repository: _repository),
   );
   @override
   void dispose() {

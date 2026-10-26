@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
-import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
-import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
+import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
+import 'package:popi_ai_app/features/v2_shared/domain/v2_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Storage extends PreferencesStorage {
@@ -19,11 +19,11 @@ class _Storage extends PreferencesStorage {
 
 void main() {
   late _Storage storage;
-  late DemoRepository repository;
+  late V2Repository repository;
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     storage = _Storage(await SharedPreferences.getInstance());
-    repository = DemoRepository(storage)..restore();
+    repository = V2Repository(storage)..restore();
   });
   tearDown(() => repository.dispose());
 
@@ -31,7 +31,7 @@ void main() {
     expect(repository.sessions, hasLength(7));
     expect(
       repository.assets.map((a) => a.kind).toSet(),
-      DemoAssetKind.values.toSet(),
+      V2AssetKind.values.toSet(),
     );
     expect(repository.session('alice').unread, 2);
   });
@@ -53,14 +53,14 @@ void main() {
       );
       await repository.addMessage(
         'alice',
-        const DemoMessage(
+        const V2Message(
           id: 'new',
           text: 'Hello',
           user: true,
           assetIds: ['milk'],
         ),
       );
-      final restored = DemoRepository(storage)..restore();
+      final restored = V2Repository(storage)..restore();
       addTearDown(restored.dispose);
       final session = restored.session('alice');
       expect(session.title, 'New title');
@@ -103,7 +103,7 @@ void main() {
           .every((a) => a.sessionId == 'alice'),
       isTrue,
     );
-    final restored = DemoRepository(storage)..restore();
+    final restored = V2Repository(storage)..restore();
     addTearDown(restored.dispose);
     expect(restored.session('alice').messages.last.assetIds, result.assetIds);
   });
@@ -111,9 +111,9 @@ void main() {
   test('reset clears demo edits and persists the original fixtures', () async {
     await repository.deleteSession('alice');
     await repository.deleteAsset('milk');
-    await repository.createSession('Temporary', DemoSessionKind.workflow);
+    await repository.createSession('Temporary', V2SessionKind.workflow);
     await repository.reset();
-    final restored = DemoRepository(storage)..restore();
+    final restored = V2Repository(storage)..restore();
     addTearDown(restored.dispose);
     expect(restored.sessions, hasLength(7));
     expect(restored.session('alice').title, '爱丽丝视频');
@@ -134,7 +134,7 @@ void main() {
   });
 
   test('corrupt saved data falls back to usable fixtures', () {
-    storage.values[DemoRepository.storageKey] = '{broken';
+    storage.values[V2Repository.storageKey] = '{broken';
     repository.restore();
     expect(repository.sessions, hasLength(7));
     expect(repository.assets, isNotEmpty);

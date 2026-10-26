@@ -5,25 +5,25 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/type/bot_avatar_type.dart';
-import '../data/demo_fixtures.dart';
-import '../data/demo_repository.dart';
-import '../domain/demo_models.dart';
-import 'demo_assets_page.dart';
-import 'widgets/demo_widgets.dart';
+import '../../v2_shared/data/v2_fixtures.dart';
+import '../../v2_shared/data/v2_repository.dart';
+import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_assets/presentation/v2_assets_page.dart';
+import '../../v2_shared/presentation/widgets/v2_widgets.dart';
 
-class DemoSettingsPage extends StatefulWidget {
-  const DemoSettingsPage({
+class V2SettingsPage extends StatefulWidget {
+  const V2SettingsPage({
     required this.repository,
     required this.sessionId,
     super.key,
   });
-  final DemoRepository repository;
+  final V2Repository repository;
   final String sessionId;
   @override
-  State<DemoSettingsPage> createState() => _DemoSettingsPageState();
+  State<V2SettingsPage> createState() => _V2SettingsPageState();
 }
 
-class _DemoSettingsPageState extends State<DemoSettingsPage>
+class _V2SettingsPageState extends State<V2SettingsPage>
     with SingleTickerProviderStateMixin {
   late final _tabs = TabController(length: 3, vsync: this)
     ..addListener(_updateTab);
@@ -44,7 +44,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       listenable: widget.repository,
       builder: (context, _) {
         final s = widget.repository.session(widget.sessionId);
-        return DemoScaffold(
+        return V2Scaffold(
           title: Text(l.demoSettings),
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -55,7 +55,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                     padding: const EdgeInsets.all(10),
                     child: Row(
                       children: [
-                        DemoAvatar(
+                        V2Avatar(
                           members: s.members,
                           memberAvatars: s.memberAvatars,
                           memberColors: s.memberColors,
@@ -72,7 +72,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                         ),
                         IconButton(
                           tooltip: l.demoRename,
-                          onPressed: () => demoEditText(
+                          onPressed: () => v2EditText(
                             context,
                             title: l.demoRename,
                             value: s.title,
@@ -83,7 +83,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                           ),
                           icon: const RotatedBox(
                             quarterTurns: 1,
-                            child: DemoIcon('edit', size: 20),
+                            child: V2Icon('edit', size: 20),
                           ),
                         ),
                       ],
@@ -93,11 +93,11 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
               ),
               SliverPersistentHeader(
                 pinned: true,
-                delegate: DemoPinnedHeader(
+                delegate: V2PinnedHeader(
                   height: 60,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: DemoSegments(
+                    child: V2Segments(
                       labels: [l.demoInfo, l.demoCapabilities, l.demoOutputs],
                       selected: _tabs.index,
                       onChanged: _tabs.animateTo,
@@ -112,7 +112,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                 _KeepTab(child: _info(context, s, l)),
                 _KeepTab(child: _capabilities(context, s, l)),
                 _KeepTab(
-                  child: DemoAssetsView(
+                  child: V2AssetsView(
                     repository: widget.repository,
                     sessionId: s.id,
                     compactHeader: true,
@@ -128,7 +128,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
 
   Widget _info(
     BuildContext context,
-    DemoSession s,
+    V2Session s,
     AppLocalizations l,
   ) => ListView(
     key: const PageStorageKey('demo-settings-info'),
@@ -157,16 +157,12 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
               for (final role in s.roles.take(3))
                 Align(
                   widthFactor: .65,
-                  child: DemoAvatar(image: demoCharacter(role).image, size: 50),
+                  child: V2Avatar(image: v2Character(role).image, size: 50),
                 ),
               const SizedBox(width: 12),
               const RotatedBox(
                 quarterTurns: 3,
-                child: DemoIcon(
-                  'back',
-                  size: 24,
-                  color: AppColors.textTertiary,
-                ),
+                child: V2Icon('back', size: 24, color: AppColors.textTertiary),
               ),
             ],
           ),
@@ -177,7 +173,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       _section(
         context,
         title: l.demoPreferences,
-        onEdit: () => demoEditText(
+        onEdit: () => v2EditText(
           context,
           title: l.demoDirection,
           value: s.direction,
@@ -190,7 +186,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
         children: [
           _field(
             l.demoDirection,
-            s.direction.isEmpty ? DemoFixtures.direction : s.direction,
+            s.direction.isEmpty ? V2Fixtures.direction : s.direction,
           ),
           const Divider(height: 30),
           _field(l.demoFeeling, l.demoFeelingValue),
@@ -204,12 +200,10 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       _section(
         context,
         title: l.demoPositioning,
-        onEdit: () => demoEditText(
+        onEdit: () => v2EditText(
           context,
           title: l.demoPositioning,
-          value: s.positioning.isEmpty
-              ? DemoFixtures.positioning
-              : s.positioning,
+          value: s.positioning.isEmpty ? V2Fixtures.positioning : s.positioning,
           multiline: true,
           onSave: (v) => widget.repository.updateSession(
             s.id,
@@ -218,7 +212,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
         ),
         children: [
           Text(
-            s.positioning.isEmpty ? DemoFixtures.positioning : s.positioning,
+            s.positioning.isEmpty ? V2Fixtures.positioning : s.positioning,
             style: const TextStyle(fontSize: 16, height: 1.5),
           ),
         ],
@@ -226,155 +220,152 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     ],
   );
 
-  Widget _capabilities(
-    BuildContext context,
-    DemoSession s,
-    AppLocalizations l,
-  ) => CustomScrollView(
-    key: const PageStorageKey('demo-settings-skills'),
-    slivers: [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        sliver: SliverToBoxAdapter(
-          child: _SettingsCard(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                for (final id in s.members) ...[
-                  InkWell(
-                    onTap: () => DemoSheet.show<void>(
-                      context: context,
-                      builder: (_) => _EditMemberSheet(
-                        repository: widget.repository,
-                        sessionId: s.id,
-                        memberId: id,
-                      ),
-                    ),
-                    child: SizedBox(
-                      height: 50,
-                      child: Row(
-                        children: [
-                          _memberAvatar(s, id, 50),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              s.memberNames[id] ?? demoMemberName(l, id),
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
+  Widget _capabilities(BuildContext context, V2Session s, AppLocalizations l) =>
+      CustomScrollView(
+        key: const PageStorageKey('demo-settings-skills'),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            sliver: SliverToBoxAdapter(
+              child: _SettingsCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    for (final id in s.members) ...[
+                      InkWell(
+                        onTap: () => V2Sheet.show<void>(
+                          context: context,
+                          builder: (_) => _EditMemberSheet(
+                            repository: widget.repository,
+                            sessionId: s.id,
+                            memberId: id,
+                          ),
+                        ),
+                        child: SizedBox(
+                          height: 50,
+                          child: Row(
+                            children: [
+                              _memberAvatar(s, id, 50),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  s.memberNames[id] ?? v2MemberName(l, id),
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const RotatedBox(
+                                quarterTurns: 3,
+                                child: V2Icon(
+                                  'back',
+                                  size: 24,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ],
                           ),
-                          const RotatedBox(
-                            quarterTurns: 3,
-                            child: DemoIcon(
-                              'back',
-                              size: 24,
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-                SizedBox(
-                  width: double.infinity,
-                  height: 42,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      backgroundColor: demoTint,
-                      shape: const StadiumBorder(),
-                    ),
-                    onPressed: () => _members(context, s),
-                    icon: const DemoIcon(
-                      'plus',
-                      size: 18,
-                      color: AppColors.brand,
-                    ),
-                    label: Text(l.demoAddMembers),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-        sliver: SliverToBoxAdapter(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l.demoEnabledItems,
-                style: const TextStyle(color: AppColors.textSecondary),
-              ),
-              Text(
-                l.demoEnabledHere,
-                style: const TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-        sliver: SliverToBoxAdapter(
-          child: _SettingsCard(
-            child: Column(
-              children: [
-                for (final entry in _skillLabels(l).entries)
-                  _CapabilityRow(
-                    title: Text(
-                      entry.value,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _skillDescription(l, entry.key),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                    value: s.capabilities.contains(entry.key),
-                    onChanged: (value) => demoPerform(
-                      context,
-                      () => widget.repository.updateSession(
-                        s.id,
-                        (s) => s.copyWith(
-                          capabilities: value
-                              ? [...s.capabilities, entry.key]
-                              : s.capabilities
-                                    .where((k) => k != entry.key)
-                                    .toList(),
                         ),
                       ),
+                      const SizedBox(height: 20),
+                    ],
+                    SizedBox(
+                      width: double.infinity,
+                      height: 42,
+                      child: TextButton.icon(
+                        style: TextButton.styleFrom(
+                          backgroundColor: v2Tint,
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: () => _members(context, s),
+                        icon: const V2Icon(
+                          'plus',
+                          size: 18,
+                          color: AppColors.brand,
+                        ),
+                        label: Text(l.demoAddMembers),
+                      ),
                     ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-    ],
-  );
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            sliver: SliverToBoxAdapter(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l.demoEnabledItems,
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    l.demoEnabledHere,
+                    style: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            sliver: SliverToBoxAdapter(
+              child: _SettingsCard(
+                child: Column(
+                  children: [
+                    for (final entry in _skillLabels(l).entries)
+                      _CapabilityRow(
+                        title: Text(
+                          entry.value,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _skillDescription(l, entry.key),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                        value: s.capabilities.contains(entry.key),
+                        onChanged: (value) => v2Perform(
+                          context,
+                          () => widget.repository.updateSession(
+                            s.id,
+                            (s) => s.copyWith(
+                              capabilities: value
+                                  ? [...s.capabilities, entry.key]
+                                  : s.capabilities
+                                        .where((k) => k != entry.key)
+                                        .toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
 
-  Future<void> _members(BuildContext context, DemoSession session) =>
-      DemoSheet.show<void>(
+  Future<void> _members(BuildContext context, V2Session session) =>
+      V2Sheet.show<void>(
         context: context,
         builder: (_) =>
             _MemberSheet(repository: widget.repository, session: session),
       );
-  Future<void> _roles(BuildContext context, DemoSession session) =>
-      DemoSheet.show<void>(
+  Future<void> _roles(BuildContext context, V2Session session) =>
+      V2Sheet.show<void>(
         context: context,
         builder: (_) =>
             _RoleSheet(repository: widget.repository, session: session),
@@ -484,7 +475,7 @@ Widget _section(
             onPressed: onEdit,
             icon: const RotatedBox(
               quarterTurns: 1,
-              child: DemoIcon('edit', size: 18),
+              child: V2Icon('edit', size: 18),
             ),
           ),
         ],
@@ -536,9 +527,9 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-DemoCharacter demoCharacter(String id) =>
-    DemoFixtures.characters.where((r) => r.id == id).firstOrNull ??
-    DemoCharacter(
+V2Character v2Character(String id) =>
+    V2Fixtures.characters.where((r) => r.id == id).firstOrNull ??
+    V2Character(
       id,
       id.startsWith('custom:') ? id.substring(7) : id,
       'assets/images/demo_role_1.png',
@@ -546,8 +537,8 @@ DemoCharacter demoCharacter(String id) =>
 
 class _MemberSheet extends StatefulWidget {
   const _MemberSheet({required this.repository, required this.session});
-  final DemoRepository repository;
-  final DemoSession session;
+  final V2Repository repository;
+  final V2Session session;
   @override
   State<_MemberSheet> createState() => _MemberSheetState();
 }
@@ -558,17 +549,17 @@ class _MemberSheetState extends State<_MemberSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final members = DemoFixtures.memberImages.keys.toList();
-    return DemoSheetBody(
+    final members = V2Fixtures.memberImages.keys.toList();
+    return V2SheetBody(
       title: l.demoAddMembers,
-      footer: DemoPrimaryButton(
+      footer: V2PrimaryButton(
         label: l.confirm,
         busy: _busy,
         onPressed: _selected.isEmpty
             ? null
             : () async {
                 setState(() => _busy = true);
-                final ok = await demoPerform(
+                final ok = await v2Perform(
                   context,
                   () => widget.repository.updateSession(
                     widget.session.id,
@@ -611,7 +602,7 @@ class _MemberSheetState extends State<_MemberSheet> {
                   selected: selected,
                   child: Material(
                     key: ValueKey(id),
-                    color: selected ? demoTint : Colors.transparent,
+                    color: selected ? v2Tint : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
@@ -639,7 +630,7 @@ class _MemberSheetState extends State<_MemberSheet> {
                                       children: [
                                         Text(
                                           widget.session.memberNames[id] ??
-                                              demoMemberName(l, id),
+                                              v2MemberName(l, id),
                                           style: const TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.w600,
@@ -647,7 +638,7 @@ class _MemberSheetState extends State<_MemberSheet> {
                                         ),
                                         const SizedBox(height: 5),
                                         Text(
-                                          demoMemberDescription(l, id),
+                                          v2MemberDescription(l, id),
                                           style: const TextStyle(
                                             fontSize: 14,
                                             height: 1.5,
@@ -664,7 +655,7 @@ class _MemberSheetState extends State<_MemberSheet> {
                           Positioned(
                             right: 10,
                             top: 10,
-                            child: DemoSelectionMark(selected: selected),
+                            child: V2SelectionMark(selected: selected),
                           ),
                         ],
                       ),
@@ -680,7 +671,7 @@ class _MemberSheetState extends State<_MemberSheet> {
   }
 }
 
-Widget _memberAvatar(DemoSession session, String id, double size) => DemoAvatar(
+Widget _memberAvatar(V2Session session, String id, double size) => V2Avatar(
   members: [id],
   size: size,
   memberAvatars: session.memberAvatars,
@@ -689,8 +680,8 @@ Widget _memberAvatar(DemoSession session, String id, double size) => DemoAvatar(
 
 class _RoleSheet extends StatefulWidget {
   const _RoleSheet({required this.repository, required this.session});
-  final DemoRepository repository;
-  final DemoSession session;
+  final V2Repository repository;
+  final V2Session session;
   @override
   State<_RoleSheet> createState() => _RoleSheetState();
 }
@@ -701,22 +692,22 @@ class _RoleSheetState extends State<_RoleSheet> {
       .expand((s) => s.roles)
       .where((r) => r.startsWith('custom:'))
       .toSet()
-      .map(demoCharacter)
+      .map(v2Character)
       .toList();
   int _tab = 0;
   bool _busy = false;
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final roles = _tab == 0 ? DemoFixtures.characters : _custom;
-    return DemoSheetBody(
+    final roles = _tab == 0 ? V2Fixtures.characters : _custom;
+    return V2SheetBody(
       title: l.demoLinkedRoles,
-      footer: DemoPrimaryButton(
+      footer: V2PrimaryButton(
         label: l.demoJoin,
         busy: _busy,
         onPressed: () async {
           setState(() => _busy = true);
-          final ok = await demoPerform(
+          final ok = await v2Perform(
             context,
             () => widget.repository.updateSession(
               widget.session.id,
@@ -739,9 +730,7 @@ class _RoleSheetState extends State<_RoleSheet> {
                 Flexible(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      backgroundColor: _tab == i
-                          ? demoTint
-                          : Colors.transparent,
+                      backgroundColor: _tab == i ? v2Tint : Colors.transparent,
                       foregroundColor: _tab == i
                           ? Theme.of(context).colorScheme.onSurface
                           : AppColors.textTertiary,
@@ -756,10 +745,10 @@ class _RoleSheetState extends State<_RoleSheet> {
               Flexible(
                 child: TextButton.icon(
                   style: TextButton.styleFrom(
-                    backgroundColor: demoTint,
+                    backgroundColor: v2Tint,
                     shape: const StadiumBorder(),
                   ),
-                  onPressed: () => demoEditText(
+                  onPressed: () => v2EditText(
                     context,
                     title: l.demoCreateRole,
                     label: l.demoName,
@@ -768,18 +757,14 @@ class _RoleSheetState extends State<_RoleSheet> {
                       final id = 'custom:$name';
                       setState(() {
                         if (!_custom.any((r) => r.id == id)) {
-                          _custom.add(demoCharacter(id));
+                          _custom.add(v2Character(id));
                         }
                         _selected.add(id);
                         _tab = 1;
                       });
                     },
                   ),
-                  icon: const DemoIcon(
-                    'plus',
-                    size: 18,
-                    color: AppColors.brand,
-                  ),
+                  icon: const V2Icon('plus', size: 18, color: AppColors.brand),
                   label: Text(l.demoCreateRole),
                 ),
               ),
@@ -804,7 +789,7 @@ class _RoleSheetState extends State<_RoleSheet> {
                         final selected = _selected.contains(role.id);
                         return Material(
                           key: ValueKey(role.id),
-                          color: selected ? demoTint : Colors.transparent,
+                          color: selected ? v2Tint : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
@@ -869,7 +854,7 @@ class _RoleSheetState extends State<_RoleSheet> {
                                                     height: 14,
                                                     child: RotatedBox(
                                                       quarterTurns: 3,
-                                                      child: DemoIcon(
+                                                      child: V2Icon(
                                                         'back',
                                                         size: 14,
                                                         color: AppColors
@@ -889,7 +874,7 @@ class _RoleSheetState extends State<_RoleSheet> {
                                 Positioned(
                                   right: 10,
                                   top: 10,
-                                  child: DemoSelectionMark(
+                                  child: V2SelectionMark(
                                     selected: selected,
                                     number: selected
                                         ? _selected.toList().indexOf(role.id) +
@@ -910,10 +895,10 @@ class _RoleSheetState extends State<_RoleSheet> {
     );
   }
 
-  void _profile(BuildContext context, DemoCharacter role, AppLocalizations l) =>
+  void _profile(BuildContext context, V2Character role, AppLocalizations l) =>
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => DemoScaffold(
+          builder: (_) => V2Scaffold(
             title: Text(l.demoRoleProfile),
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -945,7 +930,7 @@ class _EditMemberSheet extends StatefulWidget {
     required this.sessionId,
     required this.memberId,
   });
-  final DemoRepository repository;
+  final V2Repository repository;
   final String sessionId;
   final String memberId;
   @override
@@ -969,7 +954,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
       _session.memberAvatars[widget.memberId] ??
       (widget.memberId == 'popi'
           ? BotAvatarCharacter.tiger.stillAsset
-          : DemoFixtures.memberImages[widget.memberId]!);
+          : V2Fixtures.memberImages[widget.memberId]!);
   late int _color = _session.memberColors[widget.memberId] ?? 0xFFFFDFEF;
   bool _initialized = false;
   bool _busy = false;
@@ -979,7 +964,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
     if (!_initialized) {
       _name.text =
           _session.memberNames[widget.memberId] ??
-          demoMemberName(AppLocalizations.of(context)!, widget.memberId);
+          v2MemberName(AppLocalizations.of(context)!, widget.memberId);
       _initialized = true;
     }
   }
@@ -993,16 +978,16 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return DemoSheetBody(
+    return V2SheetBody(
       title: l.demoEditMember,
-      footer: DemoPrimaryButton(
+      footer: V2PrimaryButton(
         label: l.confirm,
         busy: _busy,
         onPressed: _name.text.trim().isEmpty
             ? null
             : () async {
                 setState(() => _busy = true);
-                final ok = await demoPerform(
+                final ok = await v2Perform(
                   context,
                   () => widget.repository.updateSession(
                     widget.sessionId,
@@ -1038,7 +1023,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
               children: [
                 const SizedBox(height: 30),
                 Center(
-                  child: DemoAvatar(
+                  child: V2Avatar(
                     image: _image,
                     size: 100,
                     background: Color(_color),
@@ -1046,7 +1031,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  demoMemberName(l, widget.memberId),
+                  v2MemberName(l, widget.memberId),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 24,
@@ -1055,7 +1040,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  demoMemberDescription(l, widget.memberId),
+                  v2MemberDescription(l, widget.memberId),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 16,
@@ -1079,7 +1064,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                   decoration: InputDecoration(
                     counterText: '',
                     filled: true,
-                    fillColor: demoTint,
+                    fillColor: v2Tint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(20),
                       borderSide: BorderSide.none,
@@ -1205,7 +1190,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
                             ),
                             child: _color == color
                                 ? const Center(
-                                    child: DemoIcon(
+                                    child: V2Icon(
                                       'check',
                                       size: 18,
                                       color: AppColors.brand,
