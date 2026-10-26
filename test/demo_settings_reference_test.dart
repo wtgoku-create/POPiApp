@@ -117,6 +117,18 @@ class _FailingCatalogRepository extends DemoRepository {
   }) async => throw StateError('catalog unavailable');
 }
 
+class _FailingHarnessCatalogRepository extends DemoRepository {
+  _FailingHarnessCatalogRepository(super.storage);
+
+  @override
+  bool get isHarness => true;
+
+  @override
+  Future<DemoCapabilityCatalog> loadCapabilityCatalog({
+    String? sessionId,
+  }) async => throw StateError('catalog unavailable');
+}
+
 class _RefreshFailingCatalogRepository extends DemoRepository {
   _RefreshFailingCatalogRepository(super.storage);
 
@@ -175,6 +187,18 @@ class _InstalledSkillRepository extends DemoRepository {
         granted: session(sessionId ?? 'inspiration')
             .skillsFor(session(sessionId ?? 'inspiration').activeMemberId)
             .contains(demoSeedanceReferenceRemixSkillId),
+        available: true,
+      ),
+      DemoRuntimeCapability(
+        id: 'ffmpeg-video-edit',
+        name: '通用视频剪辑',
+        description: '裁切、拼接、字幕和音轨处理',
+        source: 'installed',
+        installed: true,
+        bound: true,
+        granted: session(sessionId ?? 'inspiration')
+            .skillsFor(session(sessionId ?? 'inspiration').activeMemberId)
+            .contains('ffmpeg-video-edit'),
         available: true,
       ),
       DemoRuntimeCapability(
@@ -483,14 +507,19 @@ void main() {
         findsNWidgets(8),
       );
       expect(
-        find.descendant(of: skills, matching: find.text('尚未接入')),
-        findsOneWidget,
-      );
-      expect(
         find.descendant(of: mcp, matching: find.text('尚未接入')),
         findsOneWidget,
       );
-      for (final section in [tools, skills, mcp]) {
+      expect(
+        find.descendant(
+          of: skills,
+          matching: find.byKey(
+            const ValueKey('demo-style-film-capability-popi'),
+          ),
+        ),
+        findsOneWidget,
+      );
+      for (final section in [tools, mcp]) {
         expect(
           find.descendant(of: section, matching: find.byType(Switch)),
           findsNothing,
@@ -549,6 +578,7 @@ void main() {
       await repository.updateSession(
         'inspiration',
         (session) => session.copyWith(
+          members: const ['popi'],
           activeMemberId: 'popi',
           memberSkills: const {
             'popi': [demoStyleFilmSkillId],
@@ -575,22 +605,20 @@ void main() {
       expect(find.text('生成三份配套提示词'), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byKey(
-            const ValueKey(
-              'demo-installed-skill-seedance-reference-remix-popi',
-            ),
-          ),
-          matching: find.textContaining('适用于 Bot：POPi'),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
           of: find.byKey(const ValueKey('demo-dsh-skills')),
           matching: find.text('制作风格短片'),
         ),
-        findsNothing,
+        findsOneWidget,
       );
+      final styleToggle = find.byKey(
+        const ValueKey('demo-style-film-capability-popi'),
+      );
+      expect(styleToggle, findsOneWidget);
+      expect(
+        tester.getTopLeft(styleToggle).dy,
+        lessThan(tester.getTopLeft(toggle).dy),
+      );
+      expect(find.text('通用视频剪辑'), findsOneWidget);
 
       tester.widget<Switch>(toggle).onChanged?.call(true);
       await tester.pumpAndSettle();
@@ -634,6 +662,83 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('legacy members keep one independent style toggle each', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _InstalledSkillRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    await repository.updateSession(
+      'inspiration',
+      (session) => session.copyWith(
+        members: const ['popi', 'writer'],
+        activeMemberId: 'popi',
+        memberSkills: const {
+          'popi': ['future-case-skill'],
+          'writer': ['ffmpeg-video-edit'],
+        },
+      ),
+    );
+    await _pumpSettings(tester, repository: repository);
+    await tester.tap(find.text('能力'));
+    await tester.pumpAndSettle();
+    await _showCapabilityCatalog(tester);
+
+    final skills = find.byKey(const ValueKey('demo-dsh-skills'));
+    expect(
+      find.descendant(
+        of: skills,
+        matching: find.byKey(const ValueKey('demo-style-film-capability-popi')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: skills,
+        matching: find.byKey(
+          const ValueKey('demo-style-film-capability-writer'),
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: skills, matching: find.text('制作风格短片')),
+      findsNWidgets(2),
+    );
+    final popiToggle = find.byKey(
+      const ValueKey('demo-style-film-capability-popi'),
+    );
+    final writerToggle = find.byKey(
+      const ValueKey('demo-style-film-capability-writer'),
+    );
+    await tester.ensureVisible(writerToggle);
+    expect(tester.widget<Switch>(popiToggle).value, isFalse);
+    expect(tester.widget<Switch>(writerToggle).value, isFalse);
+
+    tester.widget<Switch>(popiToggle).onChanged?.call(true);
+    await tester.pumpAndSettle();
+    expect(repository.session('inspiration').skillsFor('popi'), [
+      'future-case-skill',
+      demoStyleFilmSkillId,
+    ]);
+    expect(repository.session('inspiration').skillsFor('writer'), [
+      'ffmpeg-video-edit',
+    ]);
+
+    tester.widget<Switch>(writerToggle).onChanged?.call(true);
+    await tester.pumpAndSettle();
+    expect(repository.session('inspiration').skillsFor('popi'), [
+      'future-case-skill',
+      demoStyleFilmSkillId,
+    ]);
+    expect(repository.session('inspiration').skillsFor('writer'), [
+      'ffmpeg-video-edit',
+      demoStyleFilmSkillId,
+    ]);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'failed installed Skill save keeps the draft but never reports it enabled',
@@ -715,7 +820,14 @@ void main() {
     await tester.pumpAndSettle();
     await _showCapabilityCatalog(tester);
 
-    expect(find.text('尚未接入'), findsNWidgets(3));
+    expect(find.text('尚未接入'), findsNWidgets(2));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('demo-dsh-skills')),
+        matching: find.byKey(const ValueKey('demo-style-film-capability-popi')),
+      ),
+      findsOneWidget,
+    );
     expect(find.byIcon(Icons.check_circle), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -737,6 +849,47 @@ void main() {
     expect(find.byKey(const ValueKey('demo-member-popi')), findsOneWidget);
     expect(find.byKey(const Key('demo-add-members')), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('catalog failure keeps enabled legacy style skills removable', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _FailingHarnessCatalogRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    await repository.updateSession(
+      'inspiration',
+      (session) => session.copyWith(
+        members: const ['popi'],
+        activeMemberId: 'popi',
+        memberSkills: const {
+          'popi': [demoStyleFilmSkillId, 'future-case-skill'],
+        },
+      ),
+    );
+    await _pumpSettings(tester, repository: repository);
+    await tester.tap(find.text('能力'));
+    await tester.pumpAndSettle();
+
+    final skills = find.byKey(const ValueKey('demo-dsh-skills'));
+    final toggle = find.byKey(
+      const ValueKey('demo-style-film-capability-popi'),
+    );
+    expect(find.byKey(const ValueKey('demo-dsh-tools')), findsNothing);
+    expect(find.byKey(const ValueKey('demo-dsh-mcp')), findsNothing);
+    expect(find.descendant(of: skills, matching: toggle), findsOneWidget);
+    expect(tester.widget<Switch>(toggle).value, isTrue);
+
+    tester.widget<Switch>(toggle).onChanged?.call(false);
+    await tester.pumpAndSettle();
+    expect(repository.session('inspiration').skillsFor('popi'), [
+      'future-case-skill',
+    ]);
+    expect(tester.takeException(), isNull);
+    toastification.dismissAll(delayForAnimation: false);
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
   });

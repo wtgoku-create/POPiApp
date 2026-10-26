@@ -687,15 +687,6 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                     onEdit: () =>
                         _editMember(context, session.id, session.members[i]),
                   ),
-                  const SizedBox(height: 8),
-                  _MemberStyleFilmCapability(
-                    key: ValueKey(
-                      'demo-member-style-film-${session.members[i]}',
-                    ),
-                    repository: widget.repository,
-                    session: session,
-                    memberId: session.members[i],
-                  ),
                   if (i != session.members.length - 1)
                     const Divider(height: 20),
                 ],
@@ -737,7 +728,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
               }
               final catalog = _capabilityCatalog;
               if (catalog == null) {
-                return const SizedBox.shrink();
+                return _skillsCatalogSection(session, l, items: const []);
               }
               return Column(
                 children: [
@@ -751,22 +742,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                     statusConfirmed: _capabilityStatusConfirmed,
                   ),
                   const SizedBox(height: 12),
-                  _CapabilityCatalogSection(
-                    title: l.demoDshSkills,
-                    items: [
-                      for (final skill in catalog.skills)
-                        if (skill.id != demoStyleFilmSkillId) skill,
-                    ],
-                    emptyText: _capabilityStatusConfirmed
-                        ? l.demoDshNotConnected
-                        : l.demoDshUnconfirmed,
-                    sectionKey: 'skills',
-                    statusConfirmed: _capabilityStatusConfirmed,
-                    repository: widget.repository,
-                    session: session,
-                    memberId: session.activeMemberId,
-                    installedSkillsToggleable: true,
-                  ),
+                  _skillsCatalogSection(session, l, items: catalog.skills),
                   const SizedBox(height: 12),
                   _CapabilityCatalogSection(
                     title: l.demoDshMcp,
@@ -830,6 +806,40 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
         ),
       ),
     ],
+  );
+
+  Widget _skillsCatalogSection(
+    DemoSession session,
+    AppLocalizations l, {
+    required List<DemoRuntimeCapability> items,
+  }) => _CapabilityCatalogSection(
+    title: l.demoDshSkills,
+    items: [
+      for (final skill in items)
+        if (skill.id != demoStyleFilmSkillId) skill,
+    ],
+    emptyText: _capabilityStatusConfirmed
+        ? l.demoDshNotConnected
+        : l.demoDshUnconfirmed,
+    sectionKey: 'skills',
+    statusConfirmed: _capabilityStatusConfirmed,
+    leading: Column(
+      children: [
+        for (var i = 0; i < session.members.length; i++) ...[
+          _MemberStyleFilmCapability(
+            key: ValueKey('demo-member-style-film-${session.members[i]}'),
+            repository: widget.repository,
+            session: session,
+            memberId: session.members[i],
+          ),
+          if (i != session.members.length - 1) const Divider(height: 1),
+        ],
+      ],
+    ),
+    repository: widget.repository,
+    session: session,
+    memberId: session.activeMemberId,
+    installedSkillsToggleable: true,
   );
 
   void _showCapabilityError(BuildContext context, AppLocalizations l) {
@@ -1332,6 +1342,7 @@ class _CapabilityCatalogSection extends StatelessWidget {
     this.session,
     this.memberId,
     this.installedSkillsToggleable = false,
+    this.leading,
   });
 
   final String title;
@@ -1343,6 +1354,7 @@ class _CapabilityCatalogSection extends StatelessWidget {
   final DemoSession? session;
   final String? memberId;
   final bool installedSkillsToggleable;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1360,7 +1372,8 @@ class _CapabilityCatalogSection extends StatelessWidget {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
-        if (items.isEmpty)
+        if (leading != null) leading!,
+        if (items.isEmpty && leading == null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Text(

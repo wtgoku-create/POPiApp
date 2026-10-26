@@ -271,6 +271,13 @@ void main() {
       find.byKey(const ValueKey('demo-style-film-capability-popi')),
       findsOneWidget,
     );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('demo-dsh-skills')),
+        matching: find.byKey(const ValueKey('demo-style-film-capability-popi')),
+      ),
+      findsOneWidget,
+    );
 
     final settingsScroll = find
         .descendant(

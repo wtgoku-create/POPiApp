@@ -417,6 +417,14 @@ void main() {
     final toggle = find.byKey(
       const ValueKey('demo-style-film-capability-popi'),
     );
+    expect(toggle, findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('demo-dsh-skills')),
+        matching: toggle,
+      ),
+      findsOneWidget,
+    );
     expect(find.bySemanticsLabel(RegExp(r'制作风格短片.*POPi')), findsOneWidget);
     semantics.dispose();
     await tester.ensureVisible(toggle);
@@ -426,6 +434,27 @@ void main() {
       repository.session('inspiration').skillsFor('popi'),
       contains(demoStyleFilmSkillId),
     );
+
+    await tester.pumpWidget(
+      _app(DemoChatPage(repository: repository, sessionId: 'inspiration')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-style-film-style-chip')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('demo-composer-add-menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-add-style-film')), findsOneWidget);
+
+    await tester.pumpWidget(
+      _app(
+        DemoSettingsPage(
+          repository: repository,
+          sessionId: 'inspiration',
+          initialTab: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(toggle);
 
     repository.failNext = true;
     tester.widget<Switch>(toggle).onChanged?.call(false);
