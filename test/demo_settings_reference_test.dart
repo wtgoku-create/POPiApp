@@ -15,8 +15,9 @@ Future<DemoRepository> _pumpSettings(
   WidgetTester tester, {
   DemoRepository? repository,
   String sessionId = 'inspiration',
+  Size size = const Size(375, 812),
 }) async {
-  tester.view.physicalSize = const Size(375, 812);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -138,6 +139,76 @@ class _RefreshFailingCatalogRepository extends DemoRepository {
           available: true,
         ),
       ],
+    );
+  }
+}
+
+class _InstalledSkillRepository extends DemoRepository {
+  _InstalledSkillRepository(super.storage);
+
+  bool failNextSave = false;
+  final List<({String memberId, String skillId, bool enabled})> saves = [];
+
+  @override
+  bool get isHarness => true;
+
+  @override
+  Future<DemoCapabilityCatalog> loadCapabilityCatalog({
+    String? sessionId,
+  }) async => DemoCapabilityCatalog(
+    skills: [
+      const DemoRuntimeCapability(
+        id: demoStyleFilmSkillId,
+        name: '制作风格短片',
+        source: 'installed',
+        installed: true,
+        bound: true,
+        available: true,
+      ),
+      DemoRuntimeCapability(
+        id: demoSeedanceReferenceRemixSkillId,
+        name: '三案例仿写：先图后视频',
+        description: '生成三份配套提示词',
+        source: 'installed',
+        installed: true,
+        bound: true,
+        granted: session(sessionId ?? 'inspiration')
+            .skillsFor(session(sessionId ?? 'inspiration').activeMemberId)
+            .contains(demoSeedanceReferenceRemixSkillId),
+        available: true,
+      ),
+      DemoRuntimeCapability(
+        id: 'future-case-skill',
+        name: '未来安装能力',
+        description: '由服务端目录发现',
+        source: 'installed',
+        installed: true,
+        bound: true,
+        granted: session(sessionId ?? 'inspiration')
+            .skillsFor(session(sessionId ?? 'inspiration').activeMemberId)
+            .contains('future-case-skill'),
+        available: true,
+      ),
+    ],
+  );
+
+  @override
+  Future<void> setMemberSkillEnabled(
+    String sessionId, {
+    required String memberId,
+    required String skillId,
+    required bool enabled,
+  }) async {
+    saves.add((memberId: memberId, skillId: skillId, enabled: enabled));
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('save failed');
+    }
+    await super.setMemberSkillEnabled(
+      sessionId,
+      memberId: memberId,
+      skillId: skillId,
+      enabled: enabled,
     );
   }
 }
@@ -429,6 +500,212 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'future catalog Skill uses the generic toggle without app enums',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _InstalledSkillRepository(
+        PreferencesStorage(await SharedPreferences.getInstance()),
+      )..restore();
+      await _pumpSettings(
+        tester,
+        repository: repository,
+        size: const Size(390, 844),
+      );
+      await tester.tap(find.text('能力'));
+      await tester.pumpAndSettle();
+      await _showCapabilityCatalog(tester);
+      final toggle = find.byKey(
+        const ValueKey('demo-installed-skill-toggle-future-case-skill-popi'),
+      );
+      await tester.ensureVisible(toggle);
+      expect(toggle, findsOneWidget);
+      tester.widget<Switch>(toggle).onChanged?.call(true);
+      await tester.pumpAndSettle();
+      expect(repository.saves.single, (
+        memberId: 'popi',
+        skillId: 'future-case-skill',
+        enabled: true,
+      ));
+      expect(
+        repository.session('inspiration').skillsFor('popi'),
+        contains('future-case-skill'),
+      );
+      expect(
+        repository.session('inspiration').skillsFor('writer'),
+        isNot(contains('future-case-skill')),
+      );
+    },
+  );
+
+  testWidgets(
+    'installed Skill autosaves only for the active Bot and preserves other skills',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _InstalledSkillRepository(
+        PreferencesStorage(await SharedPreferences.getInstance()),
+      )..restore();
+      await repository.updateSession(
+        'inspiration',
+        (session) => session.copyWith(
+          activeMemberId: 'popi',
+          memberSkills: const {
+            'popi': [demoStyleFilmSkillId],
+            'writer': ['writer-existing-skill'],
+          },
+        ),
+      );
+      await _pumpSettings(
+        tester,
+        repository: repository,
+        size: const Size(390, 844),
+      );
+      await tester.tap(find.text('能力'));
+      await tester.pumpAndSettle();
+      await _showCapabilityCatalog(tester);
+
+      const toggleKey = ValueKey(
+        'demo-installed-skill-toggle-seedance-reference-remix-popi',
+      );
+      final toggle = find.byKey(toggleKey);
+      await tester.ensureVisible(toggle);
+      expect(toggle, findsOneWidget);
+      expect(find.text('三案例仿写：先图后视频'), findsOneWidget);
+      expect(find.text('生成三份配套提示词'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey(
+              'demo-installed-skill-seedance-reference-remix-popi',
+            ),
+          ),
+          matching: find.textContaining('适用于 Bot：POPi'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('demo-dsh-skills')),
+          matching: find.text('制作风格短片'),
+        ),
+        findsNothing,
+      );
+
+      tester.widget<Switch>(toggle).onChanged?.call(true);
+      await tester.pumpAndSettle();
+      expect(repository.saves.single, (
+        memberId: 'popi',
+        skillId: demoSeedanceReferenceRemixSkillId,
+        enabled: true,
+      ));
+      expect(
+        repository.session('inspiration').skillsFor('popi'),
+        containsAll([demoStyleFilmSkillId, demoSeedanceReferenceRemixSkillId]),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(
+            const ValueKey(
+              'demo-installed-skill-seedance-reference-remix-popi',
+            ),
+          ),
+          matching: find.textContaining('本会话已启用'),
+        ),
+        findsOneWidget,
+      );
+      expect(repository.session('inspiration').skillsFor('writer'), [
+        'writer-existing-skill',
+      ]);
+
+      tester.widget<Switch>(toggle).onChanged?.call(false);
+      await tester.pumpAndSettle();
+      expect(repository.saves.last, (
+        memberId: 'popi',
+        skillId: demoSeedanceReferenceRemixSkillId,
+        enabled: false,
+      ));
+      expect(repository.session('inspiration').skillsFor('popi'), [
+        demoStyleFilmSkillId,
+      ]);
+      expect(repository.session('inspiration').skillsFor('writer'), [
+        'writer-existing-skill',
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'failed installed Skill save keeps the draft but never reports it enabled',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _InstalledSkillRepository(
+        PreferencesStorage(await SharedPreferences.getInstance()),
+      )..restore();
+      repository.failNextSave = true;
+      await _pumpSettings(tester, repository: repository);
+      await tester.tap(find.text('能力'));
+      await tester.pumpAndSettle();
+      await _showCapabilityCatalog(tester);
+
+      final row = find.byKey(
+        const ValueKey('demo-installed-skill-seedance-reference-remix-popi'),
+      );
+      final toggle = find.byKey(
+        const ValueKey(
+          'demo-installed-skill-toggle-seedance-reference-remix-popi',
+        ),
+      );
+      await tester.ensureVisible(toggle);
+      tester.widget<Switch>(toggle).onChanged?.call(true);
+      await tester.pumpAndSettle();
+
+      expect(
+        repository.session('inspiration').skillsFor('popi'),
+        isNot(contains(demoSeedanceReferenceRemixSkillId)),
+      );
+      expect(tester.widget<Switch>(toggle).value, isTrue);
+      expect(
+        find.descendant(of: row, matching: find.textContaining('本会话未启用')),
+        findsOneWidget,
+      );
+      expect(find.text('Skill 设置未保存，已保留你的选择。'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      toastification.dismissAll(delayForAnimation: false);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  for (final size in const [Size(320, 720), Size(390, 844), Size(1180, 820)]) {
+    testWidgets(
+      'installed Skill remains accessible without overflow at ${size.width}px',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final repository = _InstalledSkillRepository(
+          PreferencesStorage(await SharedPreferences.getInstance()),
+        )..restore();
+        await _pumpSettings(tester, repository: repository, size: size);
+        await tester.tap(find.text('能力'));
+        await tester.pumpAndSettle();
+        await _showCapabilityCatalog(tester);
+        final toggle = find.byKey(
+          const ValueKey(
+            'demo-installed-skill-toggle-seedance-reference-remix-popi',
+          ),
+        );
+        await tester.ensureVisible(toggle);
+        final semantics = tester.ensureSemantics();
+        expect(
+          find.bySemanticsLabel(RegExp(r'三案例仿写：先图后视频.*POPi')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+        expect(tester.getSize(toggle).height, greaterThanOrEqualTo(44));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('offline catalog states that DSH bindings are not connected', (
     tester,

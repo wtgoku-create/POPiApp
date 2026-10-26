@@ -1994,5 +1994,14 @@
   "demoDocumentTextEmpty": "文档中没有可读取的文字",
   "demoDocumentOriginalAvailable": "原文件可下载",
   "demoDocumentLimitHint": "最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。",
-  "demoAttachmentParsing": "附件仍在解析，请稍候再发送"
+  "demoAttachmentParsing": "附件仍在解析，请稍候再发送",
+  "demoSkillBotContext": "适用于 Bot：{name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill 设置未保存，已保留你的选择。"
 }

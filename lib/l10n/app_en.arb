@@ -1994,5 +1994,14 @@
   "demoDocumentTextEmpty": "No readable text was found in this document",
   "demoDocumentOriginalAvailable": "Original file available to download",
   "demoDocumentLimitHint": "Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.",
-  "demoAttachmentParsing": "Attachments are still being parsed. Wait before sending."
+  "demoAttachmentParsing": "Attachments are still being parsed. Wait before sending.",
+  "demoSkillBotContext": "For Bot: {name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill settings were not saved. Your choice is preserved."
 }

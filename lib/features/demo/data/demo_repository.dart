@@ -143,6 +143,32 @@ class DemoRepository extends ChangeNotifier {
     );
   }
 
+  Future<void> setMemberSkillEnabled(
+    String sessionId, {
+    required String memberId,
+    required String skillId,
+    required bool enabled,
+  }) {
+    if (!isValidDemoSkillId(skillId) ||
+        !session(sessionId).members.contains(memberId)) {
+      throw ArgumentError('Unknown member skill binding');
+    }
+    return updateSession(sessionId, (current) {
+      if (!current.members.contains(memberId)) {
+        throw ArgumentError('The member is no longer in this session');
+      }
+      final selected = current.skillsFor(memberId).toSet();
+      if (enabled) {
+        selected.add(skillId);
+      } else {
+        selected.remove(skillId);
+      }
+      return current.copyWith(
+        memberSkills: {...current.memberSkills, memberId: selected.toList()},
+      );
+    });
+  }
+
   Future<DemoStyleFilmCatalog> loadStyleFilmCatalog({
     String? q,
     String? category,
@@ -689,7 +715,7 @@ class DemoRepository extends ChangeNotifier {
                 (assistant.avatarColor! < 0 ||
                     assistant.avatarColor! > 0xFFFFFFFF)) ||
             assistant.skillIds.toSet().length != assistant.skillIds.length ||
-            assistant.skillIds.any((id) => id != demoStyleFilmSkillId))) {
+            assistant.skillIds.any((id) => !isValidDemoSkillId(id)))) {
       throw ArgumentError.value(
         assistant,
         'assistant',

@@ -753,12 +753,19 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                   const SizedBox(height: 12),
                   _CapabilityCatalogSection(
                     title: l.demoDshSkills,
-                    items: catalog.skills,
+                    items: [
+                      for (final skill in catalog.skills)
+                        if (skill.id != demoStyleFilmSkillId) skill,
+                    ],
                     emptyText: _capabilityStatusConfirmed
                         ? l.demoDshNotConnected
                         : l.demoDshUnconfirmed,
                     sectionKey: 'skills',
                     statusConfirmed: _capabilityStatusConfirmed,
+                    repository: widget.repository,
+                    session: session,
+                    memberId: session.activeMemberId,
+                    installedSkillsToggleable: true,
                   ),
                   const SizedBox(height: 12),
                   _CapabilityCatalogSection(
@@ -1321,6 +1328,10 @@ class _CapabilityCatalogSection extends StatelessWidget {
     required this.emptyText,
     required this.sectionKey,
     required this.statusConfirmed,
+    this.repository,
+    this.session,
+    this.memberId,
+    this.installedSkillsToggleable = false,
   });
 
   final String title;
@@ -1328,6 +1339,10 @@ class _CapabilityCatalogSection extends StatelessWidget {
   final String emptyText;
   final String sectionKey;
   final bool statusConfirmed;
+  final DemoRepository? repository;
+  final DemoSession? session;
+  final String? memberId;
+  final bool installedSkillsToggleable;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1358,14 +1373,196 @@ class _CapabilityCatalogSection extends StatelessWidget {
           )
         else
           for (final item in items)
-            _RuntimeCapabilityRow(
-              item: item,
-              sectionKey: sectionKey,
-              statusConfirmed: statusConfirmed,
-            ),
+            if (installedSkillsToggleable &&
+                item.installed &&
+                item.bound &&
+                isValidDemoSkillId(item.id) &&
+                repository != null &&
+                session != null &&
+                memberId != null)
+              _InstalledSkillCapabilityRow(
+                key: ValueKey('demo-installed-skill-${item.id}-$memberId'),
+                item: item,
+                repository: repository!,
+                session: session!,
+                memberId: memberId!,
+                statusConfirmed: statusConfirmed,
+              )
+            else
+              _RuntimeCapabilityRow(
+                item: item,
+                sectionKey: sectionKey,
+                statusConfirmed: statusConfirmed,
+              ),
       ],
     ),
   );
+}
+
+class _InstalledSkillCapabilityRow extends StatefulWidget {
+  const _InstalledSkillCapabilityRow({
+    required this.item,
+    required this.repository,
+    required this.session,
+    required this.memberId,
+    required this.statusConfirmed,
+    super.key,
+  });
+
+  final DemoRuntimeCapability item;
+  final DemoRepository repository;
+  final DemoSession session;
+  final String memberId;
+  final bool statusConfirmed;
+
+  @override
+  State<_InstalledSkillCapabilityRow> createState() =>
+      _InstalledSkillCapabilityRowState();
+}
+
+class _InstalledSkillCapabilityRowState
+    extends State<_InstalledSkillCapabilityRow> {
+  late bool _draftEnabled = _effectiveEnabled;
+  bool _busy = false;
+
+  bool get _effectiveEnabled =>
+      widget.session.skillsFor(widget.memberId).contains(widget.item.id);
+
+  bool get _canToggle =>
+      widget.statusConfirmed &&
+      widget.repository.isHarness &&
+      widget.item.installed &&
+      widget.item.bound;
+
+  @override
+  void didUpdateWidget(covariant _InstalledSkillCapabilityRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_busy &&
+        (oldWidget.session.configRevision != widget.session.configRevision ||
+            oldWidget.memberId != widget.memberId)) {
+      _draftEnabled = _effectiveEnabled;
+    }
+  }
+
+  Future<void> _save(bool enabled) async {
+    if (_busy || !_canToggle) return;
+    setState(() {
+      _draftEnabled = enabled;
+      _busy = true;
+    });
+    try {
+      await widget.repository.setMemberSkillEnabled(
+        widget.session.id,
+        memberId: widget.memberId,
+        skillId: widget.item.id,
+        enabled: enabled,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.error(
+        context,
+        AppLocalizations.of(context)!.demoSkillSaveFailed,
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final memberName = demoSessionMemberName(
+      l,
+      widget.session,
+      widget.memberId,
+    );
+    final status = !widget.statusConfirmed
+        ? l.demoDshUnconfirmed
+        : !widget.item.installed || !widget.item.bound
+        ? l.demoDshNotConnected
+        : !_effectiveEnabled
+        ? l.demoDshNotGranted
+        : widget.item.available
+        ? l.demoEnabledHere
+        : '${l.demoEnabledHere} · ${l.demoDshUnavailable}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 64),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.item.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (widget.item.description.trim().isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.item.description,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.35,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 3),
+                  Text(
+                    '${l.demoSkillBotContext(memberName)} · $status',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _effectiveEnabled
+                          ? AppColors.success
+                          : AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.all(11),
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else
+              Semantics(
+                key: ValueKey(
+                  'demo-installed-skill-semantics-${widget.item.id}-${widget.memberId}',
+                ),
+                label:
+                    '${widget.item.name}, ${l.demoSkillBotContext(memberName)}',
+                toggled: _draftEnabled,
+                enabled: _canToggle,
+                onTap: _canToggle ? () => _save(!_draftEnabled) : null,
+                child: ExcludeSemantics(
+                  child: Switch.adaptive(
+                    key: ValueKey(
+                      'demo-installed-skill-toggle-${widget.item.id}-${widget.memberId}',
+                    ),
+                    value: _draftEnabled,
+                    onChanged: _canToggle ? _save : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _RuntimeCapabilityRow extends StatelessWidget {

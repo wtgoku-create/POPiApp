@@ -4553,4 +4553,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoAttachmentParsing =>
       'Attachments are still being parsed. Wait before sending.';
+
+  @override
+  String demoSkillBotContext(String name) {
+    return 'For Bot: $name';
+  }
+
+  @override
+  String get demoSkillSaveFailed =>
+      'Skill settings were not saved. Your choice is preserved.';
 }

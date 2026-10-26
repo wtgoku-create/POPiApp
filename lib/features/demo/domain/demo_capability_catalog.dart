@@ -1,5 +1,11 @@
 import 'package:flutter/foundation.dart';
 
+const demoSeedanceReferenceRemixSkillId = 'seedance-reference-remix';
+
+/// Identifiers are syntactically bounded; the runtime catalog owns authorization.
+bool isValidDemoSkillId(String id) =>
+    id.length <= 64 && RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(id);
+
 /// A binding advertised by DSH, separate from content-generation permissions.
 @immutable
 class DemoRuntimeCapability {
@@ -10,9 +16,10 @@ class DemoRuntimeCapability {
     this.source = '',
     this.available = false,
     this.bound = true,
+    bool? installed,
     this.granted = true,
     this.reasonUnavailable = '',
-  });
+  }) : installed = installed ?? bound;
 
   final String id;
   final String name;
@@ -20,6 +27,7 @@ class DemoRuntimeCapability {
   final String source;
   final bool available;
   final bool bound;
+  final bool installed;
   final bool granted;
   final String reasonUnavailable;
 
@@ -36,6 +44,11 @@ class DemoRuntimeCapability {
       bound:
           json['bound'] == true ||
           (json['bound'] == null && json['available'] == true),
+      installed: json['installed'] is bool
+          ? json['installed'] as bool
+          : json['source'] == 'installed'
+          ? true
+          : null,
       granted: json['granted'] != false,
       reasonUnavailable: json['reasonUnavailable']?.toString() ?? '',
     );

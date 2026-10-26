@@ -4342,4 +4342,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoAttachmentParsing => '附件仍在解析，请稍候再发送';
+
+  @override
+  String demoSkillBotContext(String name) {
+    return '适用于 Bot：$name';
+  }
+
+  @override
+  String get demoSkillSaveFailed => 'Skill 设置未保存，已保留你的选择。';
 }

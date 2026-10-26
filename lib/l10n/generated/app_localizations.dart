@@ -8356,6 +8356,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Attachments are still being parsed. Wait before sending.'**
   String get demoAttachmentParsing;
+
+  /// No description provided for @demoSkillBotContext.
+  ///
+  /// In en, this message translates to:
+  /// **'For Bot: {name}'**
+  String demoSkillBotContext(String name);
+
+  /// No description provided for @demoSkillSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill settings were not saved. Your choice is preserved.'**
+  String get demoSkillSaveFailed;
 }
 
 class _AppLocalizationsDelegate
