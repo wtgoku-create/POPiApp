@@ -66,12 +66,12 @@ class FixtureSessionRepository extends SessionRepository {
   @override
   Future<ConversationSession> create(
     String userId,
-    String title, {
+    String? title, {
     CancelToken? cancelToken,
   }) async {
     final session = ConversationSession(
       id: 'mock-new-${++_nextId}',
-      title: _validateTitle(title),
+      title: _validateTitle(title ?? '新会话'),
       updatedAt: DateTime.now(),
       createdAt: DateTime.now(),
     );
@@ -234,6 +234,7 @@ class FixtureSessionRepository extends SessionRepository {
   Future<void> retry(
     String userId,
     String runId, {
+    String? sessionId,
     CancelToken? cancelToken,
   }) async {}
   @override

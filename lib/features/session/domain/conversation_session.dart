@@ -27,6 +27,8 @@ class ConversationSession {
     this.archived = false,
     this.bindingStatus = 'pending',
     this.creatorV1 = false,
+    this.runtimeDirect = false,
+    this.assistantName = 'POPi',
   });
 
   final String id;
@@ -41,6 +43,8 @@ class ConversationSession {
   final bool archived;
   final String bindingStatus;
   final bool creatorV1;
+  final bool runtimeDirect;
+  final String assistantName;
 
   bool get isPinned => pinnedAt != null;
 
@@ -76,6 +80,8 @@ class ConversationSession {
       archived: latest.archived,
       bindingStatus: latest.bindingStatus,
       creatorV1: latest.creatorV1,
+      runtimeDirect: latest.runtimeDirect,
+      assistantName: latest.assistantName,
     );
   }
 
@@ -83,6 +89,8 @@ class ConversationSession {
     final id = json['id'];
     final title = json['title'];
     final revision = json['revision'];
+    final bot = json['defaultBot'];
+    final name = bot is Map ? bot['displayName'] : null;
     final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '');
     if (id is! String ||
         id.isEmpty ||
@@ -99,6 +107,8 @@ class ConversationSession {
       archived: json['archived'] == true,
       bindingStatus: json['bindingStatus'] as String? ?? 'pending',
       creatorV1: json['creatorV1'] == true,
+      runtimeDirect: json['runtimeDirect'] == true,
+      assistantName: name is String && name.trim().isNotEmpty ? name : 'POPi',
       updatedAt: updatedAt,
       createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       lastMessageAt: DateTime.tryParse(json['lastMessageAt']?.toString() ?? ''),

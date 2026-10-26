@@ -131,6 +131,7 @@ class FixtureIpGuideAgentApi extends NetworkAgentApi {
     required String clientRequestId,
     String? title,
     String? accountId,
+    String? entry,
     CancelToken? cancelToken,
   }) async {
     requests.add({

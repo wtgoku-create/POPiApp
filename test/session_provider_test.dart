@@ -371,7 +371,7 @@ class _PendingRepository extends FixtureSessionRepository {
   @override
   Future<ConversationSession> create(
     String userId,
-    String title, {
+    String? title, {
     CancelToken? cancelToken,
   }) {
     token = cancelToken;

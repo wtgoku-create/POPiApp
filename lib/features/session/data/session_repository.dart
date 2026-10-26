@@ -29,7 +29,7 @@ abstract class SessionRepository {
   });
   Future<ConversationSession> create(
     String userId,
-    String title, {
+    String? title, {
     CancelToken? cancelToken,
   });
   Future<ConversationSession> createFromContent(
@@ -66,7 +66,12 @@ abstract class SessionRepository {
     CancelToken? cancelToken,
   });
   Future<void> stop(String userId, String id, {CancelToken? cancelToken});
-  Future<void> retry(String userId, String runId, {CancelToken? cancelToken});
+  Future<void> retry(
+    String userId,
+    String runId, {
+    String? sessionId,
+    CancelToken? cancelToken,
+  });
   Future<String> upload(
     String userId,
     String name,
@@ -229,16 +234,16 @@ class ApiSessionRepository extends SessionRepository {
   @override
   Future<ConversationSession> create(
     String userId,
-    String title, {
+    String? title, {
     CancelToken? cancelToken,
   }) => _command(
     userId,
     'create',
-    {'title': _title(title)},
+    {if (title != null) 'title': _title(title)},
     (input) async => ConversationSession.fromJson(
       await agent.createSession(
         clientRequestId: input['clientRequestId'] as String,
-        title: input['title'] as String,
+        title: input['title'] as String?,
         cancelToken: cancelToken,
       ),
     ),
@@ -318,7 +323,10 @@ class ApiSessionRepository extends SessionRepository {
       cancelToken: cancelToken,
     );
     onConnected?.call();
-    yield* decodeConversationEvents(body.stream);
+    yield* decodeConversationEvents(
+      body.stream,
+      runtimeSessionId: agent.runtime.enabled(id) ? id : null,
+    );
   }
 
   @override
@@ -411,14 +419,16 @@ class ApiSessionRepository extends SessionRepository {
   Future<void> retry(
     String userId,
     String runId, {
+    String? sessionId,
     CancelToken? cancelToken,
   }) async {
     await _command(
       userId,
-      'retry:$runId',
+      sessionId == null ? 'retry:$runId' : 'retry:$sessionId:$runId',
       const {},
       (input) => agent.retryRun(
         runId,
+        sessionId: sessionId,
         clientRequestId: input['clientRequestId'] as String,
         cancelToken: cancelToken,
       ),
@@ -524,6 +534,23 @@ class ApiSessionRepository extends SessionRepository {
     Map<String, Object?> answer, {
     CancelToken? cancelToken,
   }) async {
+    if (agent.runtime.enabled(id)) {
+      await _command(
+        'session:$id',
+        'answer:${question.id}',
+        {'revision': question.revision, 'action': action, 'answer': answer},
+        (input) => agent.respondQuestion(
+          id,
+          question.id,
+          clientRequestId: input['clientRequestId'] as String,
+          revision: input['revision'] as int,
+          action: input['action'] as String,
+          answer: conversationMap(input['answer']),
+          cancelToken: cancelToken,
+        ),
+      );
+      return;
+    }
     await agent.respondQuestion(
       id,
       question.id,
@@ -558,6 +585,16 @@ class ApiSessionRepository extends SessionRepository {
     }
     if (!card.confirmationAvailable || !card.allowedActions.contains(action)) {
       throw StateError('Confirmation expired');
+    }
+    if (card.runtimeDirect) {
+      await _respondRuntimeConfirmation(
+        userId,
+        id,
+        card,
+        action,
+        cancelToken: cancelToken,
+      );
+      return;
     }
     if (action == 'confirm' && card.objectKind == 'generation') {
       if (card.roleImage != null) {
@@ -650,6 +687,81 @@ class ApiSessionRepository extends SessionRepository {
     await storage().remove(key);
     await storage().remove('$key.configuration');
     await storage().remove('$key.preferencesChanged');
+    await storage().remove('$key.runtime.confirm');
+    await storage().remove('$key.runtime.cancel');
+  }
+
+  /// Direct plans are configured and approved by Agent, without client-side
+  /// business authorization. Keep both commands and their exact plan version.
+  Future<void> _respondRuntimeConfirmation(
+    String userId,
+    String sessionId,
+    ConversationBlock card,
+    String action, {
+    ConversationGenerationSelection? selection,
+    CancelToken? cancelToken,
+  }) async {
+    final key = '${_selectionKey(userId, sessionId, card.id)}.runtime.$action';
+    final saved = storage().getString(key);
+    final command = saved == null
+        ? <String, Object?>{
+            'configurationId': const Uuid().v4(),
+            'responseId': const Uuid().v4(),
+            if (selection != null) 'selection': selection.toJson(),
+          }
+        : conversationMap(jsonDecode(saved));
+    await storage().setString(key, jsonEncode(command));
+    try {
+      var current = command['current'] == null
+          ? card.data
+          : conversationMap(command['current']);
+      if (command['current'] == null &&
+          action == 'confirm' &&
+          card.objectKind == 'generation' &&
+          command['selection'] != null) {
+        final fixed = ConversationGenerationSelection.fromJson(
+          conversationMap(command['selection']),
+        );
+        final configured = await agent.configureRoleImage(sessionId, card.id, {
+          'clientRequestId': command['configurationId'],
+          ...fixed.config.toJson(),
+          'referenceMediaId': fixed.referenceMediaId,
+          'roleTemplateId': fixed.roleTemplateId,
+          if (card.roleImage != null) ...fixed.roleImageConfiguration,
+        }, cancelToken: cancelToken);
+        current = conversationMap(configured['confirmation']);
+      }
+      if (current['id'] != card.id ||
+          current['revision'] is! int ||
+          (current['revision'] as int) < 1) {
+        throw const FormatException('Invalid Runtime confirmation');
+      }
+      command['current'] = current;
+      await storage().setString(key, jsonEncode(command));
+      final fixedSelection = command['selection'] == null
+          ? null
+          : ConversationGenerationSelection.fromJson(
+              conversationMap(command['selection']),
+            );
+      await agent.respondConfirmation(
+        sessionId,
+        card.id,
+        clientRequestId: command['responseId'] as String,
+        revision: current['revision'] as int,
+        action: action,
+        planVersionId: current['planVersionId'] as String?,
+        planHash: current['planHash'] as String?,
+        mediaPreferencesRevision: fixedSelection?.mediaPreferencesRevision,
+        cancelToken: cancelToken,
+      );
+      await _clearGenerationRecovery(userId, sessionId, card.id);
+    } on AgentApiException catch (error) {
+      final status = error.statusCode ?? 0;
+      if (status >= 400 && status < 500 && !error.retryable) {
+        await _clearGenerationRecovery(userId, sessionId, card.id);
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -772,6 +884,18 @@ class ApiSessionRepository extends SessionRepository {
         : ConversationGenerationSelection.fromJson(
             conversationMap(jsonDecode(saved)),
           );
+    if (card.runtimeDirect) {
+      await storage().setString(key, jsonEncode(fixed.toJson()));
+      await _respondRuntimeConfirmation(
+        userId,
+        sessionId,
+        card,
+        'confirm',
+        selection: fixed,
+        cancelToken: cancelToken,
+      );
+      return;
+    }
     // 制作模式属于已准备的方案，不能被会话偏好覆盖或清除。
     final generationMode = conversationMap(
       card.planItems.firstOrNull?['params'],

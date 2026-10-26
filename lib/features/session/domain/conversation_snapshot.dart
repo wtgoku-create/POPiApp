@@ -70,6 +70,7 @@ class ConversationBlock {
   }
 
   String get objectKind => data['kind'] as String? ?? '';
+  bool get runtimeDirect => data['runtimeDirect'] == true;
   bool get isHomePlan => kind == 'plan' && data['homePlan'] is Map;
   Map<String, Object?>? get reference =>
       data['ref'] is Map ? conversationMap(data['ref']) : null;
@@ -183,7 +184,8 @@ class ConversationBlock {
       ((data['allowedActions'] as List?) ?? []).whereType<String>().toList();
   bool get confirmationAvailable {
     final expiry = DateTime.tryParse(data['expiresAt']?.toString() ?? '');
-    return ['ready', 'submitting', 'failed'].contains(status) &&
+    return !(runtimeDirect && ['approved', 'submitting'].contains(status)) &&
+        ['ready', 'submitting', 'failed'].contains(status) &&
         (expiry == null || expiry.isAfter(DateTime.now()));
   }
 
