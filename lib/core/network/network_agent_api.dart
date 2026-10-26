@@ -3,12 +3,22 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'agent_api_exception.dart';
+import 'network_agent_runtime.dart';
 
 /// HTTP contracts for the independently configured /api_agent service.
 class NetworkAgentApi {
-  const NetworkAgentApi(this.dio);
+  NetworkAgentApi(this.dio, {Dio? runtimeDio})
+    : _runtimeDio = runtimeDio ?? dio;
 
   final Dio dio;
+  final Dio _runtimeDio;
+  bool _closed = false;
+  late final runtime = NetworkAgentRuntime(_runtimeDio);
+
+  void close() {
+    _closed = true;
+    runtime.close();
+  }
 
   Future<Map<String, dynamic>> enterHome(
     Map<String, Object?> input, {
@@ -91,6 +101,7 @@ class NetworkAgentApi {
     required String clientRequestId,
     String? title,
     String? accountId,
+    String? entry,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions',
@@ -99,13 +110,14 @@ class NetworkAgentApi {
       'clientRequestId': clientRequestId,
       if (title != null) 'title': title,
       if (accountId != null) 'accountId': accountId,
+      if (entry != null) 'entry': entry,
     },
     cancelToken: cancelToken,
   );
 
   Future<Map<String, dynamic>> createProjectSession(
     String projectId,
-    String title, {
+    String? title, {
     required String clientRequestId,
     CancelToken? cancelToken,
   }) => createSession(
@@ -167,10 +179,18 @@ class NetworkAgentApi {
   Future<Map<String, dynamic>> sessionSnapshot(
     String id, {
     CancelToken? cancelToken,
-  }) => _request(
-    '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/snapshot',
-    cancelToken: cancelToken,
-  );
+  }) async {
+    if (runtime.enabled(id)) {
+      return runtime.request(id, 'snapshot', cancelToken: cancelToken);
+    }
+    final value = await _request(
+      '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/snapshot',
+      cancelToken: cancelToken,
+    );
+    return runtime.enabled(id)
+        ? runtime.request(id, 'snapshot', cancelToken: cancelToken)
+        : value;
+  }
 
   /// Optional request IDs allow retries to retain their complete input.
   Future<Map<String, dynamic>> updateSession(
@@ -237,8 +257,9 @@ class NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     CancelToken? cancelToken,
-  }) => _request(
-    '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/messages',
+  }) => _sessionRequest(
+    id,
+    'messages',
     method: 'POST',
     data: {
       'clientRequestId': clientRequestId,
@@ -253,8 +274,9 @@ class NetworkAgentApi {
     String id, {
     required String clientRequestId,
     CancelToken? cancelToken,
-  }) => _request(
-    '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/stop',
+  }) => _sessionRequest(
+    id,
+    'stop',
     method: 'POST',
     data: {'clientRequestId': clientRequestId},
     cancelToken: cancelToken,
@@ -263,27 +285,40 @@ class NetworkAgentApi {
   Future<Map<String, dynamic>> retryRun(
     String runId, {
     required String clientRequestId,
+    String? sessionId,
     CancelToken? cancelToken,
-  }) => _request(
-    '/api_agent/v2/runs/${Uri.encodeComponent(runId)}/retry',
-    method: 'POST',
-    data: {'clientRequestId': clientRequestId},
-    cancelToken: cancelToken,
-  );
+  }) => sessionId != null && runtime.enabled(sessionId)
+      ? runtime.request(
+          sessionId,
+          'executions/${Uri.encodeComponent(runId)}/retry',
+          method: 'POST',
+          data: {'clientRequestId': clientRequestId},
+          cancelToken: cancelToken,
+        )
+      : _request(
+          '/api_agent/v2/runs/${Uri.encodeComponent(runId)}/retry',
+          method: 'POST',
+          data: {'clientRequestId': clientRequestId},
+          cancelToken: cancelToken,
+        );
 
   Future<Map<String, dynamic>> respondQuestion(
     String sessionId,
     String questionId, {
     required int revision,
     required String action,
+    String? clientRequestId,
     Map<String, Object?>? answer,
     CancelToken? cancelToken,
-  }) => _request(
-    '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/questions/${Uri.encodeComponent(questionId)}/respond',
+  }) => _sessionRequest(
+    sessionId,
+    'questions/${Uri.encodeComponent(questionId)}/respond',
+    runtimeSuffix: 'interactions/${Uri.encodeComponent(questionId)}/respond',
     method: 'POST',
     data: {
       'revision': revision,
       'action': action,
+      if (clientRequestId != null) 'clientRequestId': clientRequestId,
       if (answer != null) 'answer': answer,
     },
     cancelToken: cancelToken,
@@ -296,6 +331,9 @@ class NetworkAgentApi {
     required int revision,
     required String action,
     Map<String, Object?>? generationConfig,
+    String? planVersionId,
+    String? planHash,
+    int? mediaPreferencesRevision,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/confirmations/${Uri.encodeComponent(confirmationId)}/respond',
@@ -305,6 +343,10 @@ class NetworkAgentApi {
       'revision': revision,
       'action': action,
       if (generationConfig != null) 'generationConfig': generationConfig,
+      if (planVersionId != null) 'planVersionId': planVersionId,
+      if (planHash != null) 'planHash': planHash,
+      if (mediaPreferencesRevision != null)
+        'mediaPreferencesRevision': mediaPreferencesRevision,
     },
     cancelToken: cancelToken,
   );
@@ -401,6 +443,8 @@ class NetworkAgentApi {
     String? lastEventId,
     required CancelToken cancelToken,
   }) async {
+    if (_closed) throw StateError('Agent transport disposed');
+    if (runtime.enabled(id)) return runtime.events(id, cancelToken);
     try {
       final response = await dio.get<ResponseBody>(
         '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/events',
@@ -441,6 +485,28 @@ class NetworkAgentApi {
     }
   }
 
+  Future<Map<String, dynamic>> _sessionRequest(
+    String id,
+    String suffix, {
+    String? runtimeSuffix,
+    String method = 'GET',
+    Map<String, Object?>? data,
+    CancelToken? cancelToken,
+  }) => runtime.enabled(id)
+      ? runtime.request(
+          id,
+          runtimeSuffix ?? suffix,
+          method: method,
+          data: data,
+          cancelToken: cancelToken,
+        )
+      : _request(
+          '/api_agent/v2/sessions/${Uri.encodeComponent(id)}/$suffix',
+          method: method,
+          data: data,
+          cancelToken: cancelToken,
+        );
+
   Future<Map<String, dynamic>> _request(
     String path, {
     String method = 'GET',
@@ -450,6 +516,7 @@ class NetworkAgentApi {
     int? expectedStatusCode,
     CancelToken? cancelToken,
   }) async {
+    if (_closed) throw StateError('Agent transport disposed');
     try {
       final response = await dio.request<Object?>(
         path,
@@ -470,6 +537,7 @@ class NetworkAgentApi {
           retryable: true,
         );
       }
+      runtime.remember(body);
       return body;
     } on DioException catch (error) {
       // Preserve cancellation and transport failures for the caller's lifecycle.

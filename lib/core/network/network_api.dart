@@ -91,19 +91,23 @@ class NetworkApi {
     int pageSize = 100,
     CancelToken? cancelToken,
   }) async {
-    try {
-      final response = await dio.get<Object?>(
-        '/api_client/agent/v2/sessions/${Uri.encodeComponent(sessionId)}/text-artifacts',
-        queryParameters: {'page': page, 'pageSize': pageSize},
-        cancelToken: cancelToken,
-      );
-      final data = _workBody(response.data)['data'];
-      if (data is! Map) throw const ApiException();
-      return Map<String, Object?>.from(data);
-    } on DioException catch (error) {
-      if (error.response == null || CancelToken.isCancel(error)) rethrow;
-      throw AgentApiException.fromDioException(error);
-    }
+    final result = await sessionArtifactsPage(
+      sessionId,
+      page: page,
+      pageSize: pageSize,
+      category: 'text',
+      cancelToken: cancelToken,
+    );
+    final list = result['list'];
+    if (list is! List) throw const ApiException();
+    return {
+      ...result,
+      'list': [
+        for (final item in list)
+          if (item is Map && item['category'] == 'text')
+            Map<String, Object?>.from(item['text'] as Map),
+      ],
+    };
   }
 
   Future<Map<String, Object?>> sessionArtifactsPage(
@@ -111,6 +115,7 @@ class NetworkApi {
     int page = 1,
     int pageSize = 20,
     String keyword = '',
+    String? category,
     CancelToken? cancelToken,
   }) async {
     try {
@@ -120,6 +125,7 @@ class NetworkApi {
           'page': page,
           'pageSize': pageSize,
           if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+          if (category != null) 'category': category,
         },
         cancelToken: cancelToken,
       );

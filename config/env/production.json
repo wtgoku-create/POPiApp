@@ -5,6 +5,7 @@
   "TEACHING_CENTER_URL": "https://www.popi.art/teaching",
   "TEACHING_READER_URL": "https://www.popi.art/teaching/reader",
   "AGENT_API_BASE_URL": "https://www.popi.art",
+  "RUNTIME_API_BASE_URL": "https://www.popi.art",
   "AGENT_API_ORIGIN": "",
   "API_ENABLE_LOGGING": false,
   "WECHAT_APP_ID": "wx0d9c23195606fc80",

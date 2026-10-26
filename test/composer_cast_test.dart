@@ -307,7 +307,7 @@ class _CastRepository extends FixtureSessionRepository {
   @override
   Future<ConversationSession> create(
     String userId,
-    String title, {
+    String? title, {
     CancelToken? cancelToken,
   }) {
     creates++;

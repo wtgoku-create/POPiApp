@@ -11,13 +11,20 @@ import 'network_provider.dart';
 import 'storage_provider.dart';
 import 'user_provider.dart';
 
-final sessionRepositoryProvider = Provider<SessionRepository>(
-  (ref) => ApiSessionRepository(
-    NetworkAgentApi(ref.watch(agentDioProvider)),
+final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
+  // Session routing metadata belongs to the signed-in account.
+  ref.watch(userProvider.select((user) => user?.id));
+  final agent = NetworkAgentApi(
+    ref.watch(agentDioProvider),
+    runtimeDio: ref.watch(runtimeDioProvider),
+  );
+  ref.onDispose(agent.close);
+  return ApiSessionRepository(
+    agent,
     NetworkApi(ref.watch(dioProvider)),
     () => ref.read(preferencesStorageProvider),
-  ),
-);
+  );
+});
 
 final sessionsProvider =
     AsyncNotifierProvider<SessionsController, List<ConversationSession>>(
@@ -79,7 +86,7 @@ class SessionsController extends AsyncNotifier<List<ConversationSession>> {
     return _acceptPage(result, append: false);
   }
 
-  Future<ConversationSession?> create(String title) => _mutate(
+  Future<ConversationSession?> create([String? title]) => _mutate(
     (repository, userId, token) =>
         repository.create(userId, title, cancelToken: token),
   );

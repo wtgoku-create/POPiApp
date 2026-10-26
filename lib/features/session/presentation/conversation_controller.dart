@@ -130,10 +130,14 @@ class ConversationController extends ChangeNotifier {
         )) {
           if (!current()) return;
           snapshot = applyConversationEvent(snapshot!, event);
-          if (event.type.startsWith('run.')) _awaitingRun = false;
+          if (event.type.startsWith('run.') ||
+              event.type == 'runtime.conversation') {
+            _awaitingRun = false;
+          }
           if (event.payload.containsKey('lastMessageAt') ||
               event.type == 'session.updated' ||
-              event.type == 'session.bound') {
+              event.type == 'session.bound' ||
+              event.type == 'runtime.conversation') {
             onSessionChanged?.call(snapshot!.session);
           }
           attempts = 0;
@@ -200,7 +204,7 @@ class ConversationController extends ChangeNotifier {
           if (sessionId == null) {
             final session = await repository.create(
               userId,
-              newTitle,
+              null,
               cancelToken: token,
             );
             if (token.isCancelled || _disposed) return;
@@ -274,7 +278,12 @@ class ConversationController extends ChangeNotifier {
   Future<bool> retry(String runId) => running
       ? Future.value(false)
       : act(
-          (token) => repository.retry(userId, runId, cancelToken: token),
+          (token) => repository.retry(
+            userId,
+            runId,
+            sessionId: sessionId,
+            cancelToken: token,
+          ),
           refreshAfter: true,
         );
   Future<bool> answer(

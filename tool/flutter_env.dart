@@ -1,6 +1,26 @@
 import 'dart:convert';
 import 'dart:io';
 
+/// Local files override public defaults without duplicating native settings.
+Future<Map<String, dynamic>> loadEnvironmentConfig(File file) async {
+  Future<Map<String, dynamic>> read(File source) async {
+    final value = jsonDecode(await source.readAsString());
+    if (value is! Map<String, dynamic>) {
+      throw FormatException('${source.path} must contain a JSON object');
+    }
+    return value;
+  }
+
+  if (file.path.endsWith('.local.json')) {
+    final base = File(
+      file.path.replaceFirst(RegExp(r'\.local\.json$'), '.json'),
+    );
+    return {if (await base.exists()) ...await read(base), ...await read(file)};
+  }
+  final local = File(file.path.replaceFirst(RegExp(r'\.json$'), '.local.json'));
+  return {...await read(file), if (await local.exists()) ...await read(local)};
+}
+
 Future<void> main(List<String> args) async {
   if (args.length < 2) {
     stderr.writeln(
@@ -26,8 +46,7 @@ Future<void> main(List<String> args) async {
           ? args.first
           : '${root.path}/config/env/${args.first}.json',
     ).absolute;
-    final config =
-        jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+    final config = await loadEnvironmentConfig(file);
     const requiredKeys = [
       'APP_ENV',
       'API_BASE_URL',
@@ -45,9 +64,18 @@ Future<void> main(List<String> args) async {
     if (config['API_ENABLE_LOGGING'] is! bool) {
       throw const FormatException('API_ENABLE_LOGGING must be a boolean');
     }
+    config.putIfAbsent(
+      'RUNTIME_API_BASE_URL',
+      () => config['AGENT_API_BASE_URL'],
+    );
+    if (config['RUNTIME_API_BASE_URL'] is! String ||
+        (config['RUNTIME_API_BASE_URL'] as String).trim().isEmpty) {
+      throw const FormatException('Missing or invalid RUNTIME_API_BASE_URL');
+    }
     for (final key in [
       'API_BASE_URL',
       'AGENT_API_BASE_URL',
+      'RUNTIME_API_BASE_URL',
       'WECHAT_UNIVERSAL_LINK',
       'USER_AGREEMENT_URL',
       'PRIVACY_POLICY_URL',
@@ -89,8 +117,7 @@ Future<void> main(List<String> args) async {
       throw const FormatException('Invalid DOUYIN_CLIENT_KEY');
     }
     final douyinLink = Uri.parse(
-      config['DOUYIN_UNIVERSAL_LINK'] as String? ??
-          '${link.origin}/Douyin',
+      config['DOUYIN_UNIVERSAL_LINK'] as String? ?? '${link.origin}/Douyin',
     );
     if (douyinLink.scheme != 'https' ||
         !RegExp(r'^[a-zA-Z0-9.-]+$').hasMatch(douyinLink.host)) {
@@ -111,13 +138,24 @@ Future<void> main(List<String> args) async {
     );
     stdout.writeln('Environment: ${config['APP_ENV']} (${file.path})');
     if (args[1] == 'prepare') return;
-    final process = await Process.start(
-      'flutter',
-      [args[1], ...args.skip(2), '--dart-define-from-file=${file.path}'],
-      workingDirectory: root.path,
-      mode: ProcessStartMode.inheritStdio,
-    );
-    exitCode = await process.exitCode;
+    final mergedDirectory = await Directory.systemTemp.createTemp('popi-env-');
+    try {
+      final mergedFile = File('${mergedDirectory.path}/environment.json');
+      await mergedFile.writeAsString(jsonEncode(config));
+      final process = await Process.start(
+        'flutter',
+        [
+          args[1],
+          ...args.skip(2),
+          '--dart-define-from-file=${mergedFile.path}',
+        ],
+        workingDirectory: root.path,
+        mode: ProcessStartMode.inheritStdio,
+      );
+      exitCode = await process.exitCode;
+    } finally {
+      await mergedDirectory.delete(recursive: true);
+    }
   } catch (error) {
     stderr.writeln('Environment configuration failed: $error');
     exitCode = 1;

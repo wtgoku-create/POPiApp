@@ -54,16 +54,28 @@ lib/
 `https://wwwtest.popi.art`，生产环境为 `https://www.popi.art`。
 
 `/api_agent` 接口通过 `agentDioProvider` 和 `NetworkAgentApi` 调用，使用独立的
-服务地址和 Origin，并复用 Token 鉴权。开发环境当前对齐 Web 的本地配置：
-`http://192.168.77.249:3100`；原生 App 默认不发送 Origin，Web 联调需要时可以配置
+服务地址和 Origin，并复用 Token 鉴权。Go 和 PI Host 默认共用测试服或生产域名，
+本地调试时可分别指定服务地址；原生 App 默认不发送 Origin，需要时可以配置
 后台允许的 Origin。地址变更时修改环境 JSON。Agent 成功响应直接返回 JSON，错误保留 code、retryable、requestId
 和 current 等字段。
 
 会话契约按 `popiart-agent-server/src/studio/http/routes.ts` 核对：v2 使用
 `page/pageSize` 与 `list/pageInfo`，支持服务端置顶及不带项目过滤的会话列表。
-改名和归档均使用带 `expectedRevision` 的 PATCH；重试应保留原请求号和完整输入。
+改名使用 PATCH，归档使用 DELETE；重试保留原请求号和完整输入。
 消息提交返回运行 ID，事件流通过 `openSessionEvents` 获取原始 SSE 字节，并由数据层
 解析。缺省不发送 Origin，显式配置的 Origin 必须在后台 `PUBLIC_ORIGIN` 白名单中。
+
+已同步 Web `feature/agent_bot` 至 `f966a8c` 的接口变更：服务端标记
+`runtimeDirect: true` 的会话通过固定 `/runtime/v2/sessions/:id/` 路由调用快照、消息、
+停止、问答及执行重试接口，使用 `RUNTIME_API_BASE_URL`，复用可选 Origin 和登录 Bearer Token，
+不再请求 `runtime-connection` 或获取短期令牌。网关将 `/runtime` 转发到 PI Host、
+`/api_agent` 转发到 Go；移动端无需服务端下发运行地址。Runtime SSE 的 `conversation`
+事件携带完整快照，允许游标跳号；普通会话继续使用原来的增量 SSE。
+
+直连生成方案仍通过 Agent 的 `configuration`、`respond` 接口配置和确认，携带
+`revision`、`planVersionId`、`planHash` 及媒体偏好版本，不再由客户端另行调用业务授权。
+文本产物通过统一 `/api_client/agent/v2/sessions/:id/artifacts?category=text` 分页读取；
+未命名会话省略 `title`，角色入口可传 `entry: role`，显式名称继续保留。
 
 ## 环境配置
 
@@ -73,9 +85,10 @@ Dart 代码只通过 `lib/core/config/app_config.dart` 读取配置。
 | 配置项 | 用途 |
 | --- | --- |
 | `APP_ENV` | 环境名称 |
-| `API_BASE_URL` | 后端根地址，接口路径自身包含 `/api_client` |
-| `AGENT_API_BASE_URL` | Agent 独立服务根地址，接口路径自身包含 `/api_agent` |
-| `AGENT_API_ORIGIN` | 可选 Origin，原生 App 留空；配置值必须在后台白名单中 |
+| `API_BASE_URL` | Go 业务接口根地址，接口路径自身包含 `/api_client` |
+| `AGENT_API_BASE_URL` | Go 会话接口根地址，接口路径自身包含 `/api_agent` |
+| `RUNTIME_API_BASE_URL` | PI Host 根地址，接口路径自身包含 `/runtime`；未配置时跟随 `AGENT_API_BASE_URL` |
+| `AGENT_API_ORIGIN` | Go 会话和 PI Host 共用的可选 Origin，原生 App 可留空；配置值必须在两端白名单中 |
 | `API_ENABLE_LOGGING` | Debug 模式网络日志开关 |
 | `WECHAT_APP_ID` | 微信开放平台 App ID |
 | `WECHAT_UNIVERSAL_LINK` | 微信回调 Universal Link，默认 `https://app.popi.art/WeChat` |
@@ -99,7 +112,26 @@ dart run tool/flutter_env.dart development test
 dart run tool/flutter_env.dart config/env/development.local.json run
 ```
 
-脚本将 JSON 传给 Flutter 原生 `--dart-define-from-file`，并自动生成
+本地调试对齐 Web 的两套代理目标：`API_BASE_URL`、`AGENT_API_BASE_URL` 对应
+Web 的 `DEV_API_TARGET`（Go），`RUNTIME_API_BASE_URL` 对应 `DEV_AGENT_TARGET`
+（PI Host），`AGENT_API_ORIGIN` 对应 `DEV_WEB_ORIGIN`。在
+`config/env/development.local.json` 中仅覆盖需要变更的字段，例如：
+
+```json
+{
+  "API_BASE_URL": "http://192.168.1.100:8080",
+  "AGENT_API_BASE_URL": "http://192.168.1.100:8080",
+  "RUNTIME_API_BASE_URL": "http://192.168.1.100:7801",
+  "AGENT_API_ORIGIN": "http://localhost:5195"
+}
+```
+
+`development` 命令会自动合并同目录的 `development.local.json`；显式传入
+`.local.json` 时也会继承同名公共 JSON，其余设置无需复制。以上 IP 是示例，真机应使用
+手机可访问的电脑局域网地址；`127.0.0.1` 指向设备自身，Android 模拟器访问宿主机
+可用 `10.0.2.2`。默认环境继续使用统一域名，无需本地反向代理。
+
+脚本合并配置后传给 Flutter 原生 `--dart-define-from-file`，并自动生成
 `ios/Flutter/Environment.xcconfig`，同步微信 URL Scheme 和 Associated Domains。
 新域名仍需在微信开放平台和域名服务器配置对应的 Universal Link/AASA。
 支付宝插件的 iOS Universal Link 在 `pubspec.yaml` 的 `tobias.ios.universal_link`
