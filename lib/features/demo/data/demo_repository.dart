@@ -1540,9 +1540,7 @@ class DemoRepository extends ChangeNotifier {
       _map(response['session']),
       fallback: fallback,
       messages: messages,
-      mediaJobs: _mapList(
-        response['mediaJobs'],
-      ).map(DemoMediaJob.fromJson).toList(),
+      mediaJobs: _mediaJobsFromSnapshot(response),
       filmJobs: _mapList(response['filmJobs']).map(_filmJobFromRecord).toList(),
       lastSeq: _int(response['lastSeq'], fallback: fallback?.lastSeq ?? 0),
     );
@@ -1777,9 +1775,7 @@ class DemoRepository extends ChangeNotifier {
         messages: _mapList(
           response['messages'],
         ).map(_messageFromRecord).toList(),
-        mediaJobs: _mapList(
-          response['mediaJobs'],
-        ).map(DemoMediaJob.fromJson).toList(),
+        mediaJobs: _mediaJobsFromSnapshot(response),
         filmJobs: _mapList(
           response['filmJobs'],
         ).map(_filmJobFromRecord).toList(),
@@ -1787,6 +1783,38 @@ class DemoRepository extends ChangeNotifier {
       );
     }
   }
+
+  /// Projects deterministic background edits into the existing media-job UI.
+  List<DemoMediaJob> _mediaJobsFromSnapshot(Map<String, dynamic> response) => [
+    ..._mapList(response['mediaJobs']).map(DemoMediaJob.fromJson),
+    ..._mapList(response['videoEditJobs']).map((record) {
+      final editState = record['state']?.toString() ?? '';
+      final state = switch (editState) {
+        'rendering' => 'running',
+        'validating' => 'processing',
+        'cancel_requested' => 'processing',
+        _ => editState,
+      };
+      final ingestionState = switch (editState) {
+        'ingesting' => 'ingesting',
+        'completed' => 'completed',
+        'failed' => 'failed',
+        _ => '',
+      };
+      return DemoMediaJob.fromJson({
+        'jobId': record['jobId'],
+        'state': state,
+        'operation': 'video-edit',
+        'model': 'ffmpeg',
+        'runId': record['runId'],
+        'memberId': record['memberId'],
+        'configRevision': record['configRevision'],
+        'assetIds': record['assetIds'],
+        'ingestionState': ingestionState,
+        'error': record['error'],
+      });
+    }),
+  ];
 
   DemoMessage _messageFromRecord(
     Map<String, Object?> message, {
