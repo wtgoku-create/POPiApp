@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
@@ -23,7 +24,30 @@ class DemoHomePage extends StatefulWidget {
 
 class _DemoHomePageState extends State<DemoHomePage> {
   int _tab = 0;
+  bool _bottomVisible = true;
   String _query = '';
+
+  bool _onScroll(Notification notification) {
+    if (notification is ScrollMetricsNotification &&
+        notification.depth == 0 &&
+        notification.metrics.axis == Axis.vertical &&
+        notification.metrics.maxScrollExtent <=
+            notification.metrics.minScrollExtent) {
+      _showBottom(true);
+    } else if (notification is UserScrollNotification &&
+        notification.depth == 0 &&
+        notification.metrics.axis == Axis.vertical &&
+        notification.direction != ScrollDirection.idle) {
+      _showBottom(notification.direction == ScrollDirection.forward);
+    }
+    return false;
+  }
+
+  void _showBottom(bool visible) {
+    if (visible != _bottomVisible) {
+      setState(() => _bottomVisible = visible);
+    }
+  }
 
   void _open(DemoSession s) {
     Navigator.of(context).push(
@@ -41,6 +65,7 @@ class _DemoHomePageState extends State<DemoHomePage> {
     final l = AppLocalizations.of(context)!;
     return DemoScaffold(
       floatingBottom: true,
+      floatingBottomVisible: _bottomVisible,
       title: Text(_tab == 0 ? l.demoConversations : l.demoAssets),
       leading: IconButton(
         tooltip: l.demoProfile,
@@ -117,247 +142,261 @@ class _DemoHomePageState extends State<DemoHomePage> {
           ),
         ),
       ),
-      child: IndexedStack(
-        index: _tab,
-        children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
-                child: DemoSearch(
-                  hint: l.demoSearchHistory,
-                  onChanged: (q) => setState(() => _query = q),
+      child: NotificationListener<Notification>(
+        onNotification: _onScroll,
+        child: IndexedStack(
+          index: _tab,
+          children: [
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                  child: DemoSearch(
+                    hint: l.demoSearchHistory,
+                    onChanged: (q) => setState(() {
+                      _query = q;
+                      _bottomVisible = true;
+                    }),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: widget.repository,
-                  builder: (context, _) {
-                    final sessions = widget.repository.sessions
-                        .where(
-                          (s) =>
-                              '${s.title} ${s.messages.lastOrNull?.text ?? ''}'
-                                  .toLowerCase()
-                                  .contains(_query.trim().toLowerCase()),
-                        )
-                        .toList();
-                    if (sessions.isEmpty) {
-                      return Center(
-                        child: Text(
-                          _query.isEmpty
-                              ? l.demoEmptyConversations
-                              : l.demoNoResults,
-                        ),
-                      );
-                    }
-                    return ListView.separated(
-                      key: const PageStorageKey('demo-conversations'),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
-                      itemCount: sessions.length,
-                      itemBuilder: (context, index) {
-                        final s = sessions[index];
-                        return AppContextMenu(
-                          key: ValueKey(s.id),
-                          label: s.title,
-                          entries: [
-                            AppMenuItem(
-                              label: l.renameProjectItem,
-                              icon: const Icon(Icons.edit_outlined),
-                              onSelected: () => demoEditText(
-                                context,
-                                title: l.demoRename,
-                                label: l.demoSessionName,
-                                value: s.title,
-                                onSave: (title) =>
-                                    widget.repository.updateSession(
-                                      s.id,
-                                      (s) => s.copyWith(title: title),
-                                    ),
-                              ),
-                            ),
-                            AppMenuItem(
-                              label: l.delete,
-                              destructive: true,
-                              icon: const Icon(Icons.delete_outline),
-                              onSelected: () async {
-                                final yes = await AppDialog.confirm(
-                                  context: context,
-                                  title: l.delete,
-                                  description: l.demoDeleteDescription,
-                                  cancelLabel: l.cancel,
-                                  confirmLabel: l.confirm,
-                                  destructive: true,
-                                );
-                                if (yes == true && context.mounted) {
-                                  await demoPerform(
-                                    context,
-                                    () => widget.repository.deleteSession(s.id),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                          child: Material(
-                            color: index == 0 && _query.isEmpty
-                                ? demoTint
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => _open(s),
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  10,
-                                  10,
-                                  12,
-                                  10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    DemoAvatar(
-                                      members: s.members,
-                                      memberAvatars: s.memberAvatars,
-                                      memberColors: s.memberColors,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Row(
-                                                  children: [
-                                                    Flexible(
-                                                      child: Text(
-                                                        s.title,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: const TextStyle(
-                                                          fontSize: 18,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (s.id != 'campus') ...[
-                                                      const SizedBox(width: 5),
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 9,
-                                                              vertical: 3,
-                                                            ),
-                                                        decoration:
-                                                            const ShapeDecoration(
-                                                              color: demoTint,
-                                                              shape:
-                                                                  StadiumBorder(),
-                                                            ),
-                                                        child: Text(
-                                                          switch (s.kind) {
-                                                            DemoSessionKind
-                                                                .conversation =>
-                                                              l.demoConversation,
-                                                            DemoSessionKind
-                                                                .project =>
-                                                              l.demoProject,
-                                                            DemoSessionKind
-                                                                .workflow =>
-                                                              l.demoWorkflow,
-                                                          },
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            color:
-                                                                s.kind ==
-                                                                    DemoSessionKind
-                                                                        .conversation
-                                                                ? AppColors
-                                                                      .textPrimary
-                                                                : AppColors
-                                                                      .brand,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                s.time.isEmpty
-                                                    ? l.demoNow
-                                                    : s.time,
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  color: AppColors.textTertiary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  s.messages.lastOrNull?.text
-                                                          .replaceAll(
-                                                            '\n',
-                                                            ' ',
-                                                          ) ??
-                                                      l.demoGreetingDetail,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    color:
-                                                        AppColors.textSecondary,
-                                                  ),
-                                                ),
-                                              ),
-                                              if (s.unread > 0)
-                                                Container(
-                                                  width: 20,
-                                                  height: 20,
-                                                  alignment: Alignment.center,
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                        color: AppColors.brand,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                  child: Text(
-                                                    '${s.unread}',
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: widget.repository,
+                    builder: (context, _) {
+                      final sessions = widget.repository.sessions
+                          .where(
+                            (s) =>
+                                '${s.title} ${s.messages.lastOrNull?.text ?? ''}'
+                                    .toLowerCase()
+                                    .contains(_query.trim().toLowerCase()),
+                          )
+                          .toList();
+                      if (sessions.isEmpty) {
+                        return Center(
+                          child: Text(
+                            _query.isEmpty
+                                ? l.demoEmptyConversations
+                                : l.demoNoResults,
                           ),
                         );
-                      },
-                      separatorBuilder: (_, _) => const SizedBox(height: 5),
-                    );
-                  },
+                      }
+                      return ListView.separated(
+                        key: const PageStorageKey('demo-conversations'),
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 140),
+                        itemCount: sessions.length,
+                        itemBuilder: (context, index) {
+                          final s = sessions[index];
+                          return AppContextMenu(
+                            key: ValueKey(s.id),
+                            label: s.title,
+                            entries: [
+                              AppMenuItem(
+                                label: l.renameProjectItem,
+                                icon: const Icon(Icons.edit_outlined),
+                                onSelected: () => demoEditText(
+                                  context,
+                                  title: l.demoRename,
+                                  label: l.demoSessionName,
+                                  value: s.title,
+                                  onSave: (title) =>
+                                      widget.repository.updateSession(
+                                        s.id,
+                                        (s) => s.copyWith(title: title),
+                                      ),
+                                ),
+                              ),
+                              AppMenuItem(
+                                label: l.delete,
+                                destructive: true,
+                                icon: const Icon(Icons.delete_outline),
+                                onSelected: () async {
+                                  final yes = await AppDialog.confirm(
+                                    context: context,
+                                    title: l.delete,
+                                    description: l.demoDeleteDescription,
+                                    cancelLabel: l.cancel,
+                                    confirmLabel: l.confirm,
+                                    destructive: true,
+                                  );
+                                  if (yes == true && context.mounted) {
+                                    await demoPerform(
+                                      context,
+                                      () =>
+                                          widget.repository.deleteSession(s.id),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                            child: Material(
+                              color: index == 0 && _query.isEmpty
+                                  ? demoTint
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(20),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () => _open(s),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    10,
+                                    10,
+                                    12,
+                                    10,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      DemoAvatar(
+                                        members: s.members,
+                                        memberAvatars: s.memberAvatars,
+                                        memberColors: s.memberColors,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Row(
+                                                    children: [
+                                                      Flexible(
+                                                        child: Text(
+                                                          s.title,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      if (s.id != 'campus') ...[
+                                                        const SizedBox(
+                                                          width: 5,
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 9,
+                                                                vertical: 3,
+                                                              ),
+                                                          decoration:
+                                                              const ShapeDecoration(
+                                                                color: demoTint,
+                                                                shape:
+                                                                    StadiumBorder(),
+                                                              ),
+                                                          child: Text(
+                                                            switch (s.kind) {
+                                                              DemoSessionKind
+                                                                  .conversation =>
+                                                                l.demoConversation,
+                                                              DemoSessionKind
+                                                                  .project =>
+                                                                l.demoProject,
+                                                              DemoSessionKind
+                                                                  .workflow =>
+                                                                l.demoWorkflow,
+                                                            },
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color:
+                                                                  s.kind ==
+                                                                      DemoSessionKind
+                                                                          .conversation
+                                                                  ? AppColors
+                                                                        .textPrimary
+                                                                  : AppColors
+                                                                        .brand,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  s.time.isEmpty
+                                                      ? l.demoNow
+                                                      : s.time,
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    color:
+                                                        AppColors.textTertiary,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    s.messages.lastOrNull?.text
+                                                            .replaceAll(
+                                                              '\n',
+                                                              ' ',
+                                                            ) ??
+                                                        l.demoGreetingDetail,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontSize: 16,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (s.unread > 0)
+                                                  Container(
+                                                    width: 20,
+                                                    height: 20,
+                                                    alignment: Alignment.center,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color:
+                                                              AppColors.brand,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                    child: Text(
+                                                      '${s.unread}',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (_, _) => const SizedBox(height: 5),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-          DemoAssetsView(repository: widget.repository),
-        ],
+              ],
+            ),
+            DemoAssetsView(repository: widget.repository),
+          ],
+        ),
       ),
     );
   }

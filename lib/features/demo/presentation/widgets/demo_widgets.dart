@@ -151,6 +151,7 @@ class DemoScaffold extends StatelessWidget {
     this.leading,
     this.bottom,
     this.floatingBottom = false,
+    this.floatingBottomVisible = true,
     this.extendBodyBehindAppBar = false,
     super.key,
   });
@@ -160,6 +161,7 @@ class DemoScaffold extends StatelessWidget {
   final Widget? leading;
   final Widget? bottom;
   final bool floatingBottom;
+  final bool floatingBottomVisible;
   final bool extendBodyBehindAppBar;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -222,7 +224,24 @@ class DemoScaffold extends StatelessWidget {
       ),
     ),
     bottomNavigationBar: floatingBottom && bottom != null
-        ? DemoBottomOverlay(child: bottom!)
+        ? DemoBottomOverlay(
+            child: ExcludeSemantics(
+              excluding: !floatingBottomVisible,
+              child: IgnorePointer(
+                ignoring: !floatingBottomVisible,
+                child: AnimatedSlide(
+                  offset: floatingBottomVisible
+                      ? Offset.zero
+                      : const Offset(0, 1),
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 360),
+                  curve: Curves.easeOutCubic,
+                  child: bottom!,
+                ),
+              ),
+            ),
+          )
         : bottom,
   );
 }

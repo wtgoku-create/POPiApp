@@ -22,6 +22,7 @@ Future<DemoRepository> _pump(
   WidgetTester tester, {
   Size size = const Size(390, 844),
   Locale locale = const Locale('zh'),
+  bool disableAnimations = true,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -41,7 +42,9 @@ Future<DemoRepository> _pump(
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            data: MediaQuery.of(
+              context,
+            ).copyWith(disableAnimations: disableAnimations),
             child: child!,
           ),
           home: DemoHomePage(repository: repository),
@@ -155,6 +158,53 @@ void main() {
     expect(tester.getRect(tabs).bottom, closeTo(844 - 20, .01));
     expect(tester.takeException(), isNull);
   });
+
+  for (final tab in [0, 1]) {
+    testWidgets('bottom navigation follows list scroll direction on tab $tab', (
+      tester,
+    ) async {
+      await _pump(tester, size: const Size(360, 640), disableAnimations: false);
+      await tester.tap(find.byKey(Key('demo-tab-$tab')));
+      await tester.pumpAndSettle();
+      final tabs = find.byKey(const Key('demo-bottom-tabs'));
+      final list = tab == 0
+          ? find.byType(ListView).hitTestable()
+          : find.byType(CustomScrollView).hitTestable();
+      final bounds = tester.getRect(list);
+      final navBounds = tester.getRect(tabs);
+      final backdrop = find
+          .descendant(
+            of: find.byType(DemoBottomOverlay),
+            matching: find.byType(BackdropFilter),
+          )
+          .first;
+      final backdropBounds = tester.getRect(backdrop);
+      await tester.drag(list, const Offset(0, -220));
+      await tester.pumpAndSettle();
+      expect(tabs.hitTestable(), findsNothing);
+      expect(tester.getRect(list), bounds);
+      expect(tester.getRect(backdrop), backdropBounds);
+      await tester.drag(list, const Offset(0, 100));
+      await tester.pumpAndSettle();
+      expect(tabs.hitTestable(), findsOneWidget);
+      expect(tester.getRect(tabs), navBounds);
+      expect(tester.getRect(list), bounds);
+      expect(tester.getRect(backdrop), backdropBounds);
+      await tester.drag(list, const Offset(0, -220));
+      await tester.pumpAndSettle();
+      expect(tabs.hitTestable(), findsNothing);
+      await tester.enterText(
+        find.byType(TextField).hitTestable(),
+        'no matching results',
+      );
+      await tester.pumpAndSettle();
+      expect(tabs.hitTestable(), findsOneWidget);
+      await tester.tap(find.byKey(Key('demo-tab-${1 - tab}')));
+      await tester.pumpAndSettle();
+      expect(tabs.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
     'settings identity scrolls away before tabs pin below the app bar',
