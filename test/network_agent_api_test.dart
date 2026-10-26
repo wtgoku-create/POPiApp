@@ -16,7 +16,7 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 
 void main() {
   test(
-    'providers configure independent Agent transport and shared auth',
+    'providers configure business, Go and Runtime addresses with shared auth',
     () async {
       final container = ProviderContainer(
         overrides: [secureStorageProvider.overrideWithValue(_Tokens())],
@@ -24,16 +24,23 @@ void main() {
       addTearDown(container.dispose);
       final business = container.read(dioProvider);
       final agent = container.read(agentDioProvider);
+      final runtime = container.read(runtimeDioProvider);
       addTearDown(() => business.close(force: true));
       addTearDown(() => agent.close(force: true));
       expect(identical(business, agent), isFalse);
+      expect(identical(agent, runtime), isFalse);
       expect(business.options.baseUrl, AppConfig.apiBaseUrl);
       expect(agent.options.baseUrl, AppConfig.agentApiBaseUrl);
+      expect(runtime.options.baseUrl, AppConfig.runtimeApiBaseUrl);
       expect(
         agent.options.headers['Origin'],
         AppConfig.agentApiOrigin.isEmpty ? null : AppConfig.agentApiOrigin,
       );
       expect(business.options.headers.containsKey('Origin'), isFalse);
+      expect(
+        runtime.options.headers['Origin'],
+        agent.options.headers['Origin'],
+      );
       agent.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
@@ -45,6 +52,28 @@ void main() {
         ),
       );
       await NetworkAgentApi(agent).projectSessionsPage('account', 1);
+      runtime.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.headers['Authorization'], 'Bearer agent-token');
+            expect(
+              options.uri.origin,
+              Uri.parse(AppConfig.runtimeApiBaseUrl).origin,
+            );
+            expect(options.path, '/runtime/v2/sessions/session/messages');
+            handler.resolve(
+              Response(requestOptions: options, data: {'ok': true}),
+            );
+          },
+        ),
+      );
+      final api = NetworkAgentApi(agent, runtimeDio: runtime);
+      api.runtime.remember({'id': 'session', 'runtimeDirect': true});
+      await api.sendSessionMessage(
+        'session',
+        clientRequestId: 'id',
+        text: 'hello',
+      );
     },
   );
 

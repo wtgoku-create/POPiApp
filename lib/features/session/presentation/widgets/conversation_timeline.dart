@@ -436,8 +436,12 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
           : _conversationMessageSpacing;
       final timeline = Chat(
         currentUserId: controller.userId,
-        resolveUser: (id) async =>
-            chat.User(id: id, name: id == 'popi-agent' ? 'POPi' : null),
+        resolveUser: (id) async => chat.User(
+          id: id,
+          name: id == 'popi-agent'
+              ? controller.snapshot?.session.assistantName ?? 'POPi'
+              : null,
+        ),
         chatController: _chat,
         backgroundColor: Colors.transparent,
         builders: chat.Builders(

@@ -29,6 +29,10 @@ abstract final class AppConfig {
     defaultValue: apiBaseUrl,
   );
   static const agentApiOrigin = String.fromEnvironment('AGENT_API_ORIGIN');
+  static const runtimeApiBaseUrl = String.fromEnvironment(
+    'RUNTIME_API_BASE_URL',
+    defaultValue: agentApiBaseUrl,
+  );
   static const wechatAppId = String.fromEnvironment(
     'WECHAT_APP_ID',
     defaultValue: 'wx0d9c23195606fc80',

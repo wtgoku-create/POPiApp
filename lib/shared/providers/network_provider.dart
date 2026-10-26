@@ -20,3 +20,17 @@ final agentDioProvider = Provider<Dio>(
     },
   ).dio,
 );
+
+/// PI Host can use a separate local address while sharing login credentials.
+final runtimeDioProvider = Provider<Dio>((ref) {
+  final dio = DioClient(
+    secureStorage: ref.watch(secureStorageProvider),
+    baseUrl: AppConfig.runtimeApiBaseUrl,
+    headers: {
+      if (AppConfig.agentApiOrigin.isNotEmpty)
+        'Origin': AppConfig.agentApiOrigin,
+    },
+  ).dio;
+  ref.onDispose(() => dio.close(force: true));
+  return dio;
+});

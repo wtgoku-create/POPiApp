@@ -95,6 +95,7 @@ class StreamingSessionRepository extends FixtureSessionRepository {
   Future<void> retry(
     String userId,
     String runId, {
+    String? sessionId,
     CancelToken? cancelToken,
   }) async {
     retries++;

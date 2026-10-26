@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/agent_api_exception.dart';
+import '../../../core/network/network_agent_runtime.dart';
 import '../domain/conversation_snapshot.dart';
 
 class ConversationEvent {
@@ -19,9 +20,11 @@ class ConversationEvent {
 
 /// UTF-8 and LineSplitter retain incomplete characters and CRLF across chunks.
 Stream<ConversationEvent> decodeConversationEvents(
-  Stream<List<int>> bytes,
-) async* {
+  Stream<List<int>> bytes, {
+  String? runtimeSessionId,
+}) async* {
   var data = <String>[];
+  var eventName = '';
   var firstLine = true;
   await for (var line
       in utf8.decoder.bind(bytes).transform(const LineSplitter())) {
@@ -31,11 +34,27 @@ Stream<ConversationEvent> decodeConversationEvents(
     }
     if (line.isEmpty) {
       if (data.isNotEmpty) {
-        yield ConversationEvent.fromJson(
-          conversationMap(jsonDecode(data.join('\n'))),
-        );
+        final value = conversationMap(jsonDecode(data.join('\n')));
+        if (runtimeSessionId != null) {
+          if (eventName != 'conversation') {
+            throw const AgentApiException(
+              code: 'INVALID_RUNTIME_EVENT',
+              message: 'Invalid Runtime event',
+            );
+          }
+          validateRuntimeSnapshot(runtimeSessionId, value);
+          yield ConversationEvent.fromJson({
+            'sessionId': runtimeSessionId,
+            'seq': value['lastSeq'],
+            'type': 'runtime.conversation',
+            'payload': {'snapshot': value},
+          });
+        } else {
+          yield ConversationEvent.fromJson(value);
+        }
         data = [];
       }
+      eventName = '';
       continue;
     }
     if (line.startsWith(':')) continue;
@@ -44,6 +63,7 @@ Stream<ConversationEvent> decodeConversationEvents(
     var value = colon < 0 ? '' : line.substring(colon + 1);
     if (value.startsWith(' ')) value = value.substring(1);
     if (field == 'data') data.add(value);
+    if (field == 'event') eventName = value;
   }
   // An incomplete final frame is replayed from lastSeq on reconnection.
 }
@@ -58,6 +78,16 @@ ConversationSnapshot applyConversationEvent(
   ConversationSnapshot snapshot,
   ConversationEvent event,
 ) {
+  if (event.sessionId == snapshot.session.id &&
+      event.type == 'runtime.conversation') {
+    final value = conversationMap(event.payload['snapshot']);
+    validateRuntimeSnapshot(snapshot.session.id, value);
+    if ((value['lastSeq'] as int) < snapshot.lastSeq ||
+        jsonEncode(value) == jsonEncode(snapshot.source)) {
+      return snapshot;
+    }
+    return ConversationSnapshot.fromJson(value);
+  }
   // 重连会重放事件；重复事件不追加文本，缺号则重新拉快照，避免漏消息。
   if (event.sessionId != snapshot.session.id || event.seq <= snapshot.lastSeq) {
     return snapshot;
