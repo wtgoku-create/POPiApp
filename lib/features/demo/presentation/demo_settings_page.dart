@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
@@ -49,12 +51,8 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                  child: Container(
+                  child: _SettingsCard(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: demoSurface(context),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
                     child: Row(
                       children: [
                         DemoAvatar(
@@ -136,37 +134,44 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     key: const PageStorageKey('demo-settings-info'),
     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
     children: [
-      ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 12,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        tileColor: demoSurface(context),
-        title: Text(
-          l.demoLinkedRoles,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          s.roles.isEmpty ? l.demoNoRoles : l.demoRoleCount(s.roles.length),
-          style: const TextStyle(color: AppColors.textTertiary),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final role in s.roles.take(3))
-              Align(
-                widthFactor: .65,
-                child: DemoAvatar(image: demoCharacter(role).image, size: 50),
+      _SettingsCard(
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            l.demoLinkedRoles,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            s.roles.isEmpty ? l.demoNoRoles : l.demoRoleCount(s.roles.length),
+            style: const TextStyle(color: AppColors.textTertiary),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final role in s.roles.take(3))
+                Align(
+                  widthFactor: .65,
+                  child: DemoAvatar(image: demoCharacter(role).image, size: 50),
+                ),
+              const SizedBox(width: 12),
+              const RotatedBox(
+                quarterTurns: 3,
+                child: DemoIcon(
+                  'back',
+                  size: 24,
+                  color: AppColors.textTertiary,
+                ),
               ),
-            const SizedBox(width: 12),
-            const RotatedBox(
-              quarterTurns: 3,
-              child: DemoIcon('back', size: 24, color: AppColors.textTertiary),
-            ),
-          ],
+            ],
+          ),
+          onTap: () => _roles(context, s),
         ),
-        onTap: () => _roles(context, s),
       ),
       const SizedBox(height: 20),
       _section(
@@ -231,12 +236,8 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         sliver: SliverToBoxAdapter(
-          child: Container(
+          child: _SettingsCard(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: demoSurface(context),
-              borderRadius: BorderRadius.circular(20),
-            ),
             child: Column(
               children: [
                 for (final id in s.members) ...[
@@ -324,9 +325,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         sliver: SliverToBoxAdapter(
-          child: Material(
-            color: demoSurface(context),
-            borderRadius: BorderRadius.circular(20),
+          child: _SettingsCard(
             child: Column(
               children: [
                 for (final entry in _skillLabels(l).entries)
@@ -467,12 +466,8 @@ Widget _section(
   required String title,
   required VoidCallback onEdit,
   required List<Widget> children,
-}) => Container(
+}) => _SettingsCard(
   padding: const EdgeInsets.all(20),
-  decoration: BoxDecoration(
-    color: demoSurface(context),
-    borderRadius: BorderRadius.circular(20),
-  ),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -499,6 +494,47 @@ Widget _section(
     ],
   ),
 );
+
+/// Clips the glass to the card while keeping its content and ink effects sharp.
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.child, this.padding = EdgeInsets.zero});
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  static final _blur = ImageFilter.blur(sigmaX: 25, sigmaY: 25);
+  static const _radius = BorderRadius.all(Radius.circular(20));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return ClipRRect(
+      borderRadius: _radius,
+      child: BackdropFilter(
+        filter: _blur,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: _radius,
+            color: dark
+                ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: .65)
+                : Colors.white.withValues(alpha: .5),
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: _radius,
+            border: Border.all(
+              color: dark ? Colors.white.withValues(alpha: .22) : Colors.white,
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Padding(padding: padding, child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 DemoCharacter demoCharacter(String id) =>
     DemoFixtures.characters.where((r) => r.id == id).firstOrNull ??
