@@ -15,10 +15,11 @@ import 'demo_assistant_display.dart';
 import 'demo_assets_page.dart';
 import 'demo_chat_page.dart';
 import 'demo_create_session_sheet.dart';
+import 'demo_settings_page.dart';
 import 'widgets/demo_desktop_sidebar.dart';
 import 'widgets/demo_widgets.dart';
 
-/// The persistent two-pane shell used by macOS and wide web windows.
+/// Persistent desktop navigation with a contextual inspector on wide windows.
 class DemoDesktopWorkspace extends StatefulWidget {
   const DemoDesktopWorkspace({required this.repository, super.key});
 
@@ -286,6 +287,7 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
                       builder: (_) => ValueListenableBuilder<int>(
                         valueListenable: _stageRevision,
                         builder: (context, _, child) => _DesktopSessionStage(
+                          key: ObjectKey(widget.repository),
                           repository: widget.repository,
                           openedSessionIds: List.of(_openedSessionIds),
                           selectedSessionId: _selectedSessionId,
@@ -304,12 +306,13 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
   }
 }
 
-class _DesktopSessionStage extends StatelessWidget {
+class _DesktopSessionStage extends StatefulWidget {
   const _DesktopSessionStage({
     required this.repository,
     required this.openedSessionIds,
     required this.selectedSessionId,
     required this.workspaceActive,
+    super.key,
   });
 
   final DemoRepository repository;
@@ -318,26 +321,99 @@ class _DesktopSessionStage extends StatelessWidget {
   final bool workspaceActive;
 
   @override
+  State<_DesktopSessionStage> createState() => _DesktopSessionStageState();
+}
+
+class _DesktopSessionStageState extends State<_DesktopSessionStage> {
+  bool _inspectorOpen = true;
+  int _inspectorTab = 0;
+  int _inspectorRequest = 0;
+
+  void _openInspector(String sessionId, int tab) {
+    if (!widget.workspaceActive || widget.selectedSessionId != sessionId) {
+      return;
+    }
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _inspectorOpen = true;
+      _inspectorTab = tab;
+      _inspectorRequest += 1;
+    });
+  }
+
+  void _closeInspector() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _inspectorOpen = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (openedSessionIds.isEmpty || selectedSessionId == null) {
+    if (widget.openedSessionIds.isEmpty || widget.selectedSessionId == null) {
       return const ColoredBox(
         color: AppColors.profileBackground,
         child: SizedBox.expand(),
       );
     }
-    final selectedIndex = openedSessionIds.indexOf(selectedSessionId!);
-    return IndexedStack(
-      key: const Key('demo-desktop-chats'),
-      index: selectedIndex < 0 ? 0 : selectedIndex,
-      children: [
-        for (final id in openedSessionIds)
-          _DesktopChatHost(
-            key: ValueKey('demo-desktop-chat-$id'),
-            repository: repository,
-            sessionId: id,
-            active: workspaceActive && id == selectedSessionId,
-          ),
-      ],
+    final selectedId = widget.selectedSessionId!;
+    final selectedIndex = widget.openedSessionIds.indexOf(selectedId);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // The expanded sidebar takes 280px, leaving 840px for chat at 1440px.
+        final wide = constraints.maxWidth >= 1160;
+        final inspectorWidth = constraints.maxWidth >= 1400 ? 360.0 : 320.0;
+        return Row(
+          children: [
+            Expanded(
+              key: const Key('demo-desktop-chat-frame'),
+              child: IndexedStack(
+                key: const Key('demo-desktop-chats'),
+                index: selectedIndex < 0 ? 0 : selectedIndex,
+                children: [
+                  for (final id in widget.openedSessionIds)
+                    _DesktopChatHost(
+                      key: ValueKey('demo-desktop-chat-$id'),
+                      repository: widget.repository,
+                      sessionId: id,
+                      active: widget.workspaceActive && id == selectedId,
+                      onOpenSettings: wide
+                          ? (tab) => _openInspector(id, tab)
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+            if (wide && _inspectorOpen)
+              Container(
+                key: const Key('demo-desktop-inspector-frame'),
+                width: inspectorWidth,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border(
+                    left: BorderSide(
+                      color: Theme.of(
+                        context,
+                      ).dividerColor.withValues(alpha: .55),
+                    ),
+                  ),
+                ),
+                child: DemoSettingsPage(
+                  key: ValueKey('inspector-$selectedId-$_inspectorRequest'),
+                  repository: widget.repository,
+                  sessionId: selectedId,
+                  initialTab: _inspectorTab,
+                  embedded: true,
+                  active: widget.workspaceActive,
+                  onClose: _closeInspector,
+                  onTabChanged: (tab) {
+                    if (widget.selectedSessionId == selectedId) {
+                      _inspectorTab = tab;
+                    }
+                  },
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -347,12 +423,14 @@ class _DesktopChatHost extends StatelessWidget {
     required this.repository,
     required this.sessionId,
     required this.active,
+    this.onOpenSettings,
     super.key,
   });
 
   final DemoRepository repository;
   final String sessionId;
   final bool active;
+  final ValueChanged<int>? onOpenSettings;
 
   @override
   Widget build(BuildContext context) => FocusScope(
@@ -364,6 +442,7 @@ class _DesktopChatHost extends StatelessWidget {
         sessionId: sessionId,
         desktopLayout: true,
         active: active,
+        onOpenSettings: onOpenSettings,
       ),
     ),
   );

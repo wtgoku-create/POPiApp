@@ -26,12 +26,20 @@ class DemoSettingsPage extends StatefulWidget {
     required this.repository,
     required this.sessionId,
     this.initialTab = 0,
+    this.embedded = false,
+    this.onClose,
+    this.onTabChanged,
+    this.active = true,
     super.key,
   }) : assert(initialTab >= 0 && initialTab < 3);
 
   final DemoRepository repository;
   final String sessionId;
   final int initialTab;
+  final bool embedded;
+  final VoidCallback? onClose;
+  final ValueChanged<int>? onTabChanged;
+  final bool active;
 
   @override
   State<DemoSettingsPage> createState() => _DemoSettingsPageState();
@@ -66,28 +74,34 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
   bool _capabilityErrorShown = false;
   int _capabilityRequest = 0;
   late String _lastCapabilitySignature;
+  late int _lastReportedTab = widget.initialTab;
 
   @override
   void initState() {
     super.initState();
-    _lastCapabilitySignature = _capabilitySignature(
-      widget.repository.session(widget.sessionId),
-    );
+    final session = _sessionOrNull();
+    _lastCapabilitySignature = session == null
+        ? ''
+        : _capabilitySignature(session);
     widget.repository.addListener(_handleRepositoryChange);
-    unawaited(_loadCapabilityCatalog());
+    if (session != null) unawaited(_loadCapabilityCatalog());
   }
 
   void _handleRepositoryChange() {
     if (!mounted) return;
-    final signature = _capabilitySignature(
-      widget.repository.session(widget.sessionId),
-    );
+    final session = _sessionOrNull();
+    if (session == null) {
+      _capabilityRequest += 1;
+      return;
+    }
+    final signature = _capabilitySignature(session);
     if (signature == _lastCapabilitySignature) return;
     _lastCapabilitySignature = signature;
     unawaited(_loadCapabilityCatalog());
   }
 
   Future<void> _loadCapabilityCatalog() async {
+    if (_sessionOrNull() == null) return;
     final request = ++_capabilityRequest;
     _capabilityErrorShown = false;
     if (_capabilityCatalog == null) {
@@ -119,8 +133,18 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
   }
 
   void _updateTab() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final index = _tabs.index;
+    if (_lastReportedTab != index) {
+      _lastReportedTab = index;
+      widget.onTabChanged?.call(index);
+    }
+    setState(() {});
   }
+
+  DemoSession? _sessionOrNull() => widget.repository.sessions
+      .where((session) => session.id == widget.sessionId)
+      .firstOrNull;
 
   @override
   void dispose() {
@@ -135,41 +159,83 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     return ListenableBuilder(
       listenable: widget.repository,
       builder: (context, _) {
-        final session = widget.repository.session(widget.sessionId);
-        return DemoScaffold(
-          title: Text(l.demoSettings),
-          child: NestedScrollView(
-            headerSliverBuilder: (context, _) => [
-              SliverToBoxAdapter(child: _identityCard(context, session, l)),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: DemoPinnedHeader(
-                  height: 52,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: DemoSegments(
-                      labels: [l.demoInfo, l.demoCapabilities, l.demoOutputs],
-                      selected: _tabs.index,
-                      onChanged: _tabs.animateTo,
-                    ),
+        final session = _sessionOrNull();
+        if (session == null) return const SizedBox.shrink();
+        final content = NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverToBoxAdapter(child: _identityCard(context, session, l)),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: DemoPinnedHeader(
+                height: 52,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: DemoSegments(
+                    labels: [l.demoInfo, l.demoCapabilities, l.demoOutputs],
+                    selected: _tabs.index,
+                    onChanged: _tabs.animateTo,
                   ),
                 ),
               ),
+            ),
+          ],
+          body: TabBarView(
+            controller: _tabs,
+            children: [
+              _KeepTab(child: _info(context, session, l)),
+              _KeepTab(child: _capabilities(context, session, l)),
+              _KeepTab(
+                child: DemoAssetsView(
+                  repository: widget.repository,
+                  sessionId: session.id,
+                  compactHeader: true,
+                ),
+              ),
             ],
-            body: TabBarView(
-              controller: _tabs,
-              children: [
-                _KeepTab(child: _info(context, session, l)),
-                _KeepTab(child: _capabilities(context, session, l)),
-                _KeepTab(
-                  child: DemoAssetsView(
-                    repository: widget.repository,
-                    sessionId: session.id,
-                    compactHeader: true,
+          ),
+        );
+        if (!widget.embedded) {
+          return DemoScaffold(title: Text(l.demoSettings), child: content);
+        }
+        return Material(
+          key: const Key('demo-settings-embedded'),
+          color: Theme.of(context).colorScheme.surface,
+          child: Column(
+            children: [
+              SizedBox(
+                key: const Key('demo-inspector-header'),
+                height: 56,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l.demoSettings,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (widget.onClose != null)
+                        IconButton(
+                          key: const Key('demo-inspector-close'),
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).closeButtonTooltip,
+                          onPressed: widget.onClose,
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                        ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const Divider(height: 1),
+              Expanded(child: content),
+            ],
           ),
         );
       },
@@ -180,75 +246,212 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     BuildContext context,
     DemoSession session,
     AppLocalizations l,
-  ) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    child: Container(
-      height: 76,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: demoSurface(context),
-        borderRadius: BorderRadius.circular(_cardRadius),
-      ),
-      child: Row(
-        children: [
-          DemoAvatar(
-            members: session.members,
-            size: 60,
-            memberAvatars: session.memberAvatars,
-            memberColors: session.memberColors,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  demoSessionDisplayName(l, session),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+  ) => widget.embedded
+      ? Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            children: [
+              DemoAvatar(
+                members: session.members,
+                size: 72,
+                memberAvatars: session.memberAvatars,
+                memberColors: session.memberColors,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      demoSessionDisplayName(l, session),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
-                if (session.members.length > 1) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    session.members
-                        .take(2)
-                        .map((id) => demoSessionMemberName(l, session, id))
-                        .join(' × '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textTertiary,
+                  IconButton(
+                    key: const Key('demo-settings-rename'),
+                    tooltip: session.members.length == 1
+                        ? l.demoEditMember
+                        : l.demoRename,
+                    onPressed: session.members.length == 1
+                        ? () => _editMember(
+                            context,
+                            session.id,
+                            session.members.first,
+                          )
+                        : () => _renameSession(context, session, l),
+                    icon: const RotatedBox(
+                      quarterTurns: 1,
+                      child: DemoIcon('edit', size: 17),
                     ),
                   ),
                 ],
+              ),
+              if (session.members.length > 1)
+                Text(
+                  session.members
+                      .map((id) => demoSessionMemberName(l, session, id))
+                      .join(' × '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+            ],
+          ),
+        )
+      : Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Container(
+            height: 76,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: demoSurface(context),
+              borderRadius: BorderRadius.circular(_cardRadius),
+            ),
+            child: Row(
+              children: [
+                DemoAvatar(
+                  members: session.members,
+                  size: 60,
+                  memberAvatars: session.memberAvatars,
+                  memberColors: session.memberColors,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        demoSessionDisplayName(l, session),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (session.members.length > 1) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          session.members
+                              .take(2)
+                              .map(
+                                (id) => demoSessionMemberName(l, session, id),
+                              )
+                              .join(' × '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  key: const Key('demo-settings-rename'),
+                  tooltip: l.demoRename,
+                  onPressed: () => _renameSession(context, session, l),
+                  icon: const RotatedBox(
+                    quarterTurns: 1,
+                    child: DemoIcon('edit', size: 18),
+                  ),
+                ),
               ],
             ),
           ),
-          IconButton(
-            key: const Key('demo-settings-rename'),
-            tooltip: l.demoRename,
-            onPressed: () => demoEditText(
-              context,
-              title: l.demoRename,
-              value: demoSessionDisplayName(l, session),
-              onSave: (value) => widget.repository.updateSession(
-                session.id,
-                (session) => session.copyWith(title: value),
+        );
+
+  void _renameSession(
+    BuildContext context,
+    DemoSession session,
+    AppLocalizations l,
+  ) => demoEditText(
+    context,
+    title: l.demoRename,
+    value: demoSessionDisplayName(l, session),
+    onSave: (value) => widget.repository.updateSession(
+      session.id,
+      (session) => session.copyWith(title: value),
+    ),
+  );
+
+  Widget _embeddedInstructions(
+    BuildContext context,
+    DemoSession session,
+    AppLocalizations l,
+  ) => Container(
+    key: const Key('demo-inspector-instructions'),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: demoSurface(context),
+      borderRadius: BorderRadius.circular(_cardRadius),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l.demoAssistantInstructions,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        for (var index = 0; index < session.members.length; index++) ...[
+          Row(
+            key: ValueKey(
+              'demo-inspector-instructions-${session.members[index]}',
+            ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _memberAvatar(session, session.members[index], 32),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      demoSessionMemberName(l, session, session.members[index]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      session.memberInstructions[session.members[index]]
+                                  ?.trim()
+                                  .isNotEmpty ==
+                              true
+                          ? session.memberInstructions[session.members[index]]!
+                                .trim()
+                          : l.demoNotConfigured,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            icon: const RotatedBox(
-              quarterTurns: 1,
-              child: DemoIcon('edit', size: 18),
-            ),
+            ],
           ),
+          if (index != session.members.length - 1)
+            const Divider(height: 18, indent: 41),
         ],
-      ),
+      ],
     ),
   );
 
@@ -260,6 +463,10 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     key: const PageStorageKey('demo-settings-info'),
     padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
     children: [
+      if (widget.embedded) ...[
+        _embeddedInstructions(context, session, l),
+        const SizedBox(height: 12),
+      ],
       Material(
         color: demoSurface(context),
         borderRadius: BorderRadius.circular(_cardRadius),
@@ -619,6 +826,10 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
   );
 
   void _showCapabilityError(BuildContext context, AppLocalizations l) {
+    if (widget.embedded &&
+        (!widget.active || ModalRoute.of(context)?.isCurrent == false)) {
+      return;
+    }
     if (_capabilityErrorShown) return;
     _capabilityErrorShown = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {

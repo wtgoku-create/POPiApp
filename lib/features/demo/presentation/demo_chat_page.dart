@@ -134,6 +134,7 @@ class DemoChatPage extends StatefulWidget {
     this.active = true,
     this.pickAttachmentFiles,
     this.clipboardImageService,
+    this.onOpenSettings,
     super.key,
   });
   final DemoRepository repository;
@@ -142,6 +143,7 @@ class DemoChatPage extends StatefulWidget {
   final bool active;
   final Future<List<DemoUploadFile>> Function()? pickAttachmentFiles;
   final ClipboardImageService? clipboardImageService;
+  final ValueChanged<int>? onOpenSettings;
   @override
   State<DemoChatPage> createState() => _DemoChatPageState();
 }
@@ -310,15 +312,23 @@ class _DemoChatPageState extends State<DemoChatPage> {
     }
   }
 
-  void _settings({int initialTab = 0}) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => DemoSettingsPage(
-        repository: widget.repository,
-        sessionId: widget.sessionId,
-        initialTab: initialTab,
+  void _settings({int initialTab = 0}) {
+    if (!widget.active) return;
+    final open = widget.onOpenSettings;
+    if (open != null) {
+      open(initialTab);
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => DemoSettingsPage(
+          repository: widget.repository,
+          sessionId: widget.sessionId,
+          initialTab: initialTab,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// Keeps the overview in sync with the selected task's existing snapshot.
   Future<void> _showTaskBrief(DemoMediaJob selected) async {
