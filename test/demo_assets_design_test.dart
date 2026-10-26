@@ -14,6 +14,7 @@ import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_upload_file.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_assets_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_home_page.dart';
+import 'package:popi_ai_app/features/demo/presentation/demo_remote_media.dart';
 import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -237,6 +238,75 @@ void main() {
     },
   );
 
+  testWidgets(
+    'unchanged refreshes and tab switches keep asset positions and image state',
+    (tester) async {
+      final repository = _MutableAssetRepository(storage, [
+        _localAsset('stable', '稳定素材'),
+        _localAsset('second', '第二份素材'),
+      ]);
+      addTearDown(repository.dispose);
+      await pump(tester, DemoHomePage(repository: repository));
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pump();
+
+      final stableCard = find.byKey(const ValueKey('stable'));
+      final stableImage = find.descendant(
+        of: stableCard,
+        matching: find.byType(DemoAssetImage),
+      );
+      final originalState = tester.state(stableImage);
+      final originalRect = tester.getRect(stableCard);
+
+      repository.publish(List<DemoAsset>.of(repository.assets));
+      await tester.pump();
+      expect(tester.state(stableImage), same(originalState));
+      expect(tester.getRect(stableCard), originalRect);
+
+      await tester.tap(find.byKey(const Key('demo-tab-0')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pump();
+      expect(tester.state(stableImage), same(originalState));
+      expect(tester.getRect(stableCard), originalRect);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final listMode in [false, true]) {
+    testWidgets(
+      'inserting an asset retains existing ${listMode ? 'list' : 'grid'} thumbnail state',
+      (tester) async {
+        final repository = _MutableAssetRepository(storage, [
+          _localAsset('stable', '稳定素材'),
+          _localAsset('second', '第二份素材'),
+        ]);
+        addTearDown(repository.dispose);
+        await pump(
+          tester,
+          Scaffold(body: DemoAssetsView(repository: repository)),
+        );
+        if (listMode) {
+          await tester.tap(find.byKey(const Key('demo-assets-layout-toggle')));
+          await tester.pump();
+        }
+
+        Finder thumbnailFor(String id) => find.descendant(
+          of: find.byKey(ValueKey(id)),
+          matching: find.byType(DemoAssetImage),
+        );
+
+        final originalState = tester.state(thumbnailFor('stable'));
+        repository.publish([_localAsset('new', '新素材'), ...repository.assets]);
+        await tester.pump();
+
+        expect(tester.state(thumbnailFor('stable')), same(originalState));
+        expect(find.text('新素材'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('upload sheet uses real image previews and stable file rows', (
     tester,
   ) async {
@@ -295,7 +365,7 @@ void main() {
     final titleRect = tester.getRect(find.text('上传素材'));
     expect(titleRect.top - tester.getTopLeft(sheet).dy, closeTo(24, 1));
     final picker = find.byKey(const Key('demo-import-picker'));
-    expect(tester.getSize(picker).height, closeTo(133, 1));
+    expect(tester.getSize(picker).height, closeTo(158, 1));
     expect(tester.getTopLeft(picker).dy - titleRect.bottom, closeTo(22, 1));
 
     await tester.tap(picker);
@@ -582,6 +652,30 @@ void main() {
     expect(find.text('上传到官方资产库'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+}
+
+DemoAsset _localAsset(String id, String title) => DemoAsset(
+  id: id,
+  title: title,
+  kind: DemoAssetKind.image,
+  cover: 'assets/images/demo_milk_tea.png',
+  width: 1280,
+  height: 720,
+);
+
+class _MutableAssetRepository extends DemoRepository {
+  _MutableAssetRepository(super.storage, List<DemoAsset> assets)
+    : _visibleAssets = List.of(assets);
+
+  List<DemoAsset> _visibleAssets;
+
+  @override
+  List<DemoAsset> get assets => List.unmodifiable(_visibleAssets);
+
+  void publish(List<DemoAsset> assets) {
+    _visibleAssets = List.of(assets);
+    notifyListeners();
+  }
 }
 
 class _NoNetworkApi extends NetworkAgentApi {

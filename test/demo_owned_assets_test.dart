@@ -69,6 +69,105 @@ void main() {
   );
 
   test(
+    'repeated session refresh keeps the visible mixed asset order stable',
+    () async {
+      final upload = {..._asset('upload-1', ''), 'sessionId': null};
+      final api = _AssetApi(dio)
+        ..records = [_record('s1'), _record('s2')]
+        ..listedAssets = [upload]
+        ..snapshots = {
+          's1': [
+            _snapshot('s1', assets: [_asset('generated-1', 's1')]),
+          ],
+          's2': [
+            _snapshot('s2', assets: [_asset('generated-2', 's2')]),
+          ],
+        };
+      final repository = DemoRepository.harness(storage, api)..restore();
+      addTearDown(repository.dispose);
+
+      await repository.refreshSessions();
+      const expected = ['upload-1', 'generated-1', 'generated-2'];
+      expect(repository.assets.map((asset) => asset.id), expected);
+
+      final visibleOrders = <List<String>>[];
+      repository.addListener(
+        () => visibleOrders.add(
+          repository.assets.map((asset) => asset.id).toList(),
+        ),
+      );
+      await repository.refreshSessions();
+
+      expect(visibleOrders, isNotEmpty);
+      expect(visibleOrders, everyElement(expected));
+    },
+  );
+
+  test(
+    'authoritative asset refresh updates in place and prepends only new IDs',
+    () async {
+      final upload = {..._asset('upload-1', ''), 'sessionId': null};
+      final api = _AssetApi(dio)
+        ..records = [_record('s1'), _record('s2')]
+        ..listedAssets = [upload]
+        ..snapshots = {
+          's1': [
+            _snapshot('s1', assets: [_asset('generated-1', 's1')]),
+          ],
+          's2': [
+            _snapshot('s2', assets: [_asset('generated-2', 's2')]),
+          ],
+        };
+      final repository = DemoRepository.harness(storage, api)..restore();
+      addTearDown(repository.dispose);
+      await repository.refreshSessions();
+
+      api
+        ..listedAssets = [
+          {...upload, 'title': 'Updated upload'},
+        ]
+        ..snapshots = {
+          's1': [
+            _snapshot(
+              's1',
+              assets: [
+                {..._asset('generated-1', 's1'), 'title': 'Updated generated'},
+                _asset('generated-new', 's1'),
+              ],
+            ),
+          ],
+          's2': [_snapshot('s2', assets: const [])],
+        };
+
+      await repository.refreshSessions();
+
+      expect(repository.assets.map((asset) => asset.id), [
+        'generated-new',
+        'upload-1',
+        'generated-1',
+      ]);
+      expect(
+        repository.assets.firstWhere((asset) => asset.id == 'upload-1').title,
+        'Updated upload',
+      );
+      expect(
+        repository.assets
+            .firstWhere((asset) => asset.id == 'generated-1')
+            .title,
+        'Updated generated',
+      );
+
+      final restored = DemoRepository.harness(storage, api)..restore();
+      addTearDown(restored.dispose);
+      expect(restored.assets.map((asset) => asset.id), [
+        'generated-new',
+        'upload-1',
+        'generated-1',
+      ]);
+    },
+  );
+
+  test(
     'completed owned asset updates the same message without another POST',
     () async {
       final api = _AssetApi(dio)
@@ -517,6 +616,7 @@ class _AssetApi extends NetworkAgentApi {
   _AssetApi(super.dio);
 
   List<Map<String, Object?>> records = [];
+  List<Map<String, Object?>> listedAssets = [];
   Map<String, List<Map<String, Object?>>> snapshots = {};
   int sendCalls = 0;
   Completer<void>? nextSnapshotGate;
@@ -528,7 +628,7 @@ class _AssetApi extends NetworkAgentApi {
   Future<Map<String, dynamic>> assets({
     String? sessionId,
     CancelToken? cancelToken,
-  }) async => {'list': <Object?>[]};
+  }) async => {'list': listedAssets};
 
   @override
   Future<Map<String, dynamic>> sessionsPage({

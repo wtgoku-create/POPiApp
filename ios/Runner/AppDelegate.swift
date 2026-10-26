@@ -9,6 +9,7 @@ import os.log
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let douyinLogin = DouyinLoginBridge()
   private var speechInput: SpeechInputBridge?
+  private var clipboardImages: ClipboardImageBridge?
   private let launchDiagnostics = LaunchDiagnostics()
   private var inspectedRenderLayer = false
   private var renderLayerObserver: NSObjectProtocol?
@@ -72,6 +73,9 @@ import os.log
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SpeechInputBridge") {
       speechInput = SpeechInputBridge(messenger: registrar.messenger())
+    }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ClipboardImageBridge") {
+      clipboardImages = ClipboardImageBridge(messenger: registrar.messenger())
     }
     launchDiagnostics.mark("engine_ready")
   }

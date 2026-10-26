@@ -8,6 +8,42 @@ import 'demo_models.dart';
 
 /// A validated, lazily-read file selected for the Harness asset library.
 class DemoUploadFile {
+  factory DemoUploadFile.fromBytes({
+    required String name,
+    required String mimeType,
+    required Uint8List bytes,
+  }) {
+    final kind = kindForMimeType(mimeType);
+    if (kind == null) throw const DemoUploadException('UNSUPPORTED_TYPE');
+    validateMetadata(
+      name: name,
+      mimeType: mimeType,
+      sizeBytes: bytes.lengthInBytes,
+      kind: kind,
+    );
+    validateBytes(
+      bytes,
+      expectedSizeBytes: bytes.lengthInBytes,
+      mimeType: mimeType,
+      kind: kind,
+    );
+    final owned = Uint8List.fromList(bytes);
+    final digest = sha256.convert(owned).toString();
+    return DemoUploadFile(
+      clientRequestId: requestIdFor(
+        name: name,
+        mimeType: mimeType,
+        sha256: digest,
+      ),
+      name: name,
+      mimeType: mimeType,
+      sizeBytes: owned.lengthInBytes,
+      kind: kind,
+      expectedSha256: digest,
+      readBytes: () async => Uint8List.fromList(owned),
+    );
+  }
+
   DemoUploadFile({
     String? clientRequestId,
     required this.name,
@@ -54,11 +90,65 @@ class DemoUploadFile {
   static const int videoLimitBytes = 128 * 1024 * 1024;
   static const int scriptLimitBytes = 2 * 1024 * 1024;
   static const int audioLimitBytes = 32 * 1024 * 1024;
+  static const int documentLimitBytes = 20 * 1024 * 1024;
+  static const int messageAttachmentLimit = 10;
+  static const int messageAttachmentTotalLimitBytes = 50 * 1024 * 1024;
+  static const int messageImageTotalLimitBytes = 20 * 1024 * 1024;
+  static const int documentPageLimit = 100;
+  static const int documentSlideLimit = 100;
+  static const Set<String> documentMimeTypes = {
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
 
-  static int limitFor(DemoAssetKind kind) => switch (kind) {
+  static bool isDocumentMimeType(String mimeType) =>
+      documentMimeTypes.contains(mimeType);
+
+  static DemoAssetKind? kindForMimeType(String mimeType) {
+    for (final kind in DemoAssetKind.values) {
+      if (_mimeTypesFor(kind).contains(mimeType)) return kind;
+    }
+    return null;
+  }
+
+  static String requestIdFor({
+    required String name,
+    required String mimeType,
+    required String sha256,
+  }) => const Uuid().v5(
+    Namespace.url.value,
+    'popi-upload\u0000$name\u0000$mimeType\u0000$sha256',
+  );
+
+  static void validateMessageAttachments(List<DemoAsset> assets) {
+    if (assets.length > messageAttachmentLimit) {
+      throw const DemoUploadException('ATTACHMENT_LIMIT');
+    }
+    if (assets.map((asset) => asset.id).toSet().length != assets.length) {
+      throw const DemoUploadException('INVALID_ATTACHMENT');
+    }
+    var totalBytes = 0;
+    var imageBytes = 0;
+    for (final asset in assets) {
+      totalBytes += asset.sizeBytes;
+      if (asset.kind == DemoAssetKind.image) imageBytes += asset.sizeBytes;
+    }
+    if (totalBytes > messageAttachmentTotalLimitBytes ||
+        imageBytes > messageImageTotalLimitBytes) {
+      throw const DemoUploadException('ATTACHMENTS_TOO_LARGE');
+    }
+  }
+
+  static int limitFor(DemoAssetKind kind, {String? mimeType}) => switch (kind) {
     DemoAssetKind.image => imageLimitBytes,
     DemoAssetKind.video => videoLimitBytes,
-    DemoAssetKind.script => scriptLimitBytes,
+    DemoAssetKind.script =>
+      isDocumentMimeType(mimeType ?? '')
+          ? documentLimitBytes
+          : scriptLimitBytes,
     DemoAssetKind.audio => audioLimitBytes,
   };
 
@@ -79,7 +169,7 @@ class DemoUploadFile {
     if (sizeBytes <= 0) {
       throw const DemoUploadException('EMPTY_FILE');
     }
-    if (sizeBytes > limitFor(kind)) {
+    if (sizeBytes > limitFor(kind, mimeType: mimeType)) {
       throw const DemoUploadException('FILE_TOO_LARGE');
     }
   }
@@ -94,7 +184,10 @@ class DemoUploadFile {
     if (bytes.lengthInBytes != expectedSizeBytes) {
       throw const DemoUploadException('SIZE_MISMATCH');
     }
-    if (bytes.lengthInBytes > limitFor(kind)) {
+    if (!_mimeTypesFor(kind).contains(mimeType)) {
+      throw const DemoUploadException('UNSUPPORTED_TYPE');
+    }
+    if (bytes.lengthInBytes > limitFor(kind, mimeType: mimeType)) {
       throw const DemoUploadException('FILE_TOO_LARGE');
     }
     if (!_contentMatches(bytes, mimeType)) {
@@ -105,7 +198,11 @@ class DemoUploadFile {
   static Set<String> _mimeTypesFor(DemoAssetKind kind) => switch (kind) {
     DemoAssetKind.image => const {'image/png', 'image/jpeg', 'image/webp'},
     DemoAssetKind.video => const {'video/mp4'},
-    DemoAssetKind.script => const {'text/plain', 'text/markdown'},
+    DemoAssetKind.script => const {
+      'text/plain',
+      'text/markdown',
+      ...documentMimeTypes,
+    },
     DemoAssetKind.audio => const {'audio/mpeg', 'audio/wav', 'audio/mp4'},
   };
 
@@ -142,6 +239,13 @@ class DemoUploadFile {
                 (bytes[1] & 0xE0) == 0xE0),
       'audio/wav' => hasAscii(0, 'RIFF') && hasAscii(8, 'WAVE'),
       'text/plain' || 'text/markdown' => _isUtf8Text(bytes),
+      'application/pdf' => hasAscii(0, '%PDF-'),
+      'application/msword' || 'application/vnd.ms-powerpoint' => startsWith(
+        const [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1],
+      ),
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' =>
+        startsWith(const [0x50, 0x4B, 0x03, 0x04]),
       _ => false,
     };
   }

@@ -38,6 +38,7 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
   bool _assetsSelected = false;
   int _assetRouteRevision = 0;
   bool _workspaceActive = true;
+  bool _creatingSession = false;
 
   @override
   void initState() {
@@ -128,19 +129,25 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
   }
 
   Future<void> _startCreate() async {
+    if (_creatingSession) return;
     FocusManager.instance.primaryFocus?.unfocus();
     final sheetContext = _detailNavigatorKey.currentContext;
     if (sheetContext == null || !sheetContext.mounted) return;
-    final id = await showDemoCreateSessionSheet(
-      context: sheetContext,
-      repository: widget.repository,
-      kind: DemoSessionKind.conversation,
-    );
-    if (id == null || !mounted) return;
-    final session = widget.repository.sessions
-        .where((session) => session.id == id)
-        .firstOrNull;
-    if (session != null) _selectSession(session);
+    setState(() => _creatingSession = true);
+    try {
+      final id = await showDemoCreateSessionSheet(
+        context: sheetContext,
+        repository: widget.repository,
+        kind: DemoSessionKind.conversation,
+      );
+      if (id == null || !mounted) return;
+      final session = widget.repository.sessions
+          .where((session) => session.id == id)
+          .firstOrNull;
+      if (session != null) _selectSession(session);
+    } finally {
+      if (mounted) setState(() => _creatingSession = false);
+    }
   }
 
   Future<void> _openAssets() async {
@@ -259,7 +266,7 @@ class _DemoDesktopWorkspaceState extends State<DemoDesktopWorkspace> {
                   selectedSessionId: _selectedSessionId,
                   expanded: expanded,
                   onSelectSession: _selectSession,
-                  onCreate: _startCreate,
+                  onCreate: _creatingSession ? null : _startCreate,
                   onAssets: _openAssets,
                   onProfile: () => context.push('/profile'),
                   onSearch: (query) => setState(() => _query = query),

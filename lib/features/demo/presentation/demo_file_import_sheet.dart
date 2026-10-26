@@ -46,6 +46,8 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
       return switch (error.code.toLowerCase()) {
         'empty_file' => l.demoUploadEmptyFile,
         'file_too_large' => l.demoUploadTooLarge,
+        'attachment_limit' => l.demoAttachmentLimit,
+        'attachments_too_large' => l.demoAttachmentTooLarge,
         'unsupported_type' => l.demoUploadUnsupported,
         'invalid_name' ||
         'invalid_content' ||
@@ -77,6 +79,28 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
     final added = files
         .where((file) => selected.add(file.clientRequestId))
         .toList();
+    final next = [..._files, ...added];
+    var totalBytes = 0;
+    var imageBytes = 0;
+    for (final file in next) {
+      totalBytes += file.sizeBytes;
+      if (file.kind == DemoAssetKind.image) imageBytes += file.sizeBytes;
+    }
+    if (next.length > DemoUploadFile.messageAttachmentLimit) {
+      AppToast.error(
+        context,
+        _errorMessage(const DemoUploadException('ATTACHMENT_LIMIT')),
+      );
+      return;
+    }
+    if (totalBytes > DemoUploadFile.messageAttachmentTotalLimitBytes ||
+        imageBytes > DemoUploadFile.messageImageTotalLimitBytes) {
+      AppToast.error(
+        context,
+        _errorMessage(const DemoUploadException('ATTACHMENTS_TOO_LARGE')),
+      );
+      return;
+    }
     setState(() => _files.addAll(added));
     for (final file in added) {
       _previewQueue = _previewQueue.then((_) => _loadImagePreview(file));
@@ -209,6 +233,11 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
     DemoAssetKind.audio => l.demoAudio,
   };
 
+  String _fileTypeLabel(AppLocalizations l, DemoUploadFile file) =>
+      DemoUploadFile.isDocumentMimeType(file.mimeType)
+      ? l.demoDocuments
+      : _typeLabel(l, file.kind);
+
   String _extension(DemoUploadFile file) {
     final dot = file.name.lastIndexOf('.');
     if (dot >= 0 && dot < file.name.length - 1) {
@@ -219,7 +248,7 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
 
   String _metadata(AppLocalizations l, DemoUploadFile file) {
     return <String>[
-      _typeLabel(l, file.kind),
+      _fileTypeLabel(l, file),
       _extension(file),
       _size(l, file.sizeBytes),
     ].join(' · ');
@@ -286,7 +315,7 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
                   borderRadius: BorderRadius.circular(18),
                   onTap: _picking || _uploading ? null : _pick,
                   child: SizedBox(
-                    height: 133,
+                    height: 158,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -322,6 +351,24 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
                                 .colorScheme
                                 .onSurfaceVariant
                                 .withValues(alpha: .6),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Text(
+                            l.demoDocumentLimitHint,
+                            maxLines: 2,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              height: 1.3,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: .6),
+                            ),
                           ),
                         ),
                       ],
@@ -396,7 +443,11 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
                                   if (ready) ...[
                                     const SizedBox(width: 6),
                                     Text(
-                                      l.demoFileUploaded,
+                                      DemoUploadFile.isDocumentMimeType(
+                                            file.mimeType,
+                                          )
+                                          ? l.demoDocumentReady
+                                          : l.demoFileUploaded,
                                       maxLines: 1,
                                       style: const TextStyle(
                                         fontSize: 13,
@@ -412,10 +463,18 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
                         SizedBox.square(
                           dimension: 36,
                           child: _uploadingId == file.clientRequestId && !ready
-                              ? const Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                              ? Tooltip(
+                                  message:
+                                      DemoUploadFile.isDocumentMimeType(
+                                        file.mimeType,
+                                      )
+                                      ? l.demoDocumentParsing
+                                      : l.demoUpload,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(8),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 )
                               : ready

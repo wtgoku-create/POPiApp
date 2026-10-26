@@ -29,7 +29,7 @@ for directory in ["services/agent/local", "services/agent/runtime", "services/ag
             path.suffix.lower() in {".jpg", ".png", ".webp", ".otf", ".ttf", ".woff2", ".txt"}
             or path.name in {"LICENSE", "NOTICE"}
         )
-        if vendor_asset or path.suffix in {".mjs", ".js", ".json", ".md", ".sh", ".yml", ".yaml"}:
+        if vendor_asset or path.suffix in {".mjs", ".js", ".json", ".md", ".sh", ".py", ".yml", ".yaml"}:
             sources.append((path, str(relative)))
 for name in ["services/agent/dev.mjs", "services/agent/runtime-lock.json"]:
     sources.append((args.harness_source / name, name))

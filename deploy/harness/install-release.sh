@@ -13,6 +13,24 @@ npm ci --ignore-scripts --no-audit --no-fund --cache /opt/popi-harness/npm-cache
 chmod -R u=rwX,go=rX "$release_directory"
 node paths.mjs seal
 node paths.mjs verify
+bash "$release_directory/deploy/harness/prepare-document-runtime.sh"
+
+# The byte-only converter has no access to Harness credentials. Bootstrap it
+# from the staged immutable source on the first document-capable deployment.
+if ! systemctl is-active --quiet popi-document-converter.service; then
+  sed "s@/opt/popi-harness/current/services/agent/local/document-converter-daemon.py@$release_directory/services/agent/local/document-converter-daemon.py@" \
+    "$release_directory/deploy/harness/popi-document-converter.service" \
+    > /etc/systemd/system/popi-document-converter.service
+  chmod 0644 /etc/systemd/system/popi-document-converter.service
+  systemctl daemon-reload
+  systemctl enable --now popi-document-converter.service
+fi
+for attempt in {1..20}; do
+  [[ ! -S /run/popi-document-converter/convert.sock ]] || break
+  sleep 0.25
+done
+test -S /run/popi-document-converter/convert.sock
+test "$(stat -c '%U:%G:%a' /run/popi-document-converter/convert.sock)" = 'popi-document-converter:popi-harness:660'
 
 film_chrome=""
 for candidate in /usr/bin/google-chrome-stable /usr/bin/google-chrome /usr/bin/chromium /usr/bin/chromium-browser; do

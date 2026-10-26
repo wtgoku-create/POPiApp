@@ -35,4 +35,5 @@ for candidate in /usr/bin/google-chrome-stable /usr/bin/google-chrome /usr/bin/c
 done
 test -n "$film_chrome"
 "$film_chrome" --version
+bash "$(dirname "${BASH_SOURCE[0]}")/prepare-document-runtime.sh"
 printf 'POPi runtime prerequisites ready\n'

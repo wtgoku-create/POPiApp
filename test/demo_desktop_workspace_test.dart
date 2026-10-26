@@ -106,6 +106,131 @@ void main() {
     expect(find.byType(DemoChatPage), findsOneWidget);
   });
 
+  for (final width in [1200.0, 560.0]) {
+    testWidgets(
+      'desktop create ignores rapid and stale activations at width $width',
+      (tester) async {
+        await _pumpHome(tester, size: Size(width, 820));
+        final create = find.byKey(const Key('demo-desktop-create'));
+        final createButton = find.descendant(
+          of: create,
+          matching: find.byType(IconButton),
+        );
+        final staleOnPressed = tester
+            .widget<IconButton>(createButton)
+            .onPressed!;
+
+        staleOnPressed();
+        staleOnPressed();
+        staleOnPressed();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+        expect(
+          find.byKey(const Key('demo-assistant-name'), skipOffstage: false),
+          findsOneWidget,
+        );
+        expect(tester.widget<IconButton>(createButton).onPressed, isNull);
+
+        // A callback retained before the sheet opened must also be harmless.
+        staleOnPressed();
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+
+        Navigator.of(
+          tester.element(find.byKey(const Key('demo-assistant-name'))),
+        ).pop();
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<IconButton>(createButton).onPressed, isNotNull);
+        await tester.tap(create);
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('desktop create submits one assistant and can be opened again', (
+    tester,
+  ) async {
+    final repository = await _pumpHome(tester, size: const Size(1200, 820));
+    final originalCount = repository.sessions.length;
+    final create = find.byKey(const Key('demo-desktop-create'));
+
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('demo-assistant-name')),
+      '单次创建',
+    );
+    await tester.pump();
+    final confirm = find.byKey(const Key('demo-create-assistant-confirm'));
+    final submit = tester
+        .widget<FilledButton>(
+          find.descendant(of: confirm, matching: find.byType(FilledButton)),
+        )
+        .onPressed!;
+    submit();
+    submit();
+    await tester.pumpAndSettle();
+
+    expect(repository.sessions, hasLength(originalCount + 1));
+    final created = repository.sessions.singleWhere(
+      (session) => session.title == '单次创建',
+    );
+    expect(created.members, ['popi']);
+    expect(created.memberNames['popi'], '单次创建');
+    expect(_activeSessionId(tester), created.id);
+    expect(
+      find.byKey(const Key('demo-assistant-name'), skipOffstage: false),
+      findsNothing,
+    );
+
+    expect(
+      tester
+          .widget<IconButton>(
+            find.descendant(of: create, matching: find.byType(IconButton)),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile create also ignores rapid and stale activations', (
+    tester,
+  ) async {
+    await _pumpHome(
+      tester,
+      size: const Size(390, 844),
+      platform: TargetPlatform.android,
+    );
+    final create = find.byKey(const Key('demo-create'));
+    final staleOnPressed = tester.widget<IconButton>(create).onPressed!;
+
+    staleOnPressed();
+    staleOnPressed();
+    staleOnPressed();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+    expect(tester.widget<IconButton>(create).onPressed, isNull);
+    staleOnPressed();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet, skipOffstage: false), findsOneWidget);
+
+    Navigator.of(
+      tester.element(find.byKey(const Key('demo-assistant-name'))),
+    ).pop();
+    await tester.pumpAndSettle();
+    expect(tester.widget<IconButton>(create).onPressed, isNotNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sidebar and chat controls share the root semantics tree', (
     tester,
   ) async {

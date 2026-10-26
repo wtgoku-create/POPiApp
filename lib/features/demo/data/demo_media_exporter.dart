@@ -37,7 +37,9 @@ abstract final class DemoMediaExporter {
         ? _remoteExtension(asset)
         : asset.media.split('.').last;
     final stem = asset.title.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_');
-    final name = '$stem.$extension';
+    final name = stem.toLowerCase().endsWith('.$extension')
+        ? stem
+        : '$stem.$extension';
     final file = XFile.fromData(
       bytes,
       name: name,
@@ -87,6 +89,20 @@ abstract final class DemoMediaExporter {
       case 'audio/m4a':
       case 'audio/x-m4a':
         return 'm4a';
+      case 'application/pdf':
+        return 'pdf';
+      case 'application/msword':
+        return 'doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return 'docx';
+      case 'application/vnd.ms-powerpoint':
+        return 'ppt';
+      case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        return 'pptx';
+      case 'text/plain':
+        return 'txt';
+      case 'text/markdown':
+        return 'md';
     }
     final path = Uri.tryParse(asset.contentUrl)?.path ?? asset.media;
     final extension = path.contains('.')
@@ -101,6 +117,15 @@ abstract final class DemoMediaExporter {
     return switch (extension) {
       'mp3' => 'audio/mpeg',
       'wav' => 'audio/wav',
+      'pdf' => 'application/pdf',
+      'doc' => 'application/msword',
+      'docx' =>
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'ppt' => 'application/vnd.ms-powerpoint',
+      'pptx' =>
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'txt' => 'text/plain',
+      'md' => 'text/markdown',
       _ => 'audio/mp4',
     };
   }

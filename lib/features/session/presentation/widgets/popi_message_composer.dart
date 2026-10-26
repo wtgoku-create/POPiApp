@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:extended_text_field/extended_text_field.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
@@ -146,6 +147,21 @@ class PopiMessageComposerController {
     );
   }
 
+  void insertPlainText(String value) {
+    if (value.isEmpty) return;
+    final current = textController.value;
+    final selection = current.selection.isValid
+        ? current.selection
+        : TextSelection.collapsed(offset: current.text.length);
+    final start = selection.start.clamp(0, current.text.length);
+    final end = selection.end.clamp(start, current.text.length);
+    textController.value = current.copyWith(
+      text: current.text.replaceRange(start, end, value),
+      selection: TextSelection.collapsed(offset: start + value.length),
+      composing: TextRange.empty,
+    );
+  }
+
   Future<void> insertImage(Uint8List bytes) async {
     _insertInlineImage(_InlineComposerImage.bytes(bytes));
   }
@@ -208,6 +224,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
     this.onStop,
     this.canStopRunning = true,
     this.onVoiceInput,
+    this.onFocusChanged,
+    this.onPasteImageRequested,
     this.castRoles,
     this.onCastRequested,
     this.castEnabled = true,
@@ -270,6 +288,8 @@ class PopiMessageComposer extends ConsumerStatefulWidget {
 
   /// Optional host override; otherwise uses the shared speech-to-text input.
   final VoidCallback? onVoiceInput;
+  final ValueChanged<bool>? onFocusChanged;
+  final Future<void> Function()? onPasteImageRequested;
   final List<LibraryRole>? castRoles;
   final VoidCallback? onCastRequested;
   final bool castEnabled;
@@ -290,6 +310,8 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   int _focusRevision = 0;
   bool _mentionSheetOpen = false;
   bool _expandedEditorOpen = false;
+  bool _expandedKeyboardSubmissionPending = false;
+  bool _pasteImageShortcutPending = false;
   late ComposerVoiceInputController _voiceInput;
   late final ValueNotifier<
     ({bool sending, bool running, bool attachmentsReady})
@@ -455,6 +477,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     if (_expandedEditorOpen || widget.sending) return;
     _voiceInput.cancel();
     _expandedEditorOpen = true;
+    _expandedKeyboardSubmissionPending = false;
     try {
       final submitted = await AppSheet.show<bool>(
         context: context,
@@ -477,6 +500,14 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
                   expandedEditor: true,
                   readOnly: status.sending,
                   running: status.running,
+                  onDesktopSubmitted: () {
+                    if (_expandedKeyboardSubmissionPending ||
+                        ModalRoute.of(sheetContext)?.isCurrent != true) {
+                      return;
+                    }
+                    _expandedKeyboardSubmissionPending = true;
+                    Navigator.of(sheetContext).pop(true);
+                  },
                 ),
                 action: _SendButton(
                   icon: Icons.check_rounded,
@@ -509,6 +540,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       }
     } finally {
       _expandedEditorOpen = false;
+      _expandedKeyboardSubmissionPending = false;
     }
   }
 
@@ -561,6 +593,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   }
 
   void _handleFocusChanged() {
+    widget.onFocusChanged?.call(_focusNode.hasFocus);
     final revision = ++_focusRevision;
     if (_focusNode.hasFocus) {
       _syncExpansion();
@@ -1039,6 +1072,7 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
     bool expandedEditor = false,
     bool? readOnly,
     bool? running,
+    VoidCallback? onDesktopSubmitted,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final isRunning = running ?? widget.running;
@@ -1050,61 +1084,154 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
       fontWeight: FontWeight.w400,
       height: 1.5,
     );
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: isRunning ? _showRunningToast : null,
-      child: AbsorbPointer(
-        absorbing: isRunning,
-        child: ExtendedTextField(
-          key: Key(
-            expandedEditor
-                ? 'popi-expanded-message-input'
-                : 'popi-message-input',
-          ),
-          focusNode: expandedEditor ? null : _focusNode,
-          autofocus: expandedEditor,
-          onTapOutside: (_) => widget.controller.dismissKeyboard(),
-          controller: widget.controller.textController,
-          onChanged: _handleUserTextChanged,
-          scrollController: expandedEditor ? null : _inputScroll,
-          enabled: !isRunning,
-          readOnly:
-              isRunning || _voiceInput.active || (readOnly ?? widget.sending),
-          specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
-          minLines: expandedEditor
-              ? null
-              : _isExpanded && !widget.conversationMode
-              ? 2
-              : 1,
-          maxLines: expandedEditor ? null : 3,
-          expands: expandedEditor,
-          cursorColor: colorScheme.primary,
-          textAlignVertical: expandedEditor || _isExpanded
-              ? TextAlignVertical.top
-              : TextAlignVertical.center,
-          style: TextStyle(
-            color: colorScheme.onSurface,
-            fontSize: expandedEditor || (_isExpanded && widget.conversationMode)
-                ? 18
-                : placeholderFontSize,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-          decoration: InputDecoration(
-            isDense: true,
-            filled: false,
-            fillColor: Colors.transparent,
-            contentPadding: EdgeInsets.zero,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            hintText: widget.placeholderText ?? l10n.composerPlaceholder,
-            hintStyle: placeholderStyle,
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) => _handleInputKeyEvent(
+        event,
+        onSubmitted:
+            onDesktopSubmitted ?? () => _submit(widget.controller.markdown),
+      ),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: isRunning ? _showRunningToast : null,
+        child: AbsorbPointer(
+          absorbing: isRunning,
+          child: ExtendedTextField(
+            key: Key(
+              expandedEditor
+                  ? 'popi-expanded-message-input'
+                  : 'popi-message-input',
+            ),
+            focusNode: expandedEditor ? null : _focusNode,
+            autofocus: expandedEditor,
+            onTapOutside: (_) => widget.controller.dismissKeyboard(),
+            controller: widget.controller.textController,
+            extendedContextMenuBuilder: (context, editableTextState) {
+              final items = [...editableTextState.contextMenuButtonItems];
+              if (!kIsWeb && widget.onPasteImageRequested != null) {
+                items.add(
+                  ContextMenuButtonItem(
+                    label: AppLocalizations.of(context)!.demoPasteImage,
+                    onPressed: () {
+                      ContextMenuController.removeAny();
+                      unawaited(widget.onPasteImageRequested!());
+                    },
+                  ),
+                );
+              }
+              return AdaptiveTextSelectionToolbar.buttonItems(
+                buttonItems: items,
+                anchors: editableTextState.contextMenuAnchors,
+              );
+            },
+            onChanged: _handleUserTextChanged,
+            scrollController: expandedEditor ? null : _inputScroll,
+            enabled: !isRunning,
+            readOnly:
+                isRunning || _voiceInput.active || (readOnly ?? widget.sending),
+            specialTextSpanBuilder: widget.controller.specialTextSpanBuilder,
+            minLines: expandedEditor
+                ? null
+                : _isExpanded && !widget.conversationMode
+                ? 2
+                : 1,
+            maxLines: expandedEditor ? null : 3,
+            expands: expandedEditor,
+            cursorColor: colorScheme.primary,
+            textAlignVertical: expandedEditor || _isExpanded
+                ? TextAlignVertical.top
+                : TextAlignVertical.center,
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize:
+                  expandedEditor || (_isExpanded && widget.conversationMode)
+                  ? 18
+                  : placeholderFontSize,
+              fontWeight: FontWeight.w400,
+              height: 1.5,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              filled: false,
+              fillColor: Colors.transparent,
+              contentPadding: EdgeInsets.zero,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              hintText: widget.placeholderText ?? l10n.composerPlaceholder,
+              hintStyle: placeholderStyle,
+            ),
           ),
         ),
       ),
     );
+  }
+
+  KeyEventResult _handleInputKeyEvent(
+    KeyEvent event, {
+    required VoidCallback onSubmitted,
+  }) {
+    final key = event.logicalKey;
+    final platform = Theme.of(context).platform;
+    final keyboard = HardwareKeyboard.instance;
+    final pasteImageShortcut =
+        !kIsWeb &&
+        platform == TargetPlatform.macOS &&
+        key == LogicalKeyboardKey.keyV &&
+        keyboard.isMetaPressed &&
+        widget.onPasteImageRequested != null;
+    if (pasteImageShortcut) {
+      if (event is KeyDownEvent && !_pasteImageShortcutPending) {
+        _pasteImageShortcutPending = true;
+        unawaited(
+          widget.onPasteImageRequested!().whenComplete(() {
+            _pasteImageShortcutPending = false;
+          }),
+        );
+      }
+      return KeyEventResult.handled;
+    }
+    if (key != LogicalKeyboardKey.enter &&
+        key != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    final desktop =
+        platform == TargetPlatform.macOS ||
+        platform == TargetPlatform.windows ||
+        platform == TargetPlatform.linux;
+    final composing = widget.controller.textController.value.composing;
+    if (!desktop || (composing.isValid && !composing.isCollapsed)) {
+      return KeyEventResult.ignored;
+    }
+    final modified =
+        keyboard.isShiftPressed ||
+        keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isAltPressed;
+    if (modified) {
+      return KeyEventResult.ignored;
+    }
+
+    // Consume key-up and held-key repeats so one press can submit only once.
+    if (event is! KeyDownEvent) return KeyEventResult.handled;
+    final status = _editorStatus.value;
+    final hasContent =
+        widget.controller.markdown.isNotEmpty ||
+        widget.selectedImages.isNotEmpty ||
+        widget.selectedRoles.isNotEmpty ||
+        widget.selectedAssets.isNotEmpty;
+    if (!widget.active ||
+        status.sending ||
+        status.running ||
+        !status.attachmentsReady ||
+        _voiceInput.active ||
+        !hasContent) {
+      return KeyEventResult.handled;
+    }
+    onSubmitted();
+    return KeyEventResult.handled;
   }
 
   ({double height, bool overflows}) _measureInput(

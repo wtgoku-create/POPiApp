@@ -32,7 +32,7 @@ class DemoDesktopSidebar extends StatefulWidget {
   final String? selectedSessionId;
   final bool expanded;
   final ValueChanged<DemoSession> onSelectSession;
-  final VoidCallback onCreate;
+  final VoidCallback? onCreate;
   final VoidCallback onAssets;
   final VoidCallback onProfile;
   final ValueChanged<String> onSearch;
@@ -184,7 +184,7 @@ class _SidebarHeader extends StatelessWidget {
   final VoidCallback onSearchPressed;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onSearchClosed;
-  final VoidCallback onCreate;
+  final VoidCallback? onCreate;
   final String searchTooltip;
   final String createTooltip;
 
@@ -544,7 +544,7 @@ class _SidebarIconButton extends StatelessWidget {
   });
 
   final String tooltip;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Widget icon;
 
   @override

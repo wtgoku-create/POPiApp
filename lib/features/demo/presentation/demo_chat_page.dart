@@ -1,10 +1,15 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/clipboard/clipboard_images.dart';
+import '../../../core/network/agent_api_exception.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_image_preview.dart';
 import '../../../shared/widgets/app_dialog.dart';
@@ -128,6 +133,7 @@ class DemoChatPage extends StatefulWidget {
     this.desktopLayout = false,
     this.active = true,
     this.pickAttachmentFiles,
+    this.clipboardImageService,
     super.key,
   });
   final DemoRepository repository;
@@ -135,6 +141,7 @@ class DemoChatPage extends StatefulWidget {
   final bool desktopLayout;
   final bool active;
   final Future<List<DemoUploadFile>> Function()? pickAttachmentFiles;
+  final ClipboardImageService? clipboardImageService;
   @override
   State<DemoChatPage> createState() => _DemoChatPageState();
 }
@@ -150,11 +157,26 @@ class _DemoChatPageState extends State<DemoChatPage> {
   final DemoRoleMentionTracker _roleMentions = DemoRoleMentionTracker();
   final Map<String, int> _imagePages = {};
   final Set<String> _dismissingMediaJobs = {};
+  late final ClipboardImageService _clipboardImages;
+  late final ClipboardImagePasteBinding _clipboardPasteBinding;
   bool _taskBriefOpen = false;
   bool? _referencePublishingConfigured;
+  bool _composerFocused = false;
+  bool _pastingImages = false;
+  bool _followingLatest = false;
+  bool _chatLayoutInitialized = false;
+  bool _latestScrollScheduled = false;
   @override
   void initState() {
     super.initState();
+    _clipboardImages =
+        widget.clipboardImageService ?? createClipboardImageService();
+    _clipboardPasteBinding = createClipboardImagePasteBinding(
+      isFocused: () => _composerFocused,
+      onImages: _importClipboardImages,
+      onError: _showClipboardError,
+    );
+    _followingLatest = widget.desktopLayout;
     _composer.textController.addListener(_reconcileRoleMentions);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
@@ -176,7 +198,23 @@ class _DemoChatPageState extends State<DemoChatPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleLatestScroll();
+  }
+
+  @override
+  void didUpdateWidget(covariant DemoChatPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.active != widget.active) {
+      _clipboardPasteBinding.setActive(widget.active && _composerFocused);
+    }
+    if (!oldWidget.active && widget.active) _scheduleLatestScroll();
+  }
+
+  @override
   void dispose() {
+    _clipboardPasteBinding.dispose();
     _conversation.dispose();
     _composer.textController.removeListener(_reconcileRoleMentions);
     _composer.dispose();
@@ -186,6 +224,58 @@ class _DemoChatPageState extends State<DemoChatPage> {
 
   void _reconcileRoleMentions() =>
       _roleMentions.reconcileEditingValue(_composer.textController.value);
+
+  bool get _chatVisible =>
+      mounted && widget.active && ModalRoute.of(context)?.isCurrent != false;
+
+  bool _handleChatScroll(ScrollNotification notification) {
+    if (!_chatVisible ||
+        notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is UserScrollNotification &&
+        notification.direction == ScrollDirection.forward) {
+      _followingLatest = false;
+    } else if ((notification is ScrollUpdateNotification ||
+            notification is ScrollEndNotification) &&
+        notification.metrics.extentAfter <= 1) {
+      _followingLatest = true;
+    }
+    return false;
+  }
+
+  bool _handleChatMetrics(ScrollMetricsNotification notification) {
+    if (!_chatVisible ||
+        notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (!_chatLayoutInitialized) {
+      _chatLayoutInitialized = true;
+      _followingLatest =
+          _followingLatest || notification.metrics.extentAfter <= 1;
+    }
+    _scheduleLatestScroll();
+    return false;
+  }
+
+  /// Recheck the laid-out end as streamed text and late media change its size.
+  void _scheduleLatestScroll({bool force = false}) {
+    if (force) _followingLatest = true;
+    if (!_followingLatest || _latestScrollScheduled) return;
+    _latestScrollScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _latestScrollScheduled = false;
+      if (!_chatVisible || !_followingLatest || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      if (!position.hasContentDimensions) return;
+      if ((position.maxScrollExtent - position.pixels).abs() > 1) {
+        _scroll.jumpTo(position.maxScrollExtent);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
 
   String _roleName(DemoSession session, String roleId) {
     final configured = session.roleProfiles[roleId]?.name.trim() ?? '';
@@ -291,7 +381,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
 
   Future<void> _send([String? prompt]) async {
     final input = prompt ?? _composer.markdown;
-    if (_conversation.busy) return;
+    if (!widget.active || _conversation.busy) return;
     final l = AppLocalizations.of(context)!;
     final session = _conversation.session;
     final memberId = session.members.contains(session.activeMemberId)
@@ -345,9 +435,15 @@ class _DemoChatPageState extends State<DemoChatPage> {
       unawaited(_composer.setText(''));
       _roleMentions.clear();
       setState(_attachments.clear);
+      _scheduleLatestScroll();
     }
 
-    final sent = await demoPerform(context, () async {
+    if (input.trim().isNotEmpty ||
+        _attachments.isNotEmpty ||
+        filmInvocation != null) {
+      _scheduleLatestScroll(force: true);
+    }
+    await demoPerform(context, () async {
       final ok = await _conversation.send(
         input,
         List.of(_attachments),
@@ -358,17 +454,6 @@ class _DemoChatPageState extends State<DemoChatPage> {
       );
       if (ok) clearAcceptedDraft();
     });
-    if (sent && mounted && _scroll.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _scroll.hasClients) {
-          _scroll.animateTo(
-            _scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
 
   bool _roleMentionSheetOpen = false;
@@ -552,7 +637,109 @@ class _DemoChatPageState extends State<DemoChatPage> {
         .map((asset) => asset.id)
         .where((id) => existing.add(id))
         .toList();
-    if (added.isNotEmpty) setState(() => _attachments.addAll(added));
+    if (added.isEmpty) return;
+    try {
+      widget.repository.validateMessageAttachments([..._attachments, ...added]);
+    } on AgentApiException catch (error) {
+      final l = AppLocalizations.of(context)!;
+      AppToast.error(
+        context,
+        error.code == 'message_attachment_limit'
+            ? l.demoAttachmentLimit
+            : error.code == 'message_attachment_too_large'
+            ? l.demoAttachmentTooLarge
+            : l.demoAttachmentInvalid,
+      );
+      return;
+    }
+    setState(() => _attachments.addAll(added));
+  }
+
+  void _handleComposerFocus(bool focused) {
+    _composerFocused = focused;
+    _clipboardPasteBinding.setActive(focused && widget.active);
+  }
+
+  Future<void> _pasteImagesFromClipboard() async {
+    try {
+      final images = await _clipboardImages.readImagesFromUserPaste();
+      if (!mounted) return;
+      if (images.isEmpty) {
+        final text = await Clipboard.getData(Clipboard.kTextPlain);
+        if (mounted && text?.text?.isNotEmpty == true) {
+          _composer.insertPlainText(text!.text!);
+        } else if (mounted) {
+          AppToast.info(
+            context,
+            AppLocalizations.of(context)!.demoPasteImageUnavailable,
+          );
+        }
+        return;
+      }
+      await _importClipboardImages(images);
+    } on ClipboardImageException catch (error) {
+      if (mounted) _showClipboardError(error);
+    }
+  }
+
+  Future<void> _importClipboardImages(
+    List<ClipboardImagePayload> images,
+  ) async {
+    if (_pastingImages || images.isEmpty || !mounted) return;
+    final selected = [
+      for (final id in _attachments)
+        for (final asset in widget.repository.assets)
+          if (asset.id == id) asset,
+    ];
+    final nextCount = selected.length + images.length;
+    final nextBytes =
+        selected.fold<int>(0, (sum, asset) => sum + asset.sizeBytes) +
+        images.fold<int>(0, (sum, image) => sum + image.bytes.lengthInBytes);
+    final nextImageBytes =
+        selected
+            .where((asset) => asset.kind == DemoAssetKind.image)
+            .fold<int>(0, (sum, asset) => sum + asset.sizeBytes) +
+        images.fold<int>(0, (sum, image) => sum + image.bytes.lengthInBytes);
+    final l = AppLocalizations.of(context)!;
+    if (nextCount > DemoUploadFile.messageAttachmentLimit) {
+      AppToast.error(context, l.demoAttachmentLimit);
+      return;
+    }
+    if (nextBytes > DemoUploadFile.messageAttachmentTotalLimitBytes ||
+        nextImageBytes > DemoUploadFile.messageImageTotalLimitBytes) {
+      AppToast.error(context, l.demoAttachmentTooLarge);
+      return;
+    }
+    setState(() => _pastingImages = true);
+    try {
+      for (final image in images) {
+        final asset = await widget.repository.uploadFile(
+          DemoUploadFile.fromBytes(
+            name: image.name,
+            mimeType: image.mimeType,
+            bytes: image.bytes,
+          ),
+        );
+        if (!mounted) return;
+        _addAttachments([asset]);
+      }
+    } catch (_) {
+      if (mounted) AppToast.error(context, l.demoPasteImageFailed);
+    } finally {
+      if (mounted) setState(() => _pastingImages = false);
+    }
+  }
+
+  void _showClipboardError(ClipboardImageException error) {
+    if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
+    final message = switch (error.code) {
+      'empty' || 'unavailable' => l.demoPasteImageUnavailable,
+      'too_many_images' => l.demoAttachmentLimit,
+      'image_too_large' || 'total_too_large' => l.demoAttachmentTooLarge,
+      _ => l.demoPasteImageFailed,
+    };
+    AppToast.error(context, message);
   }
 
   Future<void> _attach() async {
@@ -789,7 +976,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
         widget.desktopLayout ? 24 : 16,
         0,
         widget.desktopLayout ? 24 : 16,
-        12,
+        message.user ? 16 : 10,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -814,12 +1001,14 @@ class _DemoChatPageState extends State<DemoChatPage> {
               constraints: BoxConstraints(
                 maxWidth: widget.desktopLayout
                     ? 760
-                    : question != null || activity != null
+                    : !message.user || question != null || activity != null
                     ? MediaQuery.sizeOf(context).width - 64
-                    : MediaQuery.sizeOf(context).width * .72,
+                    : MediaQuery.sizeOf(context).width * .82,
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: message.user
+                    ? CrossAxisAlignment.end
+                    : CrossAxisAlignment.start,
                 children: [
                   if (!message.user && activity == null) ...[
                     Padding(
@@ -841,7 +1030,10 @@ class _DemoChatPageState extends State<DemoChatPage> {
                     Semantics(
                       liveRegion: message.id == 'thinking',
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: message.user ? 10 : 12,
+                        ),
                         decoration: BoxDecoration(
                           color: message.user
                               ? demoTint
@@ -850,16 +1042,16 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                         Brightness.light
                               ? const Color(0xFFF2F2F3)
                               : demoSurface(context),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(
+                            message.user ? 22 : 18,
+                          ),
                         ),
                         child: MarkdownMessage(
                           text: text,
                           style: TextStyle(
-                            fontSize: widget.desktopLayout ? 15 : 14,
-                            height: 1.5,
-                            fontWeight: widget.desktopLayout
-                                ? FontWeight.w400
-                                : FontWeight.w600,
+                            fontSize: widget.desktopLayout ? 15 : 16,
+                            height: 1.55,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ),
@@ -1092,18 +1284,30 @@ class _DemoChatPageState extends State<DemoChatPage> {
                             builders: chat.Builders(
                               composerBuilder: (_) => const SizedBox.shrink(),
                               chatAnimatedListBuilder: (context, itemBuilder) =>
-                                  ChatAnimatedList(
-                                    scrollController: _scroll,
-                                    initialScrollToEndMode: widget.desktopLayout
-                                        ? InitialScrollToEndMode.jump
-                                        : InitialScrollToEndMode.none,
-                                    handleSafeArea: false,
-                                    topPadding: headerInset + 10,
-                                    bottomPadding: 10,
-                                    keyboardDismissBehavior:
-                                        ScrollViewKeyboardDismissBehavior
-                                            .onDrag,
-                                    itemBuilder: itemBuilder,
+                                  NotificationListener<ScrollNotification>(
+                                    onNotification: _handleChatScroll,
+                                    child:
+                                        NotificationListener<
+                                          ScrollMetricsNotification
+                                        >(
+                                          onNotification: _handleChatMetrics,
+                                          child: ChatAnimatedList(
+                                            scrollController: _scroll,
+                                            initialScrollToEndMode:
+                                                InitialScrollToEndMode.none,
+                                            shouldScrollToEndWhenSendingMessage:
+                                                false,
+                                            shouldScrollToEndWhenAtBottom:
+                                                false,
+                                            handleSafeArea: false,
+                                            topPadding: headerInset + 10,
+                                            bottomPadding: 10,
+                                            keyboardDismissBehavior:
+                                                ScrollViewKeyboardDismissBehavior
+                                                    .onDrag,
+                                            itemBuilder: itemBuilder,
+                                          ),
+                                        ),
                                   ),
                               chatMessageBuilder:
                                   (
@@ -1223,6 +1427,30 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                         ),
                               clearLabel: l.demoStyleFilmClear,
                             ),
+                            if (_pastingImages)
+                              _ComposerContextChip(
+                                key: const Key('demo-pasting-images-chip'),
+                                label: l.demoPastingImages,
+                                leading: const SizedBox.square(
+                                  dimension: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                          ]
+                        : _pastingImages
+                        ? [
+                            _ComposerContextChip(
+                              key: const Key('demo-pasting-images-chip'),
+                              label: l.demoPastingImages,
+                              leading: const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
                           ]
                         : const [],
                     selectedAssets: [
@@ -1283,7 +1511,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                   const SizedBox(height: 5),
                                   Text(
                                     asset.title,
-                                    maxLines: 2,
+                                    maxLines: asset.isDocument ? 1 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
@@ -1292,6 +1520,19 @@ class _DemoChatPageState extends State<DemoChatPage> {
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
+                                  if (asset.isDocument)
+                                    Text(
+                                      asset.document?.format
+                                              .trim()
+                                              .toUpperCase() ??
+                                          l.demoDocuments,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.textTertiary,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -1326,6 +1567,14 @@ class _DemoChatPageState extends State<DemoChatPage> {
                           onSelected: () =>
                               unawaited(_attachFrom(_AttachmentSource.library)),
                         ),
+                        if (!kIsWeb)
+                          AppMenuItem(
+                            key: const Key('demo-paste-image'),
+                            label: l.demoPasteImage,
+                            icon: const Icon(Icons.content_paste_rounded),
+                            onSelected: () =>
+                                unawaited(_pasteImagesFromClipboard()),
+                          ),
                         if (styleFilmEnabled) ...[
                           const AppMenuDivider(),
                           AppMenuItem(
@@ -1356,6 +1605,9 @@ class _DemoChatPageState extends State<DemoChatPage> {
                     },
                     onHeightChanged: (_) {},
                     onSubmitted: _send,
+                    attachmentsReady: !_pastingImages,
+                    onFocusChanged: _handleComposerFocus,
+                    onPasteImageRequested: _pasteImagesFromClipboard,
                     enableMentions: true,
                     onMentionRequested: _showRoleMentionSheet,
                     sending: _conversation.sending || loadingSnapshot,

@@ -198,6 +198,57 @@ void main() {
     },
   );
 
+  testWidgets('document selection shows parsing state and publishes metadata', (
+    tester,
+  ) async {
+    final document = _documentFile('pdf-request', '企划.pdf');
+    final gate = Completer<void>();
+    api.uploadGate = gate;
+    final imported = <List<DemoAsset>>[];
+    await pump(
+      tester,
+      launcher(() async => [document], onImported: imported.add),
+    );
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-picker')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('企划.pdf'), findsOneWidget);
+    expect(find.textContaining('文档 · PDF'), findsOneWidget);
+    expect(find.textContaining('最多 10 个附件'), findsOneWidget);
+    await tester.tap(find.text('上传到官方资产库'));
+    await tester.pump();
+    expect(find.byTooltip('正在解析文档'), findsOneWidget);
+    gate.complete();
+    await pumpUntil(tester, () => imported.isNotEmpty);
+    expect(imported.single.single.isDocument, isTrue);
+    expect(imported.single.single.document?.pageCount, 2);
+    expect(imported.single.single.document?.isReady, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'selection limits reject an oversized attachment batch in place',
+    (tester) async {
+      final files = List.generate(
+        DemoUploadFile.messageAttachmentLimit + 1,
+        (index) => _scriptFile('limit-$index', 'limit-$index.txt', 'x'),
+      );
+      await pump(tester, launcher(() async => files));
+      await tester.tap(find.text('Import'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-import-picker')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('已选择 0 个文件'), findsOneWidget);
+      expect(repository.assets, isEmpty);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets(
     'partial success remains marked and retry skips the successful file',
     (tester) async {
@@ -401,6 +452,12 @@ class _ImportApi extends NetworkAgentApi {
       'image/png' || 'image/jpeg' || 'image/webp' => 'image',
       'video/mp4' => 'video',
       'text/plain' || 'text/markdown' => 'script',
+      'application/pdf' ||
+      'application/msword' ||
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      'application/vnd.ms-powerpoint' ||
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation' =>
+        'script',
       'audio/mpeg' || 'audio/wav' || 'audio/mp4' => 'audio',
       _ => throw StateError('unsupported MIME'),
     };
@@ -416,6 +473,14 @@ class _ImportApi extends NetworkAgentApi {
         'width': kind == 'image' ? 32 : 0,
         'height': kind == 'image' ? 32 : 0,
         'contentUrl': '/api_agent/v2/assets/asset-$clientRequestId/content',
+        if (DemoUploadFile.isDocumentMimeType(mimeType))
+          'document': {
+            'format': name.split('.').last.toLowerCase(),
+            'status': 'ready',
+            'pageCount': mimeType == 'application/pdf' ? 2 : null,
+            'textCharacters': 48,
+            'truncated': false,
+          },
       },
     };
   }
@@ -454,6 +519,18 @@ DemoUploadFile _scriptFile(String id, String name, String content) {
     clientRequestId: id,
     name: name,
     mimeType: 'text/markdown',
+    sizeBytes: bytes.length,
+    kind: DemoAssetKind.script,
+    readBytes: () async => bytes,
+  );
+}
+
+DemoUploadFile _documentFile(String id, String name) {
+  final bytes = Uint8List.fromList(utf8.encode('%PDF-1.7\n%%EOF'));
+  return DemoUploadFile(
+    clientRequestId: id,
+    name: name,
+    mimeType: 'application/pdf',
     sizeBytes: bytes.length,
     kind: DemoAssetKind.script,
     readBytes: () async => bytes,

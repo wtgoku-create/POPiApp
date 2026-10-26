@@ -3571,6 +3571,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoImages => 'Images';
 
   @override
+  String demoImageStackCount(int count) {
+    return '$count images';
+  }
+
+  @override
   String get demoVideos => 'Videos';
 
   @override
@@ -4489,4 +4494,63 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoStyleFilmCapabilitiesHint =>
       'DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.';
+
+  @override
+  String get demoPasteImage => 'Paste image';
+
+  @override
+  String get demoPasteImageUnavailable =>
+      'No usable image is available on the clipboard';
+
+  @override
+  String get demoPasteImageFailed =>
+      'The image was not pasted. Your input and attachments are preserved.';
+
+  @override
+  String get demoPastingImages => 'Adding clipboard images';
+
+  @override
+  String get demoDocuments => 'Documents';
+
+  @override
+  String get demoDocumentParsing => 'Parsing document';
+
+  @override
+  String get demoDocumentReady => 'Document parsed and ready for the assistant';
+
+  @override
+  String demoDocumentPages(int count) {
+    return '$count pages';
+  }
+
+  @override
+  String demoDocumentSlides(int count) {
+    return '$count slides';
+  }
+
+  @override
+  String get demoDocumentTruncated =>
+      'Content was truncated at the reading limit';
+
+  @override
+  String get demoDocumentOcrUsed => 'OCR was used';
+
+  @override
+  String get demoDocumentPageCountEstimated => 'Page count is estimated';
+
+  @override
+  String get demoDocumentTextEmpty =>
+      'No readable text was found in this document';
+
+  @override
+  String get demoDocumentOriginalAvailable =>
+      'Original file available to download';
+
+  @override
+  String get demoDocumentLimitHint =>
+      'Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.';
+
+  @override
+  String get demoAttachmentParsing =>
+      'Attachments are still being parsed. Wait before sending.';
 }

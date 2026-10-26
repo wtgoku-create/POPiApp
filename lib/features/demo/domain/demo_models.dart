@@ -796,6 +796,51 @@ DateTime? _parseDateTime(Object? value) {
 }
 
 @immutable
+class DemoDocumentMetadata {
+  const DemoDocumentMetadata({
+    required this.format,
+    this.status = 'ready',
+    this.pageCount,
+    this.slideCount,
+    this.textCharacters = 0,
+    this.truncated = false,
+    this.ocrUsed = false,
+    this.pageCountEstimated = false,
+  });
+  final String format;
+  final String status;
+  final int? pageCount;
+  final int? slideCount;
+  final int textCharacters;
+  final bool truncated;
+  final bool ocrUsed;
+  final bool pageCountEstimated;
+  bool get isReady => status == 'ready';
+
+  Map<String, Object?> toJson() => {
+    'format': format,
+    'status': status,
+    if (pageCount != null) 'pageCount': pageCount,
+    if (slideCount != null) 'slideCount': slideCount,
+    'textCharacters': textCharacters,
+    'truncated': truncated,
+    if (ocrUsed) 'ocrUsed': ocrUsed,
+    if (pageCountEstimated) 'pageCountEstimated': pageCountEstimated,
+  };
+  factory DemoDocumentMetadata.fromJson(Map<String, Object?> json) =>
+      DemoDocumentMetadata(
+        format: json['format']?.toString() ?? '',
+        status: json['status']?.toString() ?? 'ready',
+        pageCount: (json['pageCount'] as num?)?.toInt(),
+        slideCount: (json['slideCount'] as num?)?.toInt(),
+        textCharacters: (json['textCharacters'] as num?)?.toInt() ?? 0,
+        truncated: json['truncated'] == true,
+        ocrUsed: json['ocrUsed'] == true,
+        pageCountEstimated: json['pageCountEstimated'] == true,
+      );
+}
+
+@immutable
 class DemoAsset {
   const DemoAsset({
     required this.id,
@@ -820,6 +865,7 @@ class DemoAsset {
     this.durationSeconds = 0,
     this.hasAudio = false,
     this.createdAt = '',
+    this.document,
   });
   final String id;
   final String title;
@@ -843,8 +889,18 @@ class DemoAsset {
   final double durationSeconds;
   final bool hasAudio;
   final String createdAt;
+  final DemoDocumentMetadata? document;
 
   bool get isRemote => contentUrl.isNotEmpty;
+  bool get isDocument =>
+      document != null ||
+      const {
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      }.contains(mimeType);
 
   DemoAsset copyWith({String? title}) => DemoAsset(
     id: id,
@@ -869,6 +925,7 @@ class DemoAsset {
     durationSeconds: durationSeconds,
     hasAudio: hasAudio,
     createdAt: createdAt,
+    document: document,
   );
   Map<String, Object?> toJson() => {
     'id': id,
@@ -895,6 +952,7 @@ class DemoAsset {
     if (kind == DemoAssetKind.video || kind == DemoAssetKind.audio)
       'hasAudio': hasAudio,
     if (createdAt.isNotEmpty) 'createdAt': createdAt,
+    if (document != null) 'document': document!.toJson(),
   };
   factory DemoAsset.fromJson(Map<String, Object?> json) => DemoAsset(
     id: json['id'] as String,
@@ -919,6 +977,11 @@ class DemoAsset {
     durationSeconds: (json['durationSeconds'] as num?)?.toDouble() ?? 0,
     hasAudio: json['hasAudio'] as bool? ?? false,
     createdAt: json['createdAt']?.toString() ?? '',
+    document: json['document'] is Map
+        ? DemoDocumentMetadata.fromJson(
+            Map<String, Object?>.from(json['document'] as Map),
+          )
+        : null,
   );
 }
 

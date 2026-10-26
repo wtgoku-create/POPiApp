@@ -3,6 +3,7 @@ import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
   private var speechInput: SpeechInputBridge?
+  private var clipboardImages: ClipboardImageBridge?
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -12,6 +13,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     speechInput = SpeechInputBridge(messenger: flutterViewController.engine.binaryMessenger)
+    clipboardImages = ClipboardImageBridge(messenger: flutterViewController.engine.binaryMessenger)
 
     super.awakeFromNib()
 

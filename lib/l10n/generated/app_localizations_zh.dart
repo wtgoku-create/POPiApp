@@ -3415,6 +3415,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoImages => '图片';
 
   @override
+  String demoImageStackCount(int count) {
+    return '$count 张图片';
+  }
+
+  @override
   String get demoVideos => '视频';
 
   @override
@@ -4284,4 +4289,57 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get demoStyleFilmCapabilitiesHint =>
       '能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。';
+
+  @override
+  String get demoPasteImage => '粘贴图片';
+
+  @override
+  String get demoPasteImageUnavailable => '剪贴板中没有可用图片';
+
+  @override
+  String get demoPasteImageFailed => '图片未粘贴，已保留当前输入和附件';
+
+  @override
+  String get demoPastingImages => '正在添加剪贴板图片';
+
+  @override
+  String get demoDocuments => '文档';
+
+  @override
+  String get demoDocumentParsing => '正在解析文档';
+
+  @override
+  String get demoDocumentReady => '文档已解析，可发送给助理读取';
+
+  @override
+  String demoDocumentPages(int count) {
+    return '$count 页';
+  }
+
+  @override
+  String demoDocumentSlides(int count) {
+    return '$count 张幻灯片';
+  }
+
+  @override
+  String get demoDocumentTruncated => '内容已按读取上限截断';
+
+  @override
+  String get demoDocumentOcrUsed => '已使用 OCR 识别';
+
+  @override
+  String get demoDocumentPageCountEstimated => '页数为估算值';
+
+  @override
+  String get demoDocumentTextEmpty => '文档中没有可读取的文字';
+
+  @override
+  String get demoDocumentOriginalAvailable => '原文件可下载';
+
+  @override
+  String get demoDocumentLimitHint =>
+      '最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。';
+
+  @override
+  String get demoAttachmentParsing => '附件仍在解析，请稍候再发送';
 }

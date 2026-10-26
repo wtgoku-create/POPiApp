@@ -8,6 +8,7 @@ class MainActivity : FlutterActivity() {
     private var douyinChannel: MethodChannel? = null
     private var speechChannel: MethodChannel? = null
     private var speechInputBridge: SpeechInputBridge? = null
+    private var clipboardImageBridge: ClipboardImageBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -29,6 +30,10 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        clipboardImageBridge = ClipboardImageBridge(
+            this,
+            flutterEngine.dartExecutor.binaryMessenger,
+        )
     }
 
     override fun onRequestPermissionsResult(
@@ -52,6 +57,8 @@ class MainActivity : FlutterActivity() {
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         speechInputBridge?.dispose()
+        clipboardImageBridge?.dispose()
+        clipboardImageBridge = null
         speechInputBridge = null
         speechChannel?.setMethodCallHandler(null)
         speechChannel = null

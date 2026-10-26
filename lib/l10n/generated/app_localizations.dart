@@ -6631,6 +6631,12 @@ abstract class AppLocalizations {
   /// **'Images'**
   String get demoImages;
 
+  /// No description provided for @demoImageStackCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} images'**
+  String demoImageStackCount(int count);
+
   /// No description provided for @demoVideos.
   ///
   /// In en, this message translates to:
@@ -8254,6 +8260,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.'**
   String get demoStyleFilmCapabilitiesHint;
+
+  /// No description provided for @demoPasteImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste image'**
+  String get demoPasteImage;
+
+  /// No description provided for @demoPasteImageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No usable image is available on the clipboard'**
+  String get demoPasteImageUnavailable;
+
+  /// No description provided for @demoPasteImageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The image was not pasted. Your input and attachments are preserved.'**
+  String get demoPasteImageFailed;
+
+  /// No description provided for @demoPastingImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Adding clipboard images'**
+  String get demoPastingImages;
+
+  /// No description provided for @demoDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get demoDocuments;
+
+  /// No description provided for @demoDocumentParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Parsing document'**
+  String get demoDocumentParsing;
+
+  /// No description provided for @demoDocumentReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Document parsed and ready for the assistant'**
+  String get demoDocumentReady;
+
+  /// No description provided for @demoDocumentPages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pages'**
+  String demoDocumentPages(int count);
+
+  /// No description provided for @demoDocumentSlides.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} slides'**
+  String demoDocumentSlides(int count);
+
+  /// No description provided for @demoDocumentTruncated.
+  ///
+  /// In en, this message translates to:
+  /// **'Content was truncated at the reading limit'**
+  String get demoDocumentTruncated;
+
+  /// No description provided for @demoDocumentOcrUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'OCR was used'**
+  String get demoDocumentOcrUsed;
+
+  /// No description provided for @demoDocumentPageCountEstimated.
+  ///
+  /// In en, this message translates to:
+  /// **'Page count is estimated'**
+  String get demoDocumentPageCountEstimated;
+
+  /// No description provided for @demoDocumentTextEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No readable text was found in this document'**
+  String get demoDocumentTextEmpty;
+
+  /// No description provided for @demoDocumentOriginalAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Original file available to download'**
+  String get demoDocumentOriginalAvailable;
+
+  /// No description provided for @demoDocumentLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.'**
+  String get demoDocumentLimitHint;
+
+  /// No description provided for @demoAttachmentParsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments are still being parsed. Wait before sending.'**
+  String get demoAttachmentParsing;
 }
 
 class _AppLocalizationsDelegate

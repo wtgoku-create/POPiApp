@@ -29,13 +29,13 @@ class DemoConversationListItem extends StatelessWidget {
     final presentation = DemoSessionListPresentation.fromSession(session, l);
     final displayName = demoSessionDisplayName(l, session);
     final activeMessage = presentation.activeMessage;
-    final avatarSize = dense ? 40.0 : 56.0;
+    final avatarSize = dense ? 40.0 : 52.0;
     final titleSize = dense ? 14.0 : 17.0;
-    final summarySize = dense ? 12.0 : 14.0;
-    final timeSize = dense ? 10.0 : 12.0;
+    final summarySize = dense ? 13.0 : 15.0;
+    final timeSize = dense ? 11.0 : 12.0;
     final rowPadding = dense
         ? const EdgeInsets.symmetric(horizontal: 10, vertical: 7)
-        : const EdgeInsets.symmetric(horizontal: 4, vertical: 13);
+        : const EdgeInsets.symmetric(horizontal: 4, vertical: 14);
 
     return Semantics(
       container: true,
@@ -117,7 +117,7 @@ class DemoConversationListItem extends StatelessWidget {
                             ],
                           ],
                         ),
-                        SizedBox(height: dense ? 3 : 7),
+                        SizedBox(height: dense ? 3 : 6),
                         Text(
                           presentation.summary,
                           key: ValueKey('demo-session-summary-${session.id}'),

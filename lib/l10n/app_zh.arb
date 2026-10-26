@@ -1517,6 +1517,14 @@
   "demoEmptyConversations": "暂无会话",
   "demoAll": "全部",
   "demoImages": "图片",
+  "demoImageStackCount": "{count} 张图片",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "demoVideos": "视频",
   "demoScripts": "脚本",
   "demoAudio": "音频",
@@ -1968,5 +1976,23 @@
   "demoStyleFilmReasonRuntimeUnavailable": "暂时无法制作",
   "demoStyleFilmReasonModelUnavailable": "当前模型未就绪",
   "demoStyleFilmReasonUnknown": "暂不可制作",
-  "demoStyleFilmCapabilitiesHint": "能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。"
+  "demoStyleFilmCapabilitiesHint": "能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。",
+  "demoPasteImage": "粘贴图片",
+  "demoPasteImageUnavailable": "剪贴板中没有可用图片",
+  "demoPasteImageFailed": "图片未粘贴，已保留当前输入和附件",
+  "demoPastingImages": "正在添加剪贴板图片",
+  "demoDocuments": "文档",
+  "demoDocumentParsing": "正在解析文档",
+  "demoDocumentReady": "文档已解析，可发送给助理读取",
+  "demoDocumentPages": "{count} 页",
+  "@demoDocumentPages": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentSlides": "{count} 张幻灯片",
+  "@demoDocumentSlides": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentTruncated": "内容已按读取上限截断",
+  "demoDocumentOcrUsed": "已使用 OCR 识别",
+  "demoDocumentPageCountEstimated": "页数为估算值",
+  "demoDocumentTextEmpty": "文档中没有可读取的文字",
+  "demoDocumentOriginalAvailable": "原文件可下载",
+  "demoDocumentLimitHint": "最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。",
+  "demoAttachmentParsing": "附件仍在解析，请稍候再发送"
 }

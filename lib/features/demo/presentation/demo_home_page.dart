@@ -42,6 +42,7 @@ class _DemoHomePageState extends State<DemoHomePage>
   final FocusNode _searchFocusNode = FocusNode();
   Future<void>? _refreshInFlight;
   bool _openingSession = false;
+  bool _creatingSession = false;
 
   @override
   void initState() {
@@ -135,13 +136,19 @@ class _DemoHomePageState extends State<DemoHomePage>
   void _profile() => context.push('/profile');
 
   Future<void> _startCreate() async {
-    final id = await showDemoCreateSessionSheet(
-      context: context,
-      repository: widget.repository,
-      kind: DemoSessionKind.conversation,
-    );
-    if (id == null || !mounted) return;
-    await _open(widget.repository.session(id));
+    if (_creatingSession) return;
+    setState(() => _creatingSession = true);
+    try {
+      final id = await showDemoCreateSessionSheet(
+        context: context,
+        repository: widget.repository,
+        kind: DemoSessionKind.conversation,
+      );
+      if (id == null || !mounted) return;
+      await _open(widget.repository.session(id));
+    } finally {
+      if (mounted) setState(() => _creatingSession = false);
+    }
   }
 
   @override
@@ -214,7 +221,7 @@ class _DemoHomePageState extends State<DemoHomePage>
               key: const Key('demo-create'),
               tooltip: l.demoCreateAssistant,
               padding: EdgeInsets.zero,
-              onPressed: _startCreate,
+              onPressed: _creatingSession ? null : _startCreate,
               icon: const DemoIcon('plus', size: 20),
             ),
           ),

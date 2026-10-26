@@ -55,6 +55,14 @@ rm /opt/popi-harness/private-config.tar.gz
 ln -s "$release_directory" /opt/popi-harness/current.next
 mv -Tf /opt/popi-harness/current.next /opt/popi-harness/current
 install -m 0644 "$release_directory/deploy/harness/popi-harness.service" /etc/systemd/system/popi-harness.service
+install -m 0644 "$release_directory/deploy/harness/popi-document-converter.service" /etc/systemd/system/popi-document-converter.service
 systemctl daemon-reload
+systemctl enable popi-document-converter.service
+systemctl restart popi-document-converter.service
+for attempt in {1..20}; do
+  [[ ! -S /run/popi-document-converter/convert.sock ]] || break
+  sleep 0.25
+done
+test -S /run/popi-document-converter/convert.sock
 systemctl enable --now popi-harness.service
 printf 'Harness installed; check loopback health before publishing the site.\n'

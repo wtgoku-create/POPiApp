@@ -46,6 +46,21 @@ String demoAssetMeta(
     return details.join(' / ');
   }
   if (asset?.isRemote == true && kind == DemoAssetKind.script) {
+    if (asset!.isDocument) {
+      final document = asset.document;
+      final details = <String>[
+        document?.format.trim().toUpperCase().isNotEmpty == true
+            ? document!.format.trim().toUpperCase()
+            : l.demoDocuments,
+      ];
+      if (document?.pageCount case final count?) {
+        details.add(l.demoDocumentPages(count));
+      } else if (document?.slideCount case final count?) {
+        details.add(l.demoDocumentSlides(count));
+      }
+      if (document?.truncated == true) details.add(l.demoDocumentTruncated);
+      return details.join(' / ');
+    }
     return l.demoScripts;
   }
   if (asset?.isRemote == true && kind == DemoAssetKind.audio) {
@@ -344,6 +359,11 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                   a.title.toLowerCase().contains(_query.trim().toLowerCase()),
             )
             .toList();
+        final itemIndices = {
+          for (var i = 0; i < items.length; i++) items[i].id: i,
+        };
+        int? findChildIndex(Key key) =>
+            key is ValueKey<String> ? itemIndices[key.value] : null;
         return CustomScrollView(
           key: PageStorageKey(
             'demo-assets-${widget.sessionId}-${widget.onSelect != null}',
@@ -440,6 +460,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                 ),
                 sliver: _list
                     ? SliverList.builder(
+                        findChildIndexCallback: findChildIndex,
                         itemCount: items.length,
                         itemBuilder: (context, i) => Padding(
                           key: ValueKey(items[i].id),
@@ -458,6 +479,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                                       dimension: 54,
                                       child: DemoDocumentCover(
                                         kind: items[i].kind,
+                                        format: items[i].document?.format ?? '',
                                       ),
                                     )
                                   : DemoAssetImage(
@@ -500,6 +522,7 @@ class _DemoAssetsViewState extends State<DemoAssetsView> {
                                   spacing * (columns - 1)) /
                               columns;
                           return SliverGrid.builder(
+                            findChildIndexCallback: findChildIndex,
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: columns,
@@ -778,7 +801,10 @@ class _DocumentAssetCard extends StatelessWidget {
               aspectRatio: 1,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(17),
-                child: DemoDocumentCover(kind: asset.kind),
+                child: DemoDocumentCover(
+                  kind: asset.kind,
+                  format: asset.document?.format ?? '',
+                ),
               ),
             ),
             Padding(

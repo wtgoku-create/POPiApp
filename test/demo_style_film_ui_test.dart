@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:popi_ai_app/app/theme.dart';
+import 'package:popi_ai_app/core/clipboard/clipboard_images.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
+import 'package:popi_ai_app/features/demo/domain/demo_upload_file.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_settings_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_chat_page.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_style_film_job_card.dart';
@@ -15,10 +18,10 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
-Widget _app(Widget child) => ProviderScope(
+Widget _app(Widget child, {TargetPlatform? platform}) => ProviderScope(
   child: ToastificationWrapper(
     child: MaterialApp(
-      theme: AppTheme.light,
+      theme: AppTheme.light.copyWith(platform: platform),
       locale: const Locale('zh'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -586,6 +589,92 @@ void main() {
     expect(find.byKey(const Key('popi-send-button')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'explicit paste image keeps text and adds an uploaded attachment',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final repository = _ChatRepository(
+        PreferencesStorage(await SharedPreferences.getInstance()),
+      )..restore();
+      addTearDown(repository.dispose);
+      final clipboard = _ClipboardService();
+      await tester.pumpWidget(
+        _app(
+          DemoChatPage(
+            repository: repository,
+            sessionId: 'inspiration',
+            clipboardImageService: clipboard,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final composer = tester.widget<PopiMessageComposer>(
+        find.byType(PopiMessageComposer),
+      );
+      await composer.controller.setText('保留当前文字');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-composer-add-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-paste-image')));
+      await tester.pumpAndSettle();
+
+      expect(clipboard.reads, 1);
+      expect(composer.controller.markdown, '保留当前文字');
+      expect(
+        find.byKey(const ValueKey('popi-selected-asset-clipboard-asset')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('empty image paste falls back to ordinary clipboard text', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _ChatRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    addTearDown(repository.dispose);
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async => call.method == 'Clipboard.getData'
+          ? <String, Object?>{'text': '普通剪贴板文字'}
+          : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final clipboard = _EmptyClipboardService();
+    await tester.pumpWidget(
+      _app(
+        DemoChatPage(
+          repository: repository,
+          sessionId: 'inspiration',
+          clipboardImageService: clipboard,
+        ),
+        platform: TargetPlatform.macOS,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final composer = tester.widget<PopiMessageComposer>(
+      find.byType(PopiMessageComposer),
+    );
+    await tester.tap(find.byKey(const Key('popi-message-input')));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    expect(composer.controller.markdown, '普通剪贴板文字');
+    expect(composer.controller.textController.text, '普通剪贴板文字');
+    expect(clipboard.reads, 1);
+    expect(find.byKey(const Key('popi-selected-assets')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _SettingsRepository extends DemoRepository {
@@ -628,6 +717,10 @@ class _ChatRepository extends DemoRepository {
   final List<DemoStyleFilmInvocation?> invocations = [];
   bool fakeRunning = false;
   bool fakeCanStop = true;
+  final uploaded = <DemoAsset>[];
+
+  @override
+  List<DemoAsset> get assets => [...super.assets, ...uploaded];
 
   @override
   bool get isHarness => true;
@@ -637,6 +730,26 @@ class _ChatRepository extends DemoRepository {
 
   @override
   bool canStopCurrentHarnessRun(String id) => fakeCanStop;
+
+  @override
+  void validateMessageAttachments(List<String> assetIds) {}
+
+  @override
+  Future<DemoAsset> uploadFile(DemoUploadFile file) async {
+    final asset = DemoAsset(
+      id: 'clipboard-asset',
+      title: file.name,
+      kind: file.kind,
+      cover: '',
+      contentUrl:
+          'http://127.0.0.1:3084/api_agent/v2/assets/clipboard-asset/content',
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+    );
+    uploaded.add(asset);
+    notifyListeners();
+    return asset;
+  }
 
   void setRun({required bool running, required bool canStop}) {
     fakeRunning = running;
@@ -684,4 +797,39 @@ class _ChatRepository extends DemoRepository {
     ),
     list: [DemoStyleFilmStyle(id: 'impasto', nameZh: '油画厚涂', ready: true)],
   );
+}
+
+class _ClipboardService implements ClipboardImageService {
+  int reads = 0;
+
+  @override
+  Future<List<ClipboardImagePayload>> readImagesFromUserPaste() async {
+    reads += 1;
+    return [
+      ClipboardImagePayload(
+        name: 'clipboard.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList(const [
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+        ]),
+      ),
+    ];
+  }
+}
+
+class _EmptyClipboardService implements ClipboardImageService {
+  int reads = 0;
+
+  @override
+  Future<List<ClipboardImagePayload>> readImagesFromUserPaste() async {
+    reads += 1;
+    return const [];
+  }
 }

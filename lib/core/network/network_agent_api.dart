@@ -416,6 +416,9 @@ class NetworkAgentApi {
         options: Options(
           contentType: mimeType,
           headers: {'Content-Length': bytes.lengthInBytes},
+          // Document extraction may include a bounded OCR/Office conversion.
+          sendTimeout: const Duration(seconds: 200),
+          receiveTimeout: const Duration(seconds: 200),
         ),
         cancelToken: cancelToken,
       );
@@ -438,7 +441,16 @@ class NetworkAgentApi {
     }
   }
 
-  /// Reads bytes only from the configured Agent's owned-asset content route.
+  /// Reads extracted text without decoding original PDF or Office bytes.
+  Future<Map<String, dynamic>> assetText(
+    String assetId, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/assets/${Uri.encodeComponent(assetId)}/text',
+    cancelToken: cancelToken,
+  );
+
+  /// Reads the original upload bytes; parsed document text has its own route.
   Future<Uint8List> readAssetBytes(
     String contentUrl, {
     CancelToken? cancelToken,

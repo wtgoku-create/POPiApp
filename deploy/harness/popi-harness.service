@@ -1,7 +1,7 @@
 [Unit]
 Description=POPi single-user test Harness
-After=network-online.target
-Wants=network-online.target
+After=network-online.target popi-document-converter.service
+Wants=network-online.target popi-document-converter.service
 
 [Service]
 Type=simple

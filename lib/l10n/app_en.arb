@@ -1517,6 +1517,14 @@
   "demoEmptyConversations": "No conversations yet",
   "demoAll": "All",
   "demoImages": "Images",
+  "demoImageStackCount": "{count} images",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "demoVideos": "Videos",
   "demoScripts": "Scripts",
   "demoAudio": "Audio",
@@ -1968,5 +1976,23 @@
   "demoStyleFilmReasonRuntimeUnavailable": "Creation is temporarily unavailable",
   "demoStyleFilmReasonModelUnavailable": "The current model is not ready",
   "demoStyleFilmReasonUnknown": "Not available for creation yet",
-  "demoStyleFilmCapabilitiesHint": "DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection."
+  "demoStyleFilmCapabilitiesHint": "DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.",
+  "demoPasteImage": "Paste image",
+  "demoPasteImageUnavailable": "No usable image is available on the clipboard",
+  "demoPasteImageFailed": "The image was not pasted. Your input and attachments are preserved.",
+  "demoPastingImages": "Adding clipboard images",
+  "demoDocuments": "Documents",
+  "demoDocumentParsing": "Parsing document",
+  "demoDocumentReady": "Document parsed and ready for the assistant",
+  "demoDocumentPages": "{count} pages",
+  "@demoDocumentPages": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentSlides": "{count} slides",
+  "@demoDocumentSlides": {"placeholders": {"count": {"type": "int"}}},
+  "demoDocumentTruncated": "Content was truncated at the reading limit",
+  "demoDocumentOcrUsed": "OCR was used",
+  "demoDocumentPageCountEstimated": "Page count is estimated",
+  "demoDocumentTextEmpty": "No readable text was found in this document",
+  "demoDocumentOriginalAvailable": "Original file available to download",
+  "demoDocumentLimitHint": "Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.",
+  "demoAttachmentParsing": "Attachments are still being parsed. Wait before sending."
 }

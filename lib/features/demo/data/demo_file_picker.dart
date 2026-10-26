@@ -1,6 +1,5 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:crypto/crypto.dart';
-import 'package:uuid/uuid.dart';
 
 import '../domain/demo_models.dart';
 import '../domain/demo_upload_file.dart';
@@ -18,6 +17,11 @@ const _demoAssetTypes = XTypeGroup(
     'mp3',
     'wav',
     'm4a',
+    'pdf',
+    'doc',
+    'docx',
+    'ppt',
+    'pptx',
   ],
   mimeTypes: [
     'image/png',
@@ -29,6 +33,7 @@ const _demoAssetTypes = XTypeGroup(
     'audio/mpeg',
     'audio/wav',
     'audio/mp4',
+    ...DemoUploadFile.documentMimeTypes,
   ],
   uniformTypeIdentifiers: [
     'public.png',
@@ -40,6 +45,11 @@ const _demoAssetTypes = XTypeGroup(
     'public.mp3',
     'com.microsoft.waveform-audio',
     'public.mpeg-4-audio',
+    'com.adobe.pdf',
+    'com.microsoft.word.doc',
+    'org.openxmlformats.wordprocessingml.document',
+    'com.microsoft.powerpoint.ppt',
+    'org.openxmlformats.presentationml.presentation',
   ],
 );
 
@@ -96,9 +106,10 @@ Future<List<DemoUploadFile>> demoUploadFilesFromXFiles(
       );
       final digest = await sha256.bind(file.openRead(0, sizeBytes)).first;
       final digestText = digest.toString();
-      final clientRequestId = const Uuid().v5(
-        Namespace.url.value,
-        'popi-upload\u0000$name\u0000${type.mimeType}\u0000$digestText',
+      final clientRequestId = DemoUploadFile.requestIdFor(
+        name: name,
+        mimeType: type.mimeType,
+        sha256: digestText,
       );
       result.add(
         DemoUploadFile(
@@ -142,6 +153,22 @@ String _fileName(XFile file) {
     'mp3' => (mimeType: 'audio/mpeg', kind: DemoAssetKind.audio),
     'wav' => (mimeType: 'audio/wav', kind: DemoAssetKind.audio),
     'm4a' => (mimeType: 'audio/mp4', kind: DemoAssetKind.audio),
+    'pdf' => (mimeType: 'application/pdf', kind: DemoAssetKind.script),
+    'doc' => (mimeType: 'application/msword', kind: DemoAssetKind.script),
+    'docx' => (
+      mimeType:
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      kind: DemoAssetKind.script,
+    ),
+    'ppt' => (
+      mimeType: 'application/vnd.ms-powerpoint',
+      kind: DemoAssetKind.script,
+    ),
+    'pptx' => (
+      mimeType:
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      kind: DemoAssetKind.script,
+    ),
     _ => null,
   };
 }

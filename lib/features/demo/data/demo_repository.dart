@@ -528,11 +528,49 @@ class DemoRepository extends ChangeNotifier {
     if (asset.kind != DemoAssetKind.script) {
       throw const DemoUploadException('UNSUPPORTED_TYPE');
     }
+    if (asset.isDocument) {
+      final api = _api;
+      if (api == null ||
+          !asset.isRemote ||
+          !RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(asset.id)) {
+        throw const DemoUploadException('UNSUPPORTED_TYPE');
+      }
+      final response = await api.assetText(asset.id);
+      final text = response['text'];
+      if (text is! String) throw const DemoUploadException('INVALID_CONTENT');
+      return text;
+    }
     final bytes = await readAssetBytes(asset);
     try {
       return utf8.decode(bytes, allowMalformed: false);
     } on FormatException {
       throw const DemoUploadException('INVALID_CONTENT');
+    }
+  }
+
+  void validateMessageAttachments(List<String> assetIds) {
+    final selected = assetIds
+        .map((id) => _assets.where((asset) => asset.id == id).firstOrNull)
+        .toList();
+    if (selected.any((asset) => asset == null)) {
+      throw const AgentApiException(
+        code: 'message_attachment_not_found',
+        statusCode: 400,
+      );
+    }
+    try {
+      DemoUploadFile.validateMessageAttachments(
+        selected.whereType<DemoAsset>().toList(),
+      );
+    } on DemoUploadException catch (error) {
+      throw AgentApiException(
+        code: switch (error.code) {
+          'ATTACHMENT_LIMIT' => 'message_attachment_limit',
+          'ATTACHMENTS_TOO_LARGE' => 'message_attachment_too_large',
+          _ => 'message_attachment_invalid',
+        },
+        statusCode: 400,
+      );
     }
   }
 
@@ -966,6 +1004,7 @@ class DemoRepository extends ChangeNotifier {
         contextRoleIds.any((id) => !selectedRoles.contains(id))) {
       throw ArgumentError.value(contextRoleIds, 'contextRoleIds');
     }
+    validateMessageAttachments(mediaIds);
     await _persistLegacySingleAssistantName(sessionId);
     final accepted = await api.sendSessionMessage(
       sessionId,
@@ -1920,6 +1959,9 @@ class DemoRepository extends ChangeNotifier {
       durationSeconds: _double(record['durationSeconds'], fallback: 0),
       hasAudio: record['hasAudio'] as bool? ?? false,
       createdAt: record['createdAt']?.toString() ?? '',
+      document: record['document'] is Map
+          ? DemoDocumentMetadata.fromJson(_map(record['document']))
+          : null,
     );
   }
 
@@ -1980,6 +2022,7 @@ class DemoRepository extends ChangeNotifier {
       durationSeconds: cached.durationSeconds,
       hasAudio: cached.hasAudio,
       createdAt: cached.createdAt,
+      document: cached.document,
     );
   }
 
@@ -2100,28 +2143,54 @@ class DemoRepository extends ChangeNotifier {
         .map((snapshot) => snapshot.session.id)
         .toSet();
     final incoming = authoritative.expand((snapshot) => snapshot.assets);
-    final seen = <String>{};
-    return [
-      for (final asset in incoming)
-        if (seen.add(asset.id)) asset,
-      for (final asset in current)
-        if (!sessionIds.contains(asset.sessionId) && seen.add(asset.id)) asset,
-    ];
+    return _mergeAuthoritativeAssets(
+      current,
+      incoming,
+      isAuthoritative: (asset) => sessionIds.contains(asset.sessionId),
+    );
   }
 
   static List<DemoAsset> _mergeGlobalUploads(
     List<DemoAsset> current,
     List<DemoAsset> sessionless,
-  ) {
-    final seen = <String>{};
+  ) => _mergeAuthoritativeAssets(
+    current,
+    sessionless,
+    isAuthoritative: (asset) =>
+        asset.sessionId == null || asset.sessionId!.isEmpty,
+  );
+
+  /// Keeps existing cards in place while applying an authoritative subset.
+  /// Newly discovered assets are prepended in server order.
+  static List<DemoAsset> _mergeAuthoritativeAssets(
+    List<DemoAsset> current,
+    Iterable<DemoAsset> incoming, {
+    required bool Function(DemoAsset asset) isAuthoritative,
+  }) {
+    final incomingById = <String, DemoAsset>{};
+    final incomingIds = <String>[];
+    for (final asset in incoming) {
+      if (incomingById.containsKey(asset.id)) continue;
+      incomingById[asset.id] = asset;
+      incomingIds.add(asset.id);
+    }
+
+    final currentIds = <String>{};
+    final retained = <DemoAsset>[];
+    for (final asset in current) {
+      if (!currentIds.add(asset.id)) continue;
+      final replacement = incomingById[asset.id];
+      if (replacement != null) {
+        retained.add(replacement);
+      } else if (!isAuthoritative(asset)) {
+        retained.add(asset);
+      }
+    }
+
     return [
-      for (final asset in sessionless)
-        if (seen.add(asset.id)) asset,
-      for (final asset in current)
-        if (asset.sessionId != null &&
-            asset.sessionId!.isNotEmpty &&
-            seen.add(asset.id))
-          asset,
+      for (final id in incomingIds)
+        if (!currentIds.contains(id)) incomingById[id]!,
+      ...retained,
     ];
   }
 
