@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -170,6 +171,45 @@ GoRouter createAppRouter({
           GoRoute(
             path: 'profile',
             builder: (context, state) => const ProfilePage(),
+            // Match the Web entry edge while preserving native back gestures.
+            pageBuilder: kIsWeb
+                ? (context, state) {
+                    final reducedMotion = MediaQuery.disableAnimationsOf(
+                      context,
+                    );
+                    return CustomTransitionPage<void>(
+                      key: state.pageKey,
+                      name: state.name ?? state.path,
+                      arguments: {
+                        ...state.pathParameters,
+                        ...state.uri.queryParameters,
+                      },
+                      restorationId: state.pageKey.value,
+                      transitionDuration: reducedMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 280),
+                      reverseTransitionDuration: reducedMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 240),
+                      child: const ProfilePage(),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            if (MediaQuery.disableAnimationsOf(context)) {
+                              return child;
+                            }
+                            return SlideTransition(
+                              position: animation.drive(
+                                Tween<Offset>(
+                                  begin: const Offset(-1, 0),
+                                  end: Offset.zero,
+                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                              ),
+                              child: child,
+                            );
+                          },
+                    );
+                  }
+                : null,
           ),
           GoRoute(
             path: 'profile/edit',
