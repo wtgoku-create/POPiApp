@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/assets/presentation/assets_page.dart';
@@ -30,13 +32,20 @@ import '../features/payments/domain/mobile_payment.dart';
 import '../features/payments/presentation/android_payment_page.dart';
 
 final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
+  return createAppRouter();
+});
+
+/// Demo and production share the same profile and account destinations.
+GoRouter createAppRouter({
+  Widget Function(BuildContext, GoRouterState)? homeBuilder,
+}) {
   return GoRouter(
     initialLocation: '/',
     routes: [
       // Keep home beneath every destination, including direct links.
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomePage(),
+        builder: homeBuilder ?? (context, state) => const HomePage(),
         routes: [
           GoRoute(
             path: 'activities',
@@ -162,6 +171,45 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
           GoRoute(
             path: 'profile',
             builder: (context, state) => const ProfilePage(),
+            // Match the Web entry edge while preserving native back gestures.
+            pageBuilder: kIsWeb
+                ? (context, state) {
+                    final reducedMotion = MediaQuery.disableAnimationsOf(
+                      context,
+                    );
+                    return CustomTransitionPage<void>(
+                      key: state.pageKey,
+                      name: state.name ?? state.path,
+                      arguments: {
+                        ...state.pathParameters,
+                        ...state.uri.queryParameters,
+                      },
+                      restorationId: state.pageKey.value,
+                      transitionDuration: reducedMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 280),
+                      reverseTransitionDuration: reducedMotion
+                          ? Duration.zero
+                          : const Duration(milliseconds: 240),
+                      child: const ProfilePage(),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) {
+                            if (MediaQuery.disableAnimationsOf(context)) {
+                              return child;
+                            }
+                            return SlideTransition(
+                              position: animation.drive(
+                                Tween<Offset>(
+                                  begin: const Offset(-1, 0),
+                                  end: Offset.zero,
+                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                              ),
+                              child: child,
+                            );
+                          },
+                    );
+                  }
+                : null,
           ),
           GoRoute(
             path: 'profile/edit',
@@ -190,4 +238,4 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
       ),
     ],
   );
-});
+}

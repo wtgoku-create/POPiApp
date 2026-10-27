@@ -1,0 +1,29 @@
+{
+  "purpose": "Bundled exact public catalog references for reliable role preview; generation reference URLs remain unchanged.",
+  "images": [
+    {
+      "asset": "assets/images/role_reference_651.png",
+      "source": "https://static.popi.art/media/2026/0713/139187.png",
+      "bytes": 2992405,
+      "sha256": "af1b8f4b9b25342d79b22eb89e111b8502c1176d58e561c81efe1c6117716d14"
+    },
+    {
+      "asset": "assets/images/role_reference_1058.png",
+      "source": "https://static.popi.art/media/2026/0924/282014.png",
+      "bytes": 4453159,
+      "sha256": "ba7cba3c73ab7042ff9a487f3d4e1d85b404d3f662320fead80c8605cc230192"
+    },
+    {
+      "asset": "assets/images/role_reference_655.png",
+      "source": "https://static.popi.art/media/2026/0713/139225.png",
+      "bytes": 2132752,
+      "sha256": "34117a60b174a437a17fdb68c8936a69e8d300b75492bab538580e176c2e7803"
+    },
+    {
+      "asset": "assets/images/role_reference_653.png",
+      "source": "https://static.popi.art/media/2026/0713/139222.png",
+      "bytes": 2575167,
+      "sha256": "306ee7d9e7f02ccbeff3238f27b827b1a908128a1e4e0cb153451c1e2c76869b"
+    }
+  ]
+}

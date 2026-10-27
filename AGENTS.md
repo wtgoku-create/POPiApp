@@ -1,5 +1,13 @@
 # Agent Guide
 
+## 仓库同步约定
+
+本目录是 Flutter 前端应用仓库。前端应用继续同步到 `https://github.com/wtgoku-create/POPiApp.git`。
+DSH 接入后端与合仓位于 `https://git.yuanzoo.cn/weitao/popibot.git`。
+前端功能完成后同步前端 GitHub 仓及合仓；`services/agent/` 服务源码只在合仓维护。
+不要把合仓的初始化历史整体推到 GitHub。同步时基于 GitHub 现有历史应用前端改动，
+保留其他开发分支及已有修复；应用构建继续使用 GitHub 原有工作流。
+
 ## 项目概览
 
 这是一个 Flutter 应用模板，当前使用：

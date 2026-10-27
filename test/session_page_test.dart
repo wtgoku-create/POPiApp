@@ -19,6 +19,8 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_svg_icon.dart';
+import 'package:popi_ai_app/shared/widgets/app_bot_avatar.dart';
+import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 
 import 'support/project_fixtures.dart';
@@ -325,7 +327,7 @@ void main() {
       );
       expect(
         tester.getBottomRight(composer).dy,
-        closeTo(size.height - tester.view.viewInsets.bottom - 10, 1),
+        closeTo(size.height - tester.view.viewInsets.bottom - 8, 1),
       );
       tester.view.resetViewInsets();
       FocusManager.instance.primaryFocus?.unfocus();
@@ -619,15 +621,10 @@ void main() {
       AppTheme.dark.colorScheme.surface.withValues(alpha: .14),
     );
 
-    final mascot = tester.widget<Image>(
+    final mascot = tester.widget<AppBotAvatar>(
       find.byKey(const Key('popi-welcome-mascot')),
     );
-    final image = mascot.image;
-    expect(
-      ((image is ResizeImage ? image.imageProvider : image) as AssetImage)
-          .assetName,
-      'assets/images/session_welcome_character.png',
-    );
+    expect(mascot.character, BotAvatarCharacter.tiger);
 
     await tester.tap(find.byTooltip('打开导航'));
     await tester.pumpAndSettle();

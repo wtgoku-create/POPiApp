@@ -10,6 +10,7 @@ class DioClient {
     required TokenStorage secureStorage,
     String baseUrl = AppConfig.apiBaseUrl,
     bool enableLogging = AppConfig.enableApiLogging,
+    bool useAuthentication = true,
     Map<String, Object?> headers = const {},
   }) : dio = Dio(
          BaseOptions(
@@ -23,7 +24,9 @@ class DioClient {
            },
          ),
        ) {
-    dio.interceptors.add(AuthInterceptor(secureStorage));
+    if (useAuthentication) {
+      dio.interceptors.add(AuthInterceptor(secureStorage));
+    }
     if (kDebugMode) {
       dio.interceptors.add(
         InterceptorsWrapper(

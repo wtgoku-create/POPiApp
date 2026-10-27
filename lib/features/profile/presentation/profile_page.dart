@@ -9,13 +9,14 @@ import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
+import '../../../shared/providers/harness_access_provider.dart';
+import '../../../shared/providers/local_profile_provider.dart';
 import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/social_app_type.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/purchase_catalog_repository.dart';
 import '../data/social_app_binding_repository.dart';
 import 'points_details_page.dart';
@@ -58,10 +59,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
-    final displayName = user?.name.isNotEmpty == true ? user!.name : '--';
+    final localProfileEnabled = ref.watch(localProfileEnabledProvider);
+    final localProfile = ref.watch(localProfileProvider);
+    final displayedLocalProfile = user == null && localProfileEnabled
+        ? localProfile
+        : null;
+    final displayName = user?.name.isNotEmpty == true
+        ? user!.name
+        : displayedLocalProfile?.name ?? '--';
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
-        : user?.id ?? '--';
+        : user?.id ?? displayedLocalProfile?.uid ?? '--';
     final displayPhone = user?.phone.isNotEmpty == true
         ? _maskedPhone(user!.phone)
         : '--';
@@ -82,15 +90,21 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       backgroundColor: Theme.of(context).brightness == Brightness.light
           ? AppColors.profileBackground
           : colorScheme.surface,
-      drawer: const PopiNavigationDrawer(),
       body: Column(
         children: [
-          const ProfileTopBar(showNavigation: true),
+          const ProfileTopBar(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               children: [
-                Center(child: ProfileAvatar(imageUrl: user?.avatarUrl)),
+                Center(
+                  child: ProfileAvatar(
+                    imageUrl: user?.avatarUrl,
+                    imageProvider: displayedLocalProfile?.avatarBytes == null
+                        ? null
+                        : MemoryImage(displayedLocalProfile!.avatarBytes!),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Center(
                   child: Text(
@@ -324,6 +338,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     if (confirmed != true || !context.mounted) return;
 
     try {
+      if (ref.read(harnessAccessRequiredProvider)) {
+        await ref.read(harnessAccessProvider.notifier).signOut();
+        return;
+      }
       await ref.read(userProvider.notifier).clearUser();
       if (context.mounted) context.push('/login');
     } catch (_) {
@@ -407,12 +425,16 @@ class MembershipCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(userProvider);
+    final localProfile = user == null && ref.watch(localProfileEnabledProvider)
+        ? ref.watch(localProfileProvider)
+        : null;
     final points = ref.watch(userPointsProvider).valueOrNull;
     final colorScheme = Theme.of(context).colorScheme;
     final memberLabel = user?.isMember == true
         ? l10n.memberLevel(user!.memberName.trim())
         : l10n.regularUser;
-    final totalPoints = user?.allCoins ?? points?.availableTotalPoints;
+    final totalPoints =
+        user?.allCoins ?? points?.availableTotalPoints ?? localProfile?.points;
 
     return Container(
       height: 124,

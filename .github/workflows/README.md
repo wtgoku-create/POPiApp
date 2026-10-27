@@ -34,7 +34,7 @@ dart run tool/pre_commit.dart --full
 
 `flutter-ci.yml` 和 `flutter.yml` 分别负责代码校验和打包发布：
 
-- `flutter-ci.yml`：每次分支 Push 和 Pull Request 都执行格式检查、`flutter analyze` 和 `flutter test`，不执行打包任务。
+- `flutter-ci.yml`：每次分支 Push 和 Pull Request 都执行格式检查、`flutter analyze` 和 `flutter test`。`dev-mockui` 分支 Push、从该分支发起的 PR，以及手动运行时，校验通过后额外构建 Demo APK 和 iOS 模拟器包。
 - `flutter.yml` 中的 `verify`：打 Tag 或手动运行打包工作流时执行格式检查、`flutter analyze` 和 `flutter test`，通过后才进入打包节点。
 - `build-android`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动勾选时读取 Android 签名 Secrets，构建 signed release APK 并上传为 Artifact，适合直接安装或通过其他渠道分发。
 - `build-ios`：在推送 `v` 开头的 Tag（例如 `v1.0.0`）或手动运行时，使用 GitHub 的 macOS runner 读取签名 Secrets，按 App Store Connect 发布方式构建 iPhone/iPad 的签名 IPA，并上传 IPA Artifact。
@@ -47,6 +47,7 @@ iOS 构建号由 Workflow 自动生成为 `GitHub 运行序号 × 100 + 重跑�
 - 普通分支 Push 和 Pull Request 的 `flutter-ci.yml` 使用 `config/env/development.json` 运行测试。
 - Tag 发布的 `flutter.yml` 固定使用 `config/env/production.json`；手动运行默认使用生产环境，也可以将 `Build environment` 选为 `dev`。
 - `dev` 使用 `config/env/development.json` 运行测试并构建 Android APK、iOS IPA，业务和 Agent API 均指向测试服 `https://wwwtest.popi.art`，支付环境为 Sandbox。
+- `demo` 使用开发环境配置和独立入口 `lib/main_demo.dart`，展示离线 Mock UI；手动签名打包的产物名以 `-demo` 结尾。Tag 发布仍使用正式入口 `lib/main.dart`。
 - 工作流通过 `tool/flutter_env.dart` 读取环境文件，注入 Dart 编译参数，同时生成 iOS 微信 App ID 和 Associated Domains 配置。
 
 发布构建等价于：
@@ -70,12 +71,14 @@ dart run tool/flutter_env.dart development build ipa --release
 1. 打开 GitHub 仓库的 **Actions** 页面。
 2. 选择 **Flutter CI and Android Build**。
 3. 点击 **Run workflow**，手动运行打包工作流。
-4. 在 `Build environment` 中选择 `production`（生产服）或 `dev`（测试服）。
+4. 在 `Build environment` 中选择 `production`（生产服）、`dev`（测试服）或 `demo`（离线 Mock UI）。
 5. 使用复选框选择 `Build Android APK`、`Build iOS IPA`，可以单独打包 APK、IPA，也可以同时勾选。
 6. 只有需要上传 TestFlight 时，才勾选 `Upload iOS IPA to TestFlight`。
 7. 完成后在任务的 **Artifacts** 区域下载 `popi-app-android-apk-signed` 或 `flutter-starter-ios-signed`；测试服产物分别为 `popi-app-android-apk-signed-dev` 和 `flutter-starter-ios-signed-dev`。
 
 测试服包复用现有签名和包名，安装时会覆盖同包名的生产服包。手动选择 `dev` 并勾选 TestFlight 上传时，会上传测试服 IPA。
+
+Demo 自动构建无需签名 Secrets。在 **Flutter Analyze and Test** 的 Artifacts 下载 `popi-demo-android-apk-<run-id>` 和 `popi-demo-ios-simulator-<run-id>`。APK 使用临时 Debug 签名，签名不同的已有应用需要先卸载；模拟器包只适用于与构建 runner 相同架构的 Mac 模拟器。需要稳定的分发签名或真机 IPA 时，使用上述手动打包并选择 `demo`，继续使用已有签名 Secrets。完整调试、打包和安装说明见 [UI Demo](../../docs/ui_demo.md)。
 
 ## 签名发布
 

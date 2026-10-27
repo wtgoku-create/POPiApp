@@ -6,12 +6,49 @@ import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/providers/local_profile_provider.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
 void main() {
+  testWidgets('Harness profile shows stable fixture identity and balance', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [
+        localProfileEnabledProvider.overrideWithValue(true),
+        sharedPreferencesProvider.overrideWithValue(preferences),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: ToastificationWrapper(
+          child: MaterialApp(
+            theme: AppTheme.light,
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: const ProfilePage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('PPP Art'), findsOneWidget);
+    expect(find.text('UID:303180'), findsOneWidget);
+    expect(find.text('10000'), findsOneWidget);
+    expect(container.read(userProvider), isNull);
+    expect(container.read(localProfileProvider)?.uid, '303180');
+  });
+
   testWidgets('copies the UID when its label is tapped', (tester) async {
     String? clipboardText;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

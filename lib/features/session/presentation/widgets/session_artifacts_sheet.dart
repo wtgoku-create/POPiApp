@@ -608,9 +608,14 @@ class _ArtifactImage extends StatelessWidget {
 
 /// Opens the exact saved output without looking up a creation archive.
 class SessionArtifactDetailPage extends ConsumerWidget {
-  const SessionArtifactDetailPage({required this.item, super.key});
+  const SessionArtifactDetailPage({
+    required this.item,
+    this.actions = const [],
+    super.key,
+  });
 
   final SessionArtifact item;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -623,6 +628,7 @@ class SessionArtifactDetailPage extends ConsumerWidget {
       appBar: AppBar(
         title: Text(_detailTitle(AppLocalizations.of(context)!, item.type)),
         actions: [
+          ...actions,
           if (SessionArtifactExporter.supports(item))
             Padding(
               padding: const EdgeInsets.only(right: 12),

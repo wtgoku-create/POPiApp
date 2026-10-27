@@ -46,3 +46,23 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /.widget_preview/
+
+# Local agent/debug state and generated application artifacts
+/.omx/
+/.local/
+/artifacts/
+**/build/
+**/node_modules/
+**/__pycache__/
+*.ipa
+*.apk
+*.aab
+*.dmg
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+**/.credentials.yaml
+**/credentials.yaml
+**/web-access.json

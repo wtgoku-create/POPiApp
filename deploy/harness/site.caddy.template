@@ -1,0 +1,74 @@
+https://124.222.185.31 {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	encode zstd gzip
+	# Owned media is content-addressed and the API supplies a private immutable
+	# cache policy. Keep the global no-store policy on pages and mutable APIs
+	# without overriding those content and poster responses.
+	@noStore {
+		not path /api_agent/v2/assets/*/content /api_agent/v2/assets/*/poster /api_agent/v2/assets/*/thumbnail
+	}
+	header @noStore Cache-Control "no-store"
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+	}
+	request_body {
+		max_size 134217728
+	}
+	route {
+		@private path /_internal /_internal/* /verify /.env* /.git /.git/*
+		respond @private 404
+		@access path /login /logout /login.js
+		handle @access {
+			reverse_proxy 127.0.0.1:3085
+		}
+		# BEGIN POPI MODEL REFERENCES
+		@popi_model_reference {
+			method GET HEAD
+			path_regexp popi_model_reference ^/api_agent/v2/media-references/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/[0-9a-f]{64}/[1-9][0-9]{0,12}/[0-9a-f]{64}$
+		}
+		handle @popi_model_reference {
+			reverse_proxy 127.0.0.1:3084 {
+				header_up Host 127.0.0.1:3084
+				header_up -Authorization
+				header_up -Cookie
+			}
+		}
+		# END POPI MODEL REFERENCES
+		# BEGIN POPI MOBILE DOWNLOADS
+		# Deny by default. publish-mobile.py replaces only this bounded block
+		# with exact matchers for the currently published APK and metadata.
+		handle /downloads/* {
+			respond 404
+		}
+		# END POPI MOBILE DOWNLOADS
+		handle {
+			route {
+				forward_auth 127.0.0.1:3085 {
+					uri /verify
+				}
+				handle /api_agent/* {
+					reverse_proxy 127.0.0.1:3084 {
+						header_up Host 127.0.0.1:3084
+						header_up -Authorization
+						# Buffer phone uploads before the loopback API's 30s timer.
+						request_buffers 134217728
+						transport http {
+							response_header_timeout 180s
+						}
+					}
+				}
+				handle {
+					root * /srv/popi-web/current
+					try_files {path} /index.html
+					file_server
+				}
+			}
+		}
+	}
+}
