@@ -33,11 +33,6 @@ String conversationProgressLabel(
   String key,
   AppLocalizations l10n,
 ) => switch (key) {
-  'harness.activity.thinking' => l10n.demoActivityThinking,
-  'harness.activity.model' => l10n.demoActivityModel,
-  'harness.activity.search' => l10n.demoActivitySearching,
-  'harness.activity.fetch' => l10n.demoActivityReadingWeb,
-  'harness.activity.vision' => l10n.demoActivityVision,
   'script.run.preparing' => l10n.chatPreparing,
   'script.run.understanding' => l10n.chatProgressUnderstanding,
   'script.run.selectingSkill' => l10n.chatProgressSelectingSkill,

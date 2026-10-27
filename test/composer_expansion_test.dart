@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
-import 'package:popi_ai_app/shared/widgets/app_keyboard_dismiss.dart';
 import 'package:toastification/toastification.dart';
 
 void main() {
@@ -20,9 +19,7 @@ void main() {
     bool sessionLayout = false,
     double textScale = 1,
     bool running = false,
-    bool keyboardDismissWrapper = false,
     VoidCallback? onStop,
-    VoidCallback? onVoiceInput,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -30,17 +27,12 @@ void main() {
           locale: const Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) {
-            final content = MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(textScale)),
-              child: child!,
-            );
-            return keyboardDismissWrapper
-                ? AppKeyboardDismiss(child: content)
-                : content;
-          },
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
@@ -50,7 +42,6 @@ void main() {
                 sessionLayout: sessionLayout,
                 running: running,
                 onStop: onStop,
-                onVoiceInput: onVoiceInput,
                 selectedImages: const [],
                 onAttachment: () {},
                 onRemoveImage: (_) {},
@@ -63,159 +54,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-  }
-
-  testWidgets('voice entry stays beside send and yields to running stop', (
-    tester,
-  ) async {
-    final controller = PopiMessageComposerController();
-    addTearDown(controller.dispose);
-    var voiceRequests = 0;
-    var stopRequests = 0;
-    await pumpComposer(tester, controller, onVoiceInput: () => voiceRequests++);
-    final voice = find.byKey(const Key('popi-voice-input'));
-    expect(voice.hitTestable(), findsOneWidget);
-    await tester.tap(voice);
-    expect(voiceRequests, 1);
-    await controller.setText('Keep the draft');
-    await tester.pumpAndSettle();
-    expect(voice.hitTestable(), findsOneWidget);
-    expect(find.byTooltip('Send message').hitTestable(), findsOneWidget);
-    await controller.setText('');
-    await pumpComposer(
-      tester,
-      controller,
-      running: true,
-      onVoiceInput: () => voiceRequests++,
-      onStop: () => stopRequests++,
-    );
-    expect(voice, findsNothing);
-    await tester.tap(find.byTooltip('Stop reply'));
-    expect(stopRequests, 1);
-    expect(voiceRequests, 1);
-  });
-
-  testWidgets('voice entry is available to existing hosts', (tester) async {
-    final controller = PopiMessageComposerController();
-    addTearDown(controller.dispose);
-    await pumpComposer(tester, controller);
-    expect(
-      find.byKey(const Key('popi-voice-input')).hitTestable(),
-      findsOneWidget,
-    );
-  });
-
-  for (final blankArea in ['top', 'bottom']) {
-    testWidgets(
-      'one tap on collapsed $blankArea padding accepts the first character',
-      (tester) async {
-        final controller = PopiMessageComposerController();
-        addTearDown(controller.dispose);
-        await pumpComposer(
-          tester,
-          controller,
-          conversationMode: true,
-          sessionLayout: true,
-          keyboardDismissWrapper: true,
-        );
-
-        expect(tester.getSize(frame).height, 60);
-        expect(
-          tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
-          isFalse,
-        );
-        expect(tester.testTextInput.isVisible, isFalse);
-
-        final composerRect = tester.getRect(frame);
-        final target = Offset(
-          composerRect.center.dx,
-          blankArea == 'top' ? composerRect.top + 4 : composerRect.bottom - 4,
-        );
-        expect(tester.getRect(input).contains(target), isFalse);
-        expect(
-          tester.getRect(find.byTooltip('Add attachment')).contains(target),
-          isFalse,
-        );
-        expect(
-          tester.getRect(find.byTooltip('Voice input')).contains(target),
-          isFalse,
-        );
-
-        await tester.tapAt(target);
-        await tester.pump();
-
-        expect(tester.testTextInput.hasAnyClients, isTrue);
-        expect(tester.testTextInput.isVisible, isTrue);
-        expect(
-          tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
-          isTrue,
-        );
-        tester.testTextInput.enterText('A');
-        await tester.pump();
-        expect(controller.textController.text, 'A');
-        expect(controller.textController.selection.extentOffset, 1);
-        await tester.pumpAndSettle();
-        expect(tester.getSize(frame).height, 105);
-      },
-    );
-
-    testWidgets(
-      'one tap on $blankArea composer padding restores the hidden keyboard',
-      (tester) async {
-        final controller = PopiMessageComposerController(
-          initialText: 'Saved draft',
-        );
-        addTearDown(controller.dispose);
-        await pumpComposer(tester, controller, conversationMode: true);
-
-        await tester.tap(input);
-        await tester.pumpAndSettle();
-        controller.textController.selection = const TextSelection.collapsed(
-          offset: 5,
-        );
-        expect(tester.testTextInput.hasAnyClients, isTrue);
-        expect(tester.testTextInput.isVisible, isTrue);
-
-        tester.testTextInput.hide();
-        await tester.pump();
-        expect(tester.testTextInput.isVisible, isFalse);
-        expect(
-          tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
-          isTrue,
-        );
-
-        final composerRect = tester.getRect(frame);
-        final target = Offset(
-          composerRect.center.dx,
-          blankArea == 'top' ? composerRect.top + 4 : composerRect.bottom - 4,
-        );
-        expect(tester.getRect(input).contains(target), isFalse);
-        expect(
-          tester.getRect(find.byTooltip('Add attachment')).contains(target),
-          isFalse,
-        );
-        expect(
-          tester.getRect(find.byTooltip('Voice input')).contains(target),
-          isFalse,
-        );
-
-        await tester.tapAt(target);
-        await tester.pump();
-
-        expect(tester.testTextInput.hasAnyClients, isTrue);
-        expect(tester.testTextInput.isVisible, isTrue);
-        expect(
-          tester.widget<ExtendedTextField>(input).focusNode!.hasFocus,
-          isTrue,
-        );
-        expect(controller.textController.text, 'Saved draft');
-        expect(controller.textController.selection.extentOffset, 5);
-
-        tester.testTextInput.enterText('Saved! draft');
-        await tester.pump();
-        expect(controller.textController.text, 'Saved! draft');
-      },
-    );
   }
 
   testWidgets(
@@ -296,7 +134,7 @@ void main() {
     await tester.tap(input);
     await tester.pumpAndSettle();
     expect(tester.getSize(frame).height, 112);
-    expect(find.byTooltip('Voice input').hitTestable(), findsOneWidget);
+    expect(find.byTooltip('Voice input'), findsNothing);
     expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
 
     tester.testTextInput.enterText('Draft message');

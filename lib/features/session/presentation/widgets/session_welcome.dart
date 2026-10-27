@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/widgets/app_bot_avatar.dart';
 
 /// Empty conversation content stays above the composer and system keyboard.
 class SessionWelcome extends StatelessWidget {
@@ -28,11 +27,19 @@ class SessionWelcome extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AppBotAvatar(
+                Image.asset(
+                  'assets/images/session_welcome_character.png',
                   key: const Key('popi-welcome-mascot'),
-                  size: keyboardVisible
+                  cacheWidth: 450,
+                  cacheHeight: 450,
+                  width: keyboardVisible
                       ? math.min(150, math.max(0, constraints.maxHeight - 40))
                       : 150,
+                  height: keyboardVisible
+                      ? math.min(150, math.max(0, constraints.maxHeight - 40))
+                      : 150,
+                  fit: BoxFit.contain,
+                  excludeFromSemantics: true,
                 ),
                 if (!keyboardVisible) ...[
                   const SizedBox(height: 5),

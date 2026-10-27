@@ -17,7 +17,6 @@ import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_sheet.dart';
-import '../../../shared/widgets/app_bot_avatar.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../attachments/presentation/attachment_picker_sheet.dart';
@@ -148,10 +147,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final composerBottomPadding =
-        math.max(safeArea.bottom - keyboardHeight, 0).toDouble() +
-        PopiMessageComposer.bottomGap;
-    final fallbackComposerHeight = 8 + 60 + composerBottomPadding;
+    final composerBottomPadding = math
+        .max(safeArea.bottom - keyboardHeight, 20)
+        .toDouble();
+    final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
     final composerHeight = _composerHeight > 0
         ? _composerHeight
         : fallbackComposerHeight;
@@ -211,27 +210,18 @@ class _SessionPageState extends ConsumerState<SessionPage> {
                     centerTitle: true,
                     title: sessionTitle == null
                         ? null
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const AppBotAvatar(size: 36),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Tooltip(
-                                  message: sessionTitle,
-                                  child: Text(
-                                    sessionTitle,
-                                    key: const Key('session-app-bar-title'),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
+                        : Tooltip(
+                            message: sessionTitle,
+                            child: Text(
+                              sessionTitle,
+                              key: const Key('session-app-bar-title'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                               ),
-                            ],
+                            ),
                           ),
                     leadingWidth: 80,
                     leading: Align(

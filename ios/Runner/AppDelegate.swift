@@ -1,68 +1,18 @@
 import Flutter
 import UIKit
-import Darwin
-import Metal
-import QuartzCore
-import os.log
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let douyinLogin = DouyinLoginBridge()
-  private var speechInput: SpeechInputBridge?
-  private var clipboardImages: ClipboardImageBridge?
-  private let launchDiagnostics = LaunchDiagnostics()
-  private var inspectedRenderLayer = false
-  private var renderLayerObserver: NSObjectProtocol?
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    launchDiagnostics.start()
-    // UIScene apps do not receive the legacy applicationDidBecomeActive callback.
-    renderLayerObserver = NotificationCenter.default.addObserver(
-      forName: UIScene.didActivateNotification, object: nil, queue: .main
-    ) { [weak self] notification in
-      guard let scene = notification.object as? UIWindowScene,
-            scene.session.role == .windowApplication,
-            application.connectedScenes.contains(scene) else { return }
-      self?.inspectRenderLayer(application)
-    }
-    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(15)) { [weak self] in
-      self?.inspectedRenderLayer = true
-      self?.stopObservingRenderLayer()
-    }
-    let launched = super.application(application, didFinishLaunchingWithOptions: launchOptions)
-    launchDiagnostics.mark("native_launch_ready")
-    return launched
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    launchDiagnostics.mark("engine_initialize")
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "LaunchDiagnostics"),
-       let taskQueue = registrar.messenger().makeBackgroundTaskQueue?() {
-      let channel = FlutterMethodChannel(
-        name: "art.popi/launch_diagnostics", binaryMessenger: registrar.messenger(),
-        codec: FlutterStandardMethodCodec.sharedInstance(), taskQueue: taskQueue
-      )
-      channel.setMethodCallHandler { [diagnostics = launchDiagnostics] call, result in
-        guard call.method == "mark" else {
-          result(FlutterMethodNotImplemented)
-          return
-        }
-        guard let stage = call.arguments as? String,
-              LaunchDiagnostics.dartStages.contains(stage) else {
-          result(FlutterError(code: "invalid_stage", message: "Unknown launch stage.", details: nil))
-          return
-        }
-        diagnostics.mark(stage)
-        result(nil)
-      }
-    } else {
-      launchDiagnostics.mark("diagnostics_queue_unavailable")
-    }
-    launchDiagnostics.mark("plugins_register_begin")
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    launchDiagnostics.mark("plugins_register_end")
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DouyinLoginBridge") {
       let channel = FlutterMethodChannel(
         name: "art.popi/douyin_login", binaryMessenger: registrar.messenger()
@@ -71,46 +21,6 @@ import os.log
         self?.douyinLogin.handle(call, result: result)
       }
     }
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SpeechInputBridge") {
-      speechInput = SpeechInputBridge(messenger: registrar.messenger())
-    }
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "ClipboardImageBridge") {
-      clipboardImages = ClipboardImageBridge(messenger: registrar.messenger())
-    }
-    launchDiagnostics.mark("engine_ready")
-  }
-
-  override func applicationDidBecomeActive(_ application: UIApplication) {
-    super.applicationDidBecomeActive(application)
-    inspectRenderLayer(application)
-  }
-
-  private func inspectRenderLayer(_ application: UIApplication) {
-    guard !inspectedRenderLayer else { return }
-    inspectedRenderLayer = true
-    stopObservingRenderLayer()
-    let flutterController = (window?.rootViewController as? FlutterViewController) ??
-      application.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .filter { $0.activationState == .foregroundActive }
-        .flatMap { $0.windows }
-        .compactMap { $0.rootViewController as? FlutterViewController }
-        .first
-    let layer = flutterController?.viewIfLoaded?.layer
-    let stage: String
-    if let layer, let flutterLayer = NSClassFromString("FlutterMetalLayer"), layer.isKind(of: flutterLayer) {
-      stage = "render_layer_flutter"
-    } else if layer is CAMetalLayer {
-      stage = "render_layer_system"
-    } else {
-      stage = "render_layer_unknown"
-    }
-    launchDiagnostics.mark(stage)
-  }
-
-  private func stopObservingRenderLayer() {
-    if let observer = renderLayerObserver { NotificationCenter.default.removeObserver(observer) }
-    renderLayerObserver = nil
   }
 
   override func application(
@@ -131,127 +41,5 @@ import os.log
     return super.application(
       application, continue: userActivity, restorationHandler: restorationHandler
     )
-  }
-}
-
-/// Short-lived, content-free memory samples for diagnosing native launch exits.
-private final class LaunchDiagnostics {
-  static let dartStages: Set<String> = [
-    "dart_binding_ready", "preferences_ready", "frosted_ready", "run_app",
-    "first_frame", "access_restore", "access_login", "access_authenticated",
-    "repository_restore", "repository_ready",
-    "home_init", "home_build", "home_first_frame", "refresh_begin", "refresh_end",
-    "repository_setstate_done", "harness_content_build", "demo_app_init",
-    "demo_app_build_begin", "router_ready", "router_home_builder",
-  ]
-
-  private let queue = DispatchQueue(label: "art.popi.launch_diagnostics", qos: .utility)
-  private let log = OSLog(subsystem: "art.popi.launch_diagnostics", category: "memory")
-  private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
-  private let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
-  private var startedAt: DispatchTime?
-  private var timer: DispatchSourceTimer?
-  private var ticks = 0
-  private var reportedStages = Set<String>()
-  private var metalDevice: MTLDevice?
-  private typealias VMReading = (
-    footprint: Double, resident: Double, virtual: Double,
-    graphics: Double, graphicsCompressed: Double,
-    media: Double, mediaCompressed: Double, compressed: Double
-  )
-
-  func start() {
-    queue.async { [self] in
-      guard startedAt == nil else { return }
-      startedAt = .now()
-      emit("native_launch", memory: Self.memory())
-      let source = DispatchSource.makeTimerSource(queue: queue)
-      timer = source
-      source.schedule(deadline: .now() + .milliseconds(250), repeating: .milliseconds(250))
-      source.setEventHandler { [weak self] in
-        guard let self, let startedAt = self.startedAt else { return }
-        let memory = Self.memory()
-        if DispatchTime.now().uptimeNanoseconds - startedAt.uptimeNanoseconds >= 15_000_000_000 {
-          self.timer?.cancel()
-          self.timer = nil
-          self.emit("sampling_complete", memory: memory)
-          return
-        }
-        self.ticks += 1
-        if self.ticks.isMultiple(of: 2) { self.emit("sample", memory: memory) }
-      }
-      source.resume()
-    }
-  }
-
-  func mark(_ stage: String) {
-    queue.async { [self] in
-      guard let startedAt,
-            DispatchTime.now().uptimeNanoseconds - startedAt.uptimeNanoseconds < 15_000_000_000,
-            reportedStages.insert(stage).inserted else { return }
-      // Do not initialize a GPU device while measuring the pre-engine baseline.
-      if stage == "engine_ready" { metalDevice = MTLCreateSystemDefaultDevice() }
-      emit(stage, memory: Self.memory())
-    }
-  }
-
-  private func emit(_ stage: String, memory: VMReading?) {
-    var malloc = malloc_statistics_t()
-    malloc_zone_statistics(nil, &malloc)
-    let mib = 1_048_576.0
-    let inUse = Double(malloc.size_in_use) / mib
-    let allocated = Double(malloc.size_allocated) / mib
-    // -1 means unavailable/not yet queried. These overlapping counters are not additive.
-    let metal = metalDevice.map { Double($0.currentAllocatedSize) / mib } ?? -1
-    if let memory {
-      os_log(
-        "POPiLaunch stage=%{public}@ version=%{public}@ build=%{public}@ phys_footprint_mib=%{public}.1f resident_mib=%{public}.1f virtual_mib=%{public}.1f malloc_inuse_mib=%{public}.1f malloc_allocated_mib=%{public}.1f metal_allocated_mib=%{public}.1f graphics_footprint_mib=%{public}.1f graphics_compressed_mib=%{public}.1f media_footprint_mib=%{public}.1f media_compressed_mib=%{public}.1f vm_compressed_mib=%{public}.1f",
-        log: log, type: .default, stage, version, build,
-        memory.footprint, memory.resident, memory.virtual, inUse, allocated, metal,
-        memory.graphics, memory.graphicsCompressed, memory.media, memory.mediaCompressed, memory.compressed
-      )
-    } else {
-      os_log(
-        "POPiLaunch stage=%{public}@ version=%{public}@ build=%{public}@ phys_footprint_mib=unavailable resident_mib=unavailable virtual_mib=unavailable malloc_inuse_mib=%{public}.1f malloc_allocated_mib=%{public}.1f metal_allocated_mib=%{public}.1f graphics_footprint_mib=-1 graphics_compressed_mib=-1 media_footprint_mib=-1 media_compressed_mib=-1 vm_compressed_mib=-1",
-        log: log, type: .default, stage, version, build, inUse, allocated, metal
-      )
-    }
-  }
-
-  private static func memory() -> VMReading? {
-    var info = task_vm_info_data_t()
-    let capacity = MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size
-    var count = mach_msg_type_number_t(capacity)
-    let status = withUnsafeMutablePointer(to: &info) { pointer in
-      pointer.withMemoryRebound(to: integer_t.self, capacity: capacity) {
-        task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
-      }
-    }
-    return reading(info, count: status == KERN_SUCCESS ? count : 0)
-  }
-
-  private static func reading(_ info: task_vm_info_data_t, count: mach_msg_type_number_t) -> VMReading? {
-    // Older kernels return a shorter prefix; never treat missing ledger fields as zero.
-    guard contains(\.phys_footprint, count: count) else { return nil }
-    let mib = 1_048_576.0
-    return (
-      Double(info.phys_footprint) / mib, Double(info.resident_size) / mib, Double(info.virtual_size) / mib,
-      value(info, \.ledger_tag_graphics_footprint, count: count),
-      value(info, \.ledger_tag_graphics_footprint_compressed, count: count),
-      value(info, \.ledger_tag_media_footprint, count: count),
-      value(info, \.ledger_tag_media_footprint_compressed, count: count),
-      value(info, \.compressed, count: count)
-    )
-  }
-
-  private static func contains<T>(_ field: KeyPath<task_vm_info_data_t, T>, count: mach_msg_type_number_t) -> Bool {
-    guard let offset = MemoryLayout<task_vm_info_data_t>.offset(of: field) else { return false }
-    return Int(count) * MemoryLayout<integer_t>.size >= offset + MemoryLayout<T>.size
-  }
-
-  private static func value<T: BinaryInteger>(
-    _ info: task_vm_info_data_t, _ field: KeyPath<task_vm_info_data_t, T>, count: mach_msg_type_number_t
-  ) -> Double {
-    contains(field, count: count) ? Double(info[keyPath: field]) / 1_048_576.0 : -1
   }
 }

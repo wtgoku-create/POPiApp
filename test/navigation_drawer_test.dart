@@ -464,15 +464,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(router.state.uri.toString(), location);
       expect(router.canPop(), location != '/', reason: entry);
-      if (location == '/profile') {
-        expect(find.byKey(const Key('popi-open-navigation')), findsNothing);
-        await tester.tap(find.byKey(const Key('profile-back')));
-        await tester.pumpAndSettle();
-        expect(router.state.uri.path, '/');
-        expect(router.canPop(), isFalse);
-      } else {
-        expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
-      }
+      expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });

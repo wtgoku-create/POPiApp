@@ -1,12 +1,10 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -14,7 +12,6 @@ import '../../core/storage/gallery_image_storage.dart';
 import '../../core/storage/gallery_video_storage.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../type/media_preview_type.dart';
-import '../providers/harness_access_provider.dart';
 import 'app_media_preview_route.dart';
 import 'app_skeleton.dart';
 import 'app_svg_icon.dart';
@@ -68,28 +65,6 @@ class _MediaGalleryState extends State<_MediaGallery> {
   double _dismissProgress = 0;
   CancelToken? _videoSaveToken;
   CancelToken? _videoShareToken;
-
-  Map<String, String> _accessHeaders(Uri url) {
-    try {
-      return ProviderScope.containerOf(
-        context,
-        listen: false,
-      ).read(harnessAccessHeadersProvider(url.toString()));
-    } on StateError {
-      return const {};
-    }
-  }
-
-  VoidCallback? _onUnauthorized(Uri url) {
-    try {
-      return ProviderScope.containerOf(
-        context,
-        listen: false,
-      ).read(harnessAccessUnauthorizedProvider(url.toString()));
-    } on StateError {
-      return null;
-    }
-  }
 
   @override
   void initState() {
@@ -152,23 +127,12 @@ class _MediaGalleryState extends State<_MediaGallery> {
           );
         case VideoPreviewItem():
           final token = _videoSaveToken = CancelToken();
-          await GalleryVideoStorage.save(
-            item.url,
-            cancelToken: token,
-            headers: _accessHeaders(item.url),
-            onUnauthorized: _onUnauthorized(item.url),
-          );
+          await GalleryVideoStorage.save(item.url, cancelToken: token);
       }
       if (mounted && !_closing) {
         AppToast.success(
           context,
-          video
-              ? kIsWeb
-                    ? l10n.sessionArtifactSaved
-                    : l10n.videoSavedToPhotos
-              : kIsWeb
-              ? l10n.sessionArtifactSaved
-              : l10n.imageSavedToPhotos,
+          video ? l10n.videoSavedToPhotos : l10n.imageSavedToPhotos,
         );
       }
     } on GalleryAccessDenied {
@@ -228,49 +192,15 @@ class _MediaGalleryState extends State<_MediaGallery> {
           );
         case VideoPreviewItem():
           final token = _videoShareToken = CancelToken();
-          if (kIsWeb) {
-            final video = await GalleryVideoStorage.downloadForShare(
-              item.url,
-              cancelToken: token,
-              headers: _accessHeaders(item.url),
-              onUnauthorized: _onUnauthorized(item.url),
-            );
-            if (!mounted || _closing || token.isCancelled) return;
+          await GalleryVideoStorage.withDownloadedVideo(item.url, (path) async {
+            if (!mounted || _closing) return;
             await SharePlus.instance.share(
-              ShareParams(
-                files: [
-                  XFile.fromData(
-                    video.bytes,
-                    name: video.name,
-                    mimeType: video.mimeType,
-                  ),
-                ],
-                fileNameOverrides: [video.name],
-                sharePositionOrigin: origin,
-              ),
+              ShareParams(files: [XFile(path)], sharePositionOrigin: origin),
             );
-          } else {
-            await GalleryVideoStorage.withDownloadedVideo(
-              item.url,
-              (path) async {
-                if (!mounted || _closing) return;
-                await SharePlus.instance.share(
-                  ShareParams(
-                    files: [XFile(path)],
-                    sharePositionOrigin: origin,
-                  ),
-                );
-              },
-              cancelToken: token,
-              headers: _accessHeaders(item.url),
-              onUnauthorized: _onUnauthorized(item.url),
-            );
-          }
+          }, cancelToken: token);
       }
-    } catch (error) {
-      if (mounted &&
-          !_closing &&
-          !(error is DioException && CancelToken.isCancel(error))) {
+    } catch (_) {
+      if (mounted && !_closing) {
         AppToast.error(
           context,
           item is VideoPreviewItem
@@ -549,7 +479,6 @@ class _VideoGalleryPage extends StatelessWidget {
                   url: item.url,
                   autoplay: true,
                   controlsKeyPrefix: 'video-preview',
-                  placeholder: item.thumbnail,
                 )
               : item.thumbnail != null
               ? Image(

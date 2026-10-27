@@ -2,45 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "POPi: run demo",
-      "type": "process",
-      "command": "dart",
-      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "run", "-t", "lib/main_demo.dart"],
-      "options": {"cwd": "${workspaceFolder}"},
-      "problemMatcher": []
-    },
-    {
-      "label": "POPi: build demo iOS simulator",
-      "type": "process",
-      "command": "dart",
-      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "ios", "--simulator", "-t", "lib/main_demo.dart"],
-      "options": {"cwd": "${workspaceFolder}"},
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "POPi: build demo APK",
-      "type": "process",
-      "command": "dart",
-      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "apk", "--release", "-t", "lib/main_demo.dart"],
-      "options": {"cwd": "${workspaceFolder}"},
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "POPi: build demo IPA",
-      "type": "process",
-      "command": "dart",
-      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "ipa", "--release", "-t", "lib/main_demo.dart"],
-      "options": {"cwd": "${workspaceFolder}"},
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
       "label": "POPi: prepare production",
       "type": "process",
       "command": "dart",

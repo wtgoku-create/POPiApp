@@ -1,7 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 
@@ -9,7 +7,6 @@ import '../../core/storage/gallery_image_storage.dart';
 import '../../core/storage/gallery_video_storage.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../type/media_preview_type.dart';
-import '../providers/harness_access_provider.dart';
 import 'app_media_gallery.dart';
 import 'app_media_preview_route.dart';
 import 'app_toast.dart';
@@ -62,28 +59,6 @@ class _VideoPreviewState extends State<_VideoPreview> {
   bool _saving = false;
   CancelToken? _downloadCancellation;
 
-  Map<String, String> _accessHeaders() {
-    try {
-      return ProviderScope.containerOf(
-        context,
-        listen: false,
-      ).read(harnessAccessHeadersProvider(widget.url.toString()));
-    } on StateError {
-      return const {};
-    }
-  }
-
-  VoidCallback? _onUnauthorized() {
-    try {
-      return ProviderScope.containerOf(
-        context,
-        listen: false,
-      ).read(harnessAccessUnauthorizedProvider(widget.url.toString()));
-    } on StateError {
-      return null;
-    }
-  }
-
   Future<void> _download() async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context)!;
@@ -91,18 +66,8 @@ class _VideoPreviewState extends State<_VideoPreview> {
     final cancellation = CancelToken();
     _downloadCancellation = cancellation;
     try {
-      await GalleryVideoStorage.save(
-        widget.url,
-        cancelToken: cancellation,
-        headers: _accessHeaders(),
-        onUnauthorized: _onUnauthorized(),
-      );
-      if (mounted) {
-        AppToast.success(
-          context,
-          kIsWeb ? l10n.sessionArtifactSaved : l10n.videoSavedToPhotos,
-        );
-      }
+      await GalleryVideoStorage.save(widget.url, cancelToken: cancellation);
+      if (mounted) AppToast.success(context, l10n.videoSavedToPhotos);
     } on GalleryAccessDenied {
       if (mounted) AppToast.error(context, l10n.videoSaveAccessDenied);
     } on GalException catch (error) {

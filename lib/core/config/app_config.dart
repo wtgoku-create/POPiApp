@@ -29,24 +29,6 @@ abstract final class AppConfig {
     defaultValue: apiBaseUrl,
   );
   static const agentApiOrigin = String.fromEnvironment('AGENT_API_ORIGIN');
-  static const localHarnessEnabled = bool.fromEnvironment(
-    'LOCAL_HARNESS_ENABLED',
-    defaultValue: false,
-  );
-  static const remoteHarnessEnabled = bool.fromEnvironment(
-    'REMOTE_HARNESS_ENABLED',
-    defaultValue: false,
-  );
-
-  static bool get harnessEnabled {
-    if (localHarnessEnabled && remoteHarnessEnabled) {
-      throw StateError(
-        'LOCAL_HARNESS_ENABLED and REMOTE_HARNESS_ENABLED cannot both be true',
-      );
-    }
-    return localHarnessEnabled || remoteHarnessEnabled;
-  }
-
   static const wechatAppId = String.fromEnvironment(
     'WECHAT_APP_ID',
     defaultValue: 'wx0d9c23195606fc80',

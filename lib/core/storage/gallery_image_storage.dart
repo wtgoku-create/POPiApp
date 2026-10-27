@@ -1,8 +1,7 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:gal/gal.dart';
 
@@ -10,20 +9,10 @@ class GalleryAccessDenied implements Exception {}
 
 /// Saves full-resolution decoded images, reusing Flutter's image cache.
 abstract final class GalleryImageStorage {
-  @visibleForTesting
-  static Future<void> Function(Uint8List bytes, String name)? debugWebSave;
-
   static Future<void> save(
     ImageProvider provider,
     ImageConfiguration configuration,
   ) async {
-    final webSave = debugWebSave;
-    if (kIsWeb || webSave != null) {
-      final name = 'POPi_${DateTime.now().millisecondsSinceEpoch}.png';
-      final bytes = await readPng(provider, configuration);
-      await (webSave ?? _saveWeb)(bytes, name);
-      return;
-    }
     if (!await Gal.hasAccess() && !await Gal.requestAccess()) {
       throw GalleryAccessDenied();
     }
@@ -32,9 +21,6 @@ abstract final class GalleryImageStorage {
       name: 'POPi_${DateTime.now().millisecondsSinceEpoch}',
     );
   }
-
-  static Future<void> _saveWeb(Uint8List bytes, String name) =>
-      XFile.fromData(bytes, name: name, mimeType: 'image/png').saveTo(name);
 
   /// Reads the original decoded image for saving or sharing, without a screenshot.
   static Future<Uint8List> readPng(
