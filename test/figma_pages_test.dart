@@ -25,6 +25,7 @@ import 'package:popi_ai_app/features/profile/domain/user_points_log.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 
 import 'support/role_library_fixtures.dart';
 import 'support/session_fixtures.dart';
@@ -95,6 +96,33 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  }
+
+  for (final entry in <String, Widget>{
+    'profile': const ProfilePage(),
+    'edit profile': const EditProfilePage(),
+    'points': const PointsDetailsPage(
+      refreshOnOpen: false,
+      loadPointsLogOnOpen: false,
+    ),
+    'membership': const MembershipPage(loadPlansOnOpen: false),
+  }.entries) {
+    testWidgets('${entry.key} header follows the real top safe area', (
+      tester,
+    ) async {
+      tester.view.padding = const FakeViewPadding(top: 62);
+      addTearDown(tester.view.resetPadding);
+      await pumpPage(tester, entry.value);
+      expect(tester.getSize(find.byType(AppGlassHeader)).height, 110);
+
+      for (final size in [const Size(900, 390), const Size(1200, 800)]) {
+        tester.view.physicalSize = size;
+        tester.view.padding = FakeViewPadding.zero;
+        await tester.pumpAndSettle();
+        expect(tester.getSize(find.byType(AppGlassHeader)).height, 48);
+        expect(tester.takeException(), isNull);
+      }
+    });
   }
 
   testWidgets('shows only assets and roles sections', (tester) async {
@@ -453,7 +481,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
-      closeTo(548, .01),
+      closeTo(600, .01),
     );
     tester.view.physicalSize = const Size(440, 956);
     await tester.pumpAndSettle();

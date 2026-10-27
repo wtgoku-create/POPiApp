@@ -98,6 +98,12 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// No description provided for @v2NoConversationSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversation selected'**
+  String get v2NoConversationSelected;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

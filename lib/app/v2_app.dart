@@ -24,7 +24,12 @@ class _V2AppState extends ConsumerState<V2App> {
   late final _repository = V2Repository(ref.read(preferencesStorageProvider))
     ..restore();
   late final _router = createAppRouter(
-    homeBuilder: (_, _) => V2HomePage(repository: _repository),
+    homeBuilder: (_, _) => const SizedBox.shrink(),
+    shellBuilder: (_, state, child) => V2HomePage(
+      repository: _repository,
+      routeActive: state.uri.path != '/',
+      routedContent: child,
+    ),
   );
   @override
   void dispose() {

@@ -81,9 +81,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final viewport = MediaQuery.sizeOf(context);
+    final wide = viewport.width >= 600 || viewport.width > viewport.height;
     final phoneBindingRequired =
         _wechatRegisterToken != null || _douyinRegisterToken != null;
     final form = _PhoneLoginForm(
+      compact: wide,
       phoneController: _phoneController,
       codeController: _codeController,
       passwordController: _passwordController,
@@ -114,6 +117,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       );
     }
 
+    final design = _PhoneLoginDesign(
+      form: form,
+      wide: wide,
+      keyboardInset: keyboardInset,
+      agreed: _agreed,
+      loggingIn: _isLoggingIn,
+      wechatLoggingIn: _isWechatLoggingIn,
+      douyinLoggingIn: _isDouyinLoggingIn,
+      onWechatLogin: _loginWithWechat,
+      onDouyinLogin: _loginWithDouyin,
+      onBack: _closePage,
+      showBackButton: keyboardInset == 0,
+      onAgreementChanged: _toggleAgreement,
+    );
+
     return PopScope(
       canPop: true,
       child: Scaffold(
@@ -129,43 +147,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _LoginDesignViewport(
-                child: Stack(
-                  clipBehavior: Clip.hardEdge,
-                  children: [
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: colorScheme.brightness == Brightness.light
-                              ? const LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    _backgroundTopColor,
-                                    Color(0xFFF8F8F8),
-                                  ],
-                                )
-                              : null,
+              if (wide)
+                ColoredBox(
+                  key: const Key('login-wide-layout'),
+                  color: colorScheme.surface,
+                  child: design,
+                )
+              else
+                _LoginDesignViewport(
+                  child: Stack(
+                    clipBehavior: Clip.hardEdge,
+                    children: [
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: colorScheme.brightness == Brightness.light
+                                ? const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      _backgroundTopColor,
+                                      Color(0xFFF8F8F8),
+                                    ],
+                                  )
+                                : null,
+                          ),
                         ),
                       ),
-                    ),
-                    const _LoginIllustration(),
-                    _PhoneLoginDesign(
-                      form: form,
-                      agreed: _agreed,
-                      loggingIn: _isLoggingIn,
-                      wechatLoggingIn: _isWechatLoggingIn,
-                      douyinLoggingIn: _isDouyinLoggingIn,
-                      onWechatLogin: _loginWithWechat,
-                      onDouyinLogin: _loginWithDouyin,
-                      onBack: _closePage,
-                      showBackButton: keyboardInset == 0,
-                      onAgreementChanged: _toggleAgreement,
-                    ),
-                  ],
+                      const _LoginIllustration(),
+                      design,
+                    ],
+                  ),
                 ),
-              ),
-              if (keyboardInset > 0)
+              if (!wide && keyboardInset > 0)
                 Positioned(
                   left: 20,
                   top: MediaQuery.paddingOf(context).top + 8,
@@ -597,6 +611,7 @@ class _LoginDesignViewport extends StatelessWidget {
 
 class _PhoneLoginForm extends StatelessWidget {
   const _PhoneLoginForm({
+    this.compact = false,
     required this.phoneController,
     required this.codeController,
     required this.passwordController,
@@ -615,6 +630,7 @@ class _PhoneLoginForm extends StatelessWidget {
   });
 
   final TextEditingController phoneController;
+  final bool compact;
   final TextEditingController codeController;
   final TextEditingController passwordController;
   final bool passwordLogin;
@@ -646,6 +662,7 @@ class _PhoneLoginForm extends StatelessWidget {
     return Column(
       children: [
         _LoginFieldShell(
+          height: compact ? 52 : 60,
           color: fieldColor,
           child: Row(
             children: [
@@ -670,8 +687,9 @@ class _PhoneLoginForm extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: compact ? 12 : 15),
         _LoginFieldShell(
+          height: compact ? 52 : 60,
           color: fieldColor,
           padding: const EdgeInsets.only(left: 20, right: 10),
           child: Row(
@@ -752,8 +770,9 @@ class _PhoneLoginForm extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: compact ? 12 : 15),
         _LoginActionButton(
+          height: compact ? 52 : 60,
           key: const Key('phone-login-button'),
           label: phoneBindingRequired
               ? l10n.bindPhone
@@ -766,9 +785,15 @@ class _PhoneLoginForm extends StatelessWidget {
           loading: loggingIn,
         ),
         if (!phoneBindingRequired) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 4 : 8),
           TextButton(
             key: const Key('login-mode-switch'),
+            style: compact
+                ? TextButton.styleFrom(
+                    minimumSize: const Size(48, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  )
+                : null,
             onPressed:
                 loggingIn || wechatLoggingIn || douyinLoggingIn || sendingCode
                 ? null
@@ -817,9 +842,13 @@ class _PhoneLoginDesign extends StatelessWidget {
     required this.onBack,
     required this.showBackButton,
     required this.onAgreementChanged,
+    this.wide = false,
+    this.keyboardInset = 0,
   });
 
   final Widget form;
+  final bool wide;
+  final double keyboardInset;
   final bool agreed;
   final bool wechatLoggingIn;
   final bool douyinLoggingIn;
@@ -832,7 +861,7 @@ class _PhoneLoginDesign extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    if (wide) return _wideLayout(context);
     final colorScheme = Theme.of(context).colorScheme;
     return Stack(
       children: [
@@ -856,101 +885,7 @@ class _PhoneLoginDesign extends StatelessWidget {
           left: 100,
           top: 838,
           width: 240,
-          child: Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  key: const Key('wechat-login-button'),
-                  onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
-                      ? null
-                      : onWechatLogin,
-                  style: TextButton.styleFrom(
-                    fixedSize: const Size(115, 38),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 4,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (wechatLoggingIn)
-                        const SizedBox.square(
-                          dimension: 30,
-                          child: Padding(
-                            padding: EdgeInsets.all(5),
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      else
-                        Image.asset(
-                          'assets/images/login_wechat.png',
-                          width: 30,
-                          height: 30,
-                        ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          l10n.wechatLogin,
-                          style: TextStyle(
-                            color: colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextButton(
-                  key: const Key('douyin-login-button'),
-                  onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
-                      ? null
-                      : onDouyinLogin,
-                  style: TextButton.styleFrom(
-                    fixedSize: const Size(115, 38),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 4,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (douyinLoggingIn)
-                        const SizedBox.square(
-                          dimension: 30,
-                          child: Padding(
-                            padding: EdgeInsets.all(5),
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      else
-                        Image.asset(
-                          'assets/images/login_douyin.png',
-                          width: 30,
-                          height: 30,
-                        ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          l10n.douyinLogin,
-                          style: TextStyle(
-                            color: colorScheme.onSurface,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: _socialLogins(context),
         ),
         Positioned(
           left: 93,
@@ -961,18 +896,209 @@ class _PhoneLoginDesign extends StatelessWidget {
       ],
     );
   }
+
+  Widget _socialLogins(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Expanded(
+          child: TextButton(
+            key: const Key('wechat-login-button'),
+            onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+                ? null
+                : onWechatLogin,
+            style: TextButton.styleFrom(
+              fixedSize: const Size(115, 38),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            ),
+            child: Row(
+              children: [
+                if (wechatLoggingIn)
+                  const SizedBox.square(
+                    dimension: 30,
+                    child: Padding(
+                      padding: EdgeInsets.all(5),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  Image.asset(
+                    'assets/images/login_wechat.png',
+                    width: 30,
+                    height: 30,
+                  ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    l10n.wechatLogin,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: TextButton(
+            key: const Key('douyin-login-button'),
+            onPressed: loggingIn || wechatLoggingIn || douyinLoggingIn
+                ? null
+                : onDouyinLogin,
+            style: TextButton.styleFrom(
+              fixedSize: const Size(115, 38),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            ),
+            child: Row(
+              children: [
+                if (douyinLoggingIn)
+                  const SizedBox.square(
+                    dimension: 30,
+                    child: Padding(
+                      padding: EdgeInsets.all(5),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else
+                  Image.asset(
+                    'assets/images/login_douyin.png',
+                    width: 30,
+                    height: 30,
+                  ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    l10n.douyinLogin,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _wideLayout(BuildContext context) => Padding(
+    padding: EdgeInsets.only(bottom: keyboardInset),
+    child: SafeArea(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final showIllustration = constraints.maxWidth >= 800;
+              final loginForm = SizedBox(
+                width: 360,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!showIllustration && constraints.maxHeight >= 600) ...[
+                      Image.asset(
+                        'assets/images/login_brand_bubble.png',
+                        width: 140,
+                        height: 90,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    form,
+                    const SizedBox(height: 16),
+                    _socialLogins(context),
+                    const SizedBox(height: 16),
+                    _LoginAgreement(
+                      agreed: agreed,
+                      onChanged: onAgreementChanged,
+                    ),
+                  ],
+                ),
+              );
+              return SingleChildScrollView(
+                key: const Key('login-wide-scroll-view'),
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: math.max(0, constraints.maxHeight - 32),
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 920),
+                      child: showIllustration
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: SizedBox(
+                                      width: 440,
+                                      height: 360,
+                                      child: Stack(
+                                        children: [const _LoginIllustration()],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 48),
+                                loginForm,
+                              ],
+                            )
+                          : loginForm,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          if (keyboardInset > 0)
+            Positioned(
+              left: 16,
+              top: 8,
+              width: 40,
+              height: 40,
+              child: _LoginKeyboardBackButton(
+                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+              ),
+            )
+          else
+            _LoginBackButton(onPressed: onBack, left: 16, top: 8),
+        ],
+      ),
+    ),
+  );
 }
 
 class _LoginBackButton extends StatelessWidget {
-  const _LoginBackButton({required this.onPressed});
+  const _LoginBackButton({
+    required this.onPressed,
+    this.left = 15,
+    this.top = 60,
+  });
 
   final VoidCallback onPressed;
+  final double left;
+  final double top;
 
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      left: 15,
-      top: 60,
+      left: left,
+      top: top,
       width: 40,
       height: 40,
       child: IconButton(
@@ -1068,17 +1194,19 @@ class _LoginFieldShell extends StatelessWidget {
     required this.color,
     required this.child,
     this.padding = const EdgeInsets.symmetric(horizontal: 20),
+    this.height = 60,
   });
 
   final Color color;
   final Widget child;
   final EdgeInsets padding;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 360,
-      height: 60,
+      height: height,
       padding: padding,
       decoration: BoxDecoration(
         color: color,
@@ -1114,18 +1242,20 @@ class _LoginActionButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.loading = false,
+    this.height = 60,
     super.key,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 360,
-      height: 60,
+      height: height,
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(

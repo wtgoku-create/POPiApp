@@ -27,6 +27,7 @@ class V2WelcomePage extends StatelessWidget {
       if (context.mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
+            settings: RouteSettings(name: '/v2/chat', arguments: id),
             builder: (_) => V2ChatPage(repository: repository, sessionId: id),
           ),
         );

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -15,7 +13,7 @@ class ProfileTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final top = math.max(MediaQuery.paddingOf(context).top, 52).toDouble();
+    final top = MediaQuery.paddingOf(context).top;
     return AppGlassHeader(
       child: SizedBox(
         height: top + 48,

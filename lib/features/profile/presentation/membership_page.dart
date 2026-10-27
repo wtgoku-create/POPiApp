@@ -57,9 +57,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final topPadding = math
-        .max(MediaQuery.paddingOf(context).top, 52)
-        .toDouble();
+    final topPadding = MediaQuery.paddingOf(context).top;
     final plans = _productPlans == null
         ? null
         : _groupPlans(

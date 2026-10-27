@@ -130,91 +130,93 @@ class _V2ChatPageState extends State<V2ChatPage> {
         .toList();
     final batch =
         media.length > 1 && media.every((a) => a.kind == V2AssetKind.image);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: message.user
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        children: [
-          if (!message.user) ...[
-            V2Avatar(
-              members: _conversation.session.members.take(1).toList(),
-              memberAvatars: _conversation.session.memberAvatars,
-              memberColors: _conversation.session.memberColors,
-              size: 32,
-            ),
-            const SizedBox(width: 10),
-          ],
-          Flexible(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * .72,
+    return LayoutBuilder(
+      builder: (context, constraints) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: message.user
+              ? MainAxisAlignment.end
+              : MainAxisAlignment.start,
+          children: [
+            if (!message.user) ...[
+              V2Avatar(
+                members: _conversation.session.members.take(1).toList(),
+                memberAvatars: _conversation.session.memberAvatars,
+                memberColors: _conversation.session.memberColors,
+                size: 32,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (message.text.isNotEmpty)
-                    Semantics(
-                      liveRegion: message.id == 'thinking',
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: message.user ? v2Tint : v2Surface(context),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: MarkdownMessage(
-                          text: message.text,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            height: 1.5,
-                            fontWeight: FontWeight.w600,
+              const SizedBox(width: 10),
+            ],
+            Flexible(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * .72,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (message.text.isNotEmpty)
+                      Semantics(
+                        liveRegion: message.id == 'thinking',
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: message.user ? v2Tint : v2Surface(context),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        ),
-                      ),
-                    ),
-                  if (media.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    if (batch)
-                      V2ImageStack(
-                        key: ValueKey('demo-image-stack-${message.id}'),
-                        images: media,
-                        messageId: message.id,
-                        initialIndex: _imagePages[message.id] ?? 0,
-                        onChanged: (index) => _imagePages[message.id] = index,
-                      )
-                    else
-                      for (final asset in media)
-                        SizedBox(
-                          width: 245,
-                          height:
-                              asset.kind == V2AssetKind.audio ||
-                                  asset.kind == V2AssetKind.script
-                              ? 327
-                              : 310,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: V2AssetCard(
-                              asset: asset,
-                              onTap: () => asset.kind == V2AssetKind.image
-                                  ? AppImagePreview.show(
-                                      context: context,
-                                      image: AssetImage(asset.cover),
-                                      heroTag:
-                                          'message-${message.id}-${asset.id}',
-                                      label: asset.title,
-                                    )
-                                  : openV2Asset(context, asset),
+                          child: MarkdownMessage(
+                            text: message.text,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              height: 1.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                      ),
+                    if (media.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      if (batch)
+                        V2ImageStack(
+                          key: ValueKey('demo-image-stack-${message.id}'),
+                          images: media,
+                          messageId: message.id,
+                          initialIndex: _imagePages[message.id] ?? 0,
+                          onChanged: (index) => _imagePages[message.id] = index,
+                        )
+                      else
+                        for (final asset in media)
+                          SizedBox(
+                            width: 245,
+                            height:
+                                asset.kind == V2AssetKind.audio ||
+                                    asset.kind == V2AssetKind.script
+                                ? 327
+                                : 310,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: V2AssetCard(
+                                asset: asset,
+                                onTap: () => asset.kind == V2AssetKind.image
+                                    ? AppImagePreview.show(
+                                        context: context,
+                                        image: AssetImage(asset.cover),
+                                        heroTag:
+                                            'message-${message.id}-${asset.id}',
+                                        label: asset.title,
+                                      )
+                                    : openV2Asset(context, asset),
+                              ),
+                            ),
+                          ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -227,6 +229,9 @@ class _V2ChatPageState extends State<V2ChatPage> {
     return ListenableBuilder(
       listenable: _conversation,
       builder: (context, _) {
+        if (!widget.repository.sessions.any((s) => s.id == widget.sessionId)) {
+          return const SizedBox.shrink();
+        }
         final s = _conversation.session;
         return V2Scaffold(
           extendBodyBehindAppBar: true,
@@ -274,34 +279,47 @@ class _V2ChatPageState extends State<V2ChatPage> {
             children: [
               Expanded(
                 child: s.messages.isEmpty
-                    ? Padding(
-                        padding: EdgeInsets.only(top: topContentPadding),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                'assets/images/demo_welcome.png',
-                                width: 150,
-                                height: 150,
-                                cacheWidth: 450,
+                    ? CustomScrollView(
+                        slivers: [
+                          SliverPadding(
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              topContentPadding,
+                              20,
+                              20,
+                            ),
+                            sliver: SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/demo_welcome.png',
+                                    width: 150,
+                                    height: 150,
+                                    cacheWidth: 450,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    l.demoGreeting,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    l.demoGreetingDetail,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontSize: 18),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                l.demoGreeting,
-                                style: const TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                l.demoGreetingDetail,
-                                style: const TextStyle(fontSize: 18),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       )
                     : Chat(
                         currentUserId: 'demo-user',

@@ -37,165 +37,174 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
 /// Demo and production share the same profile and account destinations.
 GoRouter createAppRouter({
   Widget Function(BuildContext, GoRouterState)? homeBuilder,
+  ShellRouteBuilder? shellBuilder,
 }) {
-  return GoRouter(
-    initialLocation: '/',
-    routes: [
-      // Keep home beneath every destination, including direct links.
-      GoRoute(
-        path: '/',
-        builder: homeBuilder ?? (context, state) => const HomePage(),
-        routes: [
-          GoRoute(
-            path: 'activities',
-            builder: (context, state) => const ActivitiesPage(),
-            routes: [
-              GoRoute(
-                path: ':activityId',
-                builder: (context, state) => ActivityDetailPage(
-                  activityId:
-                      int.tryParse(state.pathParameters['activityId']!) ?? 0,
-                  catalog: state.extra is ActivityCatalog
-                      ? state.extra! as ActivityCatalog
-                      : null,
-                ),
+  final rootNavigatorKey = GlobalKey<NavigatorState>();
+  final fullScreenNavigatorKey = shellBuilder == null ? null : rootNavigatorKey;
+  final routes = <RouteBase>[
+    // Keep home beneath every destination, including direct links.
+    GoRoute(
+      path: '/',
+      builder: homeBuilder ?? (context, state) => const HomePage(),
+      routes: [
+        GoRoute(
+          path: 'activities',
+          builder: (context, state) => const ActivitiesPage(),
+          routes: [
+            GoRoute(
+              path: ':activityId',
+              builder: (context, state) => ActivityDetailPage(
+                activityId:
+                    int.tryParse(state.pathParameters['activityId']!) ?? 0,
+                catalog: state.extra is ActivityCatalog
+                    ? state.extra! as ActivityCatalog
+                    : null,
               ),
-            ],
-          ),
-          GoRoute(
-            path: 'teaching',
-            builder: (context, state) => const TeachingPage(),
-            routes: [
-              GoRoute(
-                path: 'document/:courseId',
-                builder: (context, state) => TeachingDocumentPage(
-                  courseId:
-                      int.tryParse(state.pathParameters['courseId']!) ?? 0,
-                  course: state.extra is TeachingCourse
-                      ? state.extra! as TeachingCourse
-                      : null,
-                ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'teaching',
+          builder: (context, state) => const TeachingPage(),
+          routes: [
+            GoRoute(
+              path: 'document/:courseId',
+              builder: (context, state) => TeachingDocumentPage(
+                courseId: int.tryParse(state.pathParameters['courseId']!) ?? 0,
+                course: state.extra is TeachingCourse
+                    ? state.extra! as TeachingCourse
+                    : null,
               ),
-            ],
-          ),
-          GoRoute(
-            path: 'ip-accounts',
-            builder: (context, state) => const IpAccountsLivePage(),
-            routes: [
-              GoRoute(
-                path: ':accountId',
-                builder: (context, state) => IpAccountHomePage(
-                  accountId: state.pathParameters['accountId']!,
-                ),
-                routes: [
-                  GoRoute(
-                    path: 'history',
-                    builder: (context, state) => IpAccountHistoryPage(
-                      accountId: state.pathParameters['accountId']!,
-                    ),
+            ),
+          ],
+        ),
+        GoRoute(
+          path: 'ip-accounts',
+          builder: (context, state) => const IpAccountsLivePage(),
+          routes: [
+            GoRoute(
+              path: ':accountId',
+              builder: (context, state) => IpAccountHomePage(
+                accountId: state.pathParameters['accountId']!,
+              ),
+              routes: [
+                GoRoute(
+                  path: 'history',
+                  builder: (context, state) => IpAccountHistoryPage(
+                    accountId: state.pathParameters['accountId']!,
                   ),
-                ],
-              ),
-            ],
-          ),
-          GoRoute(
-            path: 'ip-guide',
-            builder: (context, state) => const IpGuidePage(),
-          ),
-          GoRoute(
-            path: 'role-guide',
-            builder: (context, state) => RoleGuidePage(
-              accountId: state.uri.queryParameters['accountId'],
-              sessionId: state.uri.queryParameters['sessionId'],
-              initialRole: state.extra is LibraryRole
-                  ? state.extra! as LibraryRole
-                  : null,
-              initialCategory:
-                  state.uri.queryParameters['category'] == 'personal'
-                  ? 'personal'
-                  : 'official',
+                ),
+              ],
             ),
+          ],
+        ),
+        GoRoute(
+          path: 'ip-guide',
+          builder: (context, state) => const IpGuidePage(),
+        ),
+        GoRoute(
+          path: 'role-guide',
+          builder: (context, state) => RoleGuidePage(
+            accountId: state.uri.queryParameters['accountId'],
+            sessionId: state.uri.queryParameters['sessionId'],
+            initialRole: state.extra is LibraryRole
+                ? state.extra! as LibraryRole
+                : null,
+            initialCategory: state.uri.queryParameters['category'] == 'personal'
+                ? 'personal'
+                : 'official',
           ),
-          GoRoute(
-            path: 'session',
-            redirect: (context, state) {
-              final accountId = state.uri.queryParameters['accountId'];
-              if (accountId != null &&
-                  state.uri.queryParameters['sessionId'] == null) {
-                return '/ip-accounts/${Uri.encodeComponent(accountId)}';
-              }
-              return null;
-            },
-            builder: (context, state) => SessionPage(
-              initialPrompt: state.uri.queryParameters['prompt'],
-              sessionId: state.uri.queryParameters['sessionId'],
-            ),
+        ),
+        GoRoute(
+          path: 'session',
+          redirect: (context, state) {
+            final accountId = state.uri.queryParameters['accountId'];
+            if (accountId != null &&
+                state.uri.queryParameters['sessionId'] == null) {
+              return '/ip-accounts/${Uri.encodeComponent(accountId)}';
+            }
+            return null;
+          },
+          builder: (context, state) => SessionPage(
+            initialPrompt: state.uri.queryParameters['prompt'],
+            sessionId: state.uri.queryParameters['sessionId'],
           ),
-          GoRoute(
-            path: 'login',
-            builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: 'login',
+          parentNavigatorKey: fullScreenNavigatorKey,
+          builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: 'notifications',
+          builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: 'legal/user-agreement',
+          parentNavigatorKey: fullScreenNavigatorKey,
+          builder: (context, state) => H5Page(
+            title: AppLocalizations.of(context)!.userAgreement,
+            url: Uri.parse(AppConfig.userAgreementUrl),
           ),
-          GoRoute(
-            path: 'notifications',
-            builder: (context, state) => const NotificationsPage(),
+        ),
+        GoRoute(
+          path: 'legal/privacy-policy',
+          parentNavigatorKey: fullScreenNavigatorKey,
+          builder: (context, state) => H5Page(
+            title: AppLocalizations.of(context)!.privacyPolicy,
+            url: Uri.parse(AppConfig.privacyPolicyUrl),
           ),
-          GoRoute(
-            path: 'legal/user-agreement',
-            builder: (context, state) => H5Page(
-              title: AppLocalizations.of(context)!.userAgreement,
-              url: Uri.parse(AppConfig.userAgreementUrl),
-            ),
+        ),
+        GoRoute(
+          path: 'WeChat/:appId/oauth',
+          parentNavigatorKey: fullScreenNavigatorKey,
+          builder: (context, state) => LoginPage(
+            wechatAuthorizationCode: state.uri.queryParameters['code'],
           ),
-          GoRoute(
-            path: 'legal/privacy-policy',
-            builder: (context, state) => H5Page(
-              title: AppLocalizations.of(context)!.privacyPolicy,
-              url: Uri.parse(AppConfig.privacyPolicyUrl),
-            ),
+        ),
+        GoRoute(
+          path: 'assets',
+          builder: (context, state) => AssetsPage(
+            initialSection: state.uri.queryParameters['section'] == 'roles'
+                ? AssetLibrarySection.roles
+                : AssetLibrarySection.works,
           ),
-          GoRoute(
-            path: 'WeChat/:appId/oauth',
-            builder: (context, state) => LoginPage(
-              wechatAuthorizationCode: state.uri.queryParameters['code'],
-            ),
-          ),
-          GoRoute(
-            path: 'assets',
-            builder: (context, state) => AssetsPage(
-              initialSection: state.uri.queryParameters['section'] == 'roles'
-                  ? AssetLibrarySection.roles
-                  : AssetLibrarySection.works,
-            ),
-          ),
-          GoRoute(
-            path: 'profile',
-            builder: (context, state) => const ProfilePage(),
-          ),
-          GoRoute(
-            path: 'profile/edit',
-            builder: (context, state) => const EditProfilePage(),
-          ),
-          GoRoute(
-            path: 'profile/points',
-            builder: (context, state) => const PointsDetailsPage(),
-          ),
-          GoRoute(
-            path: 'profile/redemption',
-            builder: (context, state) => const RedemptionPage(),
-          ),
-          GoRoute(
-            path: 'profile/membership',
-            builder: (context, state) => const MembershipPage(),
-          ),
-          GoRoute(
-            path: 'payment/android',
-            redirect: (context, state) =>
-                state.extra is PaymentProduct ? null : '/profile',
-            builder: (context, state) =>
-                AndroidPaymentPage(product: state.extra! as PaymentProduct),
-          ),
-        ],
-      ),
-    ],
+        ),
+        GoRoute(
+          path: 'profile',
+          builder: (context, state) => const ProfilePage(),
+        ),
+        GoRoute(
+          path: 'profile/edit',
+          builder: (context, state) => const EditProfilePage(),
+        ),
+        GoRoute(
+          path: 'profile/points',
+          builder: (context, state) => const PointsDetailsPage(),
+        ),
+        GoRoute(
+          path: 'profile/redemption',
+          builder: (context, state) => const RedemptionPage(),
+        ),
+        GoRoute(
+          path: 'profile/membership',
+          builder: (context, state) => const MembershipPage(),
+        ),
+        GoRoute(
+          path: 'payment/android',
+          redirect: (context, state) =>
+              state.extra is PaymentProduct ? null : '/profile',
+          builder: (context, state) =>
+              AndroidPaymentPage(product: state.extra! as PaymentProduct),
+        ),
+      ],
+    ),
+  ];
+  return GoRouter(
+    navigatorKey: rootNavigatorKey,
+    initialLocation: '/',
+    routes: shellBuilder == null
+        ? routes
+        : [ShellRoute(builder: shellBuilder, routes: routes)],
   );
 }

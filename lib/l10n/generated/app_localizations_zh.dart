@@ -9,6 +9,9 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get v2NoConversationSelected => '尚未选择会话';
+
+  @override
   String get appTitle => 'POPi';
 
   @override

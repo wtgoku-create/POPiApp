@@ -108,6 +108,105 @@ void main() {
     expect(find.byKey(const Key('login-password-field')), findsNothing);
   });
 
+  for (final size in [
+    const Size(568, 320),
+    const Size(900, 390),
+    const Size(1200, 800),
+  ]) {
+    for (final locale in [const Locale('zh'), const Locale('en')]) {
+      testWidgets('wide login controls remain reachable at $size in $locale', (
+        tester,
+      ) async {
+        await pumpLoginPage(
+          tester,
+          size: size,
+          locale: locale,
+          theme: AppTheme.dark,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('login-wide-layout')), findsOneWidget);
+        expect(find.byKey(const Key('login-design-scroll-view')), findsNothing);
+        expect(
+          tester.getSize(find.byKey(const Key('login-phone-field'))).width,
+          lessThanOrEqualTo(360),
+        );
+        for (final key in [
+          'login-phone-field',
+          'phone-login-button',
+          'wechat-login-button',
+          'douyin-login-button',
+          'agreement-checkbox',
+        ]) {
+          final control = find.byKey(Key(key));
+          await tester.ensureVisible(control);
+          await tester.pumpAndSettle();
+          expect(control.hitTestable(), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets(
+    'login keeps input and agreement while resizing with a keyboard',
+    (tester) async {
+      await pumpLoginPage(tester, size: const Size(440, 956));
+      await tester.tap(find.byKey(const Key('login-mode-switch')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('login-phone-field')),
+        '13800138000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('login-password-field')),
+        'saved-password',
+      );
+      await tester.tap(find.byKey(const Key('agreement-checkbox')));
+      await tester.pumpAndSettle();
+      for (final size in [
+        const Size(1200, 800),
+        const Size(900, 390),
+        const Size(390, 844),
+      ]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(find.byKey(const Key('login-phone-field')))
+              .controller!
+              .text,
+          '13800138000',
+        );
+        expect(
+          tester
+              .widget<TextField>(find.byKey(const Key('login-password-field')))
+              .controller!
+              .text,
+          'saved-password',
+        );
+        final agreement = tester.widget<Semantics>(
+          find
+              .ancestor(
+                of: find.byKey(const Key('agreement-checkbox')),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(agreement.properties.checked, isTrue);
+        expect(tester.takeException(), isNull);
+      }
+      tester.view.physicalSize = const Size(900, 390);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      final password = find.byKey(const Key('login-password-field'));
+      await tester.ensureVisible(password);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(password).bottom, lessThanOrEqualTo(190));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'autofilled country code is removed before limiting phone length',
     (tester) async {

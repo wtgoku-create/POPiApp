@@ -185,9 +185,7 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final otherCoins = user?.otherCoins ?? 100;
     final pointPackageCoins = user?.pointPackageCoins ?? 88;
     final totalPoints = user?.allCoins ?? 1750;
-    final topPadding = math
-        .max(MediaQuery.paddingOf(context).top, 52)
-        .toDouble();
+    final topPadding = MediaQuery.paddingOf(context).top;
 
     final pageBody = Column(
       children: [

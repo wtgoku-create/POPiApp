@@ -22,6 +22,15 @@ Color v2Surface(BuildContext context) =>
     ? Theme.of(context).colorScheme.surfaceContainer
     : Colors.white.withValues(alpha: .5);
 
+/// SafeArea already supplies the inset; only add the remaining page gutter.
+EdgeInsets v2HorizontalPagePadding(BuildContext context) {
+  final safeArea = MediaQuery.paddingOf(context);
+  return EdgeInsets.only(
+    left: (20 - safeArea.left).clamp(0.0, 20.0),
+    right: (20 - safeArea.right).clamp(0.0, 20.0),
+  );
+}
+
 String v2MemberName(AppLocalizations l, String id) => switch (id) {
   'designer' => l.demoDesigner,
   'writer' => l.demoWriter,
@@ -152,6 +161,7 @@ class V2Scaffold extends StatelessWidget {
     this.bottom,
     this.floatingBottom = false,
     this.floatingBottomVisible = true,
+    this.contentMaxWidth = 640,
     this.extendBodyBehindAppBar = false,
     super.key,
   });
@@ -162,6 +172,7 @@ class V2Scaffold extends StatelessWidget {
   final Widget? bottom;
   final bool floatingBottom;
   final bool floatingBottomVisible;
+  final double contentMaxWidth;
   final bool extendBodyBehindAppBar;
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -184,7 +195,9 @@ class V2Scaffold extends StatelessWidget {
             ? Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 20),
+                  padding: EdgeInsets.only(
+                    left: v2HorizontalPagePadding(context).left,
+                  ),
                   child: SizedBox.square(
                     dimension: 40,
                     child:
@@ -209,7 +222,7 @@ class V2Scaffold extends StatelessWidget {
             : [
                 for (final action in actions!)
                   SizedBox.square(dimension: 40, child: action),
-                const SizedBox(width: 20),
+                SizedBox(width: v2HorizontalPagePadding(context).right),
               ],
       ),
     ),
@@ -218,7 +231,7 @@ class V2Scaffold extends StatelessWidget {
       bottom: bottom == null,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: BoxConstraints(maxWidth: contentMaxWidth),
           child: child,
         ),
       ),

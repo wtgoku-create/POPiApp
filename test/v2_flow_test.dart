@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
 import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
+import 'package:popi_ai_app/features/v2_session/presentation/v2_chat_page.dart';
 import 'package:popi_ai_app/app/v2_app.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
@@ -79,10 +82,11 @@ void main() {
     });
   }
 
-  testWidgets(
-    'avatar opens the existing profile and its edit and return routes',
-    (tester) async {
-      tester.view.physicalSize = const Size(440, 956);
+  for (final width in [440.0, 1200.0]) {
+    testWidgets('profile and edit routes stay in the detail pane at $width', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(width, 956);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -101,17 +105,82 @@ void main() {
       await tester.tap(find.byTooltip('个人资料'));
       await tester.pumpAndSettle();
       expect(find.byType(ProfilePage), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(ProfilePage)).left,
+        width >= 840 ? 320 : 0,
+      );
+      expect(
+        find.text('爱丽丝视频').hitTestable(),
+        width >= 840 ? findsOneWidget : findsNothing,
+      );
       await tester.tap(find.text('编辑资料'));
       await tester.pumpAndSettle();
       expect(find.byType(EditProfilePage), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(EditProfilePage)).left,
+        width >= 840 ? 320 : 0,
+      );
+      final editState = tester.state(find.byType(EditProfilePage));
+      await tester.enterText(
+        find
+            .descendant(
+              of: find.byType(EditProfilePage),
+              matching: find.byType(TextField),
+            )
+            .first,
+        '待保存的昵称',
+      );
+      tester.view.physicalSize = Size(width >= 840 ? 440 : 1200, 956);
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(EditProfilePage)), same(editState));
+      expect(find.text('待保存的昵称'), findsOneWidget);
+      expect(
+        tester.getRect(find.byType(EditProfilePage)).left,
+        width >= 840 ? 0 : 320,
+      );
       await tester.tap(find.byKey(const Key('profile-back')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('profile-back')));
       await tester.pumpAndSettle();
       expect(find.byType(V2HomePage), findsOneWidget);
+      tester.view.physicalSize = const Size(1200, 956);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('爱丽丝视频').hitTestable());
+      await tester.pumpAndSettle();
+      final chatState = tester.state(find.byType(V2ChatPage));
+      await tester.tap(find.byTooltip('个人资料'));
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chatState));
+      await tester.tap(find.byTooltip('个人资料'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfilePage), findsNothing);
+      await tester.tap(find.text('奶茶店的午后').hitTestable());
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(SessionArtifactDetailPage)).left, 320);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(SessionArtifactDetailPage), findsNothing);
+      await tester.tap(find.byKey(const Key('demo-tab-0')));
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chatState));
+      final router = GoRouter.of(tester.element(find.byType(V2HomePage)));
+      router.push<void>('/login');
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byType(LoginPage)),
+        const Rect.fromLTWH(0, 0, 1200, 956),
+      );
+      expect(find.text('爱丽丝视频').hitTestable(), findsNothing);
+      await tester.tap(find.byKey(const Key('login-back-button')));
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chatState));
       expect(tester.takeException(), isNull);
-    },
-  );
+    });
+  }
 
   testWidgets('chat applies the status and toolbar inset only once', (
     tester,
@@ -334,7 +403,7 @@ void main() {
       await _pump(tester, size: const Size(320, 680));
       await tester.tap(find.byKey(const Key('demo-tab-1')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('demo-create')));
+      await tester.tap(find.byKey(const Key('demo-upload')));
       await tester.pumpAndSettle();
       expect(find.text('已选择 4 个文件'), findsOneWidget);
       await tester.tap(find.byTooltip('删除').first);
@@ -636,7 +705,7 @@ void main() {
     await tester.tap(find.byKey(const Key('demo-tab-1')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.tap(find.byKey(const Key('demo-upload')));
     await tester.pumpAndSettle();
     expect(find.text('Upload material'), findsOneWidget);
     expect(tester.takeException(), isNull);

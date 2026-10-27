@@ -23,7 +23,7 @@ class V2ChatController extends ChangeNotifier {
   V2Session get session => repository.session(sessionId);
 
   void _sync() {
-    if (_disposed) return;
+    if (_disposed || !repository.sessions.any((s) => s.id == sessionId)) return;
     chatController.setMessages(
       session.messages
           .map(

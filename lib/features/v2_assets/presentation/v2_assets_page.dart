@@ -387,39 +387,42 @@ class _V2AssetsViewState extends State<V2AssetsView> {
                         ),
                       )
                     : SliverLayoutBuilder(
-                        builder: (context, constraints) => SliverGrid.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount:
-                                    constraints.crossAxisExtent >= 560 ? 3 : 2,
-                                mainAxisSpacing: 10,
-                                crossAxisSpacing: 10,
-                                mainAxisExtent:
-                                    (constraints.crossAxisExtent -
-                                            (constraints.crossAxisExtent >= 560
-                                                ? 20
-                                                : 10)) /
-                                        (constraints.crossAxisExtent >= 560
-                                            ? 3
-                                            : 2) +
-                                    72,
-                              ),
-                          itemCount: items.length,
-                          itemBuilder: (context, i) => V2AssetCard(
-                            key: ValueKey(items[i].id),
-                            asset: items[i],
-                            onTap: () => widget.onSelect != null
-                                ? widget.onSelect!(items[i])
-                                : openV2Asset(context, items[i]),
-                            trailing: widget.onSelect != null
-                                ? const Icon(Icons.add_circle_outline, size: 20)
-                                : _assetMenu(
-                                    context,
-                                    items[i],
-                                    widget.repository,
-                                  ),
-                          ),
-                        ),
+                        builder: (context, constraints) {
+                          final columns = (constraints.crossAxisExtent / 190)
+                              .floor()
+                              .clamp(2, 5);
+                          return SliverGrid.builder(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  mainAxisSpacing: 10,
+                                  crossAxisSpacing: 10,
+                                  mainAxisExtent:
+                                      (constraints.crossAxisExtent -
+                                              (columns - 1) * 10) /
+                                          columns +
+                                      72,
+                                ),
+                            itemCount: items.length,
+                            itemBuilder: (context, i) => V2AssetCard(
+                              key: ValueKey(items[i].id),
+                              asset: items[i],
+                              onTap: () => widget.onSelect != null
+                                  ? widget.onSelect!(items[i])
+                                  : openV2Asset(context, items[i]),
+                              trailing: widget.onSelect != null
+                                  ? const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 20,
+                                    )
+                                  : _assetMenu(
+                                      context,
+                                      items[i],
+                                      widget.repository,
+                                    ),
+                            ),
+                          );
+                        },
                       ),
               ),
           ],
