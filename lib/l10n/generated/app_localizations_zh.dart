@@ -2394,7 +2394,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicy => '隐私政策';
 
   @override
-  String get aboutPopiAi => '关于 POPi AI';
+  String get aboutPopiAi => '关于 POPi';
 
   @override
   String get privacyConsentTitle => '用户协议与隐私政策';

@@ -811,7 +811,7 @@
   "userAgreement": "User Agreement",
   "conjunctionAnd": " and ",
   "privacyPolicy": "Privacy Policy",
-  "aboutPopiAi": "About POPi AI",
+  "aboutPopiAi": "About POPi",
   "privacyConsentTitle": "Terms and Privacy",
   "privacyConsentMessage": "Welcome to POPi! Before using the app, please read our User Agreement and Privacy Policy to understand how we collect, use and protect your personal information, and the rights available to you.\n\nFor sign-in, AI creation and saving content, we process account information, content you submit, and necessary device and log information as described in the policy. Permissions such as photo library access are requested when you use the relevant features.\n\nBy tapping “Agree & Continue”, you confirm that you have read and agree to these terms and policies.",
   "privacyConsentAccept": "Agree & Continue",

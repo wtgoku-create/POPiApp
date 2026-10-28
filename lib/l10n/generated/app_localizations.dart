@@ -4624,7 +4624,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPopiAi.
   ///
   /// In en, this message translates to:
-  /// **'About POPi AI'**
+  /// **'About POPi'**
   String get aboutPopiAi;
 
   /// No description provided for @privacyConsentTitle.

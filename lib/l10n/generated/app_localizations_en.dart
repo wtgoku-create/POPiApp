@@ -2503,7 +2503,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy Policy';
 
   @override
-  String get aboutPopiAi => 'About POPi AI';
+  String get aboutPopiAi => 'About POPi';
 
   @override
   String get privacyConsentTitle => 'Terms and Privacy';
