@@ -22,6 +22,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/session_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 import 'support/ip_guide_fixtures.dart';
 import 'support/session_fixtures.dart';
 
@@ -351,10 +352,10 @@ void main() {
     final menu = find.byKey(const Key('ip-guide-menu'));
     expect(find.byKey(const Key('ip-guide-back')), findsNothing);
     expect(tester.getSize(menu), const Size(40, 40));
-    expect(tester.getTopLeft(menu).dy, 52 + 8);
+    expect(tester.getTopLeft(menu).dy, 52 + AppGlassHeader.topSpacing + 8);
     expect(
       tester.getTopLeft(find.byKey(const Key('ip-guide-progress'))).dy,
-      52 + 56,
+      52 + AppGlassHeader.topSpacing + 56,
     );
     expect(tester.takeException(), isNull);
   });

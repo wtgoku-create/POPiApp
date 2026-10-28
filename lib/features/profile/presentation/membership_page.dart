@@ -17,6 +17,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/purchase_catalog_repository.dart';
 import '../domain/product_plan.dart';
@@ -103,128 +104,137 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
             surface: colorScheme.surface,
           ),
         ),
-        child: Column(
-          children: [
-            AppGlassHeader(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: topPadding),
-                  const _MembershipTopBar(),
-                ],
-              ),
-            ),
-            if (plans == null)
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(
-                    key: Key('membership-plans-loading'),
-                  ),
+        child: AppPageSafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              AppGlassHeader(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: topPadding),
+                    const _MembershipTopBar(),
+                  ],
                 ),
-              )
-            else if (plans.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _loadFailed
-                            ? l10n.membershipPlansLoadFailed
-                            : l10n.membershipPlansEmpty,
-                        key: const Key('membership-plans-empty'),
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
-                      ),
-                      TextButton.icon(
-                        onPressed: _loadPlans,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.retry),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else ...[
-              const SizedBox(height: 10),
-              _PlanTabs(
-                plans: plans,
-                selected: _selectedPlan,
-                onSelected: (index) {
-                  setState(() {
-                    _selectedPlan = index;
-                    _selectedVariant = 0;
-                  });
-                },
               ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final cardHeight = math.min(
-                      620.0,
-                      constraints.maxHeight - 58,
-                    );
-                    return Column(
+              if (plans == null)
+                const Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      key: Key('membership-plans-loading'),
+                    ),
+                  ),
+                )
+              else if (plans.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          height: cardHeight,
-                          child: _MembershipPlanCard(
-                            group: plans[_selectedPlan],
-                            selectedVariant: _selectedVariant,
-                            onVariantSelected: (index) {
-                              setState(() => _selectedVariant = index);
-                            },
-                          ),
+                        Text(
+                          _loadFailed
+                              ? l10n.membershipPlansLoadFailed
+                              : l10n.membershipPlansEmpty,
+                          key: const Key('membership-plans-empty'),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: math.min(
-                            MediaQuery.sizeOf(context).width - 40,
-                            400.0,
-                          ),
-                          height: 46,
-                          child: FilledButton(
-                            key: const Key('membership-open-button'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: colorScheme.onSurface,
-                              foregroundColor: colorScheme.surface,
-                              disabledBackgroundColor: const Color(0xFFD9D9D9),
-                              disabledForegroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                            ),
-                            onPressed: _isPurchasing || purchaseDisabled
-                                ? null
-                                : () => _purchaseMembership(
-                                    plans[_selectedPlan]
-                                        .variants[_selectedVariant],
-                                  ),
-                            child: _isPurchasing
-                                ? const SizedBox.square(
-                                    key: Key('membership-purchase-loading'),
-                                    dimension: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : Text(
-                                    purchaseLabel,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                          ),
+                        TextButton.icon(
+                          onPressed: _loadPlans,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.retry),
                         ),
                       ],
-                    );
+                    ),
+                  ),
+                )
+              else ...[
+                const SizedBox(height: 10),
+                _PlanTabs(
+                  plans: plans,
+                  selected: _selectedPlan,
+                  onSelected: (index) {
+                    setState(() {
+                      _selectedPlan = index;
+                      _selectedVariant = 0;
+                    });
                   },
                 ),
-              ),
-              SizedBox(height: bottomPadding),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: Padding(
+                    padding: AppPageSafeArea.horizontalPaddingOf(context),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final cardHeight = math.min(
+                          620.0,
+                          constraints.maxHeight - 58,
+                        );
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: cardHeight,
+                              child: _MembershipPlanCard(
+                                group: plans[_selectedPlan],
+                                selectedVariant: _selectedVariant,
+                                onVariantSelected: (index) {
+                                  setState(() => _selectedVariant = index);
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: math.min(
+                                MediaQuery.sizeOf(context).width - 40,
+                                400.0,
+                              ),
+                              height: 46,
+                              child: FilledButton(
+                                key: const Key('membership-open-button'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: colorScheme.onSurface,
+                                  foregroundColor: colorScheme.surface,
+                                  disabledBackgroundColor: const Color(
+                                    0xFFD9D9D9,
+                                  ),
+                                  disabledForegroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                ),
+                                onPressed: _isPurchasing || purchaseDisabled
+                                    ? null
+                                    : () => _purchaseMembership(
+                                        plans[_selectedPlan]
+                                            .variants[_selectedVariant],
+                                      ),
+                                child: _isPurchasing
+                                    ? const SizedBox.square(
+                                        key: Key('membership-purchase-loading'),
+                                        dimension: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(
+                                        purchaseLabel,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(height: bottomPadding),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -340,7 +350,7 @@ class _MembershipTopBar extends StatelessWidget {
     return SizedBox(
       height: 48,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: AppPageSafeArea.horizontalPaddingOf(context),
         child: Row(
           children: [
             SizedBox.square(
@@ -425,9 +435,10 @@ class _PlanTabsState extends State<_PlanTabs> {
             (_) => _alignSelected(false),
           );
         }
+        final gutters = AppPageSafeArea.horizontalPaddingOf(context);
         final trailingPadding = math.max(
-          20.0,
-          constraints.maxWidth - _tabWidth - 20,
+          gutters.right,
+          constraints.maxWidth - _tabWidth - gutters.left,
         );
         return SizedBox(
           key: _viewportKey,
@@ -435,7 +446,10 @@ class _PlanTabsState extends State<_PlanTabs> {
           child: ListView.separated(
             key: const Key('membership-plan-tabs'),
             controller: _controller,
-            padding: EdgeInsets.only(left: 20, right: trailingPadding),
+            padding: EdgeInsets.only(
+              left: gutters.left,
+              right: trailingPadding,
+            ),
             scrollDirection: Axis.horizontal,
             itemCount: widget.plans.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
@@ -496,10 +510,12 @@ class _PlanTabsState extends State<_PlanTabs> {
 
     final tabLeft = tabBox.localToGlobal(Offset.zero).dx;
     final viewportLeft = viewportBox.localToGlobal(Offset.zero).dx;
-    final target = (_controller.offset + tabLeft - viewportLeft - 20).clamp(
-      0.0,
-      _controller.position.maxScrollExtent,
-    );
+    final target =
+        (_controller.offset +
+                tabLeft -
+                viewportLeft -
+                AppPageSafeArea.horizontalPaddingOf(context).left)
+            .clamp(0.0, _controller.position.maxScrollExtent);
     if ((target - _controller.offset).abs() < .5) return;
     if (animate) {
       _controller.animateTo(

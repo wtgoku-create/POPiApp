@@ -15,7 +15,8 @@ class AppGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool extendBackdrop;
 
   @override
-  Size get preferredSize => child.preferredSize;
+  Size get preferredSize =>
+      Size.fromHeight(child.preferredSize.height + AppGlassHeader.topSpacing);
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -28,9 +29,11 @@ class AppGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   );
 }
 
-/// Applies the same glass to custom headers without changing their layout.
+/// Applies the shared glass surface and top spacing to custom headers.
 class AppGlassHeader extends StatelessWidget {
   const AppGlassHeader({required this.child, this.fadeExtent = 0, super.key});
+
+  static const topSpacing = 8.0;
 
   final Widget child;
   final double fadeExtent;
@@ -61,7 +64,10 @@ class AppGlassHeader extends StatelessWidget {
                 systemOverlayStyle: overlay,
               ),
             ),
-            child: child,
+            child: Padding(
+              padding: const EdgeInsets.only(top: topSpacing),
+              child: child,
+            ),
           ),
         ],
       ),

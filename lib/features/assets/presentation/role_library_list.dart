@@ -179,6 +179,7 @@ class _RoleLibraryListState extends ConsumerState<RoleLibraryList> {
       final confirmed = await AppDialog.confirm(
         context: context,
         title: l10n.deleteRoleTitle,
+        useRootNavigator: true,
         description: l10n.deleteRoleDescription,
         cancelLabel: l10n.cancel,
         confirmLabel: l10n.delete,

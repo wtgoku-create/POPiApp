@@ -1,0 +1,11 @@
+name: cupertino_context_menu_plus
+description: Cupertino context menu with support for pane-local navigators.
+version: 1.0.3
+publish_to: none
+
+environment:
+  sdk: ^3.10.1
+
+dependencies:
+  flutter:
+    sdk: flutter

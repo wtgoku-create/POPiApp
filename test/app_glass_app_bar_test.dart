@@ -48,9 +48,12 @@ void main() {
           );
           await tester.pumpAndSettle();
           final glass = find.byType(BackdropFilter);
-          expect(tester.getSize(glass), const Size(390, 110));
+          expect(
+            tester.getSize(glass),
+            const Size(390, 110 + AppGlassHeader.topSpacing),
+          );
           final search = find.byKey(const Key('search'));
-          expect(tester.getRect(search).top, 110);
+          expect(tester.getRect(search).top, 110 + AppGlassHeader.topSpacing);
           await tester.tap(search);
           await tester.enterText(search, 'POPi');
           await tester.pumpAndSettle();
@@ -117,7 +120,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       final bar = tester.getRect(find.byType(AppBar));
-      expect(bar.top, 0);
+      expect(bar.top, AppGlassHeader.topSpacing);
       expect(bar.height, 62 + kToolbarHeight);
       final glass = find
           .descendant(

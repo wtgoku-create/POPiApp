@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
 import 'app_modal_backdrop.dart';
+import 'app_modal_scope.dart';
 import 'app_keyboard_dismiss.dart';
 
 class AppDialog extends StatelessWidget {
@@ -19,17 +20,20 @@ class AppDialog extends StatelessWidget {
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
+    bool useRootNavigator = false,
   }) {
     FocusManager.instance.primaryFocus?.unfocus();
-    final navigator = Navigator.of(context, rootNavigator: true);
-    return navigator.push<T>(
-      _AppDialogRoute<T>(
-        context: context,
-        builder: builder,
-        themes: InheritedTheme.capture(from: context, to: navigator.context),
-        reduceMotion: MediaQuery.disableAnimationsOf(context),
-      ),
+    if (!AppModalScope.isActiveOf(context)) return Future.value();
+    final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
+    final route = _AppDialogRoute<T>(
+      context: context,
+      builder: builder,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      reduceMotion: MediaQuery.disableAnimationsOf(context),
     );
+    final result = navigator.push<T>(route);
+    AppModalScope.bind(context, route);
+    return result;
   }
 
   static Future<bool?> confirm({
@@ -40,8 +44,10 @@ class AppDialog extends StatelessWidget {
     required String confirmLabel,
     Key? confirmKey,
     bool destructive = false,
+    bool useRootNavigator = false,
   }) => show<bool>(
     context: context,
+    useRootNavigator: useRootNavigator,
     builder: (context) {
       final colors = Theme.of(context).colorScheme;
       return AppDialog(

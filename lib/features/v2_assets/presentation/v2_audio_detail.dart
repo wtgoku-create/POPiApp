@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/v2_media_exporter.dart';
@@ -113,10 +114,12 @@ class _V2AudioDetailState extends State<V2AudioDetail>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final colors = Theme.of(context).colorScheme;
-    return SafeArea(
+    return AppPageSafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: AppPageSafeArea.horizontalPaddingOf(
+          context,
+        ).copyWith(top: 20, bottom: 20),
         child: Column(
           children: [
             SizedBox(

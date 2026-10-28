@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,7 @@ import '../../../shared/providers/network_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import 'widgets/profile_chrome.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
@@ -42,6 +45,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 20.0);
     final displayId = user?.code.isNotEmpty == true
         ? user!.code
         : user?.id ?? '--';
@@ -52,155 +56,165 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     }
 
     return Scaffold(
-      body: Column(
-        children: [
-          const ProfileTopBar(),
-          Expanded(
-            child: ListView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.zero,
-              children: [
-                const SizedBox(height: 10),
-                Center(
-                  child: Semantics(
-                    button: true,
-                    label: l10n.changeAvatar,
-                    child: InkWell(
-                      key: const Key('edit-profile-avatar'),
-                      customBorder: const CircleBorder(),
-                      onTap: _isSaving || _isPicking ? null : _pickAvatar,
-                      child: ProfileAvatar(
-                        size: 130,
-                        editable: true,
-                        imageUrl: user?.avatarUrl,
-                        imageProvider: _avatarPreview,
+      body: AppPageSafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          children: [
+            const ProfileTopBar(),
+            Expanded(
+              child: ListView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.zero,
+                children: [
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Semantics(
+                      button: true,
+                      label: l10n.changeAvatar,
+                      child: InkWell(
+                        key: const Key('edit-profile-avatar'),
+                        customBorder: const CircleBorder(),
+                        onTap: _isSaving || _isPicking ? null : _pickAvatar,
+                        child: ProfileAvatar(
+                          size: 130,
+                          editable: true,
+                          imageUrl: user?.avatarUrl,
+                          imageProvider: _avatarPreview,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(45),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: AppPageSafeArea.horizontalPaddingOf(
+                      context,
+                    ).copyWith(top: 20, bottom: bottomPadding),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(45),
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.nicknameRequiredLabel,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        key: const Key('profile-name'),
-                        controller: _nameController,
-                        maxLength: 15,
-                        enabled: !_isSaving,
-                        textInputAction: TextInputAction.done,
-                        onSubmitted: (_) {
-                          if (!_isSaving && !_isPicking) _saveProfile();
-                        },
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest,
-                          counterText: '',
-                          suffixText: '${_nameController.text.length}/15',
-                          border: _border,
-                          enabledBorder: _border,
-                          focusedBorder: _border,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.nicknameHelp,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        'UID',
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        initialValue: displayId,
-                        readOnly: true,
-                        style: TextStyle(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 18,
-                        ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest,
-                          suffixIcon: IconButton(
-                            key: const Key('edit-profile-uid-copy'),
-                            tooltip: l10n.copyAction,
-                            onPressed: displayId == '--'
-                                ? null
-                                : () async {
-                                    await Clipboard.setData(
-                                      ClipboardData(text: displayId),
-                                    );
-                                    if (context.mounted) {
-                                      AppToast.success(context, l10n.uidCopied);
-                                    }
-                                  },
-                            icon: Icon(
-                              Icons.copy_outlined,
-                              size: 18,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.nicknameRequiredLabel,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 16,
                           ),
-                          border: _border,
-                          enabledBorder: _border,
-                          focusedBorder: _border,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: FilledButton(
-                          key: const Key('save-profile-button'),
-                          onPressed: _isSaving || _isPicking
-                              ? null
-                              : _saveProfile,
-                          child: _isSaving
-                              ? const SizedBox.square(
-                                  dimension: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : Text(
-                                  l10n.confirm,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          key: const Key('profile-name'),
+                          controller: _nameController,
+                          maxLength: 15,
+                          enabled: !_isSaving,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) {
+                            if (!_isSaving && !_isPicking) _saveProfile();
+                          },
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest,
+                            counterText: '',
+                            suffixText: '${_nameController.text.length}/15',
+                            border: _border,
+                            enabledBorder: _border,
+                            focusedBorder: _border,
+                          ),
+                          onChanged: (_) => setState(() {}),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.nicknameHelp,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text(
+                          'UID',
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          initialValue: displayId,
+                          readOnly: true,
+                          style: TextStyle(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 18,
+                          ),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: colorScheme.surfaceContainerHighest,
+                            suffixIcon: IconButton(
+                              key: const Key('edit-profile-uid-copy'),
+                              tooltip: l10n.copyAction,
+                              onPressed: displayId == '--'
+                                  ? null
+                                  : () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: displayId),
+                                      );
+                                      if (context.mounted) {
+                                        AppToast.success(
+                                          context,
+                                          l10n.uidCopied,
+                                        );
+                                      }
+                                    },
+                              icon: Icon(
+                                Icons.copy_outlined,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            border: _border,
+                            enabledBorder: _border,
+                            focusedBorder: _border,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: FilledButton(
+                            key: const Key('save-profile-button'),
+                            onPressed: _isSaving || _isPicking
+                                ? null
+                                : _saveProfile,
+                            child: _isSaving
+                                ? const SizedBox.square(
+                                    dimension: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    l10n.confirm,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../session/domain/session_artifact.dart';
 import '../../session/presentation/widgets/session_artifacts_sheet.dart';
 import '../../v2_shared/data/v2_repository.dart';
@@ -272,12 +275,9 @@ class _V2AssetsViewState extends State<V2AssetsView> {
               delegate: V2PinnedHeader(
                 height: widget.compactHeader ? 120 : 140,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    widget.compactHeader ? 0 : 10,
-                    20,
-                    20,
-                  ),
+                  padding: AppPageSafeArea.horizontalPaddingOf(
+                    context,
+                  ).copyWith(top: widget.compactHeader ? 0 : 10, bottom: 20),
                   child: Column(
                     children: [
                       V2Search(
@@ -335,11 +335,8 @@ class _V2AssetsViewState extends State<V2AssetsView> {
               )
             else
               SliverPadding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  MediaQuery.paddingOf(context).bottom + 20,
+                padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
+                  bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
                 ),
                 sliver: _list
                     ? SliverList.builder(
@@ -461,6 +458,7 @@ Widget _assetMenu(
         onSelected: () => v2EditText(
           context,
           title: l.demoRenameAsset,
+          useRootNavigator: true,
           label: l.demoName,
           maxLength: 40,
           value: asset.title,
@@ -475,6 +473,7 @@ Widget _assetMenu(
           final yes = await AppDialog.confirm(
             context: context,
             title: l.delete,
+            useRootNavigator: true,
             description: l.demoDeleteDescription,
             cancelLabel: l.cancel,
             confirmLabel: l.confirm,

@@ -391,6 +391,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     final confirmed = await AppDialog.confirm(
       context: context,
       title: l10n.deleteAssetsTitle,
+      useRootNavigator: true,
       description: l10n.deleteAssetsDescription(_selectedWorks.length),
       cancelLabel: l10n.cancel,
       confirmLabel: l10n.delete,

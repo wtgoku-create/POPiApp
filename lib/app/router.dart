@@ -19,6 +19,7 @@ import '../features/teaching/presentation/teaching_page.dart';
 import '../features/teaching/presentation/teaching_document_page.dart';
 import '../features/teaching/domain/teaching.dart';
 import '../core/config/app_config.dart';
+import '../shared/widgets/app_modal_scope.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../features/h5/presentation/h5_page.dart';
 import '../features/profile/presentation/edit_profile_page.dart';
@@ -202,9 +203,16 @@ GoRouter createAppRouter({
   ];
   return GoRouter(
     navigatorKey: rootNavigatorKey,
+    observers: [AppModalObserver()],
     initialLocation: '/',
     routes: shellBuilder == null
         ? routes
-        : [ShellRoute(builder: shellBuilder, routes: routes)],
+        : [
+            ShellRoute(
+              builder: shellBuilder,
+              observers: [AppModalObserver()],
+              routes: routes,
+            ),
+          ],
   );
 }

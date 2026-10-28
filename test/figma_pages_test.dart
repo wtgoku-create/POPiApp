@@ -113,17 +113,106 @@ void main() {
       tester.view.padding = const FakeViewPadding(top: 62);
       addTearDown(tester.view.resetPadding);
       await pumpPage(tester, entry.value);
-      expect(tester.getSize(find.byType(AppGlassHeader)).height, 110);
+      expect(
+        tester.getSize(find.byType(AppGlassHeader)).height,
+        110 + AppGlassHeader.topSpacing,
+      );
 
       for (final size in [const Size(900, 390), const Size(1200, 800)]) {
         tester.view.physicalSize = size;
         tester.view.padding = FakeViewPadding.zero;
         await tester.pumpAndSettle();
-        expect(tester.getSize(find.byType(AppGlassHeader)).height, 48);
+        expect(
+          tester.getSize(find.byType(AppGlassHeader)).height,
+          48 + AppGlassHeader.topSpacing,
+        );
+        expect(tester.takeException(), isNull);
+      }
+    });
+
+    testWidgets('${entry.key} avoids both landscape system edges', (
+      tester,
+    ) async {
+      addTearDown(tester.view.resetPadding);
+      await pumpPage(tester, entry.value, size: const Size(1200, 800));
+      for (final insets in [
+        EdgeInsets.zero,
+        const EdgeInsets.only(left: 12, right: 12, bottom: 21),
+        const EdgeInsets.only(right: 62, bottom: 21),
+        const EdgeInsets.only(left: 62, bottom: 21),
+      ]) {
+        tester.view.padding = FakeViewPadding(
+          left: insets.left,
+          right: insets.right,
+          bottom: insets.bottom,
+        );
+        await tester.pumpAndSettle();
+        final header = tester.getRect(find.byType(AppGlassHeader));
+        expect(header.left, insets.left);
+        expect(header.right, 1200 - insets.right);
+        if (entry.key == 'edit profile') {
+          final field = tester.getRect(find.byKey(const Key('profile-name')));
+          expect(field.left, insets.left < 20 ? 20 : insets.left);
+          expect(field.right, 1200 - (insets.right < 20 ? 20 : insets.right));
+        }
+        final backKey = switch (entry.key) {
+          'points' => 'points-details-back',
+          'membership' => 'membership-back',
+          _ => 'profile-back',
+        };
+        expect(
+          tester.getRect(find.byKey(Key(backKey))).left,
+          insets.left < 20 ? 20 : insets.left,
+        );
+        if (entry.key == 'profile') {
+          final card = tester.getRect(find.byType(MembershipCard));
+          expect(card.left, insets.left < 20 ? 20 : insets.left);
+          expect(card.right, 1200 - (insets.right < 20 ? 20 : insets.right));
+        }
+        if (entry.key != 'membership') {
+          final scroll = find.descendant(
+            of: find.byWidget(entry.value),
+            matching: find.bySubtype<ScrollView>(),
+          );
+          expect(tester.getRect(scroll.first).bottom, 800);
+        }
+        if (entry.key == 'points') {
+          final card = tester.getRect(
+            find.byKey(const Key('points-summary-card')),
+          );
+          expect(card.left, insets.left < 20 ? 20 : insets.left);
+          expect(card.right, 1200 - (insets.right < 20 ? 20 : insets.right));
+        }
         expect(tester.takeException(), isNull);
       }
     });
   }
+
+  testWidgets('profile scrolls to the bottom without stacking safe area gaps', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPadding);
+    await pumpPage(tester, const ProfilePage(), size: const Size(440, 600));
+    for (final bottomInset in [0.0, 21.0, 34.0]) {
+      tester.view.padding = FakeViewPadding(bottom: bottomInset);
+      await tester.pumpAndSettle();
+      final list = find.descendant(
+        of: find.byType(ProfilePage),
+        matching: find.byType(ListView),
+      );
+      expect(tester.getRect(list).bottom, 600);
+      final scrollable = tester.state<ScrollableState>(
+        find.descendant(of: list, matching: find.byType(Scrollable)),
+      );
+      scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getBottomLeft(find.byType(SettingsGroup).last).dy,
+        closeTo(600 - (bottomInset < 20 ? 20 : bottomInset), .01),
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   testWidgets('shows only assets and roles sections', (tester) async {
     await pumpPage(tester, const AssetsPage());
@@ -481,7 +570,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester.getSize(find.byKey(const Key('membership-plan-card'))).height,
-      closeTo(600, .01),
+      closeTo(600 - AppGlassHeader.topSpacing, .01),
     );
     tester.view.physicalSize = const Size(440, 956);
     await tester.pumpAndSettle();

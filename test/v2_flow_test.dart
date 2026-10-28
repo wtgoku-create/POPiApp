@@ -16,6 +16,7 @@ import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 import 'package:popi_ai_app/features/v2_shared/presentation/widgets/v2_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -292,7 +293,7 @@ void main() {
       await tester.pumpAndSettle();
       final pinned = tester.getTopLeft(tabs).dy;
       expect(pinned, lessThan(start));
-      expect(pinned, closeTo(kToolbarHeight, 1));
+      expect(pinned, closeTo(kToolbarHeight + AppGlassHeader.topSpacing, 1));
       expect(find.byTooltip('重命名会话').hitTestable(), findsNothing);
       await tester.drag(
         find.byType(ListView).hitTestable().first,
@@ -619,7 +620,7 @@ void main() {
     await tester.pumpAndSettle();
     final disclaimer = find.text('AI生成结果可能有误，仅供参考');
     final bottom = tester.getBottomLeft(disclaimer).dy;
-    expect(844 - bottom, closeTo(38, 1));
+    expect(844 - bottom, closeTo(34, 1));
     expect(tester.takeException(), isNull);
   });
 

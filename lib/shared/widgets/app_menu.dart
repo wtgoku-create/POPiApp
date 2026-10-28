@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../app/theme.dart';
 import '../type/menu_type.dart';
 import 'app_modal_backdrop.dart';
+import 'app_modal_scope.dart';
 
 export '../type/menu_type.dart';
 
@@ -40,7 +41,10 @@ class _AppContextMenuState extends State<AppContextMenu> {
   Size? _sourceSize;
   VoidCallback? _pendingAction;
 
-  bool get _enabled => widget.enabled && widget.entries.isNotEmpty;
+  bool _scopeActive = true;
+
+  bool get _enabled =>
+      _scopeActive && widget.enabled && widget.entries.isNotEmpty;
 
   void _measureSource() {
     final box = _sourceKey.currentContext?.findRenderObject();
@@ -67,7 +71,9 @@ class _AppContextMenuState extends State<AppContextMenu> {
     if (action == null) return;
     // Finish removing the preview route before opening dialogs or changing rows.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _enabled) action();
+      if (mounted && _enabled && (ModalRoute.of(context)?.isCurrent ?? true)) {
+        action();
+      }
     });
   }
 
@@ -81,6 +87,16 @@ class _AppContextMenuState extends State<AppContextMenu> {
   void didUpdateWidget(AppContextMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_enabled && _controller.isOpen) _controller.close();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scopeActive = AppModalScope.isActiveOf(context);
+    if (!_scopeActive) {
+      _pendingAction = null;
+      _controller.dismiss();
+    }
   }
 
   @override
@@ -121,6 +137,8 @@ class _AppContextMenuState extends State<AppContextMenu> {
                 key: _sourceKey,
                 child: CupertinoContextMenuPlus.builder(
                   controller: _controller,
+                  useRootNavigator: false,
+                  onRouteCreated: (route) => AppModalScope.bind(context, route),
                   openGestureEnabled: _enabled,
                   showGrowAnimation: !reduceMotion,
                   previewLongPressTimeout: const Duration(milliseconds: 500),
@@ -255,6 +273,16 @@ class _AppMenuButtonState extends State<AppMenuButton> with _AppMenuAppearance {
   final _focusNode = FocusNode();
   LocalHistoryEntry? _historyEntry;
   bool _disposing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!AppModalScope.isActiveOf(context) && _controller.isOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.isOpen) _controller.close();
+      });
+    }
+  }
 
   void _onOpen() {
     final route = ModalRoute.of(context);

@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_session/presentation/v2_chat_page.dart';
@@ -46,7 +47,13 @@ class V2WelcomePage extends StatelessWidget {
     ];
     final dark = Theme.of(context).brightness == Brightness.dark;
     final colors = Theme.of(context).colorScheme;
-    final contentWidth = math.min(400.0, MediaQuery.sizeOf(context).width - 40);
+    final gutters = AppPageSafeArea.horizontalPaddingOf(context);
+    final contentWidth = math.min(
+      400.0,
+      MediaQuery.sizeOf(context).width -
+          MediaQuery.paddingOf(context).horizontal -
+          gutters.horizontal,
+    );
     final characterWidth = math.min(184.0, math.max(90.0, contentWidth - 208));
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -70,7 +77,7 @@ class V2WelcomePage extends StatelessWidget {
             leading: Align(
               alignment: Alignment.centerLeft,
               child: Padding(
-                padding: const EdgeInsets.only(left: 20),
+                padding: EdgeInsets.only(left: gutters.left),
                 child: SizedBox.square(
                   dimension: 40,
                   child: IconButton(
@@ -89,139 +96,149 @@ class V2WelcomePage extends StatelessWidget {
             ),
           ),
         ),
-        body: CustomScrollView(
-          slivers: [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: MediaQuery.paddingOf(context).top + kToolbarHeight,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 15,
-                              ),
-                              child: AppContextMenu(
-                                label: l.demoWelcomeTitle,
-                                entries: [
-                                  AppMenuItem(
-                                    label: l.demoReset,
-                                    icon: const Icon(Icons.restart_alt),
-                                    onSelected: () => _reset(context),
-                                  ),
-                                ],
-                                child: Text(
-                                  l.demoWelcomeTitle,
-                                  key: const Key('demo-welcome-greeting'),
-                                  style: const TextStyle(
-                                    fontSize: 30,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+        body: AppPageSafeArea(
+          top: false,
+          bottom: false,
+          child: CustomScrollView(
+            slivers: [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Padding(
+                  padding: gutters.copyWith(
+                    top:
+                        MediaQuery.paddingOf(context).top +
+                        kToolbarHeight +
+                        AppGlassHeader.topSpacing,
+                    bottom:
+                        MediaQuery.paddingOf(context).top +
+                        kToolbarHeight +
+                        AppGlassHeader.topSpacing,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 15,
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Positioned(
-                                  right: 8,
-                                  bottom: -81 * characterWidth / 184,
-                                  child: SizedBox(
-                                    key: const Key('demo-welcome-character'),
-                                    width: characterWidth,
-                                    height: characterWidth * 222 / 184,
-                                    child: const V2WelcomeCharacter(),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    left: 15,
-                                    right: characterWidth + 8,
-                                    bottom: 42,
-                                  ),
+                                child: AppContextMenu(
+                                  label: l.demoWelcomeTitle,
+                                  entries: [
+                                    AppMenuItem(
+                                      label: l.demoReset,
+                                      icon: const Icon(Icons.restart_alt),
+                                      onSelected: () => _reset(context),
+                                    ),
+                                  ],
                                   child: Text(
-                                    l.demoWelcomeCopy,
+                                    l.demoWelcomeTitle,
+                                    key: const Key('demo-welcome-greeting'),
                                     style: const TextStyle(
-                                      fontSize: 18,
+                                      fontSize: 30,
                                       height: 1.4,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Container(
-                          key: const Key('demo-welcome-options'),
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: dark
-                                ? colors.surfaceContainerLow
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Stack(
-                            children: [
-                              if (!dark)
-                                Positioned.fill(
-                                  child: Image.asset(
-                                    'assets/images/home_prompt_background.png',
-                                    fit: BoxFit.fill,
-                                    excludeFromSemantics: true,
+                              ),
+                              const SizedBox(height: 20),
+                              Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Positioned(
+                                    right: 8,
+                                    bottom: -81 * characterWidth / 184,
+                                    child: SizedBox(
+                                      key: const Key('demo-welcome-character'),
+                                      width: characterWidth,
+                                      height: characterWidth * 222 / 184,
+                                      child: const V2WelcomeCharacter(),
+                                    ),
                                   ),
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  children: [
-                                    for (
-                                      var i = 0;
-                                      i < options.length;
-                                      i++
-                                    ) ...[
-                                      _WelcomeEntry(
-                                        index: i,
-                                        label: options[i],
-                                        onTap: () => _create(
-                                          context,
-                                          options[i],
-                                          i == 0
-                                              ? V2SessionKind.project
-                                              : i == 2
-                                              ? V2SessionKind.workflow
-                                              : V2SessionKind.conversation,
-                                        ),
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 15,
+                                      right: characterWidth + 8,
+                                      bottom: 42,
+                                    ),
+                                    child: Text(
+                                      l.demoWelcomeCopy,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        height: 1.4,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      if (i < options.length - 1)
-                                        const SizedBox(height: 10),
-                                    ],
-                                  ],
-                                ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          Container(
+                            key: const Key('demo-welcome-options'),
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
+                              color: dark
+                                  ? colors.surfaceContainerLow
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Stack(
+                              children: [
+                                if (!dark)
+                                  Positioned.fill(
+                                    child: Image.asset(
+                                      'assets/images/home_prompt_background.png',
+                                      fit: BoxFit.fill,
+                                      excludeFromSemantics: true,
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    children: [
+                                      for (
+                                        var i = 0;
+                                        i < options.length;
+                                        i++
+                                      ) ...[
+                                        _WelcomeEntry(
+                                          index: i,
+                                          label: options[i],
+                                          onTap: () => _create(
+                                            context,
+                                            options[i],
+                                            i == 0
+                                                ? V2SessionKind.project
+                                                : i == 2
+                                                ? V2SessionKind.workflow
+                                                : V2SessionKind.conversation,
+                                          ),
+                                        ),
+                                        if (i < options.length - 1)
+                                          const SizedBox(height: 10),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

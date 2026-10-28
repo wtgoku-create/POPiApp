@@ -1,4 +1,5 @@
-platform :ios, '15.0'
+ios_deployment_target = '15.0'
+platform :ios, ios_deployment_target
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -45,6 +46,13 @@ post_install do |installer|
 
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # Keep older pod targets within the deployment range supported by Xcode.
+    target.build_configurations.each do |config|
+      deployment_target = config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0'
+      if Gem::Version.new(deployment_target) < Gem::Version.new(ios_deployment_target)
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
+      end
+    end
     if simulator_sdk_targets.include?(target.name) ||
        (!simulator_sdk_targets.empty? && target.name.start_with?('Pods-Runner'))
       # WeChat has an arm64 simulator slice; Douyin is linked only on devices below.

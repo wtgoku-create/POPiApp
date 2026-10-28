@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_bot_avatar.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../shared/widgets/app_page_safe_area.dart';
 import '../../data/v2_fixtures.dart';
 import 'v2_frosted_backdrop.dart';
 
@@ -23,13 +24,8 @@ Color v2Surface(BuildContext context) =>
     : Colors.white.withValues(alpha: .5);
 
 /// SafeArea already supplies the inset; only add the remaining page gutter.
-EdgeInsets v2HorizontalPagePadding(BuildContext context) {
-  final safeArea = MediaQuery.paddingOf(context);
-  return EdgeInsets.only(
-    left: (20 - safeArea.left).clamp(0.0, 20.0),
-    right: (20 - safeArea.right).clamp(0.0, 20.0),
-  );
-}
+EdgeInsets v2HorizontalPagePadding(BuildContext context) =>
+    AppPageSafeArea.horizontalPaddingOf(context);
 
 String v2MemberName(AppLocalizations l, String id) => switch (id) {
   'designer' => l.demoDesigner,
@@ -163,6 +159,7 @@ class V2Scaffold extends StatelessWidget {
     this.floatingBottomVisible = true,
     this.contentMaxWidth = 640,
     this.extendBodyBehindAppBar = false,
+    this.bottomSafeArea = false,
     super.key,
   });
   final Widget title;
@@ -174,6 +171,7 @@ class V2Scaffold extends StatelessWidget {
   final bool floatingBottomVisible;
   final double contentMaxWidth;
   final bool extendBodyBehindAppBar;
+  final bool bottomSafeArea;
   @override
   Widget build(BuildContext context) => Scaffold(
     extendBody: floatingBottom,
@@ -226,9 +224,9 @@ class V2Scaffold extends StatelessWidget {
               ],
       ),
     ),
-    body: SafeArea(
+    body: AppPageSafeArea(
       top: false,
-      bottom: bottom == null,
+      bottom: bottomSafeArea && bottom == null,
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: contentMaxWidth),
@@ -569,8 +567,10 @@ Future<void> v2EditText(
   bool multiline = false,
   String? label,
   int maxLength = 15,
+  bool useRootNavigator = false,
 }) => AppDialog.show<void>(
   context: context,
+  useRootNavigator: useRootNavigator,
   builder: (_) => _EditDialog(
     title: title,
     value: value,

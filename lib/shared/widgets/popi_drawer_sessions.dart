@@ -369,6 +369,7 @@ class _SessionItem extends ConsumerWidget {
             if (ref.read(userProvider)?.id != userId) return;
             AppDialog.show<void>(
               context: context,
+              useRootNavigator: true,
               builder: (_) =>
                   _RenameSessionDialog(session: session, userId: userId!),
             );
@@ -390,6 +391,7 @@ class _SessionItem extends ConsumerWidget {
               context: context,
               title: l10n.delete,
               description: l10n.deleteSessionConfirm(session.title),
+              useRootNavigator: true,
               cancelLabel: l10n.cancel,
               confirmLabel: l10n.delete,
               confirmKey: const Key('session-delete-confirm'),

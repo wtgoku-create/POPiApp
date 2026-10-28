@@ -5,6 +5,7 @@ import '../../../../shared/widgets/app_network_image.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_glass_app_bar.dart';
+import '../../../../shared/widgets/app_page_safe_area.dart';
 
 class ProfileTopBar extends StatelessWidget {
   const ProfileTopBar({this.showNavigation = false, super.key});
@@ -14,6 +15,7 @@ class ProfileTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
+    final gutters = AppPageSafeArea.horizontalPaddingOf(context);
     return AppGlassHeader(
       child: SizedBox(
         height: top + 48,
@@ -21,7 +23,7 @@ class ProfileTopBar extends StatelessWidget {
           padding: EdgeInsets.only(top: top),
           child: Row(
             children: [
-              const SizedBox(width: 20),
+              SizedBox(width: gutters.left),
               SizedBox.square(
                 dimension: 40,
                 child: IconButton(
@@ -47,7 +49,7 @@ class ProfileTopBar extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              const SizedBox(width: 20),
+              SizedBox(width: gutters.right),
             ],
           ),
         ),

@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
+import '../../../shared/widgets/app_modal_scope.dart';
 import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_assets/presentation/v2_assets_page.dart';
@@ -30,14 +31,24 @@ class V2HomePage extends StatefulWidget {
 }
 
 class _V2HomePageState extends State<V2HomePage> {
+  final _libraryNavigator = GlobalKey<NavigatorState>();
   final _detailNavigator = GlobalKey<NavigatorState>();
   final _assetsNavigator = GlobalKey<NavigatorState>();
+  late final _libraryModals = AppModalObserver(onChanged: _modalsChanged);
+  final _detailModals = AppModalObserver();
+  final _assetsModals = AppModalObserver();
   late final _detailObserver = _DetailObserver(_detailChanged);
   int _tab = 0;
   bool _bottomVisible = true;
   bool _detailActive = false;
   String? _selectedSessionId;
   String _query = '';
+
+  void _modalsChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   void _detailChanged(bool active, String? sessionId) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -143,6 +154,8 @@ class _V2HomePageState extends State<V2HomePage> {
           child: TickerMode(
             enabled: visible,
             child: ClipRect(
+              // Keep backdrop filters inside this pane's compositing surface.
+              clipBehavior: split ? Clip.antiAliasWithSaveLayer : Clip.hardEdge,
               child: MediaQuery(
                 data: media.copyWith(
                   size: Size(width, constraints.maxHeight),
@@ -155,7 +168,7 @@ class _V2HomePageState extends State<V2HomePage> {
                     right: split && left == 0 ? 0 : media.viewPadding.right,
                   ),
                 ),
-                child: child,
+                child: AppModalScope(active: visible, child: child),
               ),
             ),
           ),
@@ -171,7 +184,18 @@ class _V2HomePageState extends State<V2HomePage> {
             width: sidebarWidth,
             visible:
                 split || (!widget.routeActive && _tab == 0 && !_detailActive),
-            child: Builder(builder: _library),
+            child: NavigatorPopHandler<void>(
+              enabled:
+                  split || (!widget.routeActive && _tab == 0 && !_detailActive),
+              onPopWithResult: (_) =>
+                  _libraryNavigator.currentState!.maybePop(),
+              child: Navigator(
+                key: _libraryNavigator,
+                observers: [_libraryModals],
+                onGenerateRoute: (_) =>
+                    MaterialPageRoute<void>(builder: _library),
+              ),
+            ),
           ),
           pane(
             key: const Key('v2-detail-pane'),
@@ -180,13 +204,18 @@ class _V2HomePageState extends State<V2HomePage> {
             visible:
                 !widget.routeActive && _tab == 0 && (split || _detailActive),
             child: NavigatorPopHandler<void>(
-              enabled: !widget.routeActive && _detailActive && _tab == 0,
-              onPopWithResult: !widget.routeActive && _detailActive && _tab == 0
+              enabled:
+                  !widget.routeActive &&
+                  (_detailActive || _detailModals.hasPopups) &&
+                  _tab == 0 &&
+                  !_libraryModals.hasPopups,
+              onPopWithResult:
+                  !widget.routeActive && _tab == 0 && !_libraryModals.hasPopups
                   ? (_) => _detailNavigator.currentState!.maybePop()
                   : null,
               child: Navigator(
                 key: _detailNavigator,
-                observers: [_detailObserver],
+                observers: [_detailObserver, _detailModals],
                 onGenerateRoute: (_) => MaterialPageRoute<void>(
                   settings: const RouteSettings(name: '/'),
                   builder: (context) {
@@ -235,14 +264,21 @@ class _V2HomePageState extends State<V2HomePage> {
             width: constraints.maxWidth - (split ? sidebarWidth : 0),
             visible: !widget.routeActive && _tab == 1,
             child: NavigatorPopHandler<void>(
-              enabled: !widget.routeActive && _tab == 1,
-              onPopWithResult: !widget.routeActive && _tab == 1
+              enabled:
+                  !widget.routeActive && _tab == 1 && !_libraryModals.hasPopups,
+              onPopWithResult:
+                  !widget.routeActive && _tab == 1 && !_libraryModals.hasPopups
                   ? (_) => _assetsNavigator.currentState!.maybePop()
                   : null,
               child: Navigator(
                 key: _assetsNavigator,
+                observers: [_assetsModals],
                 pages: [
-                  MaterialPage<void>(child: _assets(context, split: split)),
+                  MaterialPage<void>(
+                    child: Builder(
+                      builder: (context) => _assets(context, split: split),
+                    ),
+                  ),
                 ],
                 onDidRemovePage: (_) {},
               ),
@@ -440,6 +476,7 @@ class _V2HomePageState extends State<V2HomePage> {
                           onSelected: () => v2EditText(
                             context,
                             title: l.demoRename,
+                            useRootNavigator: true,
                             label: l.demoSessionName,
                             value: s.title,
                             onSave: (title) => widget.repository.updateSession(
@@ -456,6 +493,7 @@ class _V2HomePageState extends State<V2HomePage> {
                             final yes = await AppDialog.confirm(
                               context: context,
                               title: l.delete,
+                              useRootNavigator: true,
                               description: l.demoDeleteDescription,
                               cancelLabel: l.cancel,
                               confirmLabel: l.confirm,
@@ -644,26 +682,30 @@ class _DetailObserver extends NavigatorObserver {
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute) return;
     _routes.add(route);
     _notify();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute) return;
     _routes.remove(route);
     _notify();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! PageRoute) return;
     _routes.remove(route);
     _notify();
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    final index = _routes.indexOf(oldRoute!);
-    if (index >= 0) _routes[index] = newRoute!;
+    if (oldRoute is! PageRoute || newRoute is! PageRoute) return;
+    final index = _routes.indexOf(oldRoute);
+    if (index >= 0) _routes[index] = newRoute;
     _notify();
   }
 }

@@ -18,6 +18,7 @@ import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/payment_type.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/legal_document_links.dart';
 import '../data/purchase_catalog_repository.dart';
@@ -186,98 +187,112 @@ class _PointsDetailsPageState extends ConsumerState<PointsDetailsPage> {
     final pointPackageCoins = user?.pointPackageCoins ?? 88;
     final totalPoints = user?.allCoins ?? 1750;
     final topPadding = MediaQuery.paddingOf(context).top;
+    final bottomPadding = math.max(MediaQuery.paddingOf(context).bottom, 24.0);
 
-    final pageBody = Column(
-      children: [
-        AppGlassHeader(
-          child: SizedBox(
-            height: topPadding + 48,
-            child: Padding(
-              padding: EdgeInsets.only(top: topPadding),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 20),
-                      child: SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          key: const Key('points-details-back'),
-                          tooltip: l10n.back,
-                          padding: EdgeInsets.zero,
-                          onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back_ios_new, size: 21),
+    final pageBody = AppPageSafeArea(
+      top: false,
+      bottom: false,
+      child: Column(
+        children: [
+          AppGlassHeader(
+            child: SizedBox(
+              height: topPadding + 48,
+              child: Padding(
+                padding: EdgeInsets.only(top: topPadding),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          left: AppPageSafeArea.horizontalPaddingOf(
+                            context,
+                          ).left,
+                        ),
+                        child: SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('points-details-back'),
+                            tooltip: l10n.back,
+                            padding: EdgeInsets.zero,
+                            onPressed: () => context.pop(),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 21,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Text(
-                    l10n.pointsDetailsTitle,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: AppTypeSizes.pageTitle,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: CustomScrollView(
-            key: const Key('points-details-scroll'),
-            controller: _scrollController,
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                sliver: SliverMainAxisGroup(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _PointsSummaryCard(
-                            totalPoints: totalPoints,
-                            memberCoins: memberCoins,
-                            otherCoins: otherCoins,
-                            pointPackageCoins: pointPackageCoins,
-                            onRecharge: () => _showRechargeSheet(totalPoints),
-                          ),
-                          const SizedBox(height: 18),
-                          Text(
-                            l10n.pointsDetailsTitle,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            l10n.pointsUsageDescription,
-                            style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                              height: 1.45,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
+                    Text(
+                      l10n.pointsDetailsTitle,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: AppTypeSizes.pageTitle,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    _buildPointsLogSliver(l10n),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ],
+          Expanded(
+            child: CustomScrollView(
+              key: const Key('points-details-scroll'),
+              controller: _scrollController,
+              slivers: [
+                SliverPadding(
+                  padding: AppPageSafeArea.horizontalPaddingOf(
+                    context,
+                  ).copyWith(top: 4, bottom: bottomPadding),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _PointsSummaryCard(
+                              totalPoints: totalPoints,
+                              memberCoins: memberCoins,
+                              otherCoins: otherCoins,
+                              pointPackageCoins: pointPackageCoins,
+                              onRecharge: () => _showRechargeSheet(totalPoints),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              l10n.pointsDetailsTitle,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              l10n.pointsUsageDescription,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                fontSize: 14,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                      _buildPointsLogSliver(l10n),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
 
     return Scaffold(

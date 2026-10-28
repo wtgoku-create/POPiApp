@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +15,7 @@ import '../../../shared/providers/settings_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/type/social_app_type.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/purchase_catalog_repository.dart';
@@ -68,6 +71,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final themeMode = ref.watch(themeModeProvider);
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final safeArea = MediaQuery.paddingOf(context);
+    final pagePadding = AppPageSafeArea.horizontalPaddingOf(
+      context,
+    ).copyWith(top: 12, bottom: math.max(safeArea.bottom, 20.0));
     final VoidCallback? copyUid = displayId == '--'
         ? null
         : () async {
@@ -81,221 +88,225 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       backgroundColor: Theme.of(context).brightness == Brightness.light
           ? AppColors.profileBackground
           : colorScheme.surface,
-      body: Column(
-        children: [
-          const ProfileTopBar(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              children: [
-                Center(child: ProfileAvatar(imageUrl: user?.avatarUrl)),
-                const SizedBox(height: 10),
-                Center(
-                  child: Text(
-                    displayName,
-                    style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: AppTypeSizes.pageTitle,
-                      fontWeight: FontWeight.w700,
+      body: AppPageSafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          children: [
+            const ProfileTopBar(),
+            Expanded(
+              child: ListView(
+                padding: pagePadding,
+                children: [
+                  Center(child: ProfileAvatar(imageUrl: user?.avatarUrl)),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      displayName,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontSize: AppTypeSizes.pageTitle,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Center(
-                  child: Tooltip(
-                    message: l10n.copyAction,
-                    child: InkWell(
-                      key: const Key('profile-uid-copy'),
-                      onTap: copyUid,
-                      borderRadius: BorderRadius.circular(AppRadii.small),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: SizedBox(
-                          height: 40,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'UID:$displayId',
-                                style: TextStyle(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontSize: 16,
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Tooltip(
+                      message: l10n.copyAction,
+                      child: InkWell(
+                        key: const Key('profile-uid-copy'),
+                        onTap: copyUid,
+                        borderRadius: BorderRadius.circular(AppRadii.small),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: SizedBox(
+                            height: 40,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'UID:$displayId',
+                                  style: TextStyle(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.copy_outlined,
-                                size: 17,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.copy_outlined,
+                                  size: 17,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: SizedBox(
-                    height: 44,
-                    child: OutlinedButton(
-                      onPressed: () => context.push('/profile/edit'),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: colorScheme.surface,
-                        side: BorderSide.none,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                      ),
-                      child: Text(
-                        l10n.editProfile,
-                        style: TextStyle(
-                          color: colorScheme.onSurface,
-                          fontSize: 16,
+                  const SizedBox(height: 8),
+                  Center(
+                    child: SizedBox(
+                      height: 44,
+                      child: OutlinedButton(
+                        onPressed: () => context.push('/profile/edit'),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: colorScheme.surface,
+                          side: BorderSide.none,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                        ),
+                        child: Text(
+                          l10n.editProfile,
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                MembershipCard(pointPackageLoader: widget.pointPackageLoader),
-                const SizedBox(height: 12),
-                SettingsGroup(
-                  children: [
-                    SettingsRow(
-                      key: const Key('profile-redemption-center'),
-                      iconWidget: const AppSvgIcon.asset(
-                        'redemption_center',
-                        size: 30,
+                  const SizedBox(height: 12),
+                  MembershipCard(pointPackageLoader: widget.pointPackageLoader),
+                  const SizedBox(height: 12),
+                  SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        key: const Key('profile-redemption-center'),
+                        iconWidget: const AppSvgIcon.asset(
+                          'redemption_center',
+                          size: 30,
+                        ),
+                        label: l10n.redemptionCenter,
+                        onTap: () => context.push('/profile/redemption'),
                       ),
-                      label: l10n.redemptionCenter,
-                      onTap: () => context.push('/profile/redemption'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SettingsGroup(
-                  children: [
-                    SettingsRow(
-                      iconWidget: AppSvgIcon.asset(
-                        'profile_settings_phone',
-                        size: 20,
-                      ),
-                      label: l10n.phoneNumber,
-                      value: '+86 $displayPhone',
-                      showChevron: false,
-                    ),
-                    SocialAppBindingRow(
-                      app: SocialAppType.wechat,
-                      repository: widget.socialBindingRepository,
-                    ),
-                    SocialAppBindingRow(
-                      app: SocialAppType.douyin,
-                      repository: widget.socialBindingRepository,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                SettingsGroup(
-                  children: [
-                    TreeSettingsMenu(
-                      menuKey: const Key('language-settings-menu'),
-                      icon: Icons.translate,
-                      label: l10n.language,
-                      value: _languageLabel(locale, l10n),
-                      expanded: _languageExpanded,
-                      onToggle: () => setState(
-                        () => _languageExpanded = !_languageExpanded,
-                      ),
-                      options: [
-                        TreeSettingsOption(
-                          label: l10n.chinese,
-                          selected: locale?.languageCode == 'zh',
-                          onTap: () => _setLocale(const Locale('zh')),
-                        ),
-                        TreeSettingsOption(
-                          label: l10n.english,
-                          selected: locale?.languageCode == 'en',
-                          onTap: () => _setLocale(const Locale('en')),
-                        ),
-                        TreeSettingsOption(
-                          label: l10n.system,
-                          selected: locale == null,
-                          onTap: () => _setLocale(null),
-                        ),
-                      ],
-                    ),
-                    TreeSettingsMenu(
-                      menuKey: const Key('theme-settings-menu'),
-                      icon: Icons.dark_mode_outlined,
-                      label: l10n.theme,
-                      value: _themeLabel(themeMode, l10n),
-                      expanded: _themeExpanded,
-                      onToggle: () =>
-                          setState(() => _themeExpanded = !_themeExpanded),
-                      options: [
-                        TreeSettingsOption(
-                          label: l10n.light,
-                          selected: themeMode == ThemeMode.light,
-                          onTap: () => _setThemeMode(ThemeMode.light),
-                        ),
-                        TreeSettingsOption(
-                          label: l10n.dark,
-                          selected: themeMode == ThemeMode.dark,
-                          onTap: () => _setThemeMode(ThemeMode.dark),
-                        ),
-                        TreeSettingsOption(
-                          label: l10n.system,
-                          selected: themeMode == ThemeMode.system,
-                          onTap: () => _setThemeMode(ThemeMode.system),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 1, indent: 20, endIndent: 20),
-                    SettingsRow(
-                      key: const Key('profile-logout-menu'),
-                      icon: Icons.logout,
-                      label: l10n.logout,
-                      showChevron: false,
-                      onTap: _cancelingAccount
-                          ? null
-                          : () => _confirmLogout(context, ref),
-                    ),
-                  ],
-                ),
-                if (user != null) ...[
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 50,
-                    child: FilledButton(
-                      key: const Key('profile-cancel-account-menu'),
-                      onPressed: _cancelingAccount
-                          ? null
-                          : _confirmCancelAccount,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFD63D43),
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: const Color(
-                          0xFFD63D43,
-                        ).withValues(alpha: .5),
-                        shape: const StadiumBorder(),
-                        textStyle: const TextStyle(fontSize: 16),
-                      ),
-                      child: _cancelingAccount
-                          ? const SizedBox.square(
-                              dimension: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(l10n.cancelAccount),
-                    ),
+                    ],
                   ),
+                  const SizedBox(height: 12),
+                  SettingsGroup(
+                    children: [
+                      SettingsRow(
+                        iconWidget: AppSvgIcon.asset(
+                          'profile_settings_phone',
+                          size: 20,
+                        ),
+                        label: l10n.phoneNumber,
+                        value: '+86 $displayPhone',
+                        showChevron: false,
+                      ),
+                      SocialAppBindingRow(
+                        app: SocialAppType.wechat,
+                        repository: widget.socialBindingRepository,
+                      ),
+                      SocialAppBindingRow(
+                        app: SocialAppType.douyin,
+                        repository: widget.socialBindingRepository,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SettingsGroup(
+                    children: [
+                      TreeSettingsMenu(
+                        menuKey: const Key('language-settings-menu'),
+                        icon: Icons.translate,
+                        label: l10n.language,
+                        value: _languageLabel(locale, l10n),
+                        expanded: _languageExpanded,
+                        onToggle: () => setState(
+                          () => _languageExpanded = !_languageExpanded,
+                        ),
+                        options: [
+                          TreeSettingsOption(
+                            label: l10n.chinese,
+                            selected: locale?.languageCode == 'zh',
+                            onTap: () => _setLocale(const Locale('zh')),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.english,
+                            selected: locale?.languageCode == 'en',
+                            onTap: () => _setLocale(const Locale('en')),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.system,
+                            selected: locale == null,
+                            onTap: () => _setLocale(null),
+                          ),
+                        ],
+                      ),
+                      TreeSettingsMenu(
+                        menuKey: const Key('theme-settings-menu'),
+                        icon: Icons.dark_mode_outlined,
+                        label: l10n.theme,
+                        value: _themeLabel(themeMode, l10n),
+                        expanded: _themeExpanded,
+                        onToggle: () =>
+                            setState(() => _themeExpanded = !_themeExpanded),
+                        options: [
+                          TreeSettingsOption(
+                            label: l10n.light,
+                            selected: themeMode == ThemeMode.light,
+                            onTap: () => _setThemeMode(ThemeMode.light),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.dark,
+                            selected: themeMode == ThemeMode.dark,
+                            onTap: () => _setThemeMode(ThemeMode.dark),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.system,
+                            selected: themeMode == ThemeMode.system,
+                            onTap: () => _setThemeMode(ThemeMode.system),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 1, indent: 20, endIndent: 20),
+                      SettingsRow(
+                        key: const Key('profile-logout-menu'),
+                        icon: Icons.logout,
+                        label: l10n.logout,
+                        showChevron: false,
+                        onTap: _cancelingAccount
+                            ? null
+                            : () => _confirmLogout(context, ref),
+                      ),
+                    ],
+                  ),
+                  if (user != null) ...[
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 50,
+                      child: FilledButton(
+                        key: const Key('profile-cancel-account-menu'),
+                        onPressed: _cancelingAccount
+                            ? null
+                            : _confirmCancelAccount,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFD63D43),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: const Color(
+                            0xFFD63D43,
+                          ).withValues(alpha: .5),
+                          shape: const StadiumBorder(),
+                          textStyle: const TextStyle(fontSize: 16),
+                        ),
+                        child: _cancelingAccount
+                            ? const SizedBox.square(
+                                dimension: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(l10n.cancelAccount),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -18,6 +18,7 @@ import 'package:popi_ai_app/features/teaching/data/teaching_repository.dart';
 import 'package:popi_ai_app/features/teaching/domain/teaching.dart';
 import 'package:popi_ai_app/features/teaching/presentation/teaching_page.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 
 const _categories = [
   TeachingCategory(id: 1, name: '新手教程'),
@@ -173,7 +174,7 @@ void main() {
         find.byKey(const ValueKey('teaching-course-2')),
       );
       expect(first.left, 20);
-      expect(first.top, 371);
+      expect(first.top, 371 + AppGlassHeader.topSpacing);
       expect(second.left - first.right, 10);
       expect(second.top, first.top);
       expect(first.width, 195);

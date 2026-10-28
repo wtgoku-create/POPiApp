@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/type/bot_avatar_type.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../v2_shared/data/v2_fixtures.dart';
 import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
@@ -50,7 +52,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  padding: AppPageSafeArea.horizontalPaddingOf(
+                    context,
+                  ).copyWith(top: 10, bottom: 20),
                   child: _SettingsCard(
                     padding: const EdgeInsets.all(10),
                     child: Row(
@@ -96,7 +100,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
                 delegate: V2PinnedHeader(
                   height: 60,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    padding: AppPageSafeArea.horizontalPaddingOf(
+                      context,
+                    ).copyWith(bottom: 20),
                     child: V2Segments(
                       labels: [l.demoInfo, l.demoCapabilities, l.demoOutputs],
                       selected: _tabs.index,
@@ -132,7 +138,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
     AppLocalizations l,
   ) => ListView(
     key: const PageStorageKey('demo-settings-info'),
-    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+    padding: AppPageSafeArea.horizontalPaddingOf(
+      context,
+    ).copyWith(bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0)),
     children: [
       _SettingsCard(
         child: ListTile(
@@ -225,7 +233,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
         key: const PageStorageKey('demo-settings-skills'),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
+              bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
+            ),
             sliver: SliverToBoxAdapter(
               child: _SettingsCard(
                 padding: const EdgeInsets.all(20),
@@ -293,7 +303,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            padding: AppPageSafeArea.horizontalPaddingOf(
+              context,
+            ).copyWith(bottom: 10),
             sliver: SliverToBoxAdapter(
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -314,7 +326,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: AppPageSafeArea.horizontalPaddingOf(
+              context,
+            ).copyWith(bottom: 20),
             sliver: SliverToBoxAdapter(
               child: _SettingsCard(
                 child: Column(
@@ -898,10 +912,13 @@ class _RoleSheetState extends State<_RoleSheet> {
   void _profile(BuildContext context, V2Character role, AppLocalizations l) =>
       Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) => V2Scaffold(
+          builder: (context) => V2Scaffold(
             title: Text(l.demoRoleProfile),
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
+                top: 20,
+                bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
+              ),
               children: [
                 Image.asset(role.image, height: 300, fit: BoxFit.contain),
                 const SizedBox(height: 20),

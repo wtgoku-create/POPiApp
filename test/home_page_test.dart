@@ -25,6 +25,7 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 
 import 'support/project_fixtures.dart';
 import 'support/activity_fixtures.dart';
@@ -111,14 +112,17 @@ void main() {
         safeArea: EdgeInsets.only(top: topInset, bottom: 34),
       );
       expect(tester.getSize(find.byType(AppBar)).height, 56);
-      expect(tester.getTopLeft(find.byType(AppBar)).dy, topInset);
+      expect(
+        tester.getTopLeft(find.byType(AppBar)).dy,
+        topInset + AppGlassHeader.topSpacing,
+      );
       expect(
         tester.getCenter(find.byKey(const Key('popi-open-navigation'))).dy,
-        topInset + 28,
+        topInset + AppGlassHeader.topSpacing + 28,
       );
       expect(
         tester.getTopLeft(find.byKey(const Key('home-banner-carousel'))).dy,
-        topInset + 56 + 12,
+        topInset + AppGlassHeader.topSpacing + 56 + 12,
       );
       expect(tester.takeException(), isNull);
     });
@@ -157,7 +161,7 @@ void main() {
       expect(find.text('从选题/内容/脚本开始'), findsOneWidget);
       expect(
         tester.getTopLeft(find.byKey(const Key('home-banner-carousel'))).dy,
-        120,
+        120 + AppGlassHeader.topSpacing,
       );
       expect(
         tester.getSize(find.byKey(const Key('home-creation-panel'))).height,
@@ -181,8 +185,11 @@ void main() {
       final menu = find.byKey(const Key('popi-open-navigation'));
       final banner = find.byKey(const Key('home-banner-carousel'));
       expect(tester.getSize(menu), const Size(40, 40));
-      expect(tester.getTopLeft(menu).dy, 52 + 8);
-      expect(tester.getTopLeft(banner).dy, 52 + 56 + 12);
+      expect(tester.getTopLeft(menu).dy, 52 + AppGlassHeader.topSpacing + 8);
+      expect(
+        tester.getTopLeft(banner).dy,
+        52 + AppGlassHeader.topSpacing + 56 + 12,
+      );
       expect(
         tester.getBottomRight(menu).dy,
         lessThan(tester.getTopLeft(banner).dy),

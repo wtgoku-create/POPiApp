@@ -24,6 +24,7 @@ import 'package:popi_ai_app/shared/providers/project_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/widgets/app_skeleton.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 
 import 'support/project_fixtures.dart';
 import 'support/role_library_fixtures.dart';
@@ -356,10 +357,13 @@ void main() {
   testWidgets('app bar counts the device top inset only once', (tester) async {
     await pumpGuide(tester, systemTopInset: 52);
     expect(tester.getSize(find.byType(AppBar)).height, 56);
-    expect(tester.getTopLeft(find.byType(AppBar)).dy, 52);
+    expect(
+      tester.getTopLeft(find.byType(AppBar)).dy,
+      52 + AppGlassHeader.topSpacing,
+    );
     expect(
       tester.getTopLeft(find.byKey(const Key('role-guide-scroll'))).dy,
-      52 + 56,
+      52 + AppGlassHeader.topSpacing + 56,
     );
     expect(tester.takeException(), isNull);
   });

@@ -137,6 +137,7 @@ class ProjectItemMenu extends ConsumerWidget {
   void _showDialog(BuildContext context, String? userId, bool delete) {
     AppDialog.show<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (_) => _ProjectActionDialog(
         userId: userId,
         projectId: projectId,

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -8,20 +9,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
+import 'package:popi_ai_app/features/profile/presentation/points_details_page.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_composer.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/v2_assets/presentation/v2_assets_page.dart';
 import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
+import 'package:popi_ai_app/features/v2_home/presentation/v2_welcome_page.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_chat_page.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_settings_page.dart';
 import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
 import 'package:popi_ai_app/features/v2_shared/domain/v2_models.dart';
 import 'package:popi_ai_app/features/v2_shared/presentation/widgets/v2_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
+import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
+import 'package:popi_ai_app/shared/widgets/app_dialog.dart';
+import 'package:popi_ai_app/shared/widgets/app_menu.dart';
+import 'package:popi_ai_app/shared/widgets/app_modal_backdrop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
 const _captureKey = Key('v2-responsive-capture');
+const _windowCaptureKey = Key('v2-window-capture');
 
 Future<void> _resize(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
@@ -32,6 +40,7 @@ Future<V2Repository> _pump(
   WidgetTester tester, {
   Size size = const Size(1200, 800),
   bool dark = false,
+  Widget? routedContent,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -61,14 +70,21 @@ Future<V2Repository> _pump(
   await tester.pumpWidget(
     ProviderScope(
       child: ToastificationWrapper(
-        child: MaterialApp(
-          theme: theme,
-          locale: const Locale('zh'),
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: RepaintBoundary(
-            key: _captureKey,
-            child: V2HomePage(repository: repository),
+        child: RepaintBoundary(
+          key: _windowCaptureKey,
+          child: MaterialApp(
+            theme: theme,
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            home: RepaintBoundary(
+              key: _captureKey,
+              child: V2HomePage(
+                repository: repository,
+                routedContent: routedContent,
+                routeActive: routedContent != null,
+              ),
+            ),
           ),
         ),
       ),
@@ -90,7 +106,7 @@ Future<void> _capture(WidgetTester tester, String name) async {
   });
   await tester.pumpAndSettle();
   final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find.byKey(_captureKey),
+    find.byKey(_windowCaptureKey),
   );
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 2);
@@ -102,6 +118,388 @@ Future<void> _capture(WidgetTester tester, String name) async {
 }
 
 void main() {
+  testWidgets('member sheet stays narrow and centered inside the detail pane', (
+    tester,
+  ) async {
+    await _pump(tester, size: const Size(980, 650));
+    await tester.tap(find.text('爱丽丝视频'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-settings')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('能力').hitTestable());
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('添加成员'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加成员').hitTestable());
+    await tester.pumpAndSettle();
+    final sheet = find.byType(BottomSheet);
+    final surface = find
+        .descendant(of: sheet, matching: find.byType(Material))
+        .first;
+    final state = tester.state(sheet);
+    for (final size in [
+      const Size(980, 650),
+      const Size(900, 390),
+      const Size(1200, 800),
+      const Size(390, 844),
+    ]) {
+      await _resize(tester, size);
+      final pane = tester.getRect(find.byKey(const Key('v2-detail-pane')));
+      final rect = tester.getRect(surface);
+      expect(rect.width, size.width < 840 ? 390 : 480);
+      expect(rect.center.dx, pane.center.dx);
+      expect(tester.state(sheet), same(state));
+      expect(find.text('确认').hitTestable(), findsOneWidget);
+      await _capture(tester, 'member-sheet-${size.width.toInt()}');
+      expect(tester.takeException(), isNull);
+    }
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+    expect(find.byType(V2SettingsPage), findsOneWidget);
+  });
+
+  testWidgets(
+    'pane dialogs and sheets leave sidebar pixels and chat state intact',
+    (tester) async {
+      await _pump(tester);
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      final chat = tester.state(find.byType(V2ChatPage));
+      await tester.runAsync(() async {
+        final context = tester.element(find.byKey(_captureKey));
+        await Future.wait(
+          tester
+              .widgetList<Image>(find.byType(Image))
+              .map((image) => precacheImage(image.image, context)),
+        );
+      });
+      await tester.pumpAndSettle();
+
+      Future<List<int>> sidebarPixels() async {
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(_captureKey),
+        );
+        return (await tester.runAsync(() async {
+          final image = await boundary.toImage();
+          try {
+            final data = await image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            );
+            final bytes = data!.buffer.asUint8List();
+            return [
+              for (var row = 0; row < image.height; row++)
+                ...bytes.sublist(
+                  row * image.width * 4,
+                  (row * image.width + 320) * 4,
+                ),
+            ];
+          } finally {
+            image.dispose();
+          }
+        }))!;
+      }
+
+      final before = await sidebarPixels();
+      AppDialog.confirm(
+        context: tester.element(find.byType(V2ChatPage)),
+        title: 'Remove attachment?',
+        description: 'This attachment will be removed.',
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Remove',
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(AppModalBackdrop)).left, 320);
+      expect(listEquals(before, await sidebarPixels()), isTrue);
+      await _capture(tester, 'expanded-pane-dialog');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+
+      tester
+          .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+          .onAttachment();
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(AppModalBackdrop)).left, 320);
+      expect(listEquals(before, await sidebarPixels()), isTrue);
+      await _capture(tester, 'expanded-pane-sheet');
+      await _resize(tester, const Size(390, 844));
+      expect(tester.getRect(find.byType(AppModalBackdrop)).left, 0);
+      await _capture(tester, 'compact-pane-sheet');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'sidebar menus stay local and rename and delete dialogs are global',
+    (tester) async {
+      await _pump(tester);
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      final chat = tester.state(find.byType(V2ChatPage));
+      await tester.longPress(find.text('爱丽丝视频').hitTestable().first);
+      await tester.pumpAndSettle();
+      final panel = find.byKey(const Key('app-context-menu-panel'));
+      expect(tester.getRect(panel).right, lessThanOrEqualTo(320));
+      await _capture(tester, 'expanded-sidebar-context');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(panel, findsNothing);
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+
+      await tester.longPress(find.text('爱丽丝视频').hitTestable().first);
+      await tester.pumpAndSettle();
+      final menuContext = tester.element(
+        find.byWidgetPredicate(
+          (widget) => widget is AppContextMenu && widget.label == '爱丽丝视频',
+        ),
+      );
+      final l = AppLocalizations.of(menuContext)!;
+      await tester.tap(find.text(l.renameProjectItem));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byType(AppModalBackdrop)),
+        const Rect.fromLTWH(0, 0, 1200, 800),
+      );
+      expect(tester.getRect(find.byType(AppDialog)).center.dx, 600);
+      await _capture(tester, 'expanded-global-rename');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AppDialog), findsNothing);
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+      await tester.longPress(find.text('爱丽丝视频').hitTestable().first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l.delete));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byType(AppModalBackdrop)),
+        const Rect.fromLTWH(0, 0, 1200, 800),
+      );
+      expect(tester.getRect(find.byType(AppDialog)).center.dx, 600);
+      await _capture(tester, 'expanded-global-delete');
+      await tester.tap(find.text(l.cancel));
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'switching panes dismisses sheets and upload uses the assets navigator',
+    (tester) async {
+      await _pump(tester);
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      final chat = tester.state(find.byType(V2ChatPage));
+      tester
+          .widget<PopiMessageComposer>(find.byType(PopiMessageComposer))
+          .onAttachment();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppModalBackdrop, skipOffstage: false), findsNothing);
+      await tester.tap(find.byKey(const Key('demo-upload')));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(AppModalBackdrop)).left, 320);
+      await tester.tap(find.byKey(const Key('demo-tab-0')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppModalBackdrop, skipOffstage: false), findsNothing);
+      expect(tester.state(find.byType(V2ChatPage)), same(chat));
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppModalBackdrop), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('chat footer has no gap beside the side system bar', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(right: 62, bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    addTearDown(tester.view.resetViewInsets);
+    await _pump(tester, size: const Size(950, 640));
+    await tester.tap(find.text('爱丽丝视频'));
+    await tester.pumpAndSettle();
+    final composer = find.byType(PopiMessageComposer);
+    final disclaimer = find.text('AI生成结果可能有误，仅供参考');
+    expect(tester.getRect(composer).bottom, 640);
+    expect(tester.getRect(disclaimer).bottom, closeTo(640, .01));
+    await _capture(tester, 'chat-footer-no-bottom-gap');
+
+    tester.view.padding = const FakeViewPadding(top: 62, bottom: 34);
+    await _resize(tester, const Size(390, 844));
+    expect(tester.getRect(composer).bottom, 844 - 34);
+
+    tester.view.padding = const FakeViewPadding(top: 62);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(composer).bottom, 844 - 260);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'settings tabs reach the bottom without a fixed safe area strip',
+    (tester) async {
+      tester.view.padding = const FakeViewPadding(right: 62, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      await _pump(tester, size: const Size(950, 640));
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      final composer = tester.getRect(find.byType(PopiMessageComposer));
+      expect(composer.bottom, 640);
+      await tester.tap(find.byKey(const Key('demo-settings')));
+      await tester.pumpAndSettle();
+
+      for (final (label, name) in [
+        ('信息', 'info'),
+        ('能力', 'skills'),
+        ('产物', 'assets'),
+      ]) {
+        await tester.tap(find.text(label).hitTestable());
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(NestedScrollView)).bottom, 640);
+        expect(tester.getRect(find.byType(TabBarView)).bottom, 640);
+        final tabs = tester.getRect(
+          find.byType(V2Segments).hitTestable().first,
+        );
+        expect(tabs.left, 320 + 20);
+        expect(tabs.right, 950 - 62);
+        final scroll = find.descendant(
+          of: find.byType(TabBarView),
+          matching: find.bySubtype<ScrollView>().hitTestable(),
+        );
+        expect(tester.getRect(scroll.first).bottom, 640);
+        expect(tester.getRect(scroll.first).right, 950 - 62);
+        await _capture(tester, 'settings-bottom-$name');
+      }
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(PopiMessageComposer)), composer);
+      await tester.tap(find.byKey(const Key('demo-tab-1')));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(V2AssetsView)).bottom, 640);
+      final search = find.descendant(
+        of: find.byType(V2AssetsView),
+        matching: find.byType(V2Search),
+      );
+      expect(tester.getRect(search).left, 320 + 20);
+      expect(tester.getRect(search).right, 950 - 62);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('detail header blur leaves sidebar pixels unchanged', (
+    tester,
+  ) async {
+    final showHeader = ValueNotifier(false);
+    addTearDown(showHeader.dispose);
+    await _pump(
+      tester,
+      routedContent: ValueListenableBuilder<bool>(
+        valueListenable: showHeader,
+        builder: (context, visible, _) => Scaffold(
+          extendBodyBehindAppBar: true,
+          appBar: visible
+              ? AppGlassAppBar(child: AppBar(title: const Text('Chat')))
+              : null,
+          body: ListView.builder(
+            padding: EdgeInsets.zero,
+            itemExtent: 12,
+            itemCount: 100,
+            itemBuilder: (_, index) =>
+                ColoredBox(color: index.isEven ? Colors.black : Colors.white),
+          ),
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      final context = tester.element(find.byKey(_captureKey));
+      await Future.wait(
+        tester
+            .widgetList<Image>(find.byType(Image))
+            .map((image) => precacheImage(image.image, context)),
+      );
+    });
+    await tester.pumpAndSettle();
+
+    Future<List<int>> sidebarPixels() async {
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(_captureKey),
+      );
+      return (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        try {
+          final data = await image.toByteData(
+            format: ui.ImageByteFormat.rawRgba,
+          );
+          final bytes = data!.buffer.asUint8List();
+          return <int>[
+            for (var row = 0; row < image.height; row++)
+              ...bytes.sublist(
+                row * image.width * 4,
+                (row * image.width + 320) * 4,
+              ),
+          ];
+        } finally {
+          image.dispose();
+        }
+      }))!;
+    }
+
+    await _capture(tester, 'sidebar-before-detail-glass');
+    final before = await sidebarPixels();
+    showHeader.value = true;
+    await tester.pumpAndSettle();
+    await _capture(tester, 'sidebar-after-detail-glass');
+    final after = await sidebarPixels();
+    expect(listEquals(before, after), isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('points content clears the system bar without a sidebar inset', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(right: 62, bottom: 21);
+    addTearDown(tester.view.resetPadding);
+    await _pump(
+      tester,
+      size: const Size(950, 680),
+      routedContent: const PointsDetailsPage(
+        refreshOnOpen: false,
+        loadPointsLogOnOpen: false,
+      ),
+    );
+    final card = tester.getRect(find.byKey(const Key('points-summary-card')));
+    expect(card.left, 320 + 20);
+    expect(card.right, 950 - 62);
+    expect(tester.getRect(find.byType(V2Search).hitTestable()).right, 320 - 20);
+    await _capture(tester, 'expanded-points-safe-area');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('welcome avoids the outer system bar in the detail pane', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(right: 62, bottom: 21);
+    addTearDown(tester.view.resetPadding);
+    await _pump(tester, size: const Size(900, 700));
+    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    final content = find.descendant(
+      of: find.byType(V2WelcomePage),
+      matching: find.byType(CustomScrollView),
+    );
+    expect(tester.getRect(content).left, 320);
+    expect(tester.getRect(content).right, 900 - 62);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sidebar gutters include landscape safe areas only once', (
     tester,
   ) async {

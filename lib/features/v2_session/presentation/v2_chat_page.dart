@@ -5,6 +5,8 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_image_preview.dart';
+import '../../../shared/widgets/app_glass_app_bar.dart';
+import '../../../shared/widgets/app_page_safe_area.dart';
 import '../../assets/domain/library_work.dart';
 import '../../session/presentation/widgets/conversation_timeline.dart'
     show MarkdownMessage;
@@ -132,7 +134,9 @@ class _V2ChatPageState extends State<V2ChatPage> {
         media.length > 1 && media.every((a) => a.kind == V2AssetKind.image);
     return LayoutBuilder(
       builder: (context, constraints) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        padding: AppPageSafeArea.horizontalPaddingOf(
+          context,
+        ).copyWith(bottom: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: message.user
@@ -224,8 +228,9 @@ class _V2ChatPageState extends State<V2ChatPage> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final safeArea = MediaQuery.paddingOf(context);
     final topContentPadding =
-        MediaQuery.paddingOf(context).top + kToolbarHeight;
+        safeArea.top + kToolbarHeight + AppGlassHeader.topSpacing;
     return ListenableBuilder(
       listenable: _conversation,
       builder: (context, _) {
@@ -235,6 +240,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
         final s = _conversation.session;
         return V2Scaffold(
           extendBodyBehindAppBar: true,
+          bottomSafeArea: safeArea.horizontal == 0,
           title: TextButton(
             onPressed: _settings,
             style: TextButton.styleFrom(
@@ -282,12 +288,9 @@ class _V2ChatPageState extends State<V2ChatPage> {
                     ? CustomScrollView(
                         slivers: [
                           SliverPadding(
-                            padding: EdgeInsets.fromLTRB(
-                              20,
-                              topContentPadding,
-                              20,
-                              20,
-                            ),
+                            padding: AppPageSafeArea.horizontalPaddingOf(
+                              context,
+                            ).copyWith(top: topContentPadding, bottom: 20),
                             sliver: SliverFillRemaining(
                               hasScrollBody: false,
                               child: Column(
@@ -361,7 +364,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
               PopiMessageComposer(
                 conversationMode: true,
                 sessionLayout: true,
-                bottomPadding: 4,
+                bottomPadding: 0,
                 controller: _composer,
                 selectedImages: const [],
                 selectedAssets: [

@@ -41,6 +41,7 @@ class _IpAccountsLivePageState extends ConsumerState<IpAccountsLivePage> {
       final confirmed = await AppDialog.confirm(
         context: context,
         title: l10n.deleteIpAccountTitle,
+        useRootNavigator: true,
         description: l10n.deleteIpAccountDescription,
         cancelLabel: l10n.cancel,
         confirmLabel: l10n.delete,

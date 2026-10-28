@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'app_modal_backdrop.dart';
+import 'app_modal_scope.dart';
 import 'app_keyboard_dismiss.dart';
 
 class AppSheet {
   const AppSheet._();
 
   static const maxHeightFactor = .8;
+  static const maxWidth = 480.0;
 
   /// Converts page-relative drag sizes to the capped sheet's available height.
   static double relativeExtent(double pageFraction) =>
@@ -25,39 +27,39 @@ class AppSheet {
     ShapeBorder? shape,
   }) {
     assert(maxHeightFraction > 0 && maxHeightFraction <= 1);
+    if (!AppModalScope.isActiveOf(context)) return Future.value();
     FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context);
     final localizations = MaterialLocalizations.of(context);
     final theme = Theme.of(context);
-    return navigator.push<T>(
-      _AppSheetRoute<T>(
-        builder: (context) => AppKeyboardDismiss(child: builder(context)),
-        capturedThemes: InheritedTheme.capture(
-          from: context,
-          to: navigator.context,
-        ),
-        barrierLabel: localizations.scrimLabel,
-        barrierOnTapHint: localizations.scrimOnTapHint(
-          localizations.bottomSheetLabel,
-        ),
-        useSafeArea: useSafeArea,
-        isScrollControlled: isScrollControlled,
-        isDismissible: isDismissible,
-        enableDrag: enableDrag,
-        showDragHandle: showDragHandle,
-        maxHeightFraction: maxHeightFraction,
-        backgroundColor: backgroundColor,
-        shape: shape,
-        sheetConstraints:
-            theme.bottomSheetTheme.constraints ??
-            BoxConstraints(
-              maxWidth: theme.useMaterial3 ? 640 : double.infinity,
-            ),
-        sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
-            ? AnimationStyle.noAnimation
-            : null,
+    final route = _AppSheetRoute<T>(
+      builder: (context) => AppKeyboardDismiss(child: builder(context)),
+      capturedThemes: InheritedTheme.capture(
+        from: context,
+        to: navigator.context,
       ),
+      barrierLabel: localizations.scrimLabel,
+      barrierOnTapHint: localizations.scrimOnTapHint(
+        localizations.bottomSheetLabel,
+      ),
+      useSafeArea: useSafeArea,
+      isScrollControlled: isScrollControlled,
+      isDismissible: isDismissible,
+      enableDrag: enableDrag,
+      showDragHandle: showDragHandle,
+      maxHeightFraction: maxHeightFraction,
+      backgroundColor: backgroundColor,
+      shape: shape,
+      sheetConstraints:
+          theme.bottomSheetTheme.constraints ??
+          const BoxConstraints(maxWidth: maxWidth),
+      sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+          ? AnimationStyle.noAnimation
+          : null,
     );
+    final result = navigator.push<T>(route);
+    AppModalScope.bind(context, route);
+    return result;
   }
 
   static Future<T?> showDraggable<T>({

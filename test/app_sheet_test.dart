@@ -26,7 +26,8 @@ void main() {
                 onPressed: () => AppSheet.show<void>(
                   context: context,
                   isScrollControlled: isScrollControlled,
-                  builder: (_) => SizedBox(height: contentHeight),
+                  builder: (_) =>
+                      SizedBox(width: double.infinity, height: contentHeight),
                 ),
                 child: const Text('Open'),
               ),
@@ -38,6 +39,7 @@ void main() {
       await tester.pumpAndSettle();
       final sheet = find.byType(BottomSheet);
       expect(tester.getSize(sheet).height, closeTo(844 * .8, .01));
+      expect(tester.getSize(sheet).width, 390);
       tester.view.physicalSize = const Size(844, 390);
       await tester.pumpAndSettle();
       expect(tester.getSize(sheet).height, closeTo(390 * .8, .01));
@@ -45,7 +47,8 @@ void main() {
         of: sheet,
         matching: find.byType(Material),
       );
-      expect(tester.getSize(surface).width, lessThanOrEqualTo(640));
+      expect(tester.getSize(surface).width, 480);
+      expect(tester.getRect(surface).center.dx, 844 / 2);
       await tester.tapAt(const Offset(5, 5));
       await tester.pumpAndSettle();
       contentHeight = 120;

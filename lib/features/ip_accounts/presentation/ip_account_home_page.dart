@@ -240,6 +240,7 @@ class _IpAccountHomePageState extends ConsumerState<IpAccountHomePage> {
       confirmed = await AppDialog.confirm(
         context: context,
         title: l10n.accountRenameTitle,
+        useRootNavigator: true,
         description: l10n.accountRenameConfirm(title),
         cancelLabel: l10n.cancel,
         confirmLabel: l10n.confirm,

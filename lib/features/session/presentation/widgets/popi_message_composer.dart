@@ -9,6 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/providers/safe_area_provider.dart';
+import '../../../../shared/widgets/app_page_safe_area.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
@@ -488,6 +489,12 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
+    final pageGutters = AppPageSafeArea.maybeConsumedInsetsOf(context) == null
+        ? null
+        : AppPageSafeArea.horizontalPaddingOf(
+            context,
+            gutter: widget.sessionLayout ? 10 : 20,
+          );
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final bottomPadding =
         widget.bottomPadding ??
@@ -508,9 +515,11 @@ class _PopiMessageComposerState extends ConsumerState<PopiMessageComposer>
         child: Padding(
           key: _sizeKey,
           padding: EdgeInsets.fromLTRB(
-            math.max(safeArea.left, widget.sessionLayout ? 10 : 20),
+            pageGutters?.left ??
+                math.max(safeArea.left, widget.sessionLayout ? 10 : 20),
             8,
-            math.max(safeArea.right, widget.sessionLayout ? 10 : 20),
+            pageGutters?.right ??
+                math.max(safeArea.right, widget.sessionLayout ? 10 : 20),
             bottomPadding,
           ),
           child: Center(

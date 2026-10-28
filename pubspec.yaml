@@ -8,7 +8,8 @@ environment:
 
 dependencies:
   cached_network_image: ^3.4.1
-  cupertino_context_menu_plus: ^1.0.3
+  cupertino_context_menu_plus:
+    path: packages/cupertino_context_menu_plus
   dio: ^5.8.0+1
   crypto: ^3.0.7
   extended_text_field: ^17.0.0
