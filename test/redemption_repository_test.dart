@@ -140,9 +140,17 @@ void main() {
     },
   );
 
-  test('checks official-account binding and exchanges the QR scene', () async {
-    payloads['/api_client/users/user/wxghBindStatus'] = {'bound': false};
+  test('checks the same native WeChat binding status as profile', () async {
+    payloads['/api_client/users/user/wxAppBindStatus'] = {'bound': false};
     expect(await repository.isWechatBound(), isFalse);
+    expect(requests.single.path, '/api_client/users/user/wxAppBindStatus');
+    payloads['/api_client/users/user/wxAppBindStatus'] = {'bound': true};
+    expect(await repository.isWechatBound(), isTrue);
+    payloads['/api_client/users/user/wxAppBindStatus'] = {};
+    await expectLater(repository.isWechatBound(), throwsFormatException);
+  });
+
+  test('exchanges the legacy official-account QR scene', () async {
     payloads['/api_client/users/user/wxghBindQrCode'] = {
       'sceneCode': 'scene',
       'qrCodeUrl': 'https://example.com/qr.png',

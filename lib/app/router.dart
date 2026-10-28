@@ -20,6 +20,7 @@ import '../features/teaching/domain/teaching.dart';
 import '../core/config/app_config.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../features/h5/presentation/h5_page.dart';
+import '../features/profile/presentation/about_page.dart';
 import '../features/profile/presentation/edit_profile_page.dart';
 import '../features/profile/presentation/membership_page.dart';
 import '../features/profile/presentation/points_details_page.dart';
@@ -162,6 +163,10 @@ final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
           GoRoute(
             path: 'profile',
             builder: (context, state) => const ProfilePage(),
+          ),
+          GoRoute(
+            path: 'profile/about',
+            builder: (context, state) => const AboutPage(),
           ),
           GoRoute(
             path: 'profile/edit',

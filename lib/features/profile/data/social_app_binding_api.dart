@@ -4,7 +4,7 @@ import '../../../core/network/network_api.dart';
 import '../../../shared/type/social_app_type.dart';
 import '../domain/social_app_binding.dart';
 
-/// Profile binding endpoints use the authenticated Dio client.
+/// Native social binding endpoints use the authenticated Dio client.
 class SocialAppBindingApi {
   const SocialAppBindingApi(this.dio);
 

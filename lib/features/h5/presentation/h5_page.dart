@@ -140,8 +140,8 @@ class _H5PageState extends State<H5Page> {
         leading: IconButton(
           tooltip: l10n.back,
           onPressed: () {
-            if (context.canPop()) {
-              context.pop();
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
             } else {
               context.go('/');
             }
@@ -195,18 +195,19 @@ class _H5PageState extends State<H5Page> {
                 ),
               )
             : Stack(
+                fit: StackFit.expand,
                 children: [
                   if (controller != null) WebViewWidget(controller: controller),
                   if (_progress < 100)
-                    Positioned(
-                      top: 16,
-                      right: 16,
+                    Positioned.fill(
                       child: IgnorePointer(
-                        child: SizedBox.square(
-                          dimension: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            semanticsLabel: l10n.webPageLoading,
+                        child: Center(
+                          child: SizedBox.square(
+                            dimension: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              semanticsLabel: l10n.webPageLoading,
+                            ),
                           ),
                         ),
                       ),

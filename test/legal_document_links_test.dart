@@ -8,11 +8,124 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:popi_ai_app/app/router.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:popi_ai_app/features/h5/presentation/h5_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/about_page.dart';
+import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
+import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/widgets/legal_document_links.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_webview.dart';
 
 void main() {
+  testWidgets(
+    'profile opens About page and returns there from both documents',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final platform = FakeWebViewPlatform();
+      WebViewPlatform.instance = platform;
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(preferences)],
+      );
+      final appRouter = container.read(routerProvider(false));
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, __) => const ProfilePage(),
+            routes: (appRouter.configuration.routes.single as GoRoute).routes
+                .where(
+                  (route) =>
+                      route is GoRoute &&
+                      (route.path.startsWith('legal/') ||
+                          route.path == 'profile/about'),
+                )
+                .toList(),
+          ),
+        ],
+      );
+      addTearDown(() {
+        router.dispose();
+        appRouter.dispose();
+        container.dispose();
+      });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            routerConfig: router,
+            locale: const Locale('zh'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final about = find.byKey(const Key('about-settings-menu'));
+      await tester.scrollUntilVisible(about, 200);
+      await tester.ensureVisible(about);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('profile-about-user-agreement')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('profile-about-privacy-policy')),
+        findsNothing,
+      );
+      await tester.tap(about);
+      await tester.pumpAndSettle();
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/profile/about',
+      );
+      expect(find.byType(AboutPage), findsOneWidget);
+      expect(find.text('用户协议'), findsOneWidget);
+      expect(find.text('隐私政策'), findsOneWidget);
+      for (final (key, path, title, url) in [
+        (
+          'profile-about-user-agreement',
+          '/legal/user-agreement',
+          '用户协议',
+          userAgreementUrl,
+        ),
+        (
+          'profile-about-privacy-policy',
+          '/legal/privacy-policy',
+          '隐私政策',
+          privacyPolicyUrl,
+        ),
+      ]) {
+        final option = find.byKey(Key(key));
+        await tester.ensureVisible(option);
+        await tester.pumpAndSettle();
+        await tester.tap(option);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(
+          router.routerDelegate.currentConfiguration.last.matchedLocation,
+          path,
+        );
+        expect(tester.widget<H5Page>(find.byType(H5Page)).title, title);
+        expect(platform.controller.requests.single.uri.toString(), url);
+        platform.delegate.onPageFinished(url);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('返回'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AboutPage), findsOneWidget);
+        expect(
+          router.routerDelegate.currentConfiguration.last.matchedLocation,
+          '/profile/about',
+        );
+        expect(find.byKey(Key(key)), findsOneWidget);
+      }
+      await tester.tap(find.byTooltip('返回'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfilePage), findsOneWidget);
+      expect(find.byType(AboutPage), findsNothing);
+    },
+  );
+
   testWidgets('both legal links open the shared H5 page and return', (
     tester,
   ) async {

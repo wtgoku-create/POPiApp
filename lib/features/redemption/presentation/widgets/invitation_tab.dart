@@ -2,18 +2,21 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/providers/social_login_provider.dart';
+import '../../../../shared/providers/user_provider.dart';
+import '../../../../shared/type/social_app_type.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
 import '../../data/redemption_repository.dart';
 import '../../domain/redemption.dart';
+import '../../../profile/domain/social_app_binding.dart';
 import 'redemption_banner.dart';
-import 'wechat_binding_dialog.dart';
 
-class InvitationTab extends StatefulWidget {
+class InvitationTab extends ConsumerStatefulWidget {
   const InvitationTab({
     required this.repository,
     required this.onReward,
@@ -23,14 +26,15 @@ class InvitationTab extends StatefulWidget {
   final Future<void> Function() onReward;
 
   @override
-  State<InvitationTab> createState() => _InvitationTabState();
+  ConsumerState<InvitationTab> createState() => _InvitationTabState();
 }
 
-class _InvitationTabState extends State<InvitationTab> {
+class _InvitationTabState extends ConsumerState<InvitationTab> {
   bool? _bound;
   bool _bindingLoading = false;
   bool _bindingError = false;
-  bool _dialogOpen = false;
+  bool _bindingInProgress = false;
+  int _bindingGeneration = 0;
   bool _codesLoading = false;
   bool _recordsLoading = false;
   bool _codesError = false;
@@ -45,11 +49,20 @@ class _InvitationTabState extends State<InvitationTab> {
   @override
   void initState() {
     super.initState();
+    ref.listenManual(
+      userProvider.select((user) => user?.id),
+      (_, __) => _bindingGeneration++,
+    );
     unawaited(_refresh());
   }
 
   Future<void> _refresh() async {
-    if (_bindingLoading || _codesLoading || _recordsLoading) return;
+    if (_bindingInProgress ||
+        _bindingLoading ||
+        _codesLoading ||
+        _recordsLoading) {
+      return;
+    }
     setState(() {
       _bindingLoading = true;
       _bindingError = false;
@@ -119,22 +132,46 @@ class _InvitationTabState extends State<InvitationTab> {
   }
 
   Future<void> _bind() async {
-    if (_dialogOpen) return;
-    setState(() => _dialogOpen = true);
+    if (_bindingInProgress || _bindingLoading || _bound != false) return;
+    final userId = ref.read(userProvider)?.id;
+    if (userId == null) return;
+    final generation = _bindingGeneration;
+    bool isCurrentUser() =>
+        mounted &&
+        generation == _bindingGeneration &&
+        ref.read(userProvider)?.id == userId;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _bindingInProgress = true);
     try {
-      final bound = await AppDialog.show<bool>(
-        context: context,
-        builder: (_) => WechatBindingDialog(repository: widget.repository),
-      );
-      if (!mounted || bound != true) return;
-      AppToast.success(
-        context,
-        AppLocalizations.of(context)!.redemptionBindingSuccess,
-      );
+      final binding = await ref
+          .read(socialAppBindingRepositoryProvider)
+          .bind(SocialAppType.wechat, isCurrentUser: isCurrentUser);
+      if (!mounted || !isCurrentUser()) return;
+      if (!binding.bound) {
+        throw const SocialBindingException(SocialBindingFailure.failed);
+      }
+      setState(() {
+        _bound = true;
+        _bindingInProgress = false;
+      });
+      AppToast.success(context, l10n.redemptionBindingSuccess);
       unawaited(widget.onReward());
       await _refresh();
+    } catch (error) {
+      if (!mounted || !isCurrentUser()) return;
+      final reason = error is SocialBindingException ? error.reason : null;
+      if (reason == SocialBindingFailure.canceled) {
+        AppToast.info(context, l10n.socialBindingCanceled);
+      } else {
+        AppToast.error(
+          context,
+          reason == SocialBindingFailure.unavailable
+              ? l10n.socialBindingUnavailable
+              : l10n.socialBindingFailed,
+        );
+      }
     } finally {
-      if (mounted) setState(() => _dialogOpen = false);
+      if (isCurrentUser()) setState(() => _bindingInProgress = false);
     }
   }
 
@@ -192,8 +229,22 @@ class _InvitationTabState extends State<InvitationTab> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _dialogOpen ? null : _bind,
-              child: Text(l10n.redemptionBindAction),
+              key: const Key('redemption-wechat-bind'),
+              onPressed: _bindingInProgress || _bindingLoading ? null : _bind,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Opacity(
+                    opacity: _bindingInProgress ? 0 : 1,
+                    child: Text(l10n.redemptionBindAction),
+                  ),
+                  if (_bindingInProgress)
+                    const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              ),
             ),
           ] else if (_bound == true) ...[
             Text(

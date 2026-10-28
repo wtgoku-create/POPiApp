@@ -22,14 +22,21 @@ import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/project_provider.dart';
+import 'package:popi_ai_app/shared/providers/privacy_consent_provider.dart';
 
 import 'support/project_fixtures.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({
+      PrivacyConsentController.storageKey:
+          PrivacyConsentController.currentVersion,
+    });
+  });
+
   testWidgets('keeps native splash until the home frame is ready', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final tokenStorage = _DelayedTokenStorage();
     var readyCalls = 0;
@@ -63,7 +70,6 @@ void main() {
   });
 
   testWidgets('opens home when no access token is stored', (tester) async {
-    SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
@@ -131,7 +137,6 @@ void main() {
   testWidgets('does not open login when user bootstrap returns 4001', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     const tokenStorage = _MemoryTokenStorage('expired-token');
 
@@ -159,7 +164,6 @@ void main() {
   testWidgets('drawer routes replace the root and keep the drawer accessible', (
     tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(

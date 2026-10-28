@@ -55,7 +55,7 @@ void main() {
   }
 
   for (var index = 0; index < 2; index++) {
-    final name = index == 0 ? 'language' : 'theme';
+    final name = ['language', 'theme'][index];
     testWidgets('$name expansion is isolated between profile instances', (
       tester,
     ) async {

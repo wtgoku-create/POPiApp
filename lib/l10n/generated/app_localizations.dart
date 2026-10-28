@@ -4621,6 +4621,54 @@ abstract class AppLocalizations {
   /// **'Privacy Policy'**
   String get privacyPolicy;
 
+  /// No description provided for @aboutPopiAi.
+  ///
+  /// In en, this message translates to:
+  /// **'About POPi AI'**
+  String get aboutPopiAi;
+
+  /// No description provided for @privacyConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms and Privacy'**
+  String get privacyConsentTitle;
+
+  /// No description provided for @privacyConsentMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to POPi! Before using the app, please read our User Agreement and Privacy Policy to understand how we collect, use and protect your personal information, and the rights available to you.\n\nFor sign-in, AI creation and saving content, we process account information, content you submit, and necessary device and log information as described in the policy. Permissions such as photo library access are requested when you use the relevant features.\n\nBy tapping “Agree & Continue”, you confirm that you have read and agree to these terms and policies.'**
+  String get privacyConsentMessage;
+
+  /// No description provided for @privacyConsentAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree & Continue'**
+  String get privacyConsentAccept;
+
+  /// No description provided for @privacyConsentDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Disagree'**
+  String get privacyConsentDecline;
+
+  /// No description provided for @privacyConsentRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please read and agree to the User Agreement and Privacy Policy to use POPi.'**
+  String get privacyConsentRequired;
+
+  /// No description provided for @privacyConsentReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review Terms and Privacy'**
+  String get privacyConsentReview;
+
+  /// No description provided for @privacyConsentSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save your choice. Please tap Agree & Continue again.'**
+  String get privacyConsentSaveFailed;
+
   /// No description provided for @webPageLoadFailed.
   ///
   /// In en, this message translates to:
@@ -5422,13 +5470,13 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionBindRequired.
   ///
   /// In en, this message translates to:
-  /// **'Link WeChat Official Account to view invite codes'**
+  /// **'Link WeChat to view invite codes'**
   String get redemptionBindRequired;
 
   /// No description provided for @redemptionBindAction.
   ///
   /// In en, this message translates to:
-  /// **'Link WeChat Official Account'**
+  /// **'Link WeChat'**
   String get redemptionBindAction;
 
   /// No description provided for @redemptionBindDescription.
@@ -5452,7 +5500,7 @@ abstract class AppLocalizations {
   /// No description provided for @redemptionBindingSuccess.
   ///
   /// In en, this message translates to:
-  /// **'WeChat Official Account linked'**
+  /// **'WeChat linked'**
   String get redemptionBindingSuccess;
 
   /// No description provided for @redemptionBindingCheck.

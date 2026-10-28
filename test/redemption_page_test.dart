@@ -8,7 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/features/auth/data/douyin_login_service.dart';
+import 'package:popi_ai_app/features/auth/data/wechat_login_service.dart';
 import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/profile/data/social_app_binding_api.dart';
+import 'package:popi_ai_app/features/profile/data/social_app_binding_repository.dart';
+import 'package:popi_ai_app/features/profile/domain/social_app_binding.dart';
 import 'package:popi_ai_app/features/redemption/data/redemption_repository.dart';
 import 'package:popi_ai_app/features/redemption/domain/redemption.dart';
 import 'package:popi_ai_app/features/redemption/presentation/redemption_page.dart';
@@ -18,6 +23,8 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:toastification/toastification.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
 import 'package:popi_ai_app/shared/providers/network_provider.dart';
+import 'package:popi_ai_app/shared/providers/social_login_provider.dart';
+import 'package:popi_ai_app/shared/type/social_app_type.dart';
 import 'package:popi_ai_app/shared/widgets/app_dialog.dart';
 
 class FakeRedemptionRepository extends RedemptionRepository {
@@ -140,11 +147,21 @@ Widget redemptionTestApp(
 void main() {
   tearDown(() => toastification.dismissAll(delayForAnimation: false));
 
-  Future<void> pumpPage(
+  Future<ProviderContainer> pumpPage(
     WidgetTester tester,
-    FakeRedemptionRepository repo,
-  ) async {
-    final container = ProviderContainer();
+    FakeRedemptionRepository repo, {
+    SocialAppBindingRepository? bindingRepository,
+    Dio? dio,
+  }) async {
+    final container = ProviderContainer(
+      overrides: [
+        if (bindingRepository != null)
+          socialAppBindingRepositoryProvider.overrideWithValue(
+            bindingRepository,
+          ),
+        if (dio != null) dioProvider.overrideWithValue(dio),
+      ],
+    );
     addTearDown(container.dispose);
     await container
         .read(userProvider.notifier)
@@ -156,6 +173,211 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    return container;
+  }
+
+  Future<void> dismissToasts(WidgetTester tester) async {
+    toastification.dismissAll(delayForAnimation: false);
+    await tester.pump(const Duration(milliseconds: 700));
+  }
+
+  Dio bindingRefreshDio(List<String> requests) {
+    final dio = Dio();
+    addTearDown(dio.close);
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          requests.add(options.path);
+          handler.resolve(
+            Response<Map<String, Object?>>(
+              requestOptions: options,
+              data: {
+                'status': '0000',
+                'data': options.path.endsWith('/info')
+                    ? {
+                        'user': {'id': 1, 'name': 'User', 'allCoins': 225},
+                      }
+                    : {'availableTotalPoints': 225},
+              },
+            ),
+          );
+        },
+      ),
+    );
+    return dio;
+  }
+
+  testWidgets(
+    'invitation uses native WeChat binding once and refreshes rewards without QR',
+    (tester) async {
+      final repo = FakeRedemptionRepository()..bound = false;
+      final wechat = _InvitationWechatService()
+        ..pending = Completer<WechatAuthorizationResult>();
+      final api = _InvitationBindingApi(repo)..pending = Completer<void>();
+      final requests = <String>[];
+      final container = await pumpPage(
+        tester,
+        repo,
+        bindingRepository: _invitationBindingRepository(api, wechat),
+        dio: bindingRefreshDio(requests),
+      );
+      final button = find.byKey(const Key('redemption-wechat-bind'));
+      final buttonRect = tester.getRect(button);
+      await tester.tap(button);
+      await tester.pump();
+      await tester.tap(button);
+      await tester.pump();
+      expect(wechat.calls, 1);
+      expect(tester.getRect(button), buttonRect);
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      expect(find.byType(WechatBindingDialog), findsNothing);
+      expect(repo.qrRequests, 0);
+      expect(repo.bindingChecks, 0);
+      expect(api.codes, isEmpty);
+
+      wechat.pending!.complete(
+        const WechatAuthorizationResult.authorized('native-code'),
+      );
+      await tester.pump();
+      expect(api.codes, ['native-code']);
+      expect(repo.codeRequests, 0);
+      api.pending!.complete();
+      await tester.pumpAndSettle();
+      expect(repo.boundRequests, 2);
+      expect(repo.codeRequests, 1);
+      expect(repo.recordRequests, 1);
+      expect(find.text('UNUSED123'), findsOneWidget);
+      expect(find.byKey(const Key('redemption-bind-required')), findsNothing);
+      expect(requests, [
+        '/api_client/users/user/info',
+        '/api_client/users/userPoints/total',
+      ]);
+      expect(
+        container.read(userPointsProvider).valueOrNull!.availableTotalPoints,
+        225,
+      );
+      expect(repo.qrRequests, 0);
+      await dismissToasts(tester);
+    },
+  );
+
+  for (final (authorization, message) in [
+    (const WechatAuthorizationResult.canceled(), 'Linking canceled'),
+    (
+      const WechatAuthorizationResult.unavailable(),
+      'Authorization is unavailable. Check that the app is installed and authorization is configured.',
+    ),
+    (
+      const WechatAuthorizationResult.failed(),
+      'Could not link account. Please try again.',
+    ),
+  ]) {
+    testWidgets(
+      'invitation handles ${authorization.status} and keeps the binding action',
+      (tester) async {
+        final repo = FakeRedemptionRepository()..bound = false;
+        final wechat = _InvitationWechatService()..result = authorization;
+        final api = _InvitationBindingApi(repo);
+        final requests = <String>[];
+        await pumpPage(
+          tester,
+          repo,
+          bindingRepository: _invitationBindingRepository(api, wechat),
+          dio: bindingRefreshDio(requests),
+        );
+        final button = find.byKey(const Key('redemption-wechat-bind'));
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(find.text(message), findsOneWidget);
+        expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+        expect(api.codes, isEmpty);
+        expect(repo.codeRequests, 0);
+        expect(repo.qrRequests, 0);
+        expect(requests, isEmpty);
+        await dismissToasts(tester);
+
+        wechat.result = const WechatAuthorizationResult.authorized('next-code');
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        expect(api.codes, ['next-code']);
+        expect(find.text('UNUSED123'), findsOneWidget);
+        await dismissToasts(tester);
+      },
+    );
+  }
+
+  testWidgets(
+    'invitation binding failure remains unbound and permits another submission',
+    (tester) async {
+      final repo = FakeRedemptionRepository()..bound = false;
+      final api = _InvitationBindingApi(repo)..failBinding = true;
+      final requests = <String>[];
+      await pumpPage(
+        tester,
+        repo,
+        bindingRepository: _invitationBindingRepository(
+          api,
+          _InvitationWechatService(),
+        ),
+        dio: bindingRefreshDio(requests),
+      );
+      final button = find.byKey(const Key('redemption-wechat-bind'));
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Could not link account. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('redemption-bind-required')), findsOneWidget);
+      expect(repo.codeRequests, 0);
+      expect(requests, isEmpty);
+      await dismissToasts(tester);
+      api.failBinding = false;
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(api.codes, ['native-code', 'native-code']);
+      expect(find.text('UNUSED123'), findsOneWidget);
+      await dismissToasts(tester);
+    },
+  );
+
+  for (final leavePage in [false, true]) {
+    testWidgets(
+      'invitation ignores authorization after ${leavePage ? 'leaving the page' : 'switching accounts'}',
+      (tester) async {
+        final repo = FakeRedemptionRepository()..bound = false;
+        final wechat = _InvitationWechatService()
+          ..pending = Completer<WechatAuthorizationResult>();
+        final api = _InvitationBindingApi(repo);
+        final requests = <String>[];
+        final container = await pumpPage(
+          tester,
+          repo,
+          bindingRepository: _invitationBindingRepository(api, wechat),
+          dio: bindingRefreshDio(requests),
+        );
+        await tester.tap(find.byKey(const Key('redemption-wechat-bind')));
+        await tester.pump();
+        if (leavePage) {
+          await tester.pumpWidget(const SizedBox.shrink());
+        } else {
+          await container
+              .read(userProvider.notifier)
+              .setUser(const User(id: 'next-user', name: 'Next', email: ''));
+          await tester.pump();
+        }
+        wechat.pending!.complete(
+          const WechatAuthorizationResult.authorized('old-code'),
+        );
+        await tester.pumpAndSettle();
+        expect(api.codes, isEmpty);
+        expect(requests, isEmpty);
+        expect(repo.codeRequests, 0);
+        expect(find.text('WeChat linked'), findsNothing);
+        expect(find.text('Linking canceled'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets('requires sign-in without calling authenticated endpoints', (
@@ -535,5 +757,47 @@ void main() {
         expect(tester.takeException(), isNull);
       }
     });
+  }
+}
+
+SocialAppBindingRepository _invitationBindingRepository(
+  _InvitationBindingApi api,
+  _InvitationWechatService wechat,
+) => SocialAppBindingRepository(
+  api: api,
+  wechatService: wechat,
+  douyinService: const DouyinLoginService(),
+);
+
+class _InvitationWechatService extends WechatLoginService {
+  int calls = 0;
+  Completer<WechatAuthorizationResult>? pending;
+  WechatAuthorizationResult result = const WechatAuthorizationResult.authorized(
+    'native-code',
+  );
+
+  @override
+  Future<WechatAuthorizationResult> authorize() async {
+    calls++;
+    return pending?.future ?? result;
+  }
+}
+
+class _InvitationBindingApi extends SocialAppBindingApi {
+  _InvitationBindingApi(this.redemption) : super(Dio());
+
+  final FakeRedemptionRepository redemption;
+  final codes = <String>[];
+  Completer<void>? pending;
+  bool failBinding = false;
+
+  @override
+  Future<SocialAppBinding> bind(SocialAppType app, String code) async {
+    expect(app, SocialAppType.wechat);
+    codes.add(code);
+    await pending?.future;
+    if (failBinding) throw const ApiException(message: 'Could not bind');
+    redemption.bound = true;
+    return const SocialAppBinding(bound: true, nickname: 'Linked WeChat');
   }
 }

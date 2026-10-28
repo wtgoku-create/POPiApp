@@ -10,6 +10,8 @@ import '../shared/providers/storage_provider.dart';
 import '../shared/providers/purchase_provider.dart';
 import '../shared/providers/payment_provider.dart';
 import '../shared/providers/user_provider.dart';
+import '../shared/providers/privacy_consent_provider.dart';
+import '../features/privacy/presentation/privacy_consent_page.dart';
 import '../shared/widgets/safe_area_store_sync.dart';
 import '../shared/widgets/app_keyboard_dismiss.dart';
 import 'router.dart';
@@ -42,7 +44,9 @@ class _StarterAppState extends ConsumerState<StarterApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && ref.read(userProvider) != null) {
+    if (state == AppLifecycleState.resumed &&
+        ref.read(privacyConsentProvider) &&
+        ref.read(userProvider) != null) {
       unawaited(ref.read(androidPaymentServiceProvider).recover());
       unawaited(ref.read(applePurchaseServiceProvider).recover());
     }
@@ -59,6 +63,19 @@ class _StarterAppState extends ConsumerState<StarterApp>
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+
+    // Do not construct the business router or restore sessions before consent.
+    if (!ref.watch(privacyConsentProvider)) {
+      _notifyReady();
+      return ToastificationWrapper(
+        config: const ToastificationConfig(itemWidth: 320),
+        child: _StartupApp(
+          themeMode: themeMode,
+          locale: locale,
+          home: const PrivacyConsentPage(),
+        ),
+      );
+    }
     final accessToken = ref.watch(accessTokenProvider);
 
     final content = accessToken.when(
@@ -148,10 +165,11 @@ class _RouterApp extends StatelessWidget {
 }
 
 class _StartupApp extends StatelessWidget {
-  const _StartupApp({required this.themeMode, required this.locale});
+  const _StartupApp({required this.themeMode, required this.locale, this.home});
 
   final ThemeMode themeMode;
   final Locale? locale;
+  final Widget? home;
 
   @override
   Widget build(BuildContext context) {
@@ -167,10 +185,12 @@ class _StartupApp extends StatelessWidget {
         ...AppLocalizations.localizationsDelegates,
       ],
       // main() holds the native splash until the destination's first frame.
-      home: const ColoredBox(
-        key: Key('app-startup-placeholder'),
-        color: AppColors.surface,
-      ),
+      home:
+          home ??
+          const ColoredBox(
+            key: Key('app-startup-placeholder'),
+            color: AppColors.surface,
+          ),
     );
   }
 }

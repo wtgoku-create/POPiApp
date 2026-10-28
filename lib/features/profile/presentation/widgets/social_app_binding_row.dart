@@ -3,15 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../auth/data/wechat_login_service.dart';
 import '../../../../l10n/generated/app_localizations.dart';
-import '../../../../shared/providers/network_provider.dart';
 import '../../../../shared/providers/social_login_provider.dart';
 import '../../../../shared/providers/user_provider.dart';
 import '../../../../shared/type/social_app_type.dart';
 import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../../../shared/widgets/app_toast.dart';
-import '../../data/social_app_binding_api.dart';
 import '../../data/social_app_binding_repository.dart';
 import '../../domain/social_app_binding.dart';
 import 'profile_settings_row.dart';
@@ -46,12 +43,7 @@ class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
   }
 
   SocialAppBindingRepository _createRepository() =>
-      widget.repository ??
-      SocialAppBindingRepository(
-        api: SocialAppBindingApi(ref.read(dioProvider)),
-        wechatService: WechatLoginService(),
-        douyinService: ref.read(douyinLoginServiceProvider),
-      );
+      widget.repository ?? ref.read(socialAppBindingRepositoryProvider);
 
   @override
   void didUpdateWidget(covariant SocialAppBindingRow oldWidget) {
