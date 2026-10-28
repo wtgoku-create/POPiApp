@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 
 /// Fades one native blur continuously, without slicing the backdrop into bands.
 class V2FrostedBackdrop extends StatefulWidget {
-  const V2FrostedBackdrop({this.sigma = 18, super.key});
+  const V2FrostedBackdrop({this.sigma = 18, this.fadeExtent, super.key});
 
   final double sigma;
+  final double? fadeExtent;
 
   static Future<ui.FragmentProgram>? _program;
 
@@ -60,6 +61,11 @@ class _V2FrostedBackdropState extends State<V2FrostedBackdrop> {
           shader.setFloat(
             2,
             constraints.maxHeight * MediaQuery.devicePixelRatioOf(context),
+          );
+          shader.setFloat(
+            3,
+            (widget.fadeExtent ?? constraints.maxHeight) *
+                MediaQuery.devicePixelRatioOf(context),
           );
         }
         final color = Theme.of(context).scaffoldBackgroundColor;

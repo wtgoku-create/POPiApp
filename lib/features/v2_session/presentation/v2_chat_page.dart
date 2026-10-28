@@ -39,6 +39,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
   );
   final _composer = PopiMessageComposerController();
   final _scroll = ScrollController();
+  double _composerHeight = 0;
   final List<String> _attachments = [];
   final Map<String, int> _imagePages = {};
   @override
@@ -73,6 +74,11 @@ class _V2ChatPageState extends State<V2ChatPage> {
       ),
     ),
   );
+
+  void _handleComposerHeight(double height) {
+    if (!mounted || (height - _composerHeight).abs() < .5) return;
+    setState(() => _composerHeight = height);
+  }
 
   Future<void> _send([String? prompt]) async {
     final input = prompt ?? _composer.markdown;
@@ -282,9 +288,11 @@ class _V2ChatPageState extends State<V2ChatPage> {
               icon: const V2Icon('profile', size: 24),
             ),
           ],
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Expanded(
+              Positioned.fill(
+                bottom: s.messages.isEmpty ? _composerHeight : 0,
                 child: s.messages.isEmpty
                     ? CustomScrollView(
                         slivers: [
@@ -333,6 +341,15 @@ class _V2ChatPageState extends State<V2ChatPage> {
                         backgroundColor: Colors.transparent,
                         builders: chat.Builders(
                           composerBuilder: (_) => const SizedBox.shrink(),
+                          scrollToBottomBuilder:
+                              (context, animation, onPressed) => ScrollToBottom(
+                                key: const Key('v2-chat-scroll-to-bottom'),
+                                animation: animation,
+                                onPressed: onPressed,
+                                bottom: _composerHeight + 20,
+                                useComposerHeightForBottomOffset: false,
+                                handleSafeArea: false,
+                              ),
                           chatAnimatedListBuilder: (context, itemBuilder) =>
                               ChatAnimatedList(
                                 scrollController: _scroll,
@@ -340,7 +357,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
                                     InitialScrollToEndMode.none,
                                 handleSafeArea: false,
                                 topPadding: topContentPadding + 10,
-                                bottomPadding: 10,
+                                bottomPadding: _composerHeight + 10,
                                 keyboardDismissBehavior:
                                     ScrollViewKeyboardDismissBehavior.onDrag,
                                 itemBuilder: itemBuilder,
@@ -362,46 +379,52 @@ class _V2ChatPageState extends State<V2ChatPage> {
                         ),
                       ),
               ),
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Positioned.fill(
-                    top: -16,
-                    child: IgnorePointer(
-                      child: V2FrostedBackdrop(
-                        key: Key('v2-chat-composer-backdrop'),
-                        sigma: 8,
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Positioned.fill(
+                      top: -16,
+                      child: IgnorePointer(
+                        child: V2FrostedBackdrop(
+                          key: Key('v2-chat-composer-backdrop'),
+                          sigma: 8,
+                          fadeExtent: 16,
+                        ),
                       ),
                     ),
-                  ),
-                  PopiMessageComposer(
-                    conversationMode: true,
-                    sessionLayout: true,
-                    bottomPadding: 0,
-                    controller: _composer,
-                    selectedImages: const [],
-                    selectedAssets: [
-                      for (final id in _attachments)
-                        for (final asset in widget.repository.assets)
-                          if (asset.id == id)
-                            LibraryWork(
-                              id: asset.id,
-                              previewUrl: asset.cover,
-                              isVideo: asset.kind == V2AssetKind.video,
-                              createdAt: null,
-                            ),
-                    ],
-                    onAttachment: () {
-                      if (!_conversation.sending) _attach();
-                    },
-                    onRemoveImage: (_) {},
-                    onRemoveAsset: (index) =>
-                        setState(() => _attachments.removeAt(index)),
-                    onHeightChanged: (_) {},
-                    onSubmitted: _send,
-                    sending: _conversation.sending,
-                  ),
-                ],
+                    PopiMessageComposer(
+                      conversationMode: true,
+                      sessionLayout: true,
+                      bottomPadding: 0,
+                      controller: _composer,
+                      selectedImages: const [],
+                      selectedAssets: [
+                        for (final id in _attachments)
+                          for (final asset in widget.repository.assets)
+                            if (asset.id == id)
+                              LibraryWork(
+                                id: asset.id,
+                                previewUrl: asset.cover,
+                                isVideo: asset.kind == V2AssetKind.video,
+                                createdAt: null,
+                              ),
+                      ],
+                      onAttachment: () {
+                        if (!_conversation.sending) _attach();
+                      },
+                      onRemoveImage: (_) {},
+                      onRemoveAsset: (index) =>
+                          setState(() => _attachments.removeAt(index)),
+                      onHeightChanged: _handleComposerHeight,
+                      onSubmitted: _send,
+                      sending: _conversation.sending,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

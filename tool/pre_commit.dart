@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/visitor.dart';
 
 Future<void> main(List<String> args) async {
   final total = Stopwatch()..start();
@@ -193,9 +194,12 @@ CheckPlan planChecks({
 
   if (full) return all('Full checks requested.');
   if (changed.any(_requiresFullChecks)) {
-    return all('Shared configuration, assets or check tooling changed.');
+    return all('Shared configuration, native code or check tooling changed.');
   }
   final seeds = changed.where((path) => path.endsWith('.dart')).toSet();
+  final assets = changed
+      .where((path) => path.startsWith('assets/') && !path.endsWith('.md'))
+      .toSet();
   if (changed.any((path) => path.endsWith('.arb'))) {
     // ARB files are inputs to generated Dart, not importable dependencies.
     final localizations = sources.keys.where(
@@ -206,7 +210,7 @@ CheckPlan planChecks({
     }
     seeds.addAll(localizations);
   }
-  if (seeds.isEmpty) {
+  if (seeds.isEmpty && assets.isEmpty) {
     return const CheckPlan(
       reason:
           'No staged Dart or runtime configuration changes; checks skipped.',
@@ -216,10 +220,16 @@ CheckPlan planChecks({
     );
   }
 
+  final format = seeds.where(sources.containsKey).toList()..sort();
   final importers = <String, Set<String>>{};
   try {
     for (final entry in sources.entries) {
       final unit = parseString(content: entry.value, path: entry.key).unit;
+      if (assets.isNotEmpty) {
+        final references = _AssetReferences(assets);
+        unit.accept(references);
+        if (references.matches) seeds.add(entry.key);
+      }
       for (final directive in unit.directives) {
         final uris = <String?>[];
         if (directive is UriBasedDirective) {
@@ -258,7 +268,7 @@ CheckPlan planChecks({
     (path) => path.split('/').last == 'flutter_test_config.dart',
   );
   if (testConfigChanged) {
-    return all('Flutter test configuration or its dependencies changed.');
+    affected.addAll(sources.keys.where(_isTest));
   }
   final analyze = affected.where(sources.containsKey).toList()..sort();
   final tests =
@@ -266,11 +276,15 @@ CheckPlan planChecks({
           .where((path) => _isTest(path) && affected.contains(path))
           .toList()
         ..sort();
+  final assetReason = assets.isEmpty
+      ? ''
+      : '${assets.length} changed assets; checking discoverable Dart '
+            'consumers locally, with full coverage in CI.\n';
   return CheckPlan(
     reason:
-        'Incremental checks: ${seeds.length} changed Dart files, '
+        '${assetReason}Incremental checks: ${seeds.length} Dart dependency roots, '
         '${analyze.length} files to analyze, ${tests.length} test files.',
-    format: seeds.where(sources.containsKey).toList()..sort(),
+    format: format,
     analyze: analyze,
     tests: tests,
   );
@@ -280,6 +294,7 @@ bool _isTest(String path) =>
     path.startsWith('test/') && path.endsWith('_test.dart');
 
 bool _requiresFullChecks(String path) {
+  if (path.split('/').last == 'flutter_test_config.dart') return true;
   if ({
     'pubspec.yaml',
     'pubspec.lock',
@@ -297,7 +312,6 @@ bool _requiresFullChecks(String path) {
     return true;
   }
   return [
-        'assets/',
         'config/',
         'android/',
         'ios/',
@@ -308,6 +322,35 @@ bool _requiresFullChecks(String path) {
         '.github/workflows/',
       ].any(path.startsWith) &&
       !path.endsWith('.md');
+}
+
+/// Includes directory constants and interpolated resource paths, without
+/// treating comments or unrelated filenames as asset dependencies.
+class _AssetReferences extends RecursiveAstVisitor<void> {
+  _AssetReferences(this.assets);
+
+  final Set<String> assets;
+  bool matches = false;
+
+  @override
+  void visitSimpleStringLiteral(SimpleStringLiteral node) {
+    final value = node.value;
+    if (value.startsWith('assets/')) {
+      final directory = value.endsWith('/') ? value : '$value/';
+      matches |= assets.any(
+        (path) => path == value || path.startsWith(directory),
+      );
+    }
+  }
+
+  @override
+  void visitStringInterpolation(StringInterpolation node) {
+    final first = node.elements.first;
+    if (first is InterpolationString && first.value.startsWith('assets/')) {
+      matches |= assets.any((path) => path.startsWith(first.value));
+    }
+    super.visitStringInterpolation(node);
+  }
 }
 
 String? _dependency(String importer, String value, String packageName) {

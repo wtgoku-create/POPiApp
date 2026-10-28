@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -118,6 +119,94 @@ Future<void> _capture(WidgetTester tester, String name) async {
 }
 
 void main() {
+  for (final dark in [false, true]) {
+    testWidgets('composer visibly blurs messages beneath it: dark=$dark', (
+      tester,
+    ) async {
+      tester.view.padding = const FakeViewPadding(right: 62);
+      addTearDown(tester.view.resetPadding);
+      await _pump(tester, size: const Size(950, 640), dark: dark);
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        final context = tester.element(find.byType(V2ChatPage));
+        await Future.wait(
+          tester
+              .widgetList<Image>(find.byType(Image))
+              .map((image) => precacheImage(image.image, context)),
+        );
+      });
+      await tester.pumpAndSettle();
+      final composer = tester.getRect(find.byType(PopiMessageComposer));
+      final list = find.byType(ChatAnimatedList);
+      expect(tester.getRect(list).bottom, composer.bottom);
+      expect(
+        tester.widget<ChatAnimatedList>(list).bottomPadding,
+        composer.height + 10,
+      );
+      final filter = tester.renderObject<RenderBackdropFilter>(
+        find.descendant(
+          of: find.byKey(const Key('v2-chat-composer-backdrop')),
+          matching: find.byType(BackdropFilter),
+        ),
+      );
+      Future<List<int>> bandPixels() async {
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(_captureKey),
+        );
+        return (await tester.runAsync(() async {
+          final image = await boundary.toImage();
+          try {
+            final data = await image.toByteData(
+              format: ui.ImageByteFormat.rawRgba,
+            );
+            final bytes = data!.buffer.asUint8List();
+            return [
+              for (
+                var y = composer.top.toInt() - 8;
+                y < composer.top.toInt() + 8;
+                y++
+              )
+                ...bytes.sublist(
+                  (y * image.width + 400) * 4,
+                  (y * image.width + 580) * 4,
+                ),
+            ];
+          } finally {
+            image.dispose();
+          }
+        }))!;
+      }
+
+      final blurred = await bandPixels();
+      filter.enabled = false;
+      await tester.pump();
+      final sharp = await bandPixels();
+      final difference =
+          List.generate(
+            blurred.length,
+            (i) => (blurred[i] - sharp[i]).abs(),
+          ).fold<int>(0, (sum, value) => sum + value) /
+          blurred.length;
+      expect(difference, greaterThan(1));
+      filter.enabled = true;
+      await tester.pump();
+      await _capture(
+        tester,
+        'composer-visible-blur-${dark ? 'dark' : 'light'}',
+      );
+      final scrollButton = find.byKey(const Key('v2-chat-scroll-to-bottom'));
+      expect(tester.getRect(scrollButton).bottom, lessThan(composer.top));
+      await tester.tap(scrollButton);
+      await tester.pumpAndSettle();
+      final lastAsset = find.byWidgetPredicate(
+        (widget) => widget is V2AssetCard && widget.asset.id == 'milk',
+      );
+      expect(tester.getRect(lastAsset).bottom, lessThanOrEqualTo(composer.top));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('member sheet stays narrow and centered inside the detail pane', (
     tester,
   ) async {

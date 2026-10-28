@@ -120,18 +120,35 @@ void main() {
       },
     );
     expect(result.tests, ['test/a_test.dart', 'test/b_test.dart']);
-    expect(result.full, isTrue);
+    expect(result.full, isFalse);
     expect(result.deferredTests, isEmpty);
   });
 
-  test('config, assets, native code and hook changes require full checks', () {
+  test('broad test initialization dependencies defer tests to CI', () {
+    for (final changed in [
+      {'test/support/cache.dart'},
+      {'assets/shaders/fade.frag'},
+    ]) {
+      final result = plan(changed, {
+        'test/support/cache.dart': "const shader = 'assets/shaders/fade.frag';",
+        'test/flutter_test_config.dart': "import 'support/cache.dart';",
+        for (var index = 0; index <= maxLocalTestFiles; index++)
+          'test/page_${index}_test.dart': 'void main() {}',
+      });
+      expect(result.full, isFalse);
+      expect(result.deferredTests, hasLength(maxLocalTestFiles + 1));
+      expect(result.commands.any((command) => command[1] == 'test'), isFalse);
+    }
+  });
+
+  test('config, native code and hook changes require full checks', () {
     for (final path in [
       'pubspec.yaml',
       'pubspec.lock',
       'analysis_options.yaml',
       'l10n.yaml',
       'dart_test.yaml',
-      'assets/icons/a.svg',
+      'test/flutter_test_config.dart',
       'config/env/development.json',
       'ios/Runner/AppDelegate.swift',
       'android/app/build.gradle.kts',
@@ -151,6 +168,104 @@ void main() {
       );
       expect(result.commands.last, ['flutter', 'test', '--no-pub']);
     }
+  });
+
+  test('asset-only changes follow consumers and their transitive tests', () {
+    for (final asset in [
+      'assets/images/photo.png',
+      'assets/icons/a.svg',
+      'assets/shaders/fade.frag',
+    ]) {
+      final result = plan(
+        {asset},
+        {
+          'lib/resource.dart': "const asset = '$asset';",
+          'lib/page.dart': "import 'resource.dart';",
+          'test/page_test.dart': "import '../lib/page.dart';",
+          'test/unrelated_test.dart': 'void main() {}',
+        },
+      );
+      expect(result.full, isFalse, reason: asset);
+      expect(result.resolveDependencies, isFalse);
+      expect(result.format, isEmpty);
+      expect(result.analyze, [
+        'lib/page.dart',
+        'lib/resource.dart',
+        'test/page_test.dart',
+      ]);
+      expect(result.tests, ['test/page_test.dart']);
+      expect(result.commands.last, [
+        'flutter',
+        'test',
+        '--no-pub',
+        'test/page_test.dart',
+      ]);
+    }
+  });
+
+  test('asset matching covers directory constants and interpolated paths', () {
+    final result = plan(
+      {'assets/icons/old.svg', 'assets/icons/new.svg'},
+      {
+        'lib/directory.dart': "const directory = 'assets/icons/';",
+        'lib/interpolated.dart':
+            r"String icon(String name) => 'assets/icons/$name.svg';",
+        'test/directory_test.dart': "import '../lib/directory.dart';",
+        'test/interpolated_test.dart': "import '../lib/interpolated.dart';",
+        'test/deleted_asset_test.dart': "const path = 'assets/icons/old.svg';",
+        'test/unrelated_test.dart':
+            "// assets/icons/new.svg\nconst path = 'assets/icons-other/new.svg';",
+      },
+    );
+    expect(result.full, isFalse);
+    expect(result.tests, [
+      'test/deleted_asset_test.dart',
+      'test/directory_test.dart',
+      'test/interpolated_test.dart',
+    ]);
+    expect(result.format, isEmpty);
+  });
+
+  test('mixed asset and Dart edits format only the changed Dart files', () {
+    final result = plan(
+      {'assets/shaders/fade.frag', 'lib/page.dart'},
+      {
+        'lib/backdrop.dart': "const shader = 'assets/shaders/fade.frag';",
+        'lib/page.dart': "import 'backdrop.dart';",
+        'test/page_test.dart': "import '../lib/page.dart';",
+      },
+    );
+    expect(result.full, isFalse);
+    expect(result.format, ['lib/page.dart']);
+    expect(result.tests, ['test/page_test.dart']);
+  });
+
+  test(
+    'unreferenced assets defer coverage to CI without full local checks',
+    () {
+      final result = plan(
+        {'assets/images/new.png'},
+        {'lib/page.dart': '', 'test/page_test.dart': ''},
+      );
+      expect(result.full, isFalse);
+      expect(result.commands, isEmpty);
+      expect(result.reason, contains('full coverage in CI'));
+    },
+  );
+
+  test('widely used assets respect the local test limit', () {
+    final result = plan(
+      {'assets/icons/new.svg'},
+      {
+        'lib/icons.dart':
+            r"String icon(String name) => 'assets/icons/$name.svg';",
+        for (var index = 0; index <= maxLocalTestFiles; index++)
+          'test/page_${index}_test.dart': "import '../lib/icons.dart';",
+      },
+    );
+    expect(result.full, isFalse);
+    expect(result.deferredTests, hasLength(maxLocalTestFiles + 1));
+    expect(result.commands.single.take(2), ['flutter', 'analyze']);
   });
 
   test('ARB-only changes follow generated localization dependencies', () {
