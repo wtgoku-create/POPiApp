@@ -13,6 +13,7 @@ import '../../session/presentation/widgets/conversation_timeline.dart'
 import '../../session/presentation/widgets/popi_message_composer.dart';
 import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_shared/presentation/widgets/v2_frosted_backdrop.dart';
 import '../../v2_assets/presentation/v2_assets_page.dart';
 import 'v2_chat_controller.dart';
 import 'v2_settings_page.dart';
@@ -361,32 +362,46 @@ class _V2ChatPageState extends State<V2ChatPage> {
                         ),
                       ),
               ),
-              PopiMessageComposer(
-                conversationMode: true,
-                sessionLayout: true,
-                bottomPadding: 0,
-                controller: _composer,
-                selectedImages: const [],
-                selectedAssets: [
-                  for (final id in _attachments)
-                    for (final asset in widget.repository.assets)
-                      if (asset.id == id)
-                        LibraryWork(
-                          id: asset.id,
-                          previewUrl: asset.cover,
-                          isVideo: asset.kind == V2AssetKind.video,
-                          createdAt: null,
-                        ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Positioned.fill(
+                    top: -16,
+                    child: IgnorePointer(
+                      child: V2FrostedBackdrop(
+                        key: Key('v2-chat-composer-backdrop'),
+                        sigma: 8,
+                      ),
+                    ),
+                  ),
+                  PopiMessageComposer(
+                    conversationMode: true,
+                    sessionLayout: true,
+                    bottomPadding: 0,
+                    controller: _composer,
+                    selectedImages: const [],
+                    selectedAssets: [
+                      for (final id in _attachments)
+                        for (final asset in widget.repository.assets)
+                          if (asset.id == id)
+                            LibraryWork(
+                              id: asset.id,
+                              previewUrl: asset.cover,
+                              isVideo: asset.kind == V2AssetKind.video,
+                              createdAt: null,
+                            ),
+                    ],
+                    onAttachment: () {
+                      if (!_conversation.sending) _attach();
+                    },
+                    onRemoveImage: (_) {},
+                    onRemoveAsset: (index) =>
+                        setState(() => _attachments.removeAt(index)),
+                    onHeightChanged: (_) {},
+                    onSubmitted: _send,
+                    sending: _conversation.sending,
+                  ),
                 ],
-                onAttachment: () {
-                  if (!_conversation.sending) _attach();
-                },
-                onRemoveImage: (_) {},
-                onRemoveAsset: (index) =>
-                    setState(() => _attachments.removeAt(index)),
-                onHeightChanged: (_) {},
-                onSubmitted: _send,
-                sending: _conversation.sending,
               ),
             ],
           ),

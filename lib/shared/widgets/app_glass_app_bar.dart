@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Keeps the toolbar sharp over Figma's fixed, gradually fading glass surface.
+/// Keeps the toolbar sharp over a glass surface sized to the actual header.
 class AppGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   const AppGlassAppBar({
     required this.child,
@@ -19,14 +19,8 @@ class AppGlassAppBar extends StatelessWidget implements PreferredSizeWidget {
       Size.fromHeight(child.preferredSize.height + AppGlassHeader.topSpacing);
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => AppGlassHeader(
-      fadeExtent: extendBackdrop && constraints.maxHeight < 166
-          ? 166 - constraints.maxHeight
-          : 0,
-      child: child,
-    ),
-  );
+  Widget build(BuildContext context) =>
+      AppGlassHeader(fadeExtent: extendBackdrop ? 8 : 0, child: child);
 }
 
 /// Applies the shared glass surface and top spacing to custom headers.

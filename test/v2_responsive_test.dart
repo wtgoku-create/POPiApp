@@ -325,19 +325,28 @@ void main() {
     await tester.tap(find.text('爱丽丝视频'));
     await tester.pumpAndSettle();
     final composer = find.byType(PopiMessageComposer);
+    final backdrop = find.byKey(const Key('v2-chat-composer-backdrop'));
     final disclaimer = find.text('AI生成结果可能有误，仅供参考');
     expect(tester.getRect(composer).bottom, 640);
     expect(tester.getRect(disclaimer).bottom, closeTo(640, .01));
+    expect(
+      tester.getRect(backdrop),
+      tester
+          .getRect(composer)
+          .expandToInclude(tester.getRect(composer).translate(0, -16)),
+    );
     await _capture(tester, 'chat-footer-no-bottom-gap');
 
     tester.view.padding = const FakeViewPadding(top: 62, bottom: 34);
     await _resize(tester, const Size(390, 844));
     expect(tester.getRect(composer).bottom, 844 - 34);
+    expect(tester.getRect(backdrop).bottom, 844 - 34);
 
     tester.view.padding = const FakeViewPadding(top: 62);
     tester.view.viewInsets = const FakeViewPadding(bottom: 260);
     await tester.pumpAndSettle();
     expect(tester.getRect(composer).bottom, 844 - 260);
+    expect(tester.getRect(backdrop).bottom, 844 - 260);
     expect(tester.takeException(), isNull);
   });
 

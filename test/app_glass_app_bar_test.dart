@@ -73,82 +73,96 @@ void main() {
       );
     }
 
-    testWidgets('top glass keeps navigation and scrolling usable: dark=$dark', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(440, 956);
-      tester.view.devicePixelRatio = 1;
-      tester.view.padding = const FakeViewPadding(top: 62);
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPadding);
-      final scroll = ScrollController();
-      addTearDown(scroll.dispose);
-      var backTaps = 0;
-      var rowTaps = 0;
+    for (final topInset in [0.0, 62.0]) {
+      testWidgets(
+        'top glass clears messages and keeps navigation usable: dark=$dark top=$topInset',
+        (tester) async {
+          tester.view.physicalSize = const Size(440, 956);
+          tester.view.devicePixelRatio = 1;
+          tester.view.padding = FakeViewPadding(top: topInset);
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.view.resetPadding);
+          final scroll = ScrollController();
+          addTearDown(scroll.dispose);
+          var backTaps = 0;
+          var rowTaps = 0;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: dark ? AppTheme.dark : AppTheme.light,
-          home: Scaffold(
-            extendBodyBehindAppBar: true,
-            appBar: AppGlassAppBar(
-              child: AppBar(
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                leading: IconButton(
-                  key: const Key('back'),
-                  onPressed: () => backTaps++,
-                  icon: const Icon(Icons.arrow_back),
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: dark ? AppTheme.dark : AppTheme.light,
+              home: Scaffold(
+                extendBodyBehindAppBar: true,
+                appBar: AppGlassAppBar(
+                  child: AppBar(
+                    backgroundColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    leading: IconButton(
+                      key: const Key('back'),
+                      onPressed: () => backTaps++,
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+                    title: const Text('Conversation'),
+                  ),
                 ),
-                title: const Text('Conversation'),
+                body: ListView.builder(
+                  controller: scroll,
+                  padding: EdgeInsets.only(
+                    top:
+                        topInset +
+                        kToolbarHeight +
+                        AppGlassHeader.topSpacing +
+                        10,
+                  ),
+                  itemExtent: 80,
+                  itemCount: 100,
+                  itemBuilder: (context, index) => TextButton(
+                    key: ValueKey(index),
+                    onPressed: () => rowTaps++,
+                    child: Text('Message $index'),
+                  ),
+                ),
               ),
             ),
-            body: ListView.builder(
-              controller: scroll,
-              padding: const EdgeInsets.only(top: 128),
-              itemExtent: 80,
-              itemCount: 100,
-              itemBuilder: (context, index) => TextButton(
-                key: ValueKey(index),
-                onPressed: () => rowTaps++,
-                child: Text('Message $index'),
-              ),
-            ),
-          ),
-        ),
+          );
+          await tester.pumpAndSettle();
+          final bar = tester.getRect(find.byType(AppBar));
+          expect(bar.top, AppGlassHeader.topSpacing);
+          expect(bar.height, topInset + kToolbarHeight);
+          final glass = find
+              .descendant(
+                of: find.byType(AppGlassAppBar),
+                matching: find.byType(BackdropFilter),
+              )
+              .first;
+          expect(tester.getRect(glass).bottom, bar.bottom + 8);
+          final decoration = tester.widget<DecoratedBox>(
+            find
+                .descendant(of: glass, matching: find.byType(DecoratedBox))
+                .first,
+          );
+          final gradient = (decoration.decoration as BoxDecoration).gradient!;
+          expect(gradient.stops, [.4, .6, 1]);
+          expect(gradient.colors.last.a, 0);
+          final firstMessage = find.byKey(const ValueKey(0));
+          expect(
+            tester.getRect(glass).bottom,
+            lessThanOrEqualTo(tester.getRect(firstMessage).top),
+          );
+          await tester.tap(firstMessage);
+          expect(rowTaps, 1);
+          scroll.jumpTo(100);
+          await tester.pumpAndSettle();
+          expect(
+            tester.getRect(find.byKey(const ValueKey(0))).top,
+            lessThan(bar.bottom),
+          );
+          await tester.tap(find.byKey(const Key('back')));
+          expect(backTaps, 1);
+          expect(tester.getRect(find.byType(AppBar)), bar);
+          expect(tester.takeException(), isNull);
+        },
       );
-      await tester.pumpAndSettle();
-      final bar = tester.getRect(find.byType(AppBar));
-      expect(bar.top, AppGlassHeader.topSpacing);
-      expect(bar.height, 62 + kToolbarHeight);
-      final glass = find
-          .descendant(
-            of: find.byType(AppGlassAppBar),
-            matching: find.byType(BackdropFilter),
-          )
-          .first;
-      expect(tester.getSize(glass), const Size(440, 166));
-      final decoration = tester.widget<DecoratedBox>(
-        find.descendant(of: glass, matching: find.byType(DecoratedBox)).first,
-      );
-      final gradient = (decoration.decoration as BoxDecoration).gradient!;
-      expect(gradient.stops, [.4, .6, 1]);
-      expect(gradient.colors.last.a, 0);
-      expect(tester.getRect(find.byKey(const ValueKey(0))).top, 128);
-      // The fading glass overlaps this row without intercepting its taps.
-      await tester.tapAt(const Offset(220, 145));
-      expect(rowTaps, 1);
-      scroll.jumpTo(100);
-      await tester.pumpAndSettle();
-      expect(
-        tester.getRect(find.byKey(const ValueKey(0))).top,
-        lessThan(bar.bottom),
-      );
-      await tester.tap(find.byKey(const Key('back')));
-      expect(backTaps, 1);
-      expect(tester.getRect(find.byType(AppBar)), bar);
-      expect(tester.takeException(), isNull);
-    });
+    }
   }
 }
