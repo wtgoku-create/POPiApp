@@ -207,6 +207,60 @@ void main() {
     });
   }
 
+  testWidgets(
+    'edit member footer stays compact and clears the home indicator',
+    (tester) async {
+      tester.view.padding = const FakeViewPadding(right: 62, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewInsets);
+      await _pump(tester, size: const Size(950, 640));
+      await tester.tap(find.text('爱丽丝视频'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('demo-settings')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('能力').hitTestable());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('POPi').last);
+      await tester.pumpAndSettle();
+      final body = find.byType(V2SheetBody);
+      final button = find.descendant(
+        of: body,
+        matching: find.byType(V2PrimaryButton),
+      );
+      expect(find.text('编辑成员'), findsOneWidget);
+      expect(tester.getRect(body).bottom - tester.getRect(button).bottom, 12);
+      await tester.scrollUntilVisible(
+        find.text('背景颜色'),
+        250,
+        scrollable: find
+            .descendant(
+              of: find.descendant(
+                of: body,
+                matching: find.byType(CustomScrollView),
+              ),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await _capture(tester, 'edit-member-footer-landscape');
+
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      await _resize(tester, const Size(390, 844));
+      expect(tester.getRect(body).bottom - tester.getRect(button).bottom, 34);
+
+      tester.view.padding = FakeViewPadding.zero;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(body).bottom, 544);
+      expect(tester.getRect(body).bottom - tester.getRect(button).bottom, 12);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(body, findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('member sheet stays narrow and centered inside the detail pane', (
     tester,
   ) async {

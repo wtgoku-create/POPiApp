@@ -477,7 +477,11 @@ class V2SheetBody extends StatelessWidget {
                 20,
                 0,
                 20,
-                MediaQuery.paddingOf(context).bottom.clamp(20, 40),
+                MediaQuery.paddingOf(context).horizontal > 0
+                    ? 12
+                    : MediaQuery.paddingOf(
+                        context,
+                      ).bottom.clamp(12, double.infinity),
               ),
               child: footer!,
             ),
