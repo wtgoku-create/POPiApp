@@ -30,7 +30,7 @@ class AndroidPaymentPage extends ConsumerStatefulWidget {
 class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
     with WidgetsBindingObserver {
   AndroidPaymentService? _service;
-  PaymentChannel _channel = PaymentChannel.wechat;
+  PaymentChannel _channel = PaymentChannel.alipay;
   final _channels = <PaymentChannel, bool>{};
   PaymentResult? _result;
   bool _loading = true;
@@ -77,14 +77,14 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
           _channels[channel] = false;
         }
       }
-      if (_channels[_channel] != true &&
-          _channels[PaymentChannel.alipay] == true) {
-        _channel = PaymentChannel.alipay;
-      }
       if (widget.product.kind == PaymentProductKind.subscription) {
-        final preview = await service.repository.preview(widget.product);
-        _previewAmount = preview.amountFen;
-        _previewPoints = preview.grantPoints;
+        try {
+          final preview = await service.repository.preview(widget.product);
+          _previewAmount = preview.amountFen;
+          _previewPoints = preview.grantPoints;
+        } catch (_) {
+          // Purchase checks the preview again and reports failures on confirm.
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -301,8 +301,10 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                           RadioGroup<PaymentChannel>(
                             groupValue: _channel,
                             onChanged: (value) {
-                              if (value != null && !_working) {
-                                setState(() => _channel = value);
+                              if (value == PaymentChannel.alipay && !_working) {
+                                setState(
+                                  () => _channel = PaymentChannel.alipay,
+                                );
                               }
                             },
                             child: Column(
@@ -311,6 +313,7 @@ class _AndroidPaymentPageState extends ConsumerState<AndroidPaymentPage>
                                     (channel) => _PaymentMethodRow(
                                       channel: channel,
                                       enabled:
+                                          channel == PaymentChannel.alipay &&
                                           !_working &&
                                           _channels[channel] == true,
                                       installed: _channels[channel] == true,

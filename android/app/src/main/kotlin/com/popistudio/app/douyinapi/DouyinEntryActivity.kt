@@ -22,7 +22,12 @@ class DouyinEntryActivity : Activity() {
     private fun dispatch(intent: Intent) {
         if (DouyinLoginBridge.handleIntent(this, intent)) {
             startActivity(Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                // The SDK callback runs in a separate task; resume the existing Flutter engine.
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                )
             })
         }
         finish()

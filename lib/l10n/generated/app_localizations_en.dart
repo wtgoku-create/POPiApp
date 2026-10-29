@@ -2506,6 +2506,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyPolicy => 'Privacy Policy';
 
   @override
+  String get aboutPopiAi => 'About POPi AI';
+
+  @override
+  String get privacyConsentTitle => 'Terms and Privacy';
+
+  @override
+  String get privacyConsentMessage =>
+      'Welcome to POPi! Before using the app, please read our User Agreement and Privacy Policy to understand how we collect, use and protect your personal information, and the rights available to you.\n\nFor sign-in, AI creation and saving content, we process account information, content you submit, and necessary device and log information as described in the policy. Permissions such as photo library access are requested when you use the relevant features.\n\nBy tapping “Agree & Continue”, you confirm that you have read and agree to these terms and policies.';
+
+  @override
+  String get privacyConsentAccept => 'Agree & Continue';
+
+  @override
+  String get privacyConsentDecline => 'Disagree';
+
+  @override
+  String get privacyConsentRequired =>
+      'Please read and agree to the User Agreement and Privacy Policy to use POPi.';
+
+  @override
+  String get privacyConsentReview => 'Review Terms and Privacy';
+
+  @override
+  String get privacyConsentSaveFailed =>
+      'Unable to save your choice. Please tap Agree & Continue again.';
+
+  @override
   String get webPageLoadFailed => 'Could not load this page. Please try again';
 
   @override
@@ -2935,11 +2962,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get redemptionLoginRequired => 'Sign in to invite friends';
 
   @override
-  String get redemptionBindRequired =>
-      'Link WeChat Official Account to view invite codes';
+  String get redemptionBindRequired => 'Link WeChat to view invite codes';
 
   @override
-  String get redemptionBindAction => 'Link WeChat Official Account';
+  String get redemptionBindAction => 'Link WeChat';
 
   @override
   String get redemptionBindDescription =>
@@ -2952,7 +2978,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get redemptionQrFailed => 'Could not load QR code';
 
   @override
-  String get redemptionBindingSuccess => 'WeChat Official Account linked';
+  String get redemptionBindingSuccess => 'WeChat linked';
 
   @override
   String get redemptionBindingCheck => 'Check link status';

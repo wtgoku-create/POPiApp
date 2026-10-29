@@ -260,6 +260,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                         ],
                       ),
+                      SettingsRow(
+                        key: const Key('about-settings-menu'),
+                        icon: Icons.info_outline,
+                        label: l10n.aboutPopiAi,
+                        onTap: () => context.push('/profile/about'),
+                      ),
                       const Divider(height: 1, indent: 20, endIndent: 20),
                       SettingsRow(
                         key: const Key('profile-logout-menu'),
@@ -591,7 +597,7 @@ class TreeSettingsMenu extends StatelessWidget {
     required this.menuKey,
     required this.icon,
     required this.label,
-    required this.value,
+    this.value,
     required this.expanded,
     required this.onToggle,
     required this.options,
@@ -601,7 +607,7 @@ class TreeSettingsMenu extends StatelessWidget {
   final Key menuKey;
   final IconData icon;
   final String label;
-  final String value;
+  final String? value;
   final bool expanded;
   final VoidCallback onToggle;
   final List<TreeSettingsOption> options;

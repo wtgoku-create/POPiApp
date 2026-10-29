@@ -2397,6 +2397,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicy => '隐私政策';
 
   @override
+  String get aboutPopiAi => '关于 POPi AI';
+
+  @override
+  String get privacyConsentTitle => '用户协议与隐私政策';
+
+  @override
+  String get privacyConsentMessage =>
+      '欢迎使用 POPi！请您在使用前仔细阅读《用户协议》和《隐私政策》，了解我们如何收集、使用和保护您的个人信息，以及您享有的权利。\n\n为提供账号登录、AI 创作与内容保存等服务，我们会按政策说明处理账号信息、您提交的内容及必要的设备和日志信息。相册等权限仅在您使用相关功能时申请。\n\n点击“同意并继续”表示您已阅读并同意上述协议与政策。';
+
+  @override
+  String get privacyConsentAccept => '同意并继续';
+
+  @override
+  String get privacyConsentDecline => '不同意';
+
+  @override
+  String get privacyConsentRequired => '请阅读并同意用户协议与隐私政策后使用 POPi。';
+
+  @override
+  String get privacyConsentReview => '查看协议与政策';
+
+  @override
+  String get privacyConsentSaveFailed => '未能保存您的选择，请再次点击同意并继续';
+
+  @override
   String get webPageLoadFailed => '页面加载失败，请稍后重试';
 
   @override
@@ -2804,10 +2829,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get redemptionLoginRequired => '登录后即可邀请好友';
 
   @override
-  String get redemptionBindRequired => '绑定微信公众号后可查看邀请码';
+  String get redemptionBindRequired => '绑定微信后可查看邀请码';
 
   @override
-  String get redemptionBindAction => '绑定微信公众号';
+  String get redemptionBindAction => '绑定微信';
 
   @override
   String get redemptionBindDescription => '使用微信扫描二维码并完成绑定';
@@ -2819,7 +2844,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get redemptionQrFailed => '二维码加载失败';
 
   @override
-  String get redemptionBindingSuccess => '微信公众号绑定成功';
+  String get redemptionBindingSuccess => '微信绑定成功';
 
   @override
   String get redemptionBindingCheck => '检查绑定状态';

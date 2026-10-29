@@ -372,127 +372,134 @@ void main() {
     ]);
   });
 
-  test('reads only staged paths and handles filenames with spaces', () async {
-    final root = Directory.current.path;
-    final sandbox = await Directory.systemTemp.createTemp('pre_commit_test_');
-    addTearDown(() => sandbox.delete(recursive: true));
-    final environment = {...Platform.environment}
-      ..removeWhere((key, value) => key.startsWith('GIT_'));
+  test(
+    'reads only staged paths and handles filenames with spaces',
+    () async {
+      final root = Directory.current.path;
+      final sandbox = await Directory.systemTemp.createTemp('pre_commit_test_');
+      addTearDown(() => sandbox.delete(recursive: true));
+      final environment = {...Platform.environment}
+        ..removeWhere((key, value) => key.startsWith('GIT_'));
 
-    Future<void> git(List<String> args) async {
-      final result = await Process.run(
+      Future<void> git(List<String> args) async {
+        final result = await Process.run(
+          'git',
+          args,
+          workingDirectory: sandbox.path,
+          environment: environment,
+          includeParentEnvironment: false,
+        );
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+      }
+
+      Future<void> write(String path, String content) async {
+        final file = File('${sandbox.path}/$path');
+        await file.parent.create(recursive: true);
+        await file.writeAsString(content);
+      }
+
+      await git(['init', '--quiet']);
+      await write('lib/model with spaces.dart', 'class Model {}');
+      await write('lib/unstaged.dart', 'class Unstaged {}');
+      await write(
+        'test/model_test.dart',
+        "import '../lib/model with spaces.dart';",
+      );
+      await write(
+        '.dart_tool/package_config.json',
+        jsonEncode({
+          'configVersion': 2,
+          'packages': [
+            {'name': 'example', 'rootUri': '../', 'packageUri': 'lib/'},
+          ],
+        }),
+      );
+      await git(['add', '--', 'lib/model with spaces.dart']);
+      final listed = await Process.run(
         'git',
-        args,
+        ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+        workingDirectory: sandbox.path,
+        environment: environment,
+        includeParentEnvironment: false,
+      );
+      expect(listed.stdout, contains('test/model_test.dart'));
+      // Keep the real package config for loading the script, but use sandbox Git.
+      final configFile = File('$root/.dart_tool/package_config.json');
+      final config = jsonDecode(await configFile.readAsString()) as Map;
+      final flutter = (config['packages'] as List).cast<Map>().singleWhere(
+        (package) => package['name'] == 'flutter',
+      );
+      final flutterRoot = Directory.fromUri(
+        configFile.uri.resolve(flutter['rootUri'] as String),
+      ).parent.parent;
+      final dart =
+          '${flutterRoot.path}/bin/cache/dart-sdk/bin/dart'
+          '${Platform.isWindows ? '.exe' : ''}';
+      final scriptArgs = [
+        '--packages=$root/.dart_tool/package_config.json',
+        '$root/tool/pre_commit.dart',
+      ];
+      final result = await Process.run(
+        dart,
+        [...scriptArgs, '--dry-run'],
         workingDirectory: sandbox.path,
         environment: environment,
         includeParentEnvironment: false,
       );
       expect(result.exitCode, 0, reason: result.stderr.toString());
-    }
-
-    Future<void> write(String path, String content) async {
-      final file = File('${sandbox.path}/$path');
-      await file.parent.create(recursive: true);
-      await file.writeAsString(content);
-    }
-
-    await git(['init', '--quiet']);
-    await write('lib/model with spaces.dart', 'class Model {}');
-    await write('lib/unstaged.dart', 'class Unstaged {}');
-    await write(
-      'test/model_test.dart',
-      "import '../lib/model with spaces.dart';",
-    );
-    await write(
-      '.dart_tool/package_config.json',
-      jsonEncode({
-        'configVersion': 2,
-        'packages': [
-          {'name': 'example', 'rootUri': '../', 'packageUri': 'lib/'},
-        ],
-      }),
-    );
-    await git(['add', '--', 'lib/model with spaces.dart']);
-    final listed = await Process.run(
-      'git',
-      ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-      workingDirectory: sandbox.path,
-      environment: environment,
-      includeParentEnvironment: false,
-    );
-    expect(listed.stdout, contains('test/model_test.dart'));
-    // Keep the real package config for loading the script, but use sandbox Git.
-    final configFile = File('$root/.dart_tool/package_config.json');
-    final config = jsonDecode(await configFile.readAsString()) as Map;
-    final flutter = (config['packages'] as List).cast<Map>().singleWhere(
-      (package) => package['name'] == 'flutter',
-    );
-    final flutterRoot = Directory.fromUri(
-      configFile.uri.resolve(flutter['rootUri'] as String),
-    ).parent.parent;
-    final dart =
-        '${flutterRoot.path}/bin/cache/dart-sdk/bin/dart'
-        '${Platform.isWindows ? '.exe' : ''}';
-    final scriptArgs = [
-      '--packages=$root/.dart_tool/package_config.json',
-      '$root/tool/pre_commit.dart',
-    ];
-    final result = await Process.run(
-      dart,
-      [...scriptArgs, '--dry-run'],
-      workingDirectory: sandbox.path,
-      environment: environment,
-      includeParentEnvironment: false,
-    );
-    expect(result.exitCode, 0, reason: result.stderr.toString());
-    final output = jsonDecode(result.stdout as String) as Map;
-    expect(output['full'], isFalse);
-    expect(output['format'], ['lib/model with spaces.dart']);
-    expect(output['analyze'], [
-      'lib/model with spaces.dart',
-      'test/model_test.dart',
-    ]);
-    expect(output['tests'], ['test/model_test.dart']);
-
-    if (!Platform.isWindows) {
-      await write('bin/dart', '#!/bin/sh\nexit 23\n');
-      final chmod = await Process.run('chmod', [
-        '+x',
-        '${sandbox.path}/bin/dart',
+      final output = jsonDecode(result.stdout as String) as Map;
+      expect(output['full'], isFalse);
+      expect(output['format'], ['lib/model with spaces.dart']);
+      expect(output['analyze'], [
+        'lib/model with spaces.dart',
+        'test/model_test.dart',
       ]);
-      expect(chmod.exitCode, 0);
-      final failed = await Process.run(
+      expect(output['tests'], ['test/model_test.dart']);
+
+      if (!Platform.isWindows) {
+        await write('bin/dart', '#!/bin/sh\nexit 23\n');
+        final chmod = await Process.run('chmod', [
+          '+x',
+          '${sandbox.path}/bin/dart',
+        ]);
+        expect(chmod.exitCode, 0);
+        final failed = await Process.run(
+          dart,
+          scriptArgs,
+          workingDirectory: sandbox.path,
+          environment: {
+            ...environment,
+            'PATH': '${sandbox.path}/bin:${Platform.environment['PATH']}',
+          },
+          includeParentEnvironment: false,
+        );
+        expect(failed.exitCode, 23, reason: failed.stderr.toString());
+        expect(failed.stdout, contains('> dart format'));
+        expect(failed.stderr, contains('Check failed'));
+        expect(
+          failed.stderr,
+          contains("dart format 'lib/model with spaces.dart'"),
+        );
+        expect(failed.stderr, contains('stage the formatted files'));
+        expect(failed.stdout, isNot(contains('> flutter analyze')));
+        expect(failed.stdout, isNot(contains('> flutter test')));
+      }
+
+      await write('lib/l10n/app_en.arb', '{invalid JSON');
+      await git(['add', '--', 'lib/l10n/app_en.arb']);
+      final invalidArb = await Process.run(
         dart,
-        scriptArgs,
+        [...scriptArgs, '--dry-run'],
         workingDirectory: sandbox.path,
-        environment: {
-          ...environment,
-          'PATH': '${sandbox.path}/bin:${Platform.environment['PATH']}',
-        },
+        environment: environment,
         includeParentEnvironment: false,
       );
-      expect(failed.exitCode, 23, reason: failed.stderr.toString());
-      expect(failed.stdout, contains('> dart format'));
-      expect(failed.stderr, contains('Check failed'));
+      expect(invalidArb.exitCode, 1);
       expect(
-        failed.stderr,
-        contains("dart format 'lib/model with spaces.dart'"),
+        invalidArb.stderr,
+        contains('Invalid ARB file lib/l10n/app_en.arb'),
       );
-      expect(failed.stderr, contains('stage the formatted files'));
-      expect(failed.stdout, isNot(contains('> flutter analyze')));
-      expect(failed.stdout, isNot(contains('> flutter test')));
-    }
-
-    await write('lib/l10n/app_en.arb', '{invalid JSON');
-    await git(['add', '--', 'lib/l10n/app_en.arb']);
-    final invalidArb = await Process.run(
-      dart,
-      [...scriptArgs, '--dry-run'],
-      workingDirectory: sandbox.path,
-      environment: environment,
-      includeParentEnvironment: false,
-    );
-    expect(invalidArb.exitCode, 1);
-    expect(invalidArb.stderr, contains('Invalid ARB file lib/l10n/app_en.arb'));
-  });
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

@@ -21,6 +21,7 @@ class AppDialog extends StatelessWidget {
     required BuildContext context,
     required WidgetBuilder builder,
     bool useRootNavigator = false,
+    bool barrierDismissible = true,
   }) {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!AppModalScope.isActiveOf(context)) return Future.value();
@@ -28,6 +29,7 @@ class AppDialog extends StatelessWidget {
     final route = _AppDialogRoute<T>(
       context: context,
       builder: builder,
+      barrierDismissible: barrierDismissible,
       themes: InheritedTheme.capture(from: context, to: navigator.context),
       reduceMotion: MediaQuery.disableAnimationsOf(context),
     );
@@ -145,6 +147,7 @@ class AppDialog extends StatelessWidget {
 class _AppDialogRoute<T> extends DialogRoute<T> {
   _AppDialogRoute({
     required super.context,
+    required super.barrierDismissible,
     required WidgetBuilder builder,
     required CapturedThemes themes,
     required this.reduceMotion,

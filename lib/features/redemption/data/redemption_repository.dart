@@ -1,15 +1,16 @@
 import '../../../core/network/network_api.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../shared/type/social_app_type.dart';
 import '../domain/redemption.dart';
 
-/// Adapts the same authenticated redemption contracts used by the web client.
+/// Adapts authenticated invitation and registration reward contracts.
 class RedemptionRepository {
   const RedemptionRepository(this.api);
 
   final NetworkApi api;
 
   Future<bool> isWechatBound() async {
-    final data = await api.wechatOfficialBindingStatus();
+    final data = await api.socialAppBindingStatus(SocialAppType.wechat);
     if (data['bound'] is! bool) {
       throw const FormatException('Missing binding status');
     }

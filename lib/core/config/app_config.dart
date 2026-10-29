@@ -52,11 +52,11 @@ abstract final class AppConfig {
   static const userAgreementUrl = String.fromEnvironment(
     'USER_AGREEMENT_URL',
     defaultValue:
-        'https://tcnshqo5yu6i.feishu.cn/wiki/BmCNwr8o0ii19dkcTYAcaW9Jnhc',
+        'https://tcnshqo5yu6i.feishu.cn/wiki/L0V6wYREIiG1KVkTD44cIj3lnQF?from=from_copylink',
   );
   static const privacyPolicyUrl = String.fromEnvironment(
     'PRIVACY_POLICY_URL',
     defaultValue:
-        'https://tcnshqo5yu6i.feishu.cn/wiki/Wu8mwLqOYi2nZjkur3rc18wFnbg',
+        'https://tcnshqo5yu6i.feishu.cn/wiki/UNbawnKJyiZPj7ko4z8cginsnRd',
   );
 }

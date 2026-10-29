@@ -176,11 +176,28 @@ void main() {
   }
 
   testWidgets(
-    'selects Alipay and creates a new order on each payment attempt',
+    'defaults to Alipay, disables WeChat and creates new orders on confirm',
     (tester) async {
       await pump(tester);
       expect(find.byKey(const Key('payment-method-wechat')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('payment-method-alipay')));
+      expect(
+        tester
+            .widget<RadioListTile<PaymentChannel>>(
+              find.byKey(const Key('payment-method-wechat')),
+            )
+            .enabled,
+        isFalse,
+      );
+      await tester.tap(find.byKey(const Key('payment-method-wechat')));
+      await tester.pump();
+      expect(
+        tester
+            .widget<RadioGroup<PaymentChannel>>(
+              find.byType(RadioGroup<PaymentChannel>),
+            )
+            .groupValue,
+        PaymentChannel.alipay,
+      );
       await tester.tap(find.byKey(const Key('payment-confirm')));
       await tester.pumpAndSettle();
       expect(
@@ -259,12 +276,25 @@ void main() {
     });
   }
 
-  testWidgets('subscription preview errors allow retry through confirm', (
+  testWidgets('subscription preview errors are shown only after confirm', (
     tester,
   ) async {
     previewError = 'preview unavailable';
     await pump(tester, product: _subscription);
 
+    expect(find.text('preview unavailable', skipOffstage: false), findsNothing);
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('payment-confirm')))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.byKey(const Key('payment-confirm')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump();
     expect(
       find.text('preview unavailable', skipOffstage: false),
       findsOneWidget,
@@ -274,11 +304,11 @@ void main() {
       hasLength(1),
     );
     expect(
-      tester
-          .widget<FilledButton>(find.byKey(const Key('payment-confirm')))
-          .onPressed,
-      isNotNull,
+      requests.where((request) => request.path.contains('payByGatewayApp')),
+      isEmpty,
     );
+    await tester.pump(const Duration(seconds: 4));
+
     previewError = null;
     await tester.tap(find.byKey(const Key('payment-confirm')));
     await tester.pump();
