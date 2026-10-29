@@ -84,6 +84,43 @@ void main() {
     expect(repository.session('alice').roles, ['er']);
   });
 
+  test('creates and restores a configured assistant in one write', () async {
+    final id = await repository.createSession(
+      'My POPi',
+      V2SessionKind.conversation,
+      memberNames: {'popi': 'My POPi'},
+      memberInstructions: {'popi': 'Keep replies concise'},
+      memberAvatars: {'popi': 'assets/images/popi_avatar_horse.png'},
+      memberColors: {'popi': 0xFFFCDCCE},
+    );
+    final restored = V2Repository(storage)..restore();
+    addTearDown(restored.dispose);
+    final session = restored.session(id);
+    expect(session.title, 'My POPi');
+    expect(session.memberNames, {'popi': 'My POPi'});
+    expect(session.memberInstructions, {'popi': 'Keep replies concise'});
+    expect(session.memberAvatars, {
+      'popi': 'assets/images/popi_avatar_horse.png',
+    });
+    expect(session.memberColors, {'popi': 0xFFFCDCCE});
+    expect(session.messages, isEmpty);
+    expect(session.roles, isEmpty);
+  });
+
+  test('failed assistant creation adds no partial session', () async {
+    storage.failWrites = true;
+    await expectLater(
+      repository.createSession(
+        'My POPi',
+        V2SessionKind.conversation,
+        memberNames: {'popi': 'My POPi'},
+      ),
+      throwsStateError,
+    );
+    expect(repository.sessions, hasLength(7));
+    expect(storage.values, isEmpty);
+  });
+
   test('batch generation adds five related assets with unique IDs', () async {
     await repository.reply(
       'alice',

@@ -1659,6 +1659,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePromptUnsure => '我还不知道做什么';
 
   @override
+  String get guestTagline => '你的短视频账号顾问';
+
+  @override
+  String get guestStartCreating => '登录开启创作';
+
+  @override
+  String get guestVoiceInput => '语音输入';
+
+  @override
   String get aiDisclaimer => 'AI生成结果可能有误，仅供参考';
 
   @override
@@ -2111,7 +2120,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get logoutFailed => '退出登录失败，请稍后重试';
 
   @override
-  String get cancelAccount => '注销账号';
+  String get cancelAccount => '账号注销';
 
   @override
   String get cancelAccountTitle => '确认注销账号？';
@@ -2397,7 +2406,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyPolicy => '隐私政策';
 
   @override
-  String get aboutPopiAi => '关于 POPi AI';
+  String get aboutPopiAi => '关于POPi AI';
 
   @override
   String get privacyConsentTitle => '用户协议与隐私政策';
@@ -3431,6 +3440,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoComposer => '跟 POPi 说点什么…';
+
+  @override
+  String get v2CreatePopi => '创建一个POPi';
+
+  @override
+  String get v2PopiPersonality => '职责与个性';
+
+  @override
+  String get v2PopiPersonalityHint => '描述 POPi 的职责、表达风格\n与协作偏好，可选';
+
+  @override
+  String get v2MyColor => '我的颜色';
+
+  @override
+  String get v2AddCreativeRole => '先添加你的创作角色';
+
+  @override
+  String get v2AddCreativeRoleDescription =>
+      '关联已有角色，或上传自己的 DIY 角色参考图，让助理了解你的创作主角。';
+
+  @override
+  String get v2CreateDiyRole => '创建DIY角色';
 
   @override
   String get demoGreeting => '嗨，用户～';

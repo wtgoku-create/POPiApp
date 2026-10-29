@@ -31,7 +31,10 @@ import 'widgets/ip_guide_draft_sheet.dart';
 
 /// Five creation steps autosave one resumable account plan.
 class IpGuidePage extends ConsumerStatefulWidget {
-  const IpGuidePage({super.key});
+  const IpGuidePage({this.repository, this.onCreated, super.key});
+
+  final IpGuideDraftRepository? repository;
+  final ValueChanged<String>? onCreated;
 
   @override
   ConsumerState<IpGuidePage> createState() => _IpGuidePageState();
@@ -41,7 +44,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     with TickerProviderStateMixin {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   IpGuideDraft _draft = IpGuideDraft();
-  late final IpGuideRepository _repository;
+  late final IpGuideDraftRepository _repository;
   late final String? _ownerId;
   final _directionInput = TextEditingController();
   final _feelingInput = TextEditingController();
@@ -71,7 +74,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   @override
   void initState() {
     super.initState();
-    _repository = ref.read(ipGuideRepositoryProvider);
+    _repository = widget.repository ?? ref.read(ipGuideRepositoryProvider);
     _ownerId = ref.read(userProvider)?.id;
     _directionInput.addListener(_updateDraft);
     _feelingInput.addListener(_updateDraft);
@@ -341,13 +344,23 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
         context.go('/');
         return;
       }
-      await _repository.create(_draft, guideAccountProfile(_draft, l10n));
+      final id = await _repository.create(
+        _draft,
+        guideAccountProfile(_draft, l10n),
+      );
       if (!mounted || ref.read(userProvider)?.id != _ownerId) return;
+      if (widget.onCreated != null) {
+        _completed = true;
+        widget.onCreated!(id);
+        return;
+      }
       ref.invalidate(projectsProvider);
       ref.invalidate(sessionsProvider);
       if (mounted) setState(() => _completed = true);
     } catch (_) {
-      if (mounted) AppToast.info(context, l10n.ipCreateFailed);
+      if (mounted && ref.read(userProvider)?.id == _ownerId) {
+        AppToast.error(context, l10n.ipCreateFailed);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -634,7 +647,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                               IpGuideReview(
                                 draft: _draft,
                                 nicknameController: _nicknameInput,
-                                submitted: _draft.submitted,
+                                submitted: _draft.submitted || _busy,
                                 completed: _completed,
                               ),
                             ],

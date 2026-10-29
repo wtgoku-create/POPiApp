@@ -20,12 +20,11 @@
 本机安装包含 Dart 3.10.1 或更高版本的 Flutter SDK 后，在项目目录执行：
 
 ```bash
-flutter create .
 flutter pub get
 dart run tool/flutter_env.dart development run
 ```
 
-`flutter create .` 会补齐 Android、iOS、Web 等平台目录，不会覆盖 `lib/` 和 `pubspec.yaml`。
+当前分支唯一应用入口为 `lib/main.dart`，启动 V2 应用。开发和生产环境使用相同入口。
 
 ## 目录
 
@@ -50,7 +49,7 @@ lib/
 
 ### V2 页面模块
 
-原有业务模块继续保留，原 `features/demo/` 页面按业务拆分为：
+原有业务模块继续保留，V2 页面按业务拆分为：
 
 ```text
 lib/
@@ -62,10 +61,10 @@ lib/
     └── v2_shared/       # V2 共用组件、模型、本地仓库和样例数据
 ```
 
-V2 仍通过 `lib/main_demo.dart` 启动，使用本地样例数据；沿用已有存储键和资源。
+当前应用通过 `lib/main.dart` 启动，创作流程使用本地样例数据；沿用已有存储键和资源。
 
 ```bash
-dart run tool/flutter_env.dart development run -t lib/main_demo.dart
+dart run tool/flutter_env.dart development run
 ```
 
 ## 网络请求
@@ -162,7 +161,7 @@ AASA 的路径匹配规则独立配置，并应使用当前 Team ID 和 Bundle I
 
 ```bash
 dart run tool/flutter_env.dart development prepare
-flutter build ios --config-only --dart-define-from-file=config/env/development.json
+dart run tool/flutter_env.dart development build ios --config-only
 ```
 
 直接运行 `flutter run` 时 Dart 使用开发默认值，iOS 则可能保留上次生成的原生配置；

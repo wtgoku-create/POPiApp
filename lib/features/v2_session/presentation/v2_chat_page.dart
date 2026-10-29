@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart' as chat;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
@@ -7,6 +9,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_image_preview.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
 import '../../../shared/widgets/app_page_safe_area.dart';
+import '../../../shared/widgets/app_svg_icon.dart';
 import '../../assets/domain/library_work.dart';
 import '../../session/presentation/widgets/conversation_timeline.dart'
     show MarkdownMessage;
@@ -19,6 +22,85 @@ import 'v2_chat_controller.dart';
 import 'v2_settings_page.dart';
 import 'widgets/v2_image_stack.dart';
 import '../../v2_shared/presentation/widgets/v2_widgets.dart';
+
+class _RoleOnboardingCard extends StatelessWidget {
+  const _RoleOnboardingCard({required this.onLink, required this.onCreate});
+
+  final VoidCallback onLink;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return ClipRRect(
+      key: const Key('v2-role-onboarding'),
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: .5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Theme.of(context).colorScheme.surface),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l.v2AddCreativeRole,
+                style: const TextStyle(fontSize: 18, height: 26 / 18),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l.v2AddCreativeRoleDescription,
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 22 / 14,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 42,
+                child: FilledButton(
+                  key: const Key('v2-link-role'),
+                  onPressed: onLink,
+                  child: Text(
+                    l.demoLinkedRoles,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 42,
+                child: TextButton.icon(
+                  key: const Key('v2-create-diy-role'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: v2Tint,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: onCreate,
+                  icon: const V2Icon('plus', size: 20),
+                  label: Text(
+                    l.v2CreateDiyRole,
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class V2ChatPage extends StatefulWidget {
   const V2ChatPage({
@@ -246,12 +328,17 @@ class _V2ChatPageState extends State<V2ChatPage> {
         }
         final s = _conversation.session;
         return V2Scaffold(
+          backgroundColor:
+              s.messages.isEmpty &&
+                  Theme.of(context).brightness == Brightness.light
+              ? v2Background
+              : null,
           extendBodyBehindAppBar: true,
           bottomSafeArea: safeArea.horizontal == 0,
           title: TextButton(
             onPressed: _settings,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.textPrimary,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               backgroundColor: v2Surface(context),
             ),
             child: Row(
@@ -267,13 +354,14 @@ class _V2ChatPageState extends State<V2ChatPage> {
                 Flexible(
                   child: Text(
                     s.members.length == 1
-                        ? v2MemberName(l, s.members.first)
+                        ? s.memberNames[s.members.first] ??
+                              v2MemberName(l, s.members.first)
                         : '${l.demoPopi} · ${s.members.length}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
                 ),
@@ -285,7 +373,11 @@ class _V2ChatPageState extends State<V2ChatPage> {
               key: const Key('demo-settings'),
               tooltip: l.demoSettings,
               onPressed: _settings,
-              icon: const V2Icon('profile', size: 24),
+              icon: AppSvgIcon.asset(
+                'v2_chat_settings',
+                size: 24,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ],
           child: Stack(
@@ -302,32 +394,50 @@ class _V2ChatPageState extends State<V2ChatPage> {
                             ).copyWith(top: topContentPadding, bottom: 20),
                             sliver: SliverFillRemaining(
                               hasScrollBody: false,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Image.asset(
-                                    'assets/images/demo_welcome.png',
-                                    width: 150,
-                                    height: 150,
-                                    cacheWidth: 450,
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    l.demoGreeting,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 30,
-                                      fontWeight: FontWeight.w600,
+                              child: Align(
+                                alignment: const Alignment(0, .2),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/demo_welcome.png',
+                                      width: 150,
+                                      height: 150,
+                                      cacheWidth: 450,
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    l.demoGreetingDetail,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(fontSize: 18),
-                                  ),
-                                ],
+                                    const SizedBox(height: 5),
+                                    Text(
+                                      l.demoGreeting,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      l.demoGreetingDetail,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                    if (s.roles.isEmpty) ...[
+                                      const SizedBox(height: 20),
+                                      _RoleOnboardingCard(
+                                        onLink: () => showV2RolesSheet(
+                                          context: context,
+                                          repository: widget.repository,
+                                          session: s,
+                                        ),
+                                        onCreate: () => showV2RolesSheet(
+                                          context: context,
+                                          repository: widget.repository,
+                                          session: s,
+                                          createRole: true,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),

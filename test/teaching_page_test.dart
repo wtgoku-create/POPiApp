@@ -96,6 +96,10 @@ void main() {
       initialLocation: '/teaching',
       routes: [
         GoRoute(
+          path: '/',
+          builder: (_, __) => const Scaffold(body: Text('Home')),
+        ),
+        GoRoute(
           path: '/teaching',
           builder: (_, __) => TeachingPage(repository: repository),
           routes: [
@@ -178,10 +182,7 @@ void main() {
       expect(second.left - first.right, 10);
       expect(second.top, first.top);
       expect(first.width, 195);
-      expect(
-        tester.getRect(find.byKey(const Key('popi-open-navigation'))).left,
-        15,
-      );
+      expect(tester.getRect(find.byKey(const Key('teaching-back'))).left, 15);
       expect(
         tester.getRect(find.byKey(const ValueKey('teaching-badge-1'))).right,
         first.right - 10,
@@ -233,7 +234,7 @@ void main() {
       await tester.tap(find.byKey(const Key('teaching-retry-courses')));
       await tester.pumpAndSettle();
       expect(find.text('暂无课程'), findsOneWidget);
-      expect(find.byKey(const Key('popi-open-navigation')), findsOneWidget);
+      expect(find.byKey(const Key('teaching-back')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -289,6 +290,17 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  pageTest('back from a direct teaching link opens home', (tester) async {
+    final router = await pumpPage(tester, _Repository());
+    expect(router.canPop(), isFalse);
+    expect(find.byKey(const Key('popi-open-navigation')), findsNothing);
+    await tester.tap(find.byKey(const Key('teaching-back')));
+    await tester.pumpAndSettle();
+    expect(router.state.uri.path, '/');
+    expect(find.text('Home'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   pageTest('course opens its reader and back preserves the catalog', (
     tester,

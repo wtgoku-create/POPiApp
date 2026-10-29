@@ -3223,6 +3223,24 @@ abstract class AppLocalizations {
   /// **'I\'m not sure what to create yet'**
   String get homePromptUnsure;
 
+  /// No description provided for @guestTagline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your short-video account advisor'**
+  String get guestTagline;
+
+  /// No description provided for @guestStartCreating.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to create'**
+  String get guestStartCreating;
+
+  /// No description provided for @guestVoiceInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice input'**
+  String get guestVoiceInput;
+
   /// No description provided for @aiDisclaimer.
   ///
   /// In en, this message translates to:
@@ -6666,6 +6684,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Say something to POPi…'**
   String get demoComposer;
+
+  /// No description provided for @v2CreatePopi.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a POPi'**
+  String get v2CreatePopi;
+
+  /// No description provided for @v2PopiPersonality.
+  ///
+  /// In en, this message translates to:
+  /// **'Responsibilities & personality'**
+  String get v2PopiPersonality;
+
+  /// No description provided for @v2PopiPersonalityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe POPi\'s role, tone and collaboration preferences (optional)'**
+  String get v2PopiPersonalityHint;
+
+  /// No description provided for @v2MyColor.
+  ///
+  /// In en, this message translates to:
+  /// **'My color'**
+  String get v2MyColor;
+
+  /// No description provided for @v2AddCreativeRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your creative character'**
+  String get v2AddCreativeRole;
+
+  /// No description provided for @v2AddCreativeRoleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Link an existing character or upload your own DIY character reference so your assistant knows who you\'re creating with.'**
+  String get v2AddCreativeRoleDescription;
+
+  /// No description provided for @v2CreateDiyRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Create DIY character'**
+  String get v2CreateDiyRole;
 
   /// No description provided for @demoGreeting.
   ///

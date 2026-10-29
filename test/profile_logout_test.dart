@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final logoutMenu = find.byKey(const Key('profile-logout-menu'));
-    await tester.ensureVisible(logoutMenu);
+    await tester.scrollUntilVisible(logoutMenu, 300);
     await tester.pumpAndSettle();
     await tester.tap(logoutMenu);
     await tester.pumpAndSettle();

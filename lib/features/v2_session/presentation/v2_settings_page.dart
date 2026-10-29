@@ -379,10 +379,10 @@ class _V2SettingsPageState extends State<V2SettingsPage>
             _MemberSheet(repository: widget.repository, session: session),
       );
   Future<void> _roles(BuildContext context, V2Session session) =>
-      V2Sheet.show<void>(
+      showV2RolesSheet(
         context: context,
-        builder: (_) =>
-            _RoleSheet(repository: widget.repository, session: session),
+        repository: widget.repository,
+        session: session,
       );
 }
 
@@ -692,10 +692,30 @@ Widget _memberAvatar(V2Session session, String id, double size) => V2Avatar(
   memberColors: session.memberColors,
 );
 
+/// Reuses the same role selection flow from settings and the empty chat.
+Future<void> showV2RolesSheet({
+  required BuildContext context,
+  required V2Repository repository,
+  required V2Session session,
+  bool createRole = false,
+}) => V2Sheet.show<void>(
+  context: context,
+  builder: (_) => _RoleSheet(
+    repository: repository,
+    session: session,
+    createRole: createRole,
+  ),
+);
+
 class _RoleSheet extends StatefulWidget {
-  const _RoleSheet({required this.repository, required this.session});
+  const _RoleSheet({
+    required this.repository,
+    required this.session,
+    this.createRole = false,
+  });
   final V2Repository repository;
   final V2Session session;
+  final bool createRole;
   @override
   State<_RoleSheet> createState() => _RoleSheetState();
 }
@@ -710,6 +730,35 @@ class _RoleSheetState extends State<_RoleSheet> {
       .toList();
   int _tab = 0;
   bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.createRole) {
+      _tab = 1;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _createRole();
+      });
+    }
+  }
+
+  void _createRole() => v2EditText(
+    context,
+    title: AppLocalizations.of(context)!.demoCreateRole,
+    label: AppLocalizations.of(context)!.demoName,
+    value: '',
+    onSave: (name) async {
+      if (!mounted) return;
+      final id = 'custom:$name';
+      setState(() {
+        if (!_custom.any((r) => r.id == id)) {
+          _custom.add(v2Character(id));
+        }
+        _selected.add(id);
+        _tab = 1;
+      });
+    },
+  );
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -762,22 +811,7 @@ class _RoleSheetState extends State<_RoleSheet> {
                     backgroundColor: v2Tint,
                     shape: const StadiumBorder(),
                   ),
-                  onPressed: () => v2EditText(
-                    context,
-                    title: l.demoCreateRole,
-                    label: l.demoName,
-                    value: '',
-                    onSave: (name) async {
-                      final id = 'custom:$name';
-                      setState(() {
-                        if (!_custom.any((r) => r.id == id)) {
-                          _custom.add(v2Character(id));
-                        }
-                        _selected.add(id);
-                        _tab = 1;
-                      });
-                    },
-                  ),
+                  onPressed: _busy ? null : _createRole,
                   icon: const V2Icon('plus', size: 18, color: AppColors.brand),
                   label: Text(l.demoCreateRole),
                 ),

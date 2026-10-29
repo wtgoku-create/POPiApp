@@ -250,6 +250,17 @@ class _V2AssetsViewState extends State<V2AssetsView> {
   int _filter = 0;
   bool _list = false;
   String _query = '';
+
+  Widget _withContextMenu(V2Asset asset, Widget child) {
+    if (widget.onSelect != null) return child;
+    return AppContextMenu(
+      key: ValueKey(asset.id),
+      label: asset.title,
+      entries: _assetMenuEntries(context, asset, widget.repository),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -344,42 +355,45 @@ class _V2AssetsViewState extends State<V2AssetsView> {
                         itemBuilder: (context, i) => Padding(
                           key: ValueKey(items[i].id),
                           padding: const EdgeInsets.only(bottom: 10),
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            tileColor: v2Surface(context),
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child:
-                                  items[i].kind == V2AssetKind.audio ||
-                                      items[i].kind == V2AssetKind.script
-                                  ? SizedBox.square(
-                                      dimension: 54,
-                                      child: V2DocumentCover(
-                                        kind: items[i].kind,
+                          child: _withContextMenu(
+                            items[i],
+                            ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              tileColor: v2Surface(context),
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child:
+                                    items[i].kind == V2AssetKind.audio ||
+                                        items[i].kind == V2AssetKind.script
+                                    ? SizedBox.square(
+                                        dimension: 54,
+                                        child: V2DocumentCover(
+                                          kind: items[i].kind,
+                                        ),
+                                      )
+                                    : Image.asset(
+                                        items[i].cover,
+                                        width: 54,
+                                        height: 54,
+                                        cacheWidth: 162,
+                                        fit: BoxFit.cover,
                                       ),
-                                    )
-                                  : Image.asset(
-                                      items[i].cover,
-                                      width: 54,
-                                      height: 54,
-                                      cacheWidth: 162,
-                                      fit: BoxFit.cover,
+                              ),
+                              title: Text(items[i].title),
+                              subtitle: Text(v2AssetMeta(l, items[i].kind)),
+                              onTap: () => widget.onSelect != null
+                                  ? widget.onSelect!(items[i])
+                                  : openV2Asset(context, items[i]),
+                              trailing: widget.onSelect != null
+                                  ? const Icon(Icons.add_circle_outline)
+                                  : _assetMenu(
+                                      context,
+                                      items[i],
+                                      widget.repository,
                                     ),
                             ),
-                            title: Text(items[i].title),
-                            subtitle: Text(v2AssetMeta(l, items[i].kind)),
-                            onTap: () => widget.onSelect != null
-                                ? widget.onSelect!(items[i])
-                                : openV2Asset(context, items[i]),
-                            trailing: widget.onSelect != null
-                                ? const Icon(Icons.add_circle_outline)
-                                : _assetMenu(
-                                    context,
-                                    items[i],
-                                    widget.repository,
-                                  ),
                           ),
                         ),
                       )
@@ -401,22 +415,25 @@ class _V2AssetsViewState extends State<V2AssetsView> {
                                       72,
                                 ),
                             itemCount: items.length,
-                            itemBuilder: (context, i) => V2AssetCard(
-                              key: ValueKey(items[i].id),
-                              asset: items[i],
-                              onTap: () => widget.onSelect != null
-                                  ? widget.onSelect!(items[i])
-                                  : openV2Asset(context, items[i]),
-                              trailing: widget.onSelect != null
-                                  ? const Icon(
-                                      Icons.add_circle_outline,
-                                      size: 20,
-                                    )
-                                  : _assetMenu(
-                                      context,
-                                      items[i],
-                                      widget.repository,
-                                    ),
+                            itemBuilder: (context, i) => _withContextMenu(
+                              items[i],
+                              V2AssetCard(
+                                key: ValueKey(items[i].id),
+                                asset: items[i],
+                                onTap: () => widget.onSelect != null
+                                    ? widget.onSelect!(items[i])
+                                    : openV2Asset(context, items[i]),
+                                trailing: widget.onSelect != null
+                                    ? const Icon(
+                                        Icons.add_circle_outline,
+                                        size: 20,
+                                      )
+                                    : _assetMenu(
+                                        context,
+                                        items[i],
+                                        widget.repository,
+                                      ),
+                              ),
                             ),
                           );
                         },
@@ -446,46 +463,50 @@ Widget _assetMenu(
           ? 16
           : 18,
     ),
-    entries: [
-      AppMenuItem(
-        label: l.demoAssetDetails,
-        icon: const Icon(Icons.info_outline),
-        onSelected: () => openV2Asset(context, asset),
-      ),
-      AppMenuItem(
-        label: l.renameProjectItem,
-        icon: const Icon(Icons.edit_outlined),
-        onSelected: () => v2EditText(
-          context,
-          title: l.demoRenameAsset,
-          useRootNavigator: true,
-          label: l.demoName,
-          maxLength: 40,
-          value: asset.title,
-          onSave: (v) => repository.renameAsset(asset.id, v),
-        ),
-      ),
-      AppMenuItem(
-        label: l.delete,
-        icon: const Icon(Icons.delete_outline),
-        destructive: true,
-        onSelected: () async {
-          final yes = await AppDialog.confirm(
-            context: context,
-            title: l.delete,
-            useRootNavigator: true,
-            description: l.demoDeleteDescription,
-            cancelLabel: l.cancel,
-            confirmLabel: l.confirm,
-            destructive: true,
-          );
-          if (yes == true && context.mounted) {
-            await v2Perform(context, () => repository.deleteAsset(asset.id));
-          }
-        },
-      ),
-    ],
+    entries: _assetMenuEntries(context, asset, repository),
   );
+}
+
+List<AppMenuEntry> _assetMenuEntries(
+  BuildContext context,
+  V2Asset asset,
+  V2Repository repository,
+) {
+  final l = AppLocalizations.of(context)!;
+  return [
+    AppMenuItem(
+      label: l.renameProjectItem,
+      icon: const Icon(Icons.edit_outlined),
+      onSelected: () => v2EditText(
+        context,
+        title: l.demoRenameAsset,
+        useRootNavigator: true,
+        label: l.demoName,
+        maxLength: 40,
+        value: asset.title,
+        onSave: (v) => repository.renameAsset(asset.id, v),
+      ),
+    ),
+    AppMenuItem(
+      label: l.delete,
+      icon: const Icon(Icons.delete_outline),
+      destructive: true,
+      onSelected: () async {
+        final yes = await AppDialog.confirm(
+          context: context,
+          title: l.delete,
+          useRootNavigator: true,
+          description: l.demoDeleteDescription,
+          cancelLabel: l.cancel,
+          confirmLabel: l.confirm,
+          destructive: true,
+        );
+        if (yes == true && context.mounted) {
+          await v2Perform(context, () => repository.deleteAsset(asset.id));
+        }
+      },
+    ),
+  ];
 }
 
 class V2AssetCard extends StatelessWidget {

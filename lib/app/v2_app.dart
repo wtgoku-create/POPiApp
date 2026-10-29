@@ -9,8 +9,9 @@ import '../shared/providers/storage_provider.dart';
 import '../shared/providers/settings_provider.dart';
 import '../shared/providers/user_provider.dart';
 import '../shared/widgets/app_keyboard_dismiss.dart';
+import '../shared/widgets/safe_area_store_sync.dart';
 import '../features/v2_shared/data/v2_repository.dart';
-import '../features/v2_home/presentation/v2_home_page.dart';
+import '../features/v2_home/presentation/v2_account_entry.dart';
 
 /// Mock creation flows share the existing account pages and local preferences.
 class V2App extends ConsumerStatefulWidget {
@@ -25,10 +26,23 @@ class _V2AppState extends ConsumerState<V2App> {
     ..restore();
   late final _router = createAppRouter(
     homeBuilder: (_, _) => const SizedBox.shrink(),
-    shellBuilder: (_, state, child) => V2HomePage(
-      repository: _repository,
-      routeActive: state.uri.path != '/',
-      routedContent: child,
+    shellBuilder: (_, state, child) => Consumer(
+      builder: (context, ref, _) {
+        final bootstrap = ref.watch(userBootstrapProvider);
+        final userId = ref.watch(userProvider.select((user) => user?.id));
+        if (bootstrap.isLoading && userId == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return V2AccountEntry(
+          key: ValueKey(userId),
+          repository: _repository,
+          userId: userId,
+          routeActive: state.uri.path != '/',
+          routedContent: child,
+        );
+      },
     ),
   );
   @override
@@ -57,7 +71,8 @@ class _V2AppState extends ConsumerState<V2App> {
         locale: ref.watch(localeProvider) ?? widget.locale,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
-        builder: (_, child) => AppKeyboardDismiss(child: child!),
+        builder: (_, child) =>
+            AppKeyboardDismiss(child: SafeAreaStoreSync(child: child!)),
       ),
     );
   }

@@ -252,6 +252,7 @@ class IpGuideReviewActions extends StatelessWidget {
         ] else ...[
           IpGuideNextButton(
             key: const Key('ip-confirm'),
+            loading: busy,
             label: busy ? l10n.ipCreating : l10n.ipConfirmCreate,
             onPressed: busy ? null : onConfirm,
           ),

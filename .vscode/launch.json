@@ -2,10 +2,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "POPi - V2 (Mock UI)",
+      "name": "POPi - Development",
       "request": "launch",
       "type": "dart",
-      "program": "lib/main_demo.dart",
+      "program": "lib/main.dart",
       "flutterMode": "debug",
       "osx": {
         "env": {
@@ -28,20 +28,6 @@
       },
       "preLaunchTask": "POPi: prepare production",
       "toolArgs": ["--dart-define-from-file=config/env/production.json"]
-    },
-    {
-      "name": "POPi - Development",
-      "request": "launch",
-      "type": "dart",
-      "program": "lib/main.dart",
-      "flutterMode": "debug",
-      "osx": {
-        "env": {
-          "PATH": "/opt/homebrew/opt/ruby/bin:/opt/homebrew/bin:/usr/local/bin:${env:PATH}"
-        }
-      },
-      "preLaunchTask": "POPi: prepare development",
-      "toolArgs": ["--dart-define-from-file=config/env/development.json"]
     }
   ]
 }

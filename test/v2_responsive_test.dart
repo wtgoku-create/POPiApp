@@ -15,7 +15,7 @@ import 'package:popi_ai_app/features/session/presentation/widgets/popi_message_c
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/v2_assets/presentation/v2_assets_page.dart';
 import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
-import 'package:popi_ai_app/features/v2_home/presentation/v2_welcome_page.dart';
+import 'package:popi_ai_app/features/v2_home/presentation/widgets/v2_create_popi_sheet.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_chat_page.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_settings_page.dart';
 import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
@@ -634,9 +634,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('welcome avoids the outer system bar in the detail pane', (
-    tester,
-  ) async {
+  testWidgets('create sheet stays in its originating pane', (tester) async {
     tester.view.padding = const FakeViewPadding(right: 62, bottom: 21);
     addTearDown(tester.view.resetPadding);
     await _pump(tester, size: const Size(900, 700));
@@ -644,11 +642,64 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     final content = find.descendant(
-      of: find.byType(V2WelcomePage),
+      of: find.byType(V2CreatePopiSheet),
       matching: find.byType(CustomScrollView),
     );
-    expect(tester.getRect(content).left, 320);
-    expect(tester.getRect(content).right, 900 - 62);
+    expect(tester.getRect(content).left, 20);
+    expect(tester.getRect(content).right, 320 - 20);
+    await _capture(tester, 'create-popi-sidebar');
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
+    await tester.pumpAndSettle();
+    final chat = find.byType(V2ChatPage);
+    expect(tester.getRect(chat).left, 320);
+    expect(tester.getRect(chat).right, 900);
+    expect(
+      tester.getRect(find.byKey(const Key('v2-role-onboarding'))).right,
+      lessThanOrEqualTo(900 - 62),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('create sheet and empty chat match the mobile design', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(top: 52, bottom: 34);
+    addTearDown(tester.view.resetPadding);
+    await _pump(tester, size: const Size(440, 956));
+    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.pumpAndSettle();
+    await _capture(tester, 'create-popi-mobile');
+    expect(
+      tester.getSize(find.byKey(const Key('v2-create-popi-preview'))),
+      const Size.square(100),
+    );
+    await tester.tap(find.byKey(const Key('v2-create-popi-name')));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byKey(const Key('v2-create-popi-confirm'))).bottom,
+      lessThanOrEqualTo(956 - 300),
+    );
+    await _capture(tester, 'create-popi-keyboard');
+    tester.view.viewInsets = const FakeViewPadding();
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const Key('v2-role-onboarding'))),
+      const Size(400, 230),
+    );
+    await _capture(tester, 'empty-chat-mobile');
+    await _resize(tester, const Size(320, 680));
+    await _capture(tester, 'empty-chat-small');
+    await tester.ensureVisible(find.byKey(const Key('v2-create-diy-role')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byKey(const Key('v2-create-diy-role'))).bottom,
+      lessThanOrEqualTo(tester.getRect(find.byType(PopiMessageComposer)).top),
+    );
     expect(tester.takeException(), isNull);
   });
 

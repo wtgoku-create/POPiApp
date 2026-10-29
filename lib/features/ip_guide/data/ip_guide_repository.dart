@@ -11,31 +11,26 @@ import '../../ip_accounts/domain/account_preferences.dart';
 import '../../session/domain/conversation_session.dart';
 import '../domain/ip_guide_draft.dart';
 
-/// Serializes writes so an older autosave cannot resurrect a cleared draft.
-class IpGuideRepository {
-  IpGuideRepository(
-    this._storage,
-    this._api,
-    this._agent, {
+/// Shared draft persistence for account creation and first-use session setup.
+abstract class IpGuideDraftRepository {
+  IpGuideDraftRepository(
+    PreferencesStorage storage, {
     required String? userId,
-  }) : _key = 'ip_guide_draft_v1:${userId ?? 'guest'}';
+    String namespace = 'ip_guide_draft_v1',
+  }) : _storage = storage,
+       _key = '$namespace:${userId ?? 'guest'}';
 
   final PreferencesStorage _storage;
-  final NetworkApi _api;
-  final NetworkAgentApi _agent;
   final String _key;
   Future<void>? _writes;
-  final _creationToken = CancelToken();
 
-  void dispose() => _creationToken.cancel();
+  void dispose() {}
 
   Future<List<AccountPreferenceStep>> preferenceOptions({
     CancelToken? cancelToken,
-  }) => IpAccountRepository(_api).preferenceOptions(cancelToken: cancelToken);
+  });
 
-  void _checkActive() {
-    if (_creationToken.isCancelled) throw _creationToken.cancelError!;
-  }
+  Future<String> create(IpGuideDraft draft, Map<String, Object?> profile);
 
   IpGuideDraft? load() {
     final raw = _storage.getString(_key);
@@ -116,7 +111,68 @@ class IpGuideRepository {
 
   Future<void> clear() => _enqueue(() => _storage.remove(_key));
 
+  Future<void> _enqueue(Future<void> Function() write) {
+    final result = _writes?.then((_) => write()) ?? write();
+    _writes = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
+  Map<String, Object?> _selection<T extends Enum>(IpGuideSelection<T> value) =>
+      {
+        'values': value.values.map((item) => item.name).toList(),
+        'customText': value.customText,
+      };
+
+  void _restore<T extends Enum>(
+    IpGuideSelection<T> selection,
+    List<T> options,
+    Object? value,
+  ) {
+    if (value is! Map<String, dynamic>) return;
+    for (final name in (value['values'] as List? ?? const [])) {
+      final item = _enum(options, name);
+      if (item != null && !selection.values.contains(item)) {
+        selection.toggle(item);
+      }
+    }
+    selection.customText = value['customText'] as String? ?? '';
+  }
+
+  T? _enum<T extends Enum>(List<T> values, Object? name) {
+    for (final value in values) {
+      if (value.name == name) return value;
+    }
+    return null;
+  }
+}
+
+/// Creates the production account and binds its main session.
+class IpGuideRepository extends IpGuideDraftRepository {
+  IpGuideRepository(
+    super.storage,
+    this._api,
+    this._agent, {
+    required super.userId,
+  });
+
+  final NetworkApi _api;
+  final NetworkAgentApi _agent;
+  final _creationToken = CancelToken();
+
+  @override
+  void dispose() => _creationToken.cancel();
+
+  @override
+  Future<List<AccountPreferenceStep>> preferenceOptions({
+    CancelToken? cancelToken,
+  }) => IpAccountRepository(_api).preferenceOptions(cancelToken: cancelToken);
+
+  void _checkActive() {
+    if (_creationToken.isCancelled) throw _creationToken.cancelError!;
+  }
+
   /// Account creation completes only after its main session is bound.
+  @override
   Future<String> create(
     IpGuideDraft draft,
     Map<String, Object?> profile,
@@ -182,39 +238,5 @@ class IpGuideRepository {
             ? [(entry.value as String)]
             : entry.value,
     };
-  }
-
-  Future<void> _enqueue(Future<void> Function() write) {
-    final result = _writes?.then((_) => write()) ?? write();
-    _writes = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
-    return result;
-  }
-
-  Map<String, Object?> _selection<T extends Enum>(IpGuideSelection<T> value) =>
-      {
-        'values': value.values.map((item) => item.name).toList(),
-        'customText': value.customText,
-      };
-
-  void _restore<T extends Enum>(
-    IpGuideSelection<T> selection,
-    List<T> options,
-    Object? value,
-  ) {
-    if (value is! Map<String, dynamic>) return;
-    for (final name in (value['values'] as List? ?? const [])) {
-      final item = _enum(options, name);
-      if (item != null && !selection.values.contains(item)) {
-        selection.toggle(item);
-      }
-    }
-    selection.customText = value['customText'] as String? ?? '';
-  }
-
-  T? _enum<T extends Enum>(List<T> values, Object? name) {
-    for (final value in values) {
-      if (value.name == name) return value;
-    }
-    return null;
   }
 }

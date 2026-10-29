@@ -155,16 +155,19 @@ void main() {
         final entry = find.byKey(const Key('profile-cancel-account-menu'));
         await tester.scrollUntilVisible(entry, 200);
         await tester.pumpAndSettle();
-        final button = tester.widget<FilledButton>(entry);
-        expect(
-          button.style!.backgroundColor!.resolve({}),
-          const Color(0xFFD63D43),
-        );
-        expect(button.style!.shape!.resolve({}), isA<StadiumBorder>());
+        final row = tester.widget<SettingsRow>(entry);
+        expect(row.foregroundColor, const Color(0xFFD63D43));
+        expect(tester.getSize(entry).height, 60);
         expect(
           find.ancestor(of: entry, matching: find.byType(SettingsGroup)),
-          findsNothing,
+          findsOneWidget,
         );
+        final logout = find.byKey(const Key('profile-logout-menu'));
+        await tester.ensureVisible(logout);
+        await tester.pumpAndSettle();
+        final button = tester.widget<TextButton>(logout);
+        expect(button.style!.shape!.resolve({}), isA<StadiumBorder>());
+        expect(tester.getSize(logout).height, 50);
         await openConfirmation(tester);
         expect(find.byType(Dialog), findsOneWidget);
         expect(
@@ -229,11 +232,11 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-cancel-account-button')));
       await tester.pump(const Duration(milliseconds: 400));
       final entry = find.byKey(const Key('profile-cancel-account-menu'));
-      expect(tester.widget<FilledButton>(entry).onPressed, isNull);
+      expect(tester.widget<SettingsRow>(entry).onTap, isNull);
       expect(
         tester
-            .widget<SettingsRow>(find.byKey(const Key('profile-logout-menu')))
-            .onTap,
+            .widget<TextButton>(find.byKey(const Key('profile-logout-menu')))
+            .onPressed,
         isNull,
       );
       expect(
@@ -260,7 +263,7 @@ void main() {
         20,
       );
       expect(fixture.storage.token, 'current-token');
-      expect(tester.widget<FilledButton>(entry).onPressed, isNotNull);
+      expect(tester.widget<SettingsRow>(entry).onTap, isNotNull);
       toastification.dismissAll(delayForAnimation: false);
       await tester.pumpAndSettle();
 

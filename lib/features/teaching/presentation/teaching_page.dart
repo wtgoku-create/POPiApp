@@ -10,9 +10,7 @@ import '../../../core/network/network_api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/network_provider.dart';
 import '../../../shared/widgets/app_image_preview.dart';
-import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
-import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../data/teaching_repository.dart';
 import '../domain/teaching.dart';
 import 'widgets/teaching_banners.dart';
@@ -30,7 +28,6 @@ class TeachingPage extends ConsumerStatefulWidget {
 class _TeachingPageState extends ConsumerState<TeachingPage> {
   static const _pageSize = 20;
 
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _scroll = ScrollController();
   late final TeachingRepository _repository;
   List<TeachingCategory> _categories = const [];
@@ -177,9 +174,7 @@ class _TeachingPageState extends ConsumerState<TeachingPage> {
         ? const Color(0xFFF5F4FA)
         : scheme.surface;
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: background,
-      drawer: const PopiNavigationDrawer(),
       body: SafeArea(
         top: false,
         child: Column(
@@ -213,13 +208,14 @@ class _TeachingPageState extends ConsumerState<TeachingPage> {
                         Positioned(
                           left: 15,
                           child: IconButton(
-                            key: const Key('popi-open-navigation'),
-                            tooltip: l10n.openNavigation,
-                            onPressed: () =>
-                                _scaffoldKey.currentState?.openDrawer(),
-                            icon: AppSvgIcon.asset(
-                              'common_navigation_menu',
-                              size: 30,
+                            key: const Key('teaching-back'),
+                            tooltip: l10n.back,
+                            onPressed: () => context.canPop()
+                                ? context.pop()
+                                : context.go('/'),
+                            icon: Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 21,
                               color: scheme.onSurface,
                             ),
                           ),

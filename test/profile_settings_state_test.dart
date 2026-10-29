@@ -43,9 +43,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Finder menuIn(Finder page, int index) => find
-      .descendant(of: page, matching: find.byType(TreeSettingsMenu))
-      .at(index);
+  Finder menuIn(Finder page, int index) => find.descendant(
+    of: page,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is TreeSettingsMenu &&
+          widget.menuKey ==
+              Key('${['language', 'theme'][index]}-settings-menu'),
+    ),
+  );
 
   Future<void> toggle(WidgetTester tester, Finder menu) async {
     final row = find.descendant(of: menu, matching: find.byType(SettingsRow));

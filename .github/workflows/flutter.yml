@@ -7,14 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       build_environment:
-        description: Build variant (dev uses the test server; demo uses offline Mock UI)
+        description: Build environment (dev uses the test server)
         required: true
         default: production
         type: choice
         options:
           - production
           - dev
-          - demo
       build_android:
         description: Build Android APK
         required: true
@@ -35,9 +34,9 @@ permissions:
   contents: read
 
 env:
-  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && (inputs.build_environment == 'dev' || inputs.build_environment == 'demo') && 'development' || 'production' }}
-  BUILD_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && 'lib/main_demo.dart' || 'lib/main.dart' }}
-  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'demo' && '-demo' || github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
+  FLUTTER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && 'development' || 'production' }}
+  BUILD_TARGET: lib/main.dart
+  BUILD_ARTIFACT_SUFFIX: ${{ github.event_name == 'workflow_dispatch' && inputs.build_environment == 'dev' && '-dev' || '' }}
 
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}

@@ -153,6 +153,7 @@ class V2Scaffold extends StatelessWidget {
     required this.title,
     required this.child,
     this.actions,
+    this.actionsSpacing = 0,
     this.leading,
     this.bottom,
     this.floatingBottom = false,
@@ -160,11 +161,13 @@ class V2Scaffold extends StatelessWidget {
     this.contentMaxWidth = 640,
     this.extendBodyBehindAppBar = false,
     this.bottomSafeArea = false,
+    this.backgroundColor,
     super.key,
   });
   final Widget title;
   final Widget child;
   final List<Widget>? actions;
+  final double actionsSpacing;
   final Widget? leading;
   final Widget? bottom;
   final bool floatingBottom;
@@ -172,8 +175,10 @@ class V2Scaffold extends StatelessWidget {
   final double contentMaxWidth;
   final bool extendBodyBehindAppBar;
   final bool bottomSafeArea;
+  final Color? backgroundColor;
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: backgroundColor,
     extendBody: floatingBottom,
     extendBodyBehindAppBar: extendBodyBehindAppBar,
     appBar: AppGlassAppBar(
@@ -218,8 +223,10 @@ class V2Scaffold extends StatelessWidget {
         actions: actions == null
             ? null
             : [
-                for (final action in actions!)
+                for (final (index, action) in actions!.indexed) ...[
+                  if (index > 0) SizedBox(width: actionsSpacing),
                   SizedBox.square(dimension: 40, child: action),
+                ],
                 SizedBox(width: v2HorizontalPagePadding(context).right),
               ],
       ),
@@ -394,12 +401,14 @@ abstract final class V2Sheet {
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
+    bool enableDrag = true,
   }) {
     final top = MediaQuery.paddingOf(context).top + 66;
     return AppSheet.show<T>(
       context: context,
       useSafeArea: false,
       isScrollControlled: true,
+      enableDrag: enableDrag,
       maxHeightFraction: 1,
       showDragHandle: false,
       backgroundColor: Colors.transparent,

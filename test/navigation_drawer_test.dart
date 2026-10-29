@@ -54,6 +54,7 @@ void main() {
     Locale locale = const Locale('zh'),
     bool signedIn = true,
     bool expandNavigation = true,
+    bool openDrawer = true,
     String initialLocation = '/session?prompt=旧草稿',
     FixtureSessionRepository? repository,
   }) async {
@@ -110,6 +111,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (!openDrawer) return container;
     await tester.tap(find.byKey(const Key('popi-open-navigation')));
     await tester.pumpAndSettle();
     if (expandNavigation) {
@@ -119,20 +121,28 @@ void main() {
     return container;
   }
 
-  testWidgets('teaching navigation starts collapsed on direct entry', (
-    tester,
-  ) async {
-    await pumpDrawer(
-      tester,
-      initialLocation: '/teaching',
-      expandNavigation: false,
-    );
-    expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
-    expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
-    await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('drawer-nav-teaching')), findsOneWidget);
-  });
+  testWidgets(
+    'direct teaching entry returns to home with collapsed navigation',
+    (tester) async {
+      await pumpDrawer(
+        tester,
+        initialLocation: '/teaching',
+        expandNavigation: false,
+        openDrawer: false,
+      );
+      expect(find.byKey(const Key('popi-open-navigation')), findsNothing);
+      await tester.tap(find.byKey(const Key('teaching-back')));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      await tester.tap(find.byKey(const Key('popi-open-navigation')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
+      expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
+      await tester.tap(find.byKey(const Key('drawer-nav-view-all')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('drawer-nav-teaching')), findsOneWidget);
+    },
+  );
 
   testWidgets('closing the drawer resets expanded navigation', (tester) async {
     await pumpDrawer(tester);
@@ -1009,12 +1019,7 @@ void main() {
         await tester.tap(find.byTooltip('返回'));
         await tester.pumpAndSettle();
         expect(find.byType(TeachingPage), findsOneWidget);
-        await tester.tap(find.byKey(const Key('popi-open-navigation')));
-        await tester.pumpAndSettle();
-        expect(find.byKey(const Key('drawer-nav-view-all')), findsOneWidget);
-        expect(find.byKey(const Key('drawer-nav-teaching')), findsNothing);
-        expect(find.text('收起'), findsNothing);
-        await tester.tap(find.byKey(const Key('drawer-nav-home')));
+        await tester.tap(find.byKey(const Key('teaching-back')));
         await tester.pumpAndSettle();
         expect(router.state.uri.path, '/');
         expect(find.byType(HomePage), findsOneWidget);

@@ -170,15 +170,37 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   MembershipCard(pointPackageLoader: widget.pointPackageLoader),
                   const SizedBox(height: 12),
                   SettingsGroup(
+                    spacious: true,
                     children: [
                       SettingsRow(
                         key: const Key('profile-redemption-center'),
+                        spacious: true,
                         iconWidget: const AppSvgIcon.asset(
                           'redemption_center',
                           size: 30,
                         ),
                         label: l10n.redemptionCenter,
                         onTap: () => context.push('/profile/redemption'),
+                      ),
+                      SettingsRow(
+                        key: const Key('profile-activities-center'),
+                        spacious: true,
+                        iconWidget: const AppSvgIcon.asset(
+                          'profile_settings_activities',
+                          size: 24,
+                        ),
+                        label: l10n.activityCenter,
+                        onTap: () => context.push('/activities'),
+                      ),
+                      SettingsRow(
+                        key: const Key('profile-teaching-center'),
+                        spacious: true,
+                        iconWidget: const AppSvgIcon.asset(
+                          'profile_settings_teaching',
+                          size: 24,
+                        ),
+                        label: l10n.teachingCenter,
+                        onTap: () => context.push('/teaching'),
                       ),
                     ],
                   ),
@@ -204,12 +226,45 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   SettingsGroup(
+                    spacious: true,
                     children: [
                       TreeSettingsMenu(
+                        menuKey: const Key('theme-settings-menu'),
+                        iconWidget: const AppSvgIcon.asset(
+                          'profile_settings_theme',
+                          size: 24,
+                        ),
+                        label: l10n.theme,
+                        value: _themeLabel(themeMode, l10n),
+                        expanded: _themeExpanded,
+                        onToggle: () =>
+                            setState(() => _themeExpanded = !_themeExpanded),
+                        options: [
+                          TreeSettingsOption(
+                            label: l10n.light,
+                            selected: themeMode == ThemeMode.light,
+                            onTap: () => _setThemeMode(ThemeMode.light),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.dark,
+                            selected: themeMode == ThemeMode.dark,
+                            onTap: () => _setThemeMode(ThemeMode.dark),
+                          ),
+                          TreeSettingsOption(
+                            label: l10n.system,
+                            selected: themeMode == ThemeMode.system,
+                            onTap: () => _setThemeMode(ThemeMode.system),
+                          ),
+                        ],
+                      ),
+                      TreeSettingsMenu(
                         menuKey: const Key('language-settings-menu'),
-                        icon: Icons.translate,
+                        iconWidget: const AppSvgIcon.asset(
+                          'profile_settings_language',
+                          size: 30,
+                        ),
                         label: l10n.language,
                         value: _languageLabel(locale, l10n),
                         expanded: _languageExpanded,
@@ -234,80 +289,62 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                           ),
                         ],
                       ),
-                      TreeSettingsMenu(
-                        menuKey: const Key('theme-settings-menu'),
-                        icon: Icons.dark_mode_outlined,
-                        label: l10n.theme,
-                        value: _themeLabel(themeMode, l10n),
-                        expanded: _themeExpanded,
-                        onToggle: () =>
-                            setState(() => _themeExpanded = !_themeExpanded),
-                        options: [
-                          TreeSettingsOption(
-                            label: l10n.light,
-                            selected: themeMode == ThemeMode.light,
-                            onTap: () => _setThemeMode(ThemeMode.light),
-                          ),
-                          TreeSettingsOption(
-                            label: l10n.dark,
-                            selected: themeMode == ThemeMode.dark,
-                            onTap: () => _setThemeMode(ThemeMode.dark),
-                          ),
-                          TreeSettingsOption(
-                            label: l10n.system,
-                            selected: themeMode == ThemeMode.system,
-                            onTap: () => _setThemeMode(ThemeMode.system),
-                          ),
-                        ],
-                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SettingsGroup(
+                    spacious: true,
+                    children: [
                       SettingsRow(
                         key: const Key('about-settings-menu'),
-                        icon: Icons.info_outline,
+                        spacious: true,
+                        iconWidget: const AppSvgIcon.asset(
+                          'profile_settings_about',
+                          size: 24,
+                        ),
                         label: l10n.aboutPopiAi,
                         onTap: () => context.push('/profile/about'),
                       ),
-                      const Divider(height: 1, indent: 20, endIndent: 20),
-                      SettingsRow(
-                        key: const Key('profile-logout-menu'),
-                        icon: Icons.logout,
-                        label: l10n.logout,
-                        showChevron: false,
-                        onTap: _cancelingAccount
-                            ? null
-                            : () => _confirmLogout(context, ref),
-                      ),
+                      if (user != null)
+                        SettingsRow(
+                          key: const Key('profile-cancel-account-menu'),
+                          spacious: true,
+                          foregroundColor: const Color(0xFFD63D43),
+                          iconWidget: const AppSvgIcon.asset(
+                            'profile_settings_cancel_account',
+                            size: 24,
+                          ),
+                          label: l10n.cancelAccount,
+                          busy: _cancelingAccount,
+                          onTap: _cancelingAccount
+                              ? null
+                              : _confirmCancelAccount,
+                        ),
                     ],
                   ),
-                  if (user != null) ...[
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      height: 50,
-                      child: FilledButton(
-                        key: const Key('profile-cancel-account-menu'),
-                        onPressed: _cancelingAccount
-                            ? null
-                            : _confirmCancelAccount,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFD63D43),
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: const Color(
-                            0xFFD63D43,
-                          ).withValues(alpha: .5),
-                          shape: const StadiumBorder(),
-                          textStyle: const TextStyle(fontSize: 16),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 50,
+                    child: TextButton(
+                      key: const Key('profile-logout-menu'),
+                      onPressed: _cancelingAccount
+                          ? null
+                          : () => _confirmLogout(context, ref),
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.light
+                            ? colorScheme.surface.withValues(alpha: .5)
+                            : colorScheme.surfaceContainerLow,
+                        foregroundColor: colorScheme.onSurface,
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                         ),
-                        child: _cancelingAccount
-                            ? const SizedBox.square(
-                                dimension: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(l10n.cancelAccount),
                       ),
+                      child: Text(l10n.logout),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -559,25 +596,34 @@ class MembershipCard extends ConsumerWidget {
 }
 
 class SettingsGroup extends StatelessWidget {
-  const SettingsGroup({required this.children, super.key});
+  const SettingsGroup({
+    required this.children,
+    this.spacious = false,
+    super.key,
+  });
 
   final List<Widget> children;
+  final bool spacious;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: spacious ? 0 : 4),
       decoration: BoxDecoration(
-        color: isDark ? colorScheme.surfaceContainerLow : colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadii.medium),
-        border: isDark
+        color: isDark
+            ? colorScheme.surfaceContainerLow
+            : colorScheme.surface.withValues(alpha: spacious ? .5 : 1),
+        borderRadius: BorderRadius.circular(
+          spacious ? AppRadii.card : AppRadii.medium,
+        ),
+        border: isDark && !spacious
             ? Border.all(
                 color: colorScheme.outlineVariant.withValues(alpha: 0.45),
               )
             : null,
-        boxShadow: isDark
+        boxShadow: isDark && !spacious
             ? [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.16),
@@ -595,7 +641,7 @@ class SettingsGroup extends StatelessWidget {
 class TreeSettingsMenu extends StatelessWidget {
   const TreeSettingsMenu({
     required this.menuKey,
-    required this.icon,
+    required this.iconWidget,
     required this.label,
     this.value,
     required this.expanded,
@@ -605,7 +651,7 @@ class TreeSettingsMenu extends StatelessWidget {
   });
 
   final Key menuKey;
-  final IconData icon;
+  final Widget iconWidget;
   final String label;
   final String? value;
   final bool expanded;
@@ -618,10 +664,11 @@ class TreeSettingsMenu extends StatelessWidget {
       key: menuKey,
       children: [
         SettingsRow(
-          icon: icon,
+          spacious: true,
+          iconWidget: iconWidget,
           label: label,
           value: value,
-          trailing: expanded ? Icons.expand_less : Icons.expand_more,
+          trailing: expanded ? Icons.expand_less : null,
           onTap: onToggle,
         ),
         if (expanded)

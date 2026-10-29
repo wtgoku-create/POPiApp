@@ -1734,6 +1734,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePromptUnsure => 'I\'m not sure what to create yet';
 
   @override
+  String get guestTagline => 'Your short-video account advisor';
+
+  @override
+  String get guestStartCreating => 'Sign in to create';
+
+  @override
+  String get guestVoiceInput => 'Voice input';
+
+  @override
   String get aiDisclaimer =>
       'AI-generated results may be inaccurate and are for reference only';
 
@@ -3582,6 +3591,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get demoComposer => 'Say something to POPi…';
+
+  @override
+  String get v2CreatePopi => 'Create a POPi';
+
+  @override
+  String get v2PopiPersonality => 'Responsibilities & personality';
+
+  @override
+  String get v2PopiPersonalityHint =>
+      'Describe POPi\'s role, tone and collaboration preferences (optional)';
+
+  @override
+  String get v2MyColor => 'My color';
+
+  @override
+  String get v2AddCreativeRole => 'Add your creative character';
+
+  @override
+  String get v2AddCreativeRoleDescription =>
+      'Link an existing character or upload your own DIY character reference so your assistant knows who you\'re creating with.';
+
+  @override
+  String get v2CreateDiyRole => 'Create DIY character';
 
   @override
   String get demoGreeting => 'Hi there';

@@ -53,8 +53,8 @@ jobs:
           path: coverage/lcov.info
           if-no-files-found: ignore
 
-  demo-android:
-    name: Build Demo APK
+  build-android:
+    name: Build APK
     needs: verify
     if: github.ref == 'refs/heads/dev-mockui' || github.head_ref == 'dev-mockui' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -79,18 +79,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Demo APK with debug signing
-        run: dart run tool/flutter_env.dart development build apk --release --target=lib/main_demo.dart
+      - name: Build APK with debug signing
+        run: dart run tool/flutter_env.dart development build apk --release
 
-      - name: Upload Demo APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: popi-demo-android-apk-${{ github.run_id }}
+          name: popi-android-apk-${{ github.run_id }}
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
-  demo-ios-simulator:
-    name: Build Demo iOS Simulator
+  build-ios-simulator:
+    name: Build iOS Simulator
     needs: verify
     if: github.ref == 'refs/heads/dev-mockui' || github.head_ref == 'dev-mockui' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
@@ -109,15 +109,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Demo iOS Simulator
-        run: dart run tool/flutter_env.dart development build ios --simulator --target=lib/main_demo.dart
+      - name: Build iOS Simulator
+        run: dart run tool/flutter_env.dart development build ios --simulator
 
       - name: Package simulator app
-        run: tar -czf build/popi-demo-ios-simulator.tar.gz -C build/ios/iphonesimulator Runner.app
+        run: tar -czf build/popi-ios-simulator.tar.gz -C build/ios/iphonesimulator Runner.app
 
-      - name: Upload Demo iOS Simulator
+      - name: Upload iOS Simulator
         uses: actions/upload-artifact@v4
         with:
-          name: popi-demo-ios-simulator-${{ github.run_id }}
-          path: build/popi-demo-ios-simulator.tar.gz
+          name: popi-ios-simulator-${{ github.run_id }}
+          path: build/popi-ios-simulator.tar.gz
           if-no-files-found: error

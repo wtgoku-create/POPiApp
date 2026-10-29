@@ -207,7 +207,7 @@ void main() {
       scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
       await tester.pumpAndSettle();
       expect(
-        tester.getBottomLeft(find.byType(SettingsGroup).last).dy,
+        tester.getBottomLeft(find.byKey(const Key('profile-logout-menu'))).dy,
         closeTo(600 - (bottomInset < 20 ? 20 : bottomInset), .01),
       );
       expect(tester.takeException(), isNull);
@@ -467,7 +467,7 @@ void main() {
     expect(find.byKey(const Key('profile-points-icon')), findsOneWidget);
 
     final logoutMenu = find.byKey(const Key('profile-logout-menu'));
-    await tester.ensureVisible(logoutMenu);
+    await tester.scrollUntilVisible(logoutMenu, 300);
     await tester.pumpAndSettle();
     expect(logoutMenu, findsOneWidget);
   });
@@ -1039,7 +1039,7 @@ void main() {
     await pumpPage(tester, const ProfilePage());
 
     final logoutMenu = find.byKey(const Key('profile-logout-menu'));
-    await tester.ensureVisible(logoutMenu);
+    await tester.scrollUntilVisible(logoutMenu, 300);
     await tester.pumpAndSettle();
     await tester.tap(logoutMenu);
     await tester.pumpAndSettle();

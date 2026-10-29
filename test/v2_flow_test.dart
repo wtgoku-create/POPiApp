@@ -1,11 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:popi_ai_app/features/auth/presentation/login_page.dart';
+import 'package:popi_ai_app/features/auth/domain/user.dart';
+import 'package:popi_ai_app/features/notifications/presentation/notifications_page.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
+import 'package:popi_ai_app/features/v2_shared/data/v2_fixtures.dart';
 import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_chat_page.dart';
 import 'package:popi_ai_app/app/v2_app.dart';
@@ -15,6 +22,7 @@ import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/safe_area_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/providers/network_provider.dart';
 import 'package:popi_ai_app/shared/type/bot_avatar_type.dart';
 import 'package:popi_ai_app/shared/widgets/app_glass_app_bar.dart';
 import 'package:popi_ai_app/features/v2_shared/presentation/widgets/v2_widgets.dart';
@@ -22,11 +30,29 @@ import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
 
+class _ControlledStorage extends PreferencesStorage {
+  _ControlledStorage(super.preferences);
+  bool failWrites = false;
+  Completer<void>? writeGate;
+  @override
+  Future<void> setString(String key, String value) async {
+    await writeGate?.future;
+    if (failWrites) throw StateError('Disk unavailable');
+    await super.setString(key, value);
+  }
+}
+
+class _ReturningUser extends UserController {
+  @override
+  User? build() => const User(id: 'returning', name: '用户', email: '');
+}
+
 Future<V2Repository> _pump(
   WidgetTester tester, {
   Size size = const Size(390, 844),
   Locale locale = const Locale('zh'),
   bool disableAnimations = true,
+  PreferencesStorage? storage,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -34,7 +60,7 @@ Future<V2Repository> _pump(
   addTearDown(tester.view.resetDevicePixelRatio);
   SharedPreferences.setMockInitialValues({});
   final repository = V2Repository(
-    PreferencesStorage(await SharedPreferences.getInstance()),
+    storage ?? PreferencesStorage(await SharedPreferences.getInstance()),
   )..restore();
   addTearDown(repository.dispose);
   await tester.pumpWidget(
@@ -68,9 +94,15 @@ void main() {
       await _pump(tester, size: Size(width, 844));
       final avatar = tester.getRect(find.byTooltip('个人资料'));
       final create = tester.getRect(find.byKey(const Key('demo-create')));
+      final notifications = tester.getRect(
+        find.byKey(const Key('v2-notifications')),
+      );
       expect(avatar.size, const Size.square(40));
       expect(avatar.left, 20);
       expect(width - create.right, 20);
+      expect(notifications.size, const Size.square(40));
+      expect(create.left - notifications.right, 10);
+      expect(tester.getCenter(find.text('会话')).dx, width / 2);
       await tester.tap(find.text('灵感到成片'));
       await tester.pumpAndSettle();
       final back = tester.getRect(find.byTooltip('返回'));
@@ -91,13 +123,29 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({
+        V2Repository.storageKey: jsonEncode({
+          'sessions': V2Fixtures.sessions().map((s) => s.toJson()).toList(),
+          'assets': V2Fixtures.assets().map((a) => a.toJson()).toList(),
+          'onboardingSessions': {'returning': 'alice'},
+        }),
+      });
       final preferences = await SharedPreferences.getInstance();
+      final dio = Dio()
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) =>
+                handler.reject(DioException(requestOptions: options)),
+          ),
+        );
+      addTearDown(() => dio.close(force: true));
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(preferences),
             userBootstrapProvider.overrideWith((ref) async {}),
+            userProvider.overrideWith(_ReturningUser.new),
+            dioProvider.overrideWithValue(dio),
           ],
           child: const V2App(),
         ),
@@ -149,6 +197,13 @@ void main() {
       await tester.tap(find.text('爱丽丝视频').hitTestable());
       await tester.pumpAndSettle();
       final chatState = tester.state(find.byType(V2ChatPage));
+      await tester.tap(find.byKey(const Key('v2-notifications')));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationsPage), findsOneWidget);
+      expect(tester.getRect(find.byType(NotificationsPage)).left, 320);
+      await tester.tap(find.byKey(const Key('notification-back')));
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(V2ChatPage)), same(chatState));
       await tester.tap(find.byTooltip('个人资料'));
       await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
@@ -616,7 +671,7 @@ void main() {
         .update(const EdgeInsets.only(bottom: 34));
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('我还没想好，先聊聊'));
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
     await tester.pumpAndSettle();
     final disclaimer = find.text('AI生成结果可能有误，仅供参考');
     final bottom = tester.getBottomLeft(disclaimer).dy;
@@ -630,7 +685,7 @@ void main() {
     final repository = await _pump(tester);
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('我还没想好，先聊聊'));
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
     await tester.pumpAndSettle();
     expect(find.text('嗨，用户～'), findsOneWidget);
     final attachment = repository.assets.first;
@@ -670,35 +725,157 @@ void main() {
   });
 
   testWidgets(
-    'welcome matches the design geometry and keeps real line breaks',
+    'create sheet saves the configured assistant before opening an empty chat',
     (tester) async {
-      await _pump(tester, size: const Size(440, 956));
+      final repository = await _pump(tester, size: const Size(440, 956));
       await tester.tap(find.byKey(const Key('demo-create')));
       await tester.pumpAndSettle();
-      final panel = find.byKey(const Key('demo-welcome-options'));
-      expect(tester.getSize(panel), const Size(400, 310));
-      expect(tester.getTopLeft(panel).dy, closeTo(412, 1));
+      expect(find.text('创建一个POPi'), findsOneWidget);
       expect(
-        tester.getTopLeft(find.byKey(const Key('demo-welcome-greeting'))).dy,
-        closeTo(233, 1),
+        tester.getSize(find.byKey(const Key('v2-create-popi-preview'))),
+        const Size.square(100),
       );
-      expect(find.text('在创建会话之前\n请告诉我：\n你现在最想做什么？'), findsOneWidget);
+      expect(repository.sessions, hasLength(7));
+      await tester.enterText(
+        find.byKey(const Key('v2-create-popi-name')),
+        '画画搭子',
+      );
+      await tester.enterText(
+        find.byKey(const Key('v2-create-popi-instructions')),
+        '帮我设计角色，简洁表达',
+      );
+      tester.testTextInput.hide();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('v2-create-avatar-rabbit')),
+      );
+      await tester.tap(find.byKey(const ValueKey('v2-create-avatar-rabbit')));
+      final color = find.byKey(const ValueKey('v2-create-color-4293188862'));
+      await tester.ensureVisible(color);
+      await tester.tap(color);
+      await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
+      await tester.pumpAndSettle();
+      final session = repository.sessions.first;
+      expect(session.title, '画画搭子');
+      expect(session.memberNames, {'popi': '画画搭子'});
+      expect(session.memberInstructions, {'popi': '帮我设计角色，简洁表达'});
+      expect(session.memberAvatars, {
+        'popi': 'assets/images/popi_avatar_rabbit.png',
+      });
+      expect(session.memberColors, {'popi': 0xFFE4DCFE});
+      expect(session.messages, isEmpty);
+      expect(find.text('画画搭子'), findsOneWidget);
+      expect(find.byKey(const Key('v2-role-onboarding')), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('all welcome entries remain reachable on a small English phone', (
+  testWidgets('create controls remain reachable on a small English phone', (
     tester,
   ) async {
     await _pump(tester, size: const Size(320, 680), locale: const Locale('en'));
     await tester.tap(find.byKey(const Key('demo-create')));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('demo-welcome-entry-3')));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('v2-create-avatar-pig')),
+      100,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('v2-create-popi-form')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text("Let's chat first"));
+    await tester.tap(find.byKey(const ValueKey('v2-create-avatar-pig')));
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('demo-settings')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('cancelling creation leaves the conversation list unchanged', (
+    tester,
+  ) async {
+    final repository = await _pump(tester);
+    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 20));
+    await tester.pumpAndSettle();
+    expect(repository.sessions, hasLength(7));
+    expect(find.byType(V2ChatPage), findsNothing);
+    expect(find.byKey(const Key('demo-create')), findsOneWidget);
+  });
+
+  testWidgets(
+    'creation failure retains inputs and pending saves cannot duplicate',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final storage = _ControlledStorage(await SharedPreferences.getInstance())
+        ..failWrites = true;
+      final repository = await _pump(tester, storage: storage);
+      await tester.tap(find.byKey(const Key('demo-create')));
+      await tester.pumpAndSettle();
+      final name = find.byKey(const Key('v2-create-popi-name'));
+      await tester.enterText(name, '我的助手');
+      await tester.pumpAndSettle();
+      final confirm = find.byKey(const Key('v2-create-popi-confirm'));
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(repository.sessions, hasLength(7));
+      expect(tester.widget<TextField>(name).controller!.text, '我的助手');
+      storage.failWrites = false;
+      final gate = storage.writeGate = Completer<void>();
+      await tester.tap(confirm);
+      await tester.pump();
+      final button = find.descendant(
+        of: confirm,
+        matching: find.byType(FilledButton),
+      );
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(repository.sessions, hasLength(8));
+      expect(repository.sessions.first.title, '我的助手');
+      expect(find.byType(V2ChatPage), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets('empty chat links a role and removes the onboarding card', (
+    tester,
+  ) async {
+    final repository = await _pump(tester);
+    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('v2-link-role')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('er')));
+    await tester.tap(find.text('加入创作'));
+    await tester.pumpAndSettle();
+    expect(repository.sessions.first.roles, ['er']);
+    expect(find.byKey(const Key('v2-role-onboarding')), findsNothing);
+    expect(find.text('嗨，用户～'), findsOneWidget);
+  });
+
+  testWidgets('empty chat can create and link a custom role', (tester) async {
+    final repository = await _pump(tester);
+    await tester.tap(find.byKey(const Key('demo-create')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('v2-create-popi-confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('v2-create-diy-role')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '小橘');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('加入创作'));
+    await tester.pumpAndSettle();
+    expect(repository.sessions.first.roles, ['custom:小橘']);
+    expect(find.byKey(const Key('v2-role-onboarding')), findsNothing);
   });
 
   testWidgets('English layout fits the smaller phone viewport', (tester) async {

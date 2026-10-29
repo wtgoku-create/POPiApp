@@ -11,11 +11,13 @@ class IpGuideNextButton extends StatelessWidget {
   const IpGuideNextButton({
     required this.label,
     required this.onPressed,
+    this.loading = false,
     super.key,
   });
 
   final String label;
   final VoidCallback? onPressed;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -38,11 +40,20 @@ class IpGuideNextButton extends StatelessWidget {
         children: [
           Flexible(child: Text(label, textAlign: TextAlign.center)),
           const SizedBox(width: 8),
-          const AppSvgIcon.asset(
-            'home_welcome_chevron',
-            size: 13,
-            color: Colors.white,
-          ),
+          if (loading)
+            const SizedBox.square(
+              dimension: 13,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          else
+            const AppSvgIcon.asset(
+              'home_welcome_chevron',
+              size: 13,
+              color: Colors.white,
+            ),
         ],
       ),
     ),

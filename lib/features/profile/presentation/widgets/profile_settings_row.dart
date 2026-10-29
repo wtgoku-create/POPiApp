@@ -12,6 +12,9 @@ class SettingsRow extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.showChevron = true,
+    this.spacious = false,
+    this.foregroundColor,
+    this.busy = false,
     super.key,
   }) : assert(icon != null || iconWidget != null);
 
@@ -22,43 +25,54 @@ class SettingsRow extends StatelessWidget {
   final VoidCallback? onTap;
   final IconData? trailing;
   final bool showChevron;
+  final bool spacious;
+  final Color? foregroundColor;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final foreground = foregroundColor ?? colorScheme.onSurface;
+    final secondary =
+        spacious && Theme.of(context).brightness == Brightness.light
+        ? AppColors.textTertiary
+        : colorScheme.onSurfaceVariant;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.medium),
+      borderRadius: BorderRadius.circular(
+        spacious ? AppRadii.card : AppRadii.medium,
+      ),
       child: SizedBox(
-        height: 48,
+        height: spacious ? 60 : 48,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(horizontal: spacious ? 20 : 16),
           child: LayoutBuilder(
             builder: (context, constraints) => Row(
               children: [
                 SizedBox.square(
-                  dimension: 20,
+                  dimension: spacious ? 30 : 20,
                   child: Center(
                     child: iconWidget == null
-                        ? Icon(icon, size: 20, color: colorScheme.onSurface)
+                        ? Icon(icon, size: 20, color: foreground)
                         : ColorFiltered(
                             colorFilter: ColorFilter.mode(
-                              colorScheme.onSurface,
+                              foreground,
                               BlendMode.srcIn,
                             ),
                             child: iconWidget!,
                           ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: spacious ? 5 : 10),
                 Expanded(
                   child: Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 16,
-                      color: colorScheme.onSurface,
+                      fontSize: spacious ? 18 : 16,
+                      fontWeight: spacious ? FontWeight.w600 : FontWeight.w400,
+                      color: foreground,
                     ),
                   ),
                 ),
@@ -73,29 +87,32 @@ class SettingsRow extends StatelessWidget {
                       textAlign: TextAlign.end,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 16, color: secondary),
                     ),
                   ),
                 ],
-                if (showChevron) ...[
-                  const SizedBox(width: 7),
+                if (showChevron || busy) ...[
+                  SizedBox(width: spacious ? 0 : 7),
                   SizedBox.square(
-                    dimension: 20,
+                    dimension: spacious ? 30 : 20,
                     child: Center(
-                      child: trailing == null
+                      child: busy
+                          ? SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: foreground,
+                              ),
+                            )
+                          : trailing == null
                           ? AppSvgIcon.asset(
                               'profile_settings_chevron',
                               size: 13,
-                              color: colorScheme.onSurfaceVariant,
+                              color: spacious
+                                  ? colorScheme.onSurface
+                                  : secondary,
                             )
-                          : Icon(
-                              trailing,
-                              size: 20,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
+                          : Icon(trailing, size: 20, color: secondary),
                     ),
                   ),
                 ],

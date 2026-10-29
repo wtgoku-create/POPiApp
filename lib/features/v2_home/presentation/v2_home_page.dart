@@ -9,11 +9,12 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/app_modal_scope.dart';
+import '../../../shared/widgets/app_svg_icon.dart';
 import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_assets/presentation/v2_assets_page.dart';
 import '../../v2_session/presentation/v2_chat_page.dart';
-import 'v2_welcome_page.dart';
+import 'widgets/v2_create_popi_sheet.dart';
 import '../../v2_shared/presentation/widgets/v2_widgets.dart';
 
 class V2HomePage extends StatefulWidget {
@@ -21,11 +22,13 @@ class V2HomePage extends StatefulWidget {
     required this.repository,
     this.routedContent,
     this.routeActive = false,
+    this.initialSessionId,
     super.key,
   });
   final V2Repository repository;
   final Widget? routedContent;
   final bool routeActive;
+  final String? initialSessionId;
   @override
   State<V2HomePage> createState() => _V2HomePageState();
 }
@@ -43,6 +46,17 @@ class _V2HomePageState extends State<V2HomePage> {
   bool _detailActive = false;
   String? _selectedSessionId;
   String _query = '';
+  bool _creating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSessionId case final id?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _open(widget.repository.session(id));
+      });
+    }
+  }
 
   void _modalsChanged() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -102,19 +116,16 @@ class _V2HomePageState extends State<V2HomePage> {
     );
   }
 
-  void _newConversation() {
-    _returnHome();
-    setState(() {
-      _tab = 0;
-      _detailActive = true;
-      _selectedSessionId = null;
-    });
-    _detailNavigator.currentState!.pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => V2WelcomePage(repository: widget.repository),
-      ),
-      (route) => route.isFirst,
+  Future<void> _newConversation(BuildContext sheetContext) async {
+    if (_creating) return;
+    _creating = true;
+    final id = await V2Sheet.show<String>(
+      context: sheetContext,
+      enableDrag: false,
+      builder: (_) => V2CreatePopiSheet(repository: widget.repository),
     );
+    _creating = false;
+    if (mounted && id != null) _open(widget.repository.session(id));
   }
 
   void _returnHome() {
@@ -126,6 +137,14 @@ class _V2HomePageState extends State<V2HomePage> {
       context.go('/profile');
     } else {
       context.push('/profile');
+    }
+  }
+
+  void _notifications() {
+    if (widget.routeActive) {
+      context.go('/notifications');
+    } else {
+      context.push('/notifications');
     }
   }
 
@@ -243,7 +262,7 @@ class _V2HomePageState extends State<V2HomePage> {
                                 ),
                                 const SizedBox(height: 20),
                                 FilledButton.icon(
-                                  onPressed: _newConversation,
+                                  onPressed: () => _newConversation(context),
                                   icon: const Icon(Icons.add),
                                   label: Text(l.demoNew),
                                 ),
@@ -320,11 +339,19 @@ class _V2HomePageState extends State<V2HomePage> {
         onPressed: _profile,
         icon: const V2Avatar(size: 40),
       ),
+      actionsSpacing: 10,
       actions: [
+        IconButton(
+          key: const Key('v2-notifications'),
+          tooltip: l.notifications,
+          padding: EdgeInsets.zero,
+          onPressed: _notifications,
+          icon: const AppSvgIcon.asset('v2_notifications', size: 40),
+        ),
         IconButton(
           key: const Key('demo-create'),
           tooltip: l.demoNew,
-          onPressed: _newConversation,
+          onPressed: () => _newConversation(context),
           icon: const V2Icon('plus', color: AppColors.brand),
         ),
       ],

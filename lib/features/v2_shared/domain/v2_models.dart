@@ -49,6 +49,7 @@ class V2Session {
     this.memberInstructions = const {},
     this.memberAvatars = const {},
     this.memberColors = const {},
+    this.accountPreferences = const {},
   });
   final String id;
   final String title;
@@ -65,6 +66,7 @@ class V2Session {
   final Map<String, String> memberInstructions;
   final Map<String, String> memberAvatars;
   final Map<String, int> memberColors;
+  final Map<String, String> accountPreferences;
 
   V2Session copyWith({
     String? title,
@@ -80,6 +82,7 @@ class V2Session {
     Map<String, String>? memberInstructions,
     Map<String, String>? memberAvatars,
     Map<String, int>? memberColors,
+    Map<String, String>? accountPreferences,
   }) => V2Session(
     id: id,
     title: title ?? this.title,
@@ -96,6 +99,7 @@ class V2Session {
     memberInstructions: memberInstructions ?? this.memberInstructions,
     memberAvatars: memberAvatars ?? this.memberAvatars,
     memberColors: memberColors ?? this.memberColors,
+    accountPreferences: accountPreferences ?? this.accountPreferences,
   );
   Map<String, Object?> toJson() => {
     'id': id,
@@ -113,6 +117,7 @@ class V2Session {
     'memberInstructions': memberInstructions,
     'memberAvatars': memberAvatars,
     'memberColors': memberColors,
+    'accountPreferences': accountPreferences,
   };
   factory V2Session.fromJson(Map<String, Object?> json) => V2Session(
     id: json['id'] as String,
@@ -136,6 +141,9 @@ class V2Session {
       json['memberAvatars'] as Map? ?? {},
     ),
     memberColors: Map<String, int>.from(json['memberColors'] as Map? ?? {}),
+    accountPreferences: Map<String, String>.from(
+      json['accountPreferences'] as Map? ?? {},
+    ),
   );
 }
 

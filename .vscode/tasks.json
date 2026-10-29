@@ -2,40 +2,40 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "POPi: run demo",
+      "label": "POPi: run",
       "type": "process",
       "command": "dart",
       "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "run", "-t", "lib/main_demo.dart"],
+      "args": ["run", "tool/flutter_env.dart", "development", "run"],
       "options": {"cwd": "${workspaceFolder}"},
       "problemMatcher": []
     },
     {
-      "label": "POPi: build demo iOS simulator",
+      "label": "POPi: build iOS simulator",
       "type": "process",
       "command": "dart",
       "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "ios", "--simulator", "-t", "lib/main_demo.dart"],
-      "options": {"cwd": "${workspaceFolder}"},
-      "group": "build",
-      "problemMatcher": []
-    },
-    {
-      "label": "POPi: build demo APK",
-      "type": "process",
-      "command": "dart",
-      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "apk", "--release", "-t", "lib/main_demo.dart"],
+      "args": ["run", "tool/flutter_env.dart", "development", "build", "ios", "--simulator"],
       "options": {"cwd": "${workspaceFolder}"},
       "group": "build",
       "problemMatcher": []
     },
     {
-      "label": "POPi: build demo IPA",
+      "label": "POPi: build APK",
       "type": "process",
       "command": "dart",
       "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
-      "args": ["run", "tool/flutter_env.dart", "development", "build", "ipa", "--release", "-t", "lib/main_demo.dart"],
+      "args": ["run", "tool/flutter_env.dart", "development", "build", "apk", "--release"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "POPi: build IPA",
+      "type": "process",
+      "command": "dart",
+      "osx": {"command": "${env:HOME}/SDK/flutter/bin/dart"},
+      "args": ["run", "tool/flutter_env.dart", "development", "build", "ipa", "--release"],
       "options": {"cwd": "${workspaceFolder}"},
       "group": "build",
       "problemMatcher": []
