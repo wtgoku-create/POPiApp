@@ -104,12 +104,7 @@ Future<void> main() async {
 
 class _PreviewGuideRepository extends IpGuideRepository {
   _PreviewGuideRepository(PreferencesStorage storage, this.accounts)
-    : super(
-        storage,
-        NetworkApi(Dio()),
-        NetworkAgentApi(Dio()),
-        userId: 'preview',
-      );
+    : super(storage, NetworkAgentApi(Dio()), userId: 'preview');
 
   final IpAccountRepository accounts;
 
@@ -123,15 +118,10 @@ class _PreviewGuideRepository extends IpGuideRepository {
     IpGuideDraft draft,
     Map<String, Object?> profile,
   ) async {
-    draft.creationRequestId ??= const Uuid().v4();
-    draft.accountId = await accounts.create(
-      requestId: draft.creationRequestId!,
-      title: draft.nickname.trim(),
-      preferences: profile,
-    );
+    draft.sessionRequestId ??= const Uuid().v4();
     draft.sessionId ??= const Uuid().v4();
     await clear();
-    return draft.accountId!;
+    return draft.sessionId!;
   }
 }
 
