@@ -871,18 +871,23 @@ class NetworkApi {
     ),
   );
 
-  Future<Map<String, dynamic>> wechatOfficialBindingQrCode() async => _data(
+  Future<Map<String, dynamic>> wechatOfficialBindingQrCode({
+    CancelToken? cancelToken,
+  }) async => _data(
     await dio.get<Map<String, dynamic>>(
       '/api_client/users/user/wxghBindQrCode',
+      cancelToken: cancelToken,
     ),
   );
 
   Future<Map<String, dynamic>> checkWechatOfficialBinding(
-    String sceneCode,
-  ) async => _data(
+    String sceneCode, {
+    CancelToken? cancelToken,
+  }) async => _data(
     await dio.get<Map<String, dynamic>>(
       '/api_client/users/user/checkWxghBind',
       queryParameters: {'sceneCode': sceneCode},
+      cancelToken: cancelToken,
     ),
   );
 

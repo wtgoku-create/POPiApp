@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/app_url.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_skeleton.dart';
+import '../../../shared/widgets/app_dialog.dart';
 
 /// A fixed-size browser authorization surface shared by QR and OAuth login.
 class WebSocialLoginPanel extends StatelessWidget {
@@ -14,6 +15,7 @@ class WebSocialLoginPanel extends StatelessWidget {
     required this.qrUrl,
     required this.onBack,
     required this.onRefresh,
+    this.title,
   });
 
   final bool douyin;
@@ -22,10 +24,78 @@ class WebSocialLoginPanel extends StatelessWidget {
   final String? qrUrl;
   final VoidCallback onBack;
   final VoidCallback onRefresh;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (title != null) {
+      return AppDialog(
+        key: const Key('web-social-login-panel'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 24),
+            AspectRatio(
+              aspectRatio: 1,
+              child: loading
+                  ? const AppSkeletonBox(width: 240, height: 240)
+                  : expired
+                  ? const Icon(Icons.timer_off_outlined, size: 64)
+                  : qrUrl == null
+                  ? const Icon(Icons.qr_code_2, size: 120)
+                  : Image.network(
+                      AppUrl.resolve(qrUrl!),
+                      webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                      semanticLabel: title,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (_, child, progress) => progress == null
+                          ? child
+                          : const AppSkeletonBox(width: 240, height: 240),
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.broken_image_outlined, size: 64),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 24,
+              child: expired
+                  ? Text(l10n.socialLoginExpired, textAlign: TextAlign.center)
+                  : null,
+            ),
+            IconButton(
+              key: const Key('web-social-login-refresh'),
+              tooltip: l10n.refreshSocialLogin,
+              onPressed: loading ? null : onRefresh,
+              icon: const Icon(Icons.refresh),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: TextButton(
+                key: const Key('web-social-login-cancel'),
+                onPressed: onBack,
+                style: TextButton.styleFrom(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: .05),
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+                child: Text(l10n.cancel),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

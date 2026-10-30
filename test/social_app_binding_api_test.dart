@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/api_exception.dart';
 import 'package:popi_ai_app/features/profile/data/social_app_binding_api.dart';
@@ -36,7 +37,12 @@ void main() {
 
   test('queries WeChat with GET and no authorization code', () async {
     final binding = await api.fetchStatus(SocialAppType.wechat);
-    expect(request.path, '/api_client/users/user/wxAppBindStatus');
+    expect(
+      request.path,
+      kIsWeb
+          ? '/api_client/users/user/wxghBindStatus'
+          : '/api_client/users/user/wxAppBindStatus',
+    );
     expect(request.method, 'GET');
     expect(request.data, isNull);
     expect(binding.bound, isFalse);
@@ -113,5 +119,25 @@ void main() {
       api.bind(SocialAppType.wechat, ' '),
       throwsA(isA<FormatException>()),
     );
+  });
+
+  test('Web linking uses binding QR endpoints with cancellation', () async {
+    final token = CancelToken();
+    response['data'] = {
+      'sceneCode': 'binding-scene',
+      'qrCodeUrl': 'https://example.com/bind.png',
+      'expireSeconds': 180,
+    };
+    final challenge = await api.createWebWechatChallenge(cancelToken: token);
+    expect(challenge['sceneCode'], 'binding-scene');
+    expect(request.path, '/api_client/users/user/wxghBindQrCode');
+    expect(request.method, 'GET');
+    expect(request.queryParameters, isEmpty);
+    expect(request.cancelToken, same(token));
+    response['data'] = {'status': 'waiting', 'bound': false};
+    await api.checkWebWechatBinding('binding-scene', cancelToken: token);
+    expect(request.path, '/api_client/users/user/checkWxghBind');
+    expect(request.queryParameters, {'sceneCode': 'binding-scene'});
+    expect(request.cancelToken, same(token));
   });
 }

@@ -14,6 +14,7 @@ import '../../../../shared/widgets/app_toast.dart';
 import '../../data/social_app_binding_api.dart';
 import '../../data/social_app_binding_repository.dart';
 import '../../domain/social_app_binding.dart';
+import '../social_app_binding_flow.dart';
 import 'profile_settings_row.dart';
 
 /// Loads fresh binding state whenever the profile is opened or the user changes.
@@ -85,11 +86,13 @@ class _SocialAppBindingRowState extends ConsumerState<SocialAppBindingRow> {
     final l10n = AppLocalizations.of(context)!;
     setState(() => _bindingInProgress = true);
     try {
-      final binding = await _repository.bind(
-        widget.app,
+      final binding = await SocialAppBindingFlow.bind(
+        context: context,
+        repository: _repository,
+        app: widget.app,
         isCurrentUser: () => mounted && generation == _generation,
       );
-      if (!mounted || generation != _generation) return;
+      if (!mounted || generation != _generation || binding == null) return;
       setState(() => _binding = AsyncData(binding));
       AppToast.success(context, l10n.socialBindingSucceeded);
     } catch (error) {

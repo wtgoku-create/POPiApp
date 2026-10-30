@@ -1,10 +1,14 @@
+import 'package:dio/dio.dart';
+
+import '../../../core/platform/app_platform.dart';
 import '../../auth/data/douyin_login_service.dart';
+import '../../auth/domain/web_social_login.dart';
 import '../../auth/data/wechat_login_service.dart';
 import '../../../shared/type/social_app_type.dart';
 import '../domain/social_app_binding.dart';
 import 'social_app_binding_api.dart';
 
-/// Reuses native login authorization to bind the current account.
+/// Links the current account without creating or replacing a login session.
 class SocialAppBindingRepository {
   const SocialAppBindingRepository({
     required this.api,
@@ -19,10 +23,46 @@ class SocialAppBindingRepository {
   Future<SocialAppBinding> fetchStatus(SocialAppType app) =>
       api.fetchStatus(app);
 
+  Future<WebSocialLoginChallenge> createWebWechatChallenge({
+    required CancelToken cancelToken,
+  }) async {
+    final data = await api.createWebWechatChallenge(cancelToken: cancelToken);
+    _checkCancellation(cancelToken);
+    return WebSocialLoginChallenge.fromJson(data, douyin: false);
+  }
+
+  Future<SocialAppBinding?> checkWebWechatBinding(
+    String sceneCode, {
+    required CancelToken cancelToken,
+  }) async {
+    final data = await api.checkWebWechatBinding(
+      sceneCode,
+      cancelToken: cancelToken,
+    );
+    _checkCancellation(cancelToken);
+    if (data['bound'] != true && data['status'] != 'success') return null;
+    // Linking is complete even if the subsequent nickname refresh fails.
+    try {
+      final binding = await fetchStatus(SocialAppType.wechat);
+      _checkCancellation(cancelToken);
+      if (binding.bound) return binding;
+    } catch (_) {
+      _checkCancellation(cancelToken);
+    }
+    return const SocialAppBinding(bound: true);
+  }
+
+  void _checkCancellation(CancelToken token) {
+    if (token.isCancelled) throw token.cancelError!;
+  }
+
   Future<SocialAppBinding> bind(
     SocialAppType app, {
     required bool Function() isCurrentUser,
   }) async {
+    if (AppPlatform.current.isWeb) {
+      throw const SocialBindingException(SocialBindingFailure.unavailable);
+    }
     final String code;
     switch (app) {
       case SocialAppType.wechat:

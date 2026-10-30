@@ -19,6 +19,13 @@
 
 业务 Web 环境继续复用现有 HttpOnly Cookie 登录机制，不新增业务 Bearer 存储。部署时保留 `/api_client/` 的同源代理，确保查询登录结果和手机号绑定接口设置的 Cookie 属于当前应用来源。第三方实际授权和 Cookie 行为需要在目标部署域名完成联调。
 
+## 已登录账号绑定
+
+Web 个人页不显示抖音绑定入口，抖音扫码登录和移动 App 绑定保持可用。
+微信使用 `/api_client/users/user/` 下的 `wxghBindStatus`、`wxghBindQrCode`
+和 `checkWxghBind`，通过扫码弹窗绑定当前账号，不调用登录接口或替换登录 Token。
+关闭、刷新、过期和切换账号会取消轮询；昵称刷新失败不会撤销已完成的绑定。
+
 验证命令：
 
 ```bash
@@ -26,4 +33,5 @@ flutter pub get
 flutter analyze
 flutter test
 flutter test --platform chrome test/web_social_auth_test.dart test/web_social_login_page_test.dart
+flutter test --platform chrome test/web_social_binding_test.dart test/social_app_binding_api_test.dart
 ```

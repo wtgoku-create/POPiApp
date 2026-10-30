@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/platform/app_platform.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/network_api.dart';
 import '../../payments/presentation/apple_payment_entry.dart';
@@ -190,10 +191,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       app: SocialAppType.wechat,
                       repository: widget.socialBindingRepository,
                     ),
-                    SocialAppBindingRow(
-                      app: SocialAppType.douyin,
-                      repository: widget.socialBindingRepository,
-                    ),
+                    if (!AppPlatform.current.isWeb)
+                      SocialAppBindingRow(
+                        app: SocialAppType.douyin,
+                        repository: widget.socialBindingRepository,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
