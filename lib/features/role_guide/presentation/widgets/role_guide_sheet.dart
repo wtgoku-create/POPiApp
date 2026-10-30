@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/platform/app_platform.dart';
 import '../../../../shared/widgets/app_sheet.dart';
 
 /// Shared layout for the guide's scrollable selection and reading sheets.
@@ -26,14 +27,15 @@ class RoleGuideSheet extends StatelessWidget {
   final double initialSize;
 
   @override
-  Widget build(BuildContext context) => DraggableScrollableSheet(
+  Widget build(BuildContext context) => AppSheet.scrollable(
     initialChildSize: AppSheet.relativeExtent(initialSize),
     minChildSize: AppSheet.relativeExtent(.5),
     maxChildSize: 1,
-    expand: false,
     builder: (context, controller) => Material(
       color: backgroundColor ?? Theme.of(context).colorScheme.surface,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(44)),
+      borderRadius: AppPlatform.current.isWeb
+          ? BorderRadius.zero
+          : const BorderRadius.vertical(top: Radius.circular(44)),
       clipBehavior: Clip.antiAlias,
       child: Center(
         child: ConstrainedBox(

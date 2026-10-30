@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/platform/app_platform.dart';
+import 'app_dialog.dart';
 import 'app_modal_backdrop.dart';
 import 'app_keyboard_dismiss.dart';
 
@@ -7,6 +9,7 @@ class AppSheet {
   const AppSheet._();
 
   static const maxHeightFactor = .8;
+  static const maxWidth = 480.0;
 
   /// Converts page-relative drag sizes to the capped sheet's available height.
   static double relativeExtent(double pageFraction) =>
@@ -20,9 +23,21 @@ class AppSheet {
     bool isDismissible = true,
     bool enableDrag = true,
     bool showDragHandle = true,
+    double maxHeightFraction = maxHeightFactor,
     Color? backgroundColor,
     ShapeBorder? shape,
   }) {
+    assert(maxHeightFraction > 0 && maxHeightFraction <= 1);
+    if (AppPlatform.current.isWeb) {
+      return AppDialog.show<T>(
+        context: context,
+        barrierDismissible: isDismissible,
+        builder: (context) => _AppSheetDialog(
+          maxHeightFraction: maxHeightFraction,
+          child: Builder(builder: builder),
+        ),
+      );
+    }
     FocusManager.instance.primaryFocus?.unfocus();
     final navigator = Navigator.of(context);
     final localizations = MaterialLocalizations.of(context);
@@ -66,13 +81,14 @@ class AppSheet {
     bool useSafeArea = true,
     bool showDragHandle = true,
   }) {
+    final isWeb = AppPlatform.current.isWeb;
     return show<T>(
       context: context,
       useSafeArea: useSafeArea,
       isScrollControlled: true,
       showDragHandle: showDragHandle,
-      builder: (context) => DraggableScrollableSheet(
-        expand: false,
+      maxHeightFraction: isWeb ? maxChildSize : maxHeightFactor,
+      builder: (context) => scrollable(
         minChildSize: relativeExtent(minChildSize),
         initialChildSize: relativeExtent(initialChildSize),
         maxChildSize: relativeExtent(maxChildSize),
@@ -80,6 +96,74 @@ class AppSheet {
       ),
     );
   }
+
+  /// Keeps a regular scroll controller on Web and native sheet resizing in apps.
+  static Widget scrollable({
+    required Widget Function(BuildContext, ScrollController) builder,
+    required double minChildSize,
+    required double initialChildSize,
+    required double maxChildSize,
+  }) => AppPlatform.current.isWeb
+      ? _FixedSheetContent(builder: builder)
+      : DraggableScrollableSheet(
+          expand: false,
+          minChildSize: minChildSize,
+          initialChildSize: initialChildSize,
+          maxChildSize: maxChildSize,
+          builder: builder,
+        );
+}
+
+class _FixedSheetContent extends StatefulWidget {
+  const _FixedSheetContent({required this.builder});
+
+  final Widget Function(BuildContext, ScrollController) builder;
+
+  @override
+  State<_FixedSheetContent> createState() => _FixedSheetContentState();
+}
+
+class _FixedSheetContentState extends State<_FixedSheetContent> {
+  final _controller = ScrollController();
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _controller);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+/// Bounds existing scrollable sheet layouts without adding another scroll view.
+class _AppSheetDialog extends StatelessWidget {
+  const _AppSheetDialog({required this.maxHeightFraction, required this.child});
+
+  final double maxHeightFraction;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+    insetAnimationDuration: MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 100),
+    constraints: const BoxConstraints(maxWidth: AppSheet.maxWidth),
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    surfaceTintColor: Colors.transparent,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+    clipBehavior: Clip.antiAlias,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.sizeOf(context).height *
+            maxHeightFraction.clamp(0.0, AppSheet.maxHeightFactor),
+      ),
+      child: SizedBox(width: AppSheet.maxWidth, child: child),
+    ),
+  );
 }
 
 /// Keeps Flutter sheet gestures and semantics with a full-screen blurred barrier.
