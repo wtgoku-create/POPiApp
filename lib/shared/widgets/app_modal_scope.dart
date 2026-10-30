@@ -1,17 +1,33 @@
 import 'package:flutter/material.dart';
 
-/// Owns transient routes in a pane whose pages stay mounted while hidden.
+import '../../core/platform/app_platform.dart';
+
+/// Owns native transient routes in panes whose hidden pages stay mounted.
 class AppModalScope extends StatefulWidget {
   const AppModalScope({required this.active, required this.child, super.key});
 
   final bool active;
   final Widget child;
 
-  static bool isActiveOf(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_ModalScope>()?.active ?? true;
+  /// Web overlays belong to the app window, independently of retained panes.
+  static bool get useGlobalOverlays => AppPlatform.current.isWeb;
 
-  /// Also ties overlays to the source route when it is removed externally.
+  static NavigatorState navigatorOf(
+    BuildContext context, {
+    bool useRootNavigator = false,
+  }) => Navigator.of(
+    context,
+    rootNavigator: useGlobalOverlays || useRootNavigator,
+  );
+
+  static bool isActiveOf(BuildContext context) =>
+      useGlobalOverlays ||
+      (context.dependOnInheritedWidgetOfExactType<_ModalScope>()?.active ??
+          true);
+
+  /// Native overlays also close when the source route is removed externally.
   static void bind(BuildContext context, Route<dynamic> route) {
+    if (useGlobalOverlays) return;
     final scope = context.getInheritedWidgetOfExactType<_ModalScope>()?.state;
     scope?._routes.add(route);
     route.popped.whenComplete(() => scope?._routes.remove(route));
@@ -80,7 +96,7 @@ class _ModalScope extends InheritedWidget {
   bool updateShouldNotify(_ModalScope oldWidget) => active != oldWidget.active;
 }
 
-/// Dismisses transient overlays when navigation moves to another page.
+/// Tracks popups, with source-page lifecycle dismissal on native platforms.
 class AppModalObserver extends NavigatorObserver {
   AppModalObserver({this.onChanged});
 
@@ -92,9 +108,9 @@ class AppModalObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (route is PopupRoute) {
-      _owners[route] = previousRoute;
+      _owners[route] = AppModalScope.useGlobalOverlays ? null : previousRoute;
       onChanged?.call();
-    } else if (route is PageRoute) {
+    } else if (route is PageRoute && !AppModalScope.useGlobalOverlays) {
       AppModalScope._dismiss(_owners.keys);
     }
   }
@@ -106,7 +122,9 @@ class AppModalObserver extends NavigatorObserver {
       if (removed.contains(entry.value)) removed.add(entry.key);
     }
     AppModalScope._dismiss(removed.where((item) => item != route));
-    if (_owners.remove(route) != null) onChanged?.call();
+    final wasPopup = _owners.containsKey(route);
+    _owners.remove(route);
+    if (wasPopup) onChanged?.call();
   }
 
   @override
@@ -120,6 +138,8 @@ class AppModalObserver extends NavigatorObserver {
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     if (oldRoute != null) _removed(oldRoute);
-    if (newRoute is PageRoute) AppModalScope._dismiss(_owners.keys);
+    if (newRoute is PageRoute && !AppModalScope.useGlobalOverlays) {
+      AppModalScope._dismiss(_owners.keys);
+    }
   }
 }

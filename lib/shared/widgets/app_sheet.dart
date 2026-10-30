@@ -29,7 +29,7 @@ class AppSheet {
     assert(maxHeightFraction > 0 && maxHeightFraction <= 1);
     if (!AppModalScope.isActiveOf(context)) return Future.value();
     FocusManager.instance.primaryFocus?.unfocus();
-    final navigator = Navigator.of(context);
+    final navigator = AppModalScope.navigatorOf(context);
     final localizations = MaterialLocalizations.of(context);
     final theme = Theme.of(context);
     final route = _AppSheetRoute<T>(

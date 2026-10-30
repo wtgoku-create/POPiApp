@@ -25,9 +25,12 @@ class AppDialog extends StatelessWidget {
   }) {
     FocusManager.instance.primaryFocus?.unfocus();
     if (!AppModalScope.isActiveOf(context)) return Future.value();
-    final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
+    final navigator = AppModalScope.navigatorOf(
+      context,
+      useRootNavigator: useRootNavigator,
+    );
     final route = _AppDialogRoute<T>(
-      context: context,
+      context: AppModalScope.useGlobalOverlays ? navigator.context : context,
       builder: builder,
       barrierDismissible: barrierDismissible,
       themes: InheritedTheme.capture(from: context, to: navigator.context),

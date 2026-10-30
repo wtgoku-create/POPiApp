@@ -659,6 +659,13 @@ class _CupertinoContextMenuPlusState extends State<CupertinoContextMenuPlus>
   bool _pendingControllerOpen = false;
   bool _pendingControllerClose = false;
 
+  // Preview coordinates and viewport metrics must use the same overlay space.
+  MediaQueryData get _menuMediaQuery => MediaQuery.of(
+    widget.useRootNavigator
+        ? Navigator.of(context, rootNavigator: true).context
+        : context,
+  );
+
   double get _animationOpensAt => CupertinoContextMenuPlus.animationOpensAtFor(
     widget.previewLongPressTimeout,
   );
@@ -749,8 +756,8 @@ class _CupertinoContextMenuPlusState extends State<CupertinoContextMenuPlus>
     );
     _scaleFactor = _getScaleFactor(
       childRect,
-      MediaQuery.paddingOf(context),
-      MediaQuery.sizeOf(context),
+      _menuMediaQuery.padding,
+      _menuMediaQuery.size,
     );
     _decoyChildEndRect = childRect;
     _previousChildRectWasScaled = false;
@@ -848,7 +855,7 @@ class _CupertinoContextMenuPlusState extends State<CupertinoContextMenuPlus>
       _childGlobalKey,
       rootOverlay: widget.useRootNavigator,
     );
-    final double screenWidth = MediaQuery.widthOf(context);
+    final double screenWidth = _menuMediaQuery.size.width;
 
     final double center = screenWidth / 2;
     final bool centerDividesChild =
@@ -1070,8 +1077,8 @@ class _CupertinoContextMenuPlusState extends State<CupertinoContextMenuPlus>
     );
     _scaleFactor = _getScaleFactor(
       childRect,
-      MediaQuery.paddingOf(context),
-      MediaQuery.sizeOf(context),
+      _menuMediaQuery.padding,
+      _menuMediaQuery.size,
     );
 
     if (widget.showGrowAnimation) {

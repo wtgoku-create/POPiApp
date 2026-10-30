@@ -26,6 +26,16 @@ responsive layout decisions based on the space available to the widget.
 Development/production service configuration remains in
 `AppConfig.environment` and `config/env/*.json`, separate from runtime platform.
 
+## Modal presentation
+
+On Web, `AppDialog` and `AppSheet` always use the root Navigator, including
+calls that request a local Navigator. Their backdrop covers the full window;
+switching panes or removing the source page does not dismiss them. Close them
+using the builder's dialog/sheet context so their result returns to the caller.
+`AppMenuButton` and `AppContextMenu` also use the root overlay/Navigator, while
+remaining anchored to their source widget. Native app presentation and pane
+lifecycle behavior are unchanged.
+
 Regression checks:
 
 ```bash

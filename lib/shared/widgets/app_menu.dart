@@ -114,8 +114,11 @@ class _AppContextMenuState extends State<AppContextMenu> {
     // The library requires positive durations even when motion is disabled.
     const instantTransition = Duration(microseconds: 1);
     final theme = Theme.of(context);
-    final size = MediaQuery.sizeOf(context);
-    final padding = MediaQuery.paddingOf(context);
+    final overlayContext = AppModalScope.useGlobalOverlays
+        ? AppModalScope.navigatorOf(context).context
+        : context;
+    final size = MediaQuery.sizeOf(overlayContext);
+    final padding = MediaQuery.paddingOf(overlayContext);
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.contextMenu): _open,
@@ -137,7 +140,7 @@ class _AppContextMenuState extends State<AppContextMenu> {
                 key: _sourceKey,
                 child: CupertinoContextMenuPlus.builder(
                   controller: _controller,
-                  useRootNavigator: false,
+                  useRootNavigator: AppModalScope.useGlobalOverlays,
                   onRouteCreated: (route) => AppModalScope.bind(context, route),
                   openGestureEnabled: _enabled,
                   showGrowAnimation: !reduceMotion,
@@ -285,6 +288,7 @@ class _AppMenuButtonState extends State<AppMenuButton> with _AppMenuAppearance {
   }
 
   void _onOpen() {
+    if (AppModalScope.useGlobalOverlays) return;
     final route = ModalRoute.of(context);
     if (route == null) return;
 
@@ -321,6 +325,7 @@ class _AppMenuButtonState extends State<AppMenuButton> with _AppMenuAppearance {
 
     return MenuAnchor(
       controller: _controller,
+      useRootOverlay: AppModalScope.useGlobalOverlays,
       childFocusNode: _focusNode,
       style: menuStyle.copyWith(
         alignment: AlignmentDirectional.bottomStart,
@@ -366,8 +371,15 @@ mixin _AppMenuAppearance {
         : theme.colorScheme.surface;
   }
 
-  double _maxWidth(BuildContext context) =>
-      math.min(320.0, math.max(0.0, MediaQuery.sizeOf(context).width - 32));
+  double _maxWidth(BuildContext context) {
+    final overlayContext = AppModalScope.useGlobalOverlays
+        ? AppModalScope.navigatorOf(context).context
+        : context;
+    return math.min(
+      320.0,
+      math.max(0.0, MediaQuery.sizeOf(overlayContext).width - 32),
+    );
+  }
 
   MenuStyle _menuStyle(BuildContext context, double maxWidth) {
     final colors = Theme.of(context).colorScheme;

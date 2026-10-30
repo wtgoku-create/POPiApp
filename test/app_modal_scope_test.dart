@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
 import 'package:popi_ai_app/shared/widgets/app_dialog.dart';
@@ -10,12 +11,16 @@ import 'package:popi_ai_app/shared/widgets/app_sheet.dart';
 const _preview = Key('app-context-menu-preview');
 
 class _Fixture {
+  _Fixture({this.includeMenu = false});
+
+  final bool includeMenu;
   final navigator = GlobalKey<NavigatorState>();
   final active = ValueNotifier(true);
   late BuildContext source;
   int sidebarTaps = 0;
   String? result;
   bool completed = false;
+  int menuSelections = 0;
 
   void dispose() => active.dispose();
 
@@ -69,13 +74,23 @@ class _Fixture {
                 child: Center(child: Text('Source')),
               ),
             ),
+            if (includeMenu)
+              AppMenuButton(
+                tooltip: 'Menu',
+                entries: [
+                  AppMenuItem(
+                    label: 'A long global menu action',
+                    onSelected: () => menuSelections++,
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> pump(WidgetTester tester) async {
+  Future<void> pump(WidgetTester tester, {double sidebarWidth = 320}) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1000, 700);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -84,11 +99,12 @@ class _Fixture {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
+        navigatorObservers: [AppModalObserver()],
         home: Scaffold(
           body: Row(
             children: [
               SizedBox(
-                width: 320,
+                width: sidebarWidth,
                 child: Center(
                   child: TextButton(
                     onPressed: () => sidebarTaps++,
@@ -147,6 +163,10 @@ class _Fixture {
 }
 
 void main() {
+  if (kIsWeb) {
+    _webTests();
+    return;
+  }
   testWidgets(
     'global dialogs cover both panes and close with their own result',
     (tester) async {
@@ -344,5 +364,149 @@ void main() {
     expect(find.byKey(_preview), findsNothing);
     expect(find.text('Source').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+}
+
+void _webTests() {
+  for (final kind in ['Dialog', 'Sheet']) {
+    testWidgets('Web $kind covers the window and returns its own result', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await fixture.pump(tester);
+      await fixture.show(tester, kind);
+      final content = find.text('Confirm');
+      expect(
+        Navigator.of(tester.element(content)),
+        Navigator.of(fixture.source, rootNavigator: true),
+      );
+      expect(
+        tester.getRect(find.byType(AppModalBackdrop)),
+        const Rect.fromLTWH(0, 0, 1000, 700),
+      );
+      expect(tester.getRect(content).center.dx, closeTo(500, 1));
+      tester.view.physicalSize = const Size(760, 520);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(find.byType(AppModalBackdrop)),
+        const Rect.fromLTWH(0, 0, 760, 520),
+      );
+      await tester.tap(content);
+      await tester.pumpAndSettle();
+      expect(fixture.completed, isTrue);
+      expect(fixture.result, 'confirmed');
+      expect(fixture.navigator.currentState!.canPop(), isFalse);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('Web $kind blocks sidebar interaction and dismisses globally', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await fixture.pump(tester);
+      await fixture.show(tester, kind);
+      await tester.tapAt(tester.getCenter(find.text('Sidebar')));
+      await tester.pumpAndSettle();
+      expect(fixture.sidebarTaps, 0);
+      expect(fixture.completed, isTrue);
+      expect(fixture.result, isNull);
+      expect(find.byType(AppModalBackdrop), findsNothing);
+    });
+
+    testWidgets('Web $kind survives pane hiding and source page removal', (
+      tester,
+    ) async {
+      final fixture = _Fixture();
+      await fixture.pump(tester);
+      fixture.navigator.currentState!.push<void>(
+        MaterialPageRoute<void>(builder: fixture.page),
+      );
+      await tester.pumpAndSettle();
+      final owner = ModalRoute.of(fixture.source)!;
+      await fixture.show(tester, kind);
+      fixture.active.value = false;
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm'), findsOneWidget);
+      fixture.navigator.currentState!.removeRoute(owner);
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm'), findsOneWidget);
+      expect(fixture.completed, isFalse);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(fixture.completed, isTrue);
+      expect(find.byType(AppModalBackdrop), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('Web context preview uses the root Navigator and full backdrop', (
+    tester,
+  ) async {
+    final fixture = _Fixture();
+    await fixture.pump(tester);
+    await fixture.show(tester, 'Context');
+    expect(
+      Navigator.of(tester.element(find.byKey(_preview))),
+      Navigator.of(fixture.source, rootNavigator: true),
+    );
+    expect(
+      tester.getRect(find.byType(BackdropFilter)),
+      const Rect.fromLTWH(0, 0, 1000, 700),
+    );
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(_preview), findsNothing);
+    expect(tester.getRect(find.byType(AppModalBackdrop)).left, 0);
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(fixture.result, 'confirmed');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Web anchored menus extend beyond a narrow source pane', (
+    tester,
+  ) async {
+    final fixture = _Fixture(includeMenu: true);
+    await fixture.pump(tester, sidebarWidth: 800);
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    final menu = find.text('A long global menu action');
+    expect(tester.getRect(menu).left, lessThan(800));
+    expect(
+      tester.widget<MenuAnchor>(find.byType(MenuAnchor)).useRootOverlay,
+      isTrue,
+    );
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    expect(fixture.menuSelections, 1);
+    expect(menu, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Web popup observation ends when an unowned popup closes', (
+    tester,
+  ) async {
+    final observer = AppModalObserver();
+    var changes = 0;
+    final tracked = AppModalObserver(onChanged: () => changes++);
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        navigatorObservers: [observer, tracked],
+        home: const Scaffold(body: Text('Home')),
+      ),
+    );
+    final route = DialogRoute<void>(
+      context: navigator.currentContext!,
+      builder: (_) => const Text('Popup'),
+    );
+    navigator.currentState!.push(route);
+    await tester.pumpAndSettle();
+    expect(observer.hasPopups, isTrue);
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(observer.hasPopups, isFalse);
+    expect(changes, 2);
   });
 }
