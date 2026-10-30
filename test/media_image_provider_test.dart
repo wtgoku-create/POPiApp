@@ -18,11 +18,11 @@ void main() {
     'relative image URLs resolve against the configured business server',
     () {
       expect(
-        AppImageCache.provider('/avatars/a.png').url,
+        AppImageCache.resolveUrl('/avatars/a.png'),
         '${AppConfig.apiBaseUrl}/avatars/a.png',
       );
       const absolute = 'https://cdn.example/avatar.png?signature=original';
-      expect(AppImageCache.provider(absolute).url, absolute);
+      expect(AppImageCache.resolveUrl(absolute), absolute);
     },
   );
 

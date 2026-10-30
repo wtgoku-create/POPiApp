@@ -149,10 +149,10 @@ class _SessionPageState extends ConsumerState<SessionPage> {
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
-    final composerBottomPadding = math
-        .max(safeArea.bottom - keyboardHeight, 20)
-        .toDouble();
-    final fallbackComposerHeight = 8 + 60 + 10 + 14 + composerBottomPadding;
+    final composerBottomPadding =
+        math.max(safeArea.bottom - keyboardHeight, 0).toDouble() +
+        PopiMessageComposer.bottomGap;
+    final fallbackComposerHeight = 8 + 60 + composerBottomPadding;
     final composerHeight = _composerHeight > 0
         ? _composerHeight
         : fallbackComposerHeight;

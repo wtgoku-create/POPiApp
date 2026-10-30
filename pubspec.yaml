@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   cached_network_image: ^3.4.1
+  cached_network_image_platform_interface: ^4.1.1
   cupertino_context_menu_plus:
     path: packages/cupertino_context_menu_plus
   dio: ^5.8.0+1

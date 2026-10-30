@@ -834,6 +834,14 @@ class NetworkApi {
     final response = await dio.get<Map<String, dynamic>>(
       '/api_client/users/user/info',
     );
+    final status = response.data?['status']?.toString();
+    // 旧业务接口以 HTTP 200 返回未登录码；Cookie 启动恢复需将其识别为访客。
+    if (const {'4001', '4201', '4003'}.contains(status)) {
+      throw ApiException(
+        message: response.data?['message']?.toString(),
+        statusCode: status == '4003' ? 403 : 401,
+      );
+    }
     return _data(response);
   }
 

@@ -3851,4 +3851,884 @@ class AppLocalizationsEn extends AppLocalizations {
   String demoSelectedFiles(int count) {
     return '$count files selected';
   }
+
+  @override
+  String get wechatScanLogin => 'Scan with WeChat';
+
+  @override
+  String get douyinScanLogin => 'Scan with Douyin';
+
+  @override
+  String get douyinWebAuthorizing => 'Completing Douyin sign-in';
+
+  @override
+  String get allowDouyinPopup =>
+      'Allow the Douyin authorization popup and sign in again.';
+
+  @override
+  String get socialLoginExpired => 'Authorization expired';
+
+  @override
+  String get refreshSocialLogin => 'Refresh authorization';
+
+  @override
+  String get ipSessionTitle => 'Conversation name:';
+
+  @override
+  String get ipSessionTitleHint => 'Give your conversation a name';
+
+  @override
+  String get voiceInputStarting => 'Preparing voice input…';
+
+  @override
+  String get voiceInputListening => 'Listening. Tap the microphone to finish';
+
+  @override
+  String get voiceInputFinishing => 'Transcribing…';
+
+  @override
+  String get voiceInputStop => 'Finish voice input';
+
+  @override
+  String get voiceInputCancel => 'Cancel voice input';
+
+  @override
+  String get voiceInputPermissionDenied =>
+      'Allow microphone and speech recognition access in system or browser settings';
+
+  @override
+  String get voiceInputUnavailable =>
+      'Voice input is not available on this device or browser';
+
+  @override
+  String get voiceInputNoSpeech => 'No speech recognized. Please try again';
+
+  @override
+  String get voiceInputNetworkError =>
+      'Could not connect to speech recognition. Check your connection and try again';
+
+  @override
+  String get voiceInputAudioError =>
+      'Cannot access the microphone. Check the device and whether it is in use';
+
+  @override
+  String get voiceInputFailed => 'Could not recognize speech. Please try again';
+
+  @override
+  String get demoCreativeMemory => 'Creative preferences';
+
+  @override
+  String get demoEditCreativeMemory => 'Edit creative preferences';
+
+  @override
+  String get demoCreativeMemoryEmpty =>
+      'AI can summarize the visual style, specific model preferences, and aspect ratios from the conversation, or you can enter them manually.';
+
+  @override
+  String get demoCreativeMemoryScope =>
+      'Used only in this conversation. AI will not overwrite manual edits.';
+
+  @override
+  String get demoCreativeMemoryEditorHint =>
+      'This text is the creative memory for this conversation. Name the visual style, specific image and video model preferences, and aspect ratios.';
+
+  @override
+  String get demoCreativeMemoryAfterSave =>
+      'Future creations will automatically use this memory after you save it.';
+
+  @override
+  String get demoSaveToCurrentSession => 'Save to this conversation';
+
+  @override
+  String demoImageStackCount(int count) {
+    return '$count images';
+  }
+
+  @override
+  String demoActivityTitle(String name, String activity) {
+    return '$name · $activity';
+  }
+
+  @override
+  String get demoActivityThinking => 'Thinking about your request';
+
+  @override
+  String get demoActivityModel => 'Calling the model';
+
+  @override
+  String get demoActivitySearching => 'Searching the web';
+
+  @override
+  String get demoActivityReadingWeb => 'Reading a web page';
+
+  @override
+  String get demoActivityVision => 'Reviewing reference images';
+
+  @override
+  String demoOwnedImageMeta(int width, int height) {
+    return 'Image / $width×$height';
+  }
+
+  @override
+  String get demoUploadFiles => 'Upload to library';
+
+  @override
+  String get demoFileUploaded => 'Uploaded';
+
+  @override
+  String get demoUploadPending => 'Preparing upload';
+
+  @override
+  String get demoUploadVerifying => 'Verifying';
+
+  @override
+  String get demoFileSelectionFailed =>
+      'Could not select files. Please try again';
+
+  @override
+  String get demoUploadFailed => 'Could not upload files. Please try again';
+
+  @override
+  String get demoUploadEmptyFile => 'Empty files cannot be uploaded';
+
+  @override
+  String get demoUploadTooLarge =>
+      'This file exceeds the upload size limit. Choose a smaller file';
+
+  @override
+  String get demoUploadUnsupported =>
+      'Unsupported file type. Choose an image, MP4 video, text script or audio file';
+
+  @override
+  String get demoUploadInvalidFile =>
+      'This file is invalid or has changed. Please select it again';
+
+  @override
+  String get demoAssetLoadFailed =>
+      'Could not load the file. Please reopen it later';
+
+  @override
+  String get demoInlineTextLoading => 'Loading file';
+
+  @override
+  String get demoInlineTextCopied => 'Text copied';
+
+  @override
+  String get demoInlineTextExpand => 'Show more';
+
+  @override
+  String get demoInlineTextCollapse => 'Show less';
+
+  @override
+  String get demoInlineTextScrollHint => 'Scroll to read the full text';
+
+  @override
+  String get demoInlineTextDownloadFormats => 'Download file';
+
+  @override
+  String demoInlineTextOpenFile(String name) {
+    return 'Open $name';
+  }
+
+  @override
+  String demoFileSizeMb(String size) {
+    return '$size MB';
+  }
+
+  @override
+  String demoFileSizeKb(String size) {
+    return '$size KB';
+  }
+
+  @override
+  String demoFileSizeBytes(int size) {
+    return '$size B';
+  }
+
+  @override
+  String get demoChooseBots => 'Choose Bots';
+
+  @override
+  String get demoChooseAssistant => 'Choose an assistant';
+
+  @override
+  String get demoCreateAssistant => 'Create a new Popi';
+
+  @override
+  String get demoAssistantName => 'Popi name';
+
+  @override
+  String get demoAssistantInstructions => 'Role and personality';
+
+  @override
+  String get demoAssistantInstructionsHint =>
+      'Describe Popi’s responsibilities, communication style, and preferences (optional)';
+
+  @override
+  String get demoSingleAssistantNotice =>
+      'Only one assistant can be selected for now';
+
+  @override
+  String get demoDiyRoleTitle => 'Create a content character';
+
+  @override
+  String get demoUploadDiyRole => 'Upload a DIY character';
+
+  @override
+  String get demoSelectRoleImages => 'Choose character references';
+
+  @override
+  String get demoDiyRoleNameHint => 'Character name';
+
+  @override
+  String get demoDiyRoleDescriptionHint =>
+      'Personality and appearance (optional)';
+
+  @override
+  String get demoDiyRoleSave => 'Save character';
+
+  @override
+  String get demoDiyRoleLimit => 'Up to 5 reference images';
+
+  @override
+  String get demoNewSessionRoleTitle => 'Add your content character first';
+
+  @override
+  String get demoNewSessionRoleHint =>
+      'Link an existing character or upload your DIY references so the assistant knows who you want to create.';
+
+  @override
+  String get demoLinkContentRole => 'Link a character';
+
+  @override
+  String get demoRoleContextReady => 'Content characters linked';
+
+  @override
+  String get demoStartCreating => 'Start creating';
+
+  @override
+  String get demoCreateSessionAction => 'Create';
+
+  @override
+  String get demoPinSession => 'Pin';
+
+  @override
+  String get demoUnpinSession => 'Unpin';
+
+  @override
+  String get demoPopiAssistant => 'POPi assistant';
+
+  @override
+  String get demoCurrentConversationOnly => 'Only for this conversation';
+
+  @override
+  String get demoEditWorkMode => 'Working mode';
+
+  @override
+  String get demoWorkModeAutomatic => 'Automatic collaboration';
+
+  @override
+  String get demoWorkModeManual => 'Choose manually';
+
+  @override
+  String get demoWorkModeOnDemand => 'On demand';
+
+  @override
+  String get demoVoiceUnavailable => 'Voice input is not connected yet';
+
+  @override
+  String demoBotGroupTitle(int count) {
+    return 'POPi + $count Bots';
+  }
+
+  @override
+  String get demoGlobalCapabilities => 'Conversation skills';
+
+  @override
+  String demoServerConfigRevision(int revision) {
+    return 'Server configuration v$revision';
+  }
+
+  @override
+  String get demoLocalConfig => 'Local demo configuration';
+
+  @override
+  String get demoVisionSkill => 'Visual understanding';
+
+  @override
+  String get demoVisionDetail =>
+      'Understand images and use them in creative decisions';
+
+  @override
+  String get demoCurrentTaskConfigNotice =>
+      'The current task keeps its accepted configuration; changes apply to later tasks';
+
+  @override
+  String get demoActiveMember => 'Assigned member';
+
+  @override
+  String get demoRolePending => 'Persona needs configuration';
+
+  @override
+  String get demoRoleConfigured => 'Persona configured';
+
+  @override
+  String get demoRoleInstructions => 'Persona instructions';
+
+  @override
+  String get demoRoleInstructionsHint =>
+      'Describe the character\'s appearance, personality, and creative constraints for content generation';
+
+  @override
+  String get demoContextRolesHint =>
+      'Characters and reference images for image, text, and video creation. Reference them with @ in your prompt.';
+
+  @override
+  String get demoContextPreferencesHint =>
+      'Default context for future content. You can specify different preferences in the current prompt.';
+
+  @override
+  String get demoReferenceImages => 'Character reference images';
+
+  @override
+  String get demoAddReferenceImage => 'Add reference image';
+
+  @override
+  String get demoReferenceImageUrls => 'Public image links';
+
+  @override
+  String get demoReferenceImageUrlsHint =>
+      'One public image link per line, up to 5';
+
+  @override
+  String get demoReferenceImagesHint =>
+      'Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.';
+
+  @override
+  String get demoDshCapabilitiesHint =>
+      'Provided by DSH and enabled by default. Availability reflects the services actually connected.';
+
+  @override
+  String get demoDshTools => 'Tools';
+
+  @override
+  String get demoDshSkills => 'Skills';
+
+  @override
+  String get demoDshMcp => 'MCP';
+
+  @override
+  String get demoDshNotConnected => 'Not connected';
+
+  @override
+  String get demoDshNotGranted => 'Not enabled in this conversation';
+
+  @override
+  String get demoDshUnavailable => 'Currently unavailable';
+
+  @override
+  String get demoDshUnconfirmed => 'Status not confirmed';
+
+  @override
+  String get demoLocalReferenceOnly =>
+      'Local reference (unavailable to cloud models)';
+
+  @override
+  String get demoReferencePending => 'Reference image not loaded yet';
+
+  @override
+  String get demoNotConfigured => 'Not set';
+
+  @override
+  String get demoMentionRole => 'Reference character';
+
+  @override
+  String get demoMentionRoleHint =>
+      'Choose a linked content character to include its profile and reference images in this request.';
+
+  @override
+  String get demoTaskQueued => 'Task queued';
+
+  @override
+  String get demoTaskCreating => 'Creating';
+
+  @override
+  String get demoTaskSaving => 'Saving to the asset library';
+
+  @override
+  String get demoTaskSaved => 'Saved to the asset library';
+
+  @override
+  String get demoViewOutputs => 'View outputs';
+
+  @override
+  String get demoDismissTaskNotice => 'Dismiss task notice';
+
+  @override
+  String get demoTaskFailed => 'Task failed';
+
+  @override
+  String get demoTaskUnknown => 'Task status needs verification';
+
+  @override
+  String get demoTaskBrief => 'Task overview';
+
+  @override
+  String get demoTaskDescriptionMissing =>
+      'No written description was saved for this task';
+
+  @override
+  String get demoTaskExecutionMember => 'Execution member';
+
+  @override
+  String get demoTaskModel => 'Model';
+
+  @override
+  String get demoTaskConfiguration => 'Task configuration';
+
+  @override
+  String get demoTaskIdentifier => 'Task ID';
+
+  @override
+  String get demoTaskImage => 'Image generation';
+
+  @override
+  String get demoTaskVideo => 'Video generation';
+
+  @override
+  String get demoTaskTts => 'Text-to-speech';
+
+  @override
+  String get demoTaskMusic => 'Music generation';
+
+  @override
+  String get demoTaskVision => 'Visual understanding';
+
+  @override
+  String get demoTaskAudio => 'Audio generation';
+
+  @override
+  String get demoTaskText => 'Text generation';
+
+  @override
+  String get demoTaskScript => 'Script generation';
+
+  @override
+  String get demoTaskMedia => 'Media task';
+
+  @override
+  String demoTaskConfigRevision(int revision) {
+    return 'Accepted configuration v$revision';
+  }
+
+  @override
+  String get harnessAccessTitle => 'Sign in to POPi Test';
+
+  @override
+  String get harnessAccessSubtitle =>
+      'Connect to the test environment and try the latest app features';
+
+  @override
+  String get harnessAccessUsername => 'Account';
+
+  @override
+  String get harnessAccessUsernameHint => 'Enter your test account';
+
+  @override
+  String get harnessAccessPassword => 'Password';
+
+  @override
+  String get harnessAccessSignIn => 'Sign in';
+
+  @override
+  String get harnessAccessSigningIn => 'Signing in…';
+
+  @override
+  String get harnessAccessRequired => 'Enter your account and password';
+
+  @override
+  String get harnessAccessInvalidCredentials =>
+      'The account or password is incorrect';
+
+  @override
+  String harnessAccessRateLimited(int seconds) {
+    return 'Too many attempts. Try again in $seconds seconds';
+  }
+
+  @override
+  String get harnessAccessRateLimitedUnknown =>
+      'Too many attempts. Try again later';
+
+  @override
+  String get harnessAccessUnavailable =>
+      'The test environment is unavailable. Try again later';
+
+  @override
+  String get demoPinnedConversations => 'Pinned';
+
+  @override
+  String get demoRecentConversations => 'Recent conversations';
+
+  @override
+  String get demoListNoMessages => 'No messages yet';
+
+  @override
+  String get demoListYou => 'You';
+
+  @override
+  String get demoListAttachment => '[Attachment]';
+
+  @override
+  String get demoListQuestion => 'Waiting for your answer';
+
+  @override
+  String demoListMessagePreview(String sender, String message) {
+    return '$sender: $message';
+  }
+
+  @override
+  String demoListTime(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.Hm(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.MMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String demoListFullDate(DateTime date) {
+    final intl.DateFormat dateDateFormat = intl.DateFormat.yMMMd(localeName);
+    final String dateString = dateDateFormat.format(date);
+
+    return '$dateString';
+  }
+
+  @override
+  String get demoMaterials => 'Materials';
+
+  @override
+  String composerNamedPlaceholder(String name) {
+    return 'Say something to $name...';
+  }
+
+  @override
+  String get demoUploadFromDevice => 'Upload from device';
+
+  @override
+  String get demoSelectFromLibrary => 'Choose from library';
+
+  @override
+  String get previewAttachment => 'Double-click to preview attachment';
+
+  @override
+  String get demoAttachmentUnsupported =>
+      'This assistant cannot read this attachment type yet. Choose images or text scripts.';
+
+  @override
+  String get demoAttachmentNotFound =>
+      'An attachment is no longer available. Remove it and upload it again.';
+
+  @override
+  String get demoAttachmentTooLarge =>
+      'The attachments are too large together. Use fewer or smaller files.';
+
+  @override
+  String get demoAttachmentLimit =>
+      'There are too many or duplicate attachments. Adjust them before sending.';
+
+  @override
+  String get demoAttachmentInvalid =>
+      'An attachment cannot be read or has changed. Upload it again.';
+
+  @override
+  String get demoStyleFilmCapabilityTitle => 'Create styled short films';
+
+  @override
+  String get demoStyleFilmCapabilityDescription =>
+      'Enable style selection in the composer and the + menu.';
+
+  @override
+  String get demoStyleFilmSelect => 'Choose style';
+
+  @override
+  String get demoStyleFilmChange => 'Change style';
+
+  @override
+  String get demoStyleFilmClear => 'Clear selected style';
+
+  @override
+  String get demoStyleFilmMenu => 'Choose style';
+
+  @override
+  String get demoStyleFilmSheetTitle => 'Film styles';
+
+  @override
+  String get demoStyleFilmSearchHint => 'Search styles or uses';
+
+  @override
+  String get demoStyleFilmAllCategories => 'All categories';
+
+  @override
+  String get demoStyleFilmUnavailable => 'Not ready to create';
+
+  @override
+  String get demoStyleFilmDuration => 'Duration';
+
+  @override
+  String get demoStyleFilmAspectRatio => 'Aspect ratio';
+
+  @override
+  String get demoStyleFilmSoundtrack => 'Soundtrack';
+
+  @override
+  String get demoStyleFilmSoundNone => 'No audio';
+
+  @override
+  String get demoStyleFilmSoundMusic => 'Original music';
+
+  @override
+  String get demoStyleFilmStoryboardReview =>
+      'Review the storyboard before rendering';
+
+  @override
+  String get demoStyleFilmCreate => 'Use this style';
+
+  @override
+  String get demoStyleFilmConfirmTitle => 'Confirm the film brief';
+
+  @override
+  String demoStyleFilmConfirmDescription(
+    String style,
+    int seconds,
+    String ratio,
+  ) {
+    return 'Style: $style. Duration: $seconds seconds. Aspect ratio: $ratio. Review the storyboard before rendering the video.';
+  }
+
+  @override
+  String get demoStyleFilmCostPending =>
+      'Creation uses the current model and server resources. Model usage is billed by your service provider.';
+
+  @override
+  String get demoStyleFilmPreparingStoryboard => 'Preparing storyboard';
+
+  @override
+  String get demoStyleFilmAwaitingStoryboard =>
+      'Storyboard awaiting your review';
+
+  @override
+  String get demoStyleFilmApproveStoryboard => 'Approve storyboard and render';
+
+  @override
+  String get demoStyleFilmReviseStoryboard => 'Revise storyboard';
+
+  @override
+  String get demoStyleFilmRevisionNotes =>
+      'How should the story and visuals change?';
+
+  @override
+  String get demoStyleFilmRevisionNotice =>
+      'Submitting creates a new complete storyboard. The video waits for your approval.';
+
+  @override
+  String get demoStyleFilmSubmitRevision => 'Submit changes';
+
+  @override
+  String get demoStyleFilmCreating => 'Creating your film';
+
+  @override
+  String get demoStyleFilmCompleted => 'Film completed';
+
+  @override
+  String get demoStyleFilmFailed => 'Film creation failed';
+
+  @override
+  String get demoStyleFilmViewOutput => 'View film';
+
+  @override
+  String get demoStyleFilmNoReadyStyles =>
+      'No styles are ready for creation. You can still browse the catalog.';
+
+  @override
+  String get demoStyleFilmLoadFailed =>
+      'Could not load film styles. Open the picker again to try.';
+
+  @override
+  String get demoStyleFilmReviewFailed =>
+      'The storyboard action was not submitted. Your choices and notes are preserved.';
+
+  @override
+  String get demoStyleFilmSaveFailed =>
+      'Capability settings were not saved. Your changes are preserved.';
+
+  @override
+  String get demoStyleFilmRetry => 'Create again';
+
+  @override
+  String demoStyleFilmStyleCount(int count) {
+    return '$count styles';
+  }
+
+  @override
+  String demoStyleFilmPosterLabel(String name) {
+    return '$name style example';
+  }
+
+  @override
+  String get demoStyleFilmPreviewLabel => 'Storyboard preview';
+
+  @override
+  String get demoStyleFilmNoStoryboard =>
+      'The storyboard is not ready yet. Progress stays in this conversation.';
+
+  @override
+  String get demoStyleFilmUpload => 'Upload from device';
+
+  @override
+  String get demoStyleFilmLibrary => 'Choose from library';
+
+  @override
+  String get demoStyleFilmReferencesUnsupported =>
+      'Style films currently support text prompts only. Remove attachments and content roles before creating.';
+
+  @override
+  String demoStyleFilmBotContext(String name) {
+    return 'For Bot: $name';
+  }
+
+  @override
+  String get demoStyleFilmLoadingCatalog => 'Loading style catalog';
+
+  @override
+  String demoStyleFilmReadyCount(int count) {
+    return '$count ready to create';
+  }
+
+  @override
+  String get demoStyleFilmBrowsePending =>
+      'Browse all styles now; creation unlocks after verification.';
+
+  @override
+  String get demoStyleFilmNoReadyFooter =>
+      'No verified style is ready to create yet';
+
+  @override
+  String get demoStyleFilmReasonUnsupportedStyle => 'Not adapted yet';
+
+  @override
+  String get demoStyleFilmReasonUnverifiedStyle => 'Awaiting verification';
+
+  @override
+  String get demoStyleFilmReasonRuntimeUnavailable =>
+      'Creation is temporarily unavailable';
+
+  @override
+  String get demoStyleFilmReasonModelUnavailable =>
+      'The current model is not ready';
+
+  @override
+  String get demoStyleFilmReasonUnknown => 'Not available for creation yet';
+
+  @override
+  String get demoStyleFilmCapabilitiesHint =>
+      'DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.';
+
+  @override
+  String get demoPasteImage => 'Paste image';
+
+  @override
+  String get demoPasteImageUnavailable =>
+      'No usable image is available on the clipboard';
+
+  @override
+  String get demoPasteImageFailed =>
+      'The image was not pasted. Your input and attachments are preserved.';
+
+  @override
+  String get demoPastingImages => 'Adding clipboard images';
+
+  @override
+  String get demoDocuments => 'Documents';
+
+  @override
+  String get demoDocumentParsing => 'Parsing document';
+
+  @override
+  String get demoDocumentReady => 'Document parsed and ready for the assistant';
+
+  @override
+  String demoDocumentPages(int count) {
+    return '$count pages';
+  }
+
+  @override
+  String demoDocumentSlides(int count) {
+    return '$count slides';
+  }
+
+  @override
+  String get demoDocumentTruncated =>
+      'Content was truncated at the reading limit';
+
+  @override
+  String get demoDocumentOcrUsed => 'OCR was used';
+
+  @override
+  String get demoDocumentPageCountEstimated => 'Page count is estimated';
+
+  @override
+  String get demoDocumentTextEmpty =>
+      'No readable text was found in this document';
+
+  @override
+  String get demoDocumentOriginalAvailable =>
+      'Original file available to download';
+
+  @override
+  String get demoDocumentLimitHint =>
+      'Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.';
+
+  @override
+  String get demoAttachmentParsing =>
+      'Attachments are still being parsed. Wait before sending.';
+
+  @override
+  String demoSkillBotContext(String name) {
+    return 'For Bot: $name';
+  }
+
+  @override
+  String get demoSkillSaveFailed =>
+      'Skill settings were not saved. Your choice is preserved.';
+
+  @override
+  String get demoRolePreviewEdit => 'Edit profile';
+
+  @override
+  String get demoRolePreviewNoReferences => 'No character reference images';
+
+  @override
+  String demoRolePreviewMissingReferences(int count) {
+    return '$count reference images are unavailable';
+  }
+
+  @override
+  String demoRolePreviewReferenceCount(int count) {
+    return '$count reference images';
+  }
+
+  @override
+  String get demoRolePreviewFullInstructions =>
+      'View full original instructions';
+
+  @override
+  String get demoRolePreviewCollapseInstructions =>
+      'Collapse original instructions';
 }

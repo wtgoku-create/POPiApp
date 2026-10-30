@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/media_image_repository.dart';
 import '../../core/storage/app_image_cache.dart';
 import '../providers/media_image_provider.dart';
+import '../../core/config/app_config.dart';
+import '../providers/harness_access_provider.dart';
 
 export '../../core/storage/app_image_cache.dart';
 
@@ -19,6 +21,9 @@ class AppNetworkImage extends StatelessWidget {
     this.loadingBuilder,
     this.semanticLabel,
     this.excludeFromSemantics = false,
+    this.headers = const {},
+    this.cacheKey,
+    this.onUnauthorized,
   });
 
   final String url;
@@ -29,15 +34,29 @@ class AppNetworkImage extends StatelessWidget {
   final ImageLoadingBuilder? loadingBuilder;
   final String? semanticLabel;
   final bool excludeFromSemantics;
+  final Map<String, String> headers;
+  final String? cacheKey;
+  final VoidCallback? onUnauthorized;
 
   @override
   Widget build(BuildContext context) =>
-      MediaImageRepository.protectedMediaId(url) == null
+      AppConfig.businessAgentEnabled &&
+          Uri.tryParse(url)?.hasAuthority == true &&
+          Uri.tryParse(url)?.origin ==
+              Uri.parse(AppConfig.agentApiBaseUrl).origin &&
+          Uri.parse(url).path.startsWith('/api_agent/v2/roles/')
+      ? _AgentRoleImage(image: this)
+      : MediaImageRepository.protectedMediaId(url) == null
       ? _image(url)
       : _ProtectedImage(image: this);
 
-  Widget _image(String resolvedUrl) => Image(
-    image: AppImageCache.provider(resolvedUrl),
+  Widget _image(String resolvedUrl, {bool includeAccess = true}) => Image(
+    image: AppImageCache.provider(
+      resolvedUrl,
+      headers: includeAccess ? headers : const {},
+      cacheKey: includeAccess ? cacheKey : null,
+      onUnauthorized: includeAccess ? onUnauthorized : null,
+    ),
     width: width,
     height: height,
     fit: fit,
@@ -45,6 +64,28 @@ class AppNetworkImage extends StatelessWidget {
     loadingBuilder: loadingBuilder,
     semanticLabel: semanticLabel,
     excludeFromSemantics: excludeFromSemantics,
+  );
+}
+
+class _AgentRoleImage extends ConsumerWidget {
+  const _AgentRoleImage({required this.image});
+  final AppNetworkImage image;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Image(
+    image: AppImageCache.provider(
+      image.url,
+      headers: ref.watch(harnessAccessHeadersProvider(image.url)),
+      cacheKey: ref.watch(harnessAccessCacheKeyProvider(image.url)),
+      onUnauthorized: ref.watch(harnessAccessUnauthorizedProvider(image.url)),
+    ),
+    width: image.width,
+    height: image.height,
+    fit: image.fit,
+    errorBuilder: image.errorBuilder,
+    loadingBuilder: image.loadingBuilder,
+    semanticLabel: image.semanticLabel,
+    excludeFromSemantics: image.excludeFromSemantics,
   );
 }
 
@@ -59,7 +100,7 @@ class _ProtectedImage extends ConsumerWidget {
       .when(
         skipLoadingOnRefresh: false,
         skipLoadingOnReload: false,
-        data: image._image,
+        data: (url) => image._image(url, includeAccess: false),
         error: (error, stack) =>
             image.errorBuilder?.call(context, error, stack) ??
             SizedBox(width: image.width, height: image.height),

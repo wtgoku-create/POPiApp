@@ -4,12 +4,15 @@ import 'package:flutter/foundation.dart';
 import '../storage/secure_storage.dart';
 import '../config/app_config.dart';
 import 'auth_interceptor.dart';
+import 'business_web_credentials.dart';
 
 class DioClient {
   DioClient({
     required TokenStorage secureStorage,
     String baseUrl = AppConfig.apiBaseUrl,
     bool enableLogging = AppConfig.enableApiLogging,
+    bool useAuthentication = true,
+    bool cookieAuthentication = kIsWeb && AppConfig.businessAgentEnabled,
     Map<String, Object?> headers = const {},
   }) : dio = Dio(
          BaseOptions(
@@ -23,7 +26,10 @@ class DioClient {
            },
          ),
        ) {
-    dio.interceptors.add(AuthInterceptor(secureStorage));
+    if (cookieAuthentication) configureBusinessWebCredentials(dio);
+    if (useAuthentication && !cookieAuthentication) {
+      dio.interceptors.add(AuthInterceptor(secureStorage));
+    }
     if (kDebugMode) {
       dio.interceptors.add(
         InterceptorsWrapper(

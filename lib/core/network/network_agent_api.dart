@@ -637,6 +637,7 @@ class NetworkAgentApi {
     String? taskId,
     List<String>? mediaIds,
     List<String>? contextRoleIds,
+    Map<String, Object?>? skillInvocation,
     CancelToken? cancelToken,
   }) => _sessionRequest(
     id,
@@ -648,6 +649,7 @@ class NetworkAgentApi {
       if (taskId != null) 'taskId': taskId,
       if (mediaIds != null) 'mediaIds': mediaIds,
       if (contextRoleIds != null) 'contextRoleIds': contextRoleIds,
+      if (skillInvocation != null) 'skillInvocation': skillInvocation,
     },
     cancelToken: cancelToken,
   );
@@ -926,5 +928,111 @@ class NetworkAgentApi {
       if (error.response == null || CancelToken.isCancel(error)) rethrow;
       throw AgentApiException.fromDioException(error);
     }
+  }
+
+  Future<Map<String, dynamic>> preferenceOptions({CancelToken? cancelToken}) =>
+      _request('/api_agent/v2/preference-options', cancelToken: cancelToken);
+
+  /// Exchanges test-server credentials for the dedicated Harness cookie.
+  ///
+  /// Redirects stay disabled so only the server's explicit 303 response can
+  /// be validated by the access repository. The caller owns all response
+  /// interpretation; credentials are never placed in a URL.
+  Future<Response<Object?>> signInHarness({
+    required String username,
+    required String password,
+    CancelToken? cancelToken,
+  }) => dio.post<Object?>(
+    '/login',
+    data: {'username': username, 'password': password},
+    options: Options(
+      contentType: Headers.formUrlEncodedContentType,
+      followRedirects: false,
+      maxRedirects: 0,
+      validateStatus: (status) =>
+          status != null && status >= 200 && status < 500,
+    ),
+    cancelToken: cancelToken,
+  );
+
+  /// Returns the tools, Skills, and MCP bindings supplied by the Agent runtime.
+  Future<Map<String, dynamic>> harnessCapabilities({
+    String? sessionId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/capabilities',
+    queryParameters: {if (sessionId != null) 'sessionId': sessionId},
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> styleFilmCatalog({
+    String? q,
+    String? category,
+    int page = 1,
+    int pageSize = 20,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/style-films/catalog',
+    queryParameters: {
+      if (q != null && q.trim().isNotEmpty) 'q': q.trim(),
+      if (category != null && category.isNotEmpty) 'category': category,
+      'page': page,
+      'pageSize': pageSize,
+    },
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> reviewStyleFilm(
+    String sessionId,
+    String jobId, {
+    required String clientRequestId,
+    required int expectedRevision,
+    required String action,
+    String? notes,
+    CancelToken? cancelToken,
+  }) {
+    final trimmedNotes = notes?.trim();
+    if (!const ['approve', 'revise'].contains(action) ||
+        expectedRevision < 1 ||
+        (trimmedNotes?.runes.length ?? 0) > 2000) {
+      throw ArgumentError('Invalid style film review');
+    }
+    return _request(
+      '/api_agent/v2/sessions/${Uri.encodeComponent(sessionId)}/style-films/${Uri.encodeComponent(jobId)}/review',
+      method: 'POST',
+      data: {
+        'clientRequestId': clientRequestId,
+        'expectedRevision': expectedRevision,
+        'action': action,
+        if (trimmedNotes != null) 'notes': trimmedNotes,
+      },
+      cancelToken: cancelToken,
+    );
+  }
+
+  /// Style posters share Agent authentication but are separate from owned assets.
+  String resolveStyleFilmPosterUrl(String value) {
+    final base = Uri.parse(dio.options.baseUrl);
+    final candidate = Uri.tryParse(value);
+    if (!base.hasScheme || base.host.isEmpty || candidate == null) {
+      throw const FormatException('Invalid style poster URL');
+    }
+    final resolved = candidate.hasScheme
+        ? candidate
+        : base.resolveUri(candidate);
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !RegExp(
+          r'^/api_agent/v2/style-films/styles/[a-z0-9]+(?:-[a-z0-9]+)*/poster$',
+        ).hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment ||
+        resolved.userInfo.isNotEmpty) {
+      throw const FormatException(
+        'Style poster URL is outside the Agent origin',
+      );
+    }
+    return resolved.toString();
   }
 }

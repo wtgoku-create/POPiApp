@@ -588,6 +588,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
                     PopiMessageComposer(
                       conversationMode: true,
                       sessionLayout: true,
+                      showDisclaimer: true,
                       bottomPadding: 0,
                       controller: _composer,
                       selectedImages: const [],

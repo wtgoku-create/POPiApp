@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 abstract final class AppConfig {
   // Defaults preserve plain flutter run; environment files override these at build time.
   static const environment = String.fromEnvironment(
@@ -29,6 +31,34 @@ abstract final class AppConfig {
     defaultValue: apiBaseUrl,
   );
   static const agentApiOrigin = String.fromEnvironment('AGENT_API_ORIGIN');
+  static const businessAgentEnabled = bool.fromEnvironment(
+    'BUSINESS_AGENT_ENABLED',
+    // The normal Web entry uses the authenticated business workspace.
+    defaultValue: kIsWeb && !localHarnessEnabled && !remoteHarnessEnabled,
+  );
+  static const localHarnessEnabled = bool.fromEnvironment(
+    'LOCAL_HARNESS_ENABLED',
+    defaultValue: false,
+  );
+  static const remoteHarnessEnabled = bool.fromEnvironment(
+    'REMOTE_HARNESS_ENABLED',
+    defaultValue: false,
+  );
+
+  static bool get harnessEnabled {
+    if (localHarnessEnabled && remoteHarnessEnabled) {
+      throw StateError(
+        'LOCAL_HARNESS_ENABLED and REMOTE_HARNESS_ENABLED cannot both be true',
+      );
+    }
+    if (businessAgentEnabled && (localHarnessEnabled || remoteHarnessEnabled)) {
+      throw StateError(
+        'Business and test Harness transports cannot both be enabled',
+      );
+    }
+    return businessAgentEnabled || localHarnessEnabled || remoteHarnessEnabled;
+  }
+
   static const runtimeApiBaseUrl = String.fromEnvironment(
     'RUNTIME_API_BASE_URL',
     defaultValue: agentApiBaseUrl,

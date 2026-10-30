@@ -1273,5 +1273,455 @@
         "type": "int"
       }
     }
-  }
+  },
+  "wechatScanLogin": "微信扫码登录",
+  "douyinScanLogin": "抖音扫码登录",
+  "douyinWebAuthorizing": "正在完成抖音登录",
+  "allowDouyinPopup": "请允许浏览器打开抖音授权窗口后再次登录",
+  "socialLoginExpired": "授权已过期",
+  "refreshSocialLogin": "刷新授权",
+  "ipSessionTitle": "会话名称：",
+  "ipSessionTitleHint": "给会话取个名字",
+  "voiceInputStarting": "正在准备语音输入…",
+  "voiceInputListening": "正在聆听，点击麦克风结束",
+  "voiceInputFinishing": "正在识别…",
+  "voiceInputStop": "结束语音输入",
+  "voiceInputCancel": "取消语音输入",
+  "voiceInputPermissionDenied": "请在系统或浏览器设置中允许麦克风和语音识别权限",
+  "voiceInputUnavailable": "当前设备或浏览器暂不支持语音输入",
+  "voiceInputNoSpeech": "未识别到语音，请再试一次",
+  "voiceInputNetworkError": "语音识别连接失败，请检查网络后再试",
+  "voiceInputAudioError": "无法使用麦克风，请检查设备或是否被占用",
+  "voiceInputFailed": "语音识别失败，请再试一次",
+  "demoCreativeMemory": "创作偏好",
+  "demoEditCreativeMemory": "编辑创作偏好",
+  "demoCreativeMemoryEmpty": "AI 会根据对话整理画面风格、具体模型偏好与比例，也可以手动填写。",
+  "demoCreativeMemoryScope": "仅用于当前会话，手动修改后 AI 不会自动覆盖。",
+  "demoCreativeMemoryEditorHint": "这段内容会作为当前会话的创作记忆。请写明画面风格、图片/视频的具体模型偏好和比例。",
+  "demoCreativeMemoryAfterSave": "保存后，后续创作会自动使用这段记忆。",
+  "demoSaveToCurrentSession": "保存到当前会话",
+  "demoImageStackCount": "{count} 张图片",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoActivityTitle": "{name} · {activity}",
+  "@demoActivityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "demoActivityThinking": "正在思考你的内容",
+  "demoActivityModel": "正在调用模型",
+  "demoActivitySearching": "正在搜索资料",
+  "demoActivityReadingWeb": "正在阅读网页",
+  "demoActivityVision": "正在查看参考图片",
+  "demoOwnedImageMeta": "图片 / {width}×{height}",
+  "@demoOwnedImageMeta": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "demoUploadFiles": "上传到资产库",
+  "demoFileUploaded": "已上传",
+  "demoUploadPending": "准备上传",
+  "demoUploadVerifying": "校验中",
+  "demoFileSelectionFailed": "无法选择文件，请再试一次",
+  "demoUploadFailed": "文件上传失败，请再试一次",
+  "demoUploadEmptyFile": "空文件无法上传",
+  "demoUploadTooLarge": "文件超过上传大小限制，请选择较小的文件",
+  "demoUploadUnsupported": "不支持该文件类型，请选择图片、MP4视频、文本脚本或音频",
+  "demoUploadInvalidFile": "文件无效或已发生变化，请重新选择",
+  "demoAssetLoadFailed": "文件加载失败，请稍后重新打开",
+  "demoInlineTextLoading": "正在加载文件",
+  "demoInlineTextCopied": "已复制全文",
+  "demoInlineTextExpand": "展开全文",
+  "demoInlineTextCollapse": "收起全文",
+  "demoInlineTextScrollHint": "滚动查看全文",
+  "demoInlineTextDownloadFormats": "下载文件",
+  "demoInlineTextOpenFile": "打开{name}",
+  "@demoInlineTextOpenFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeMb": "{size} MB",
+  "@demoFileSizeMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeKb": "{size} KB",
+  "@demoFileSizeKb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeBytes": "{size} 字节",
+  "@demoFileSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "demoChooseBots": "选择Bot",
+  "demoChooseAssistant": "选择助理",
+  "demoCreateAssistant": "创建新的 Popi",
+  "demoAssistantName": "Popi 名称",
+  "demoAssistantInstructions": "职责与个性",
+  "demoAssistantInstructionsHint": "描述 Popi 的职责、表达风格与协作偏好，可选",
+  "demoSingleAssistantNotice": "当前仅支持选择一名助理",
+  "demoDiyRoleTitle": "创建内容角色",
+  "demoUploadDiyRole": "上传 DIY 角色",
+  "demoSelectRoleImages": "选择角色参考图",
+  "demoDiyRoleNameHint": "角色名称",
+  "demoDiyRoleDescriptionHint": "人设与外观描述，可选",
+  "demoDiyRoleSave": "保存角色",
+  "demoDiyRoleLimit": "最多 5 张参考图",
+  "demoNewSessionRoleTitle": "先添加你的创作角色",
+  "demoNewSessionRoleHint": "关联已有角色，或上传自己的 DIY 角色参考图，让助理了解你的创作主角。",
+  "demoLinkContentRole": "关联角色",
+  "demoRoleContextReady": "已关联创作角色",
+  "demoStartCreating": "开始创作",
+  "demoCreateSessionAction": "创建",
+  "demoPinSession": "置顶",
+  "demoUnpinSession": "取消置顶",
+  "demoPopiAssistant": "POPi助手",
+  "demoCurrentConversationOnly": "仅作用于当前会话",
+  "demoEditWorkMode": "工作方式",
+  "demoWorkModeAutomatic": "自动协作",
+  "demoWorkModeManual": "手动选择",
+  "demoWorkModeOnDemand": "按需调用",
+  "demoVoiceUnavailable": "语音输入尚未接入",
+  "demoBotGroupTitle": "POPi等{count}人",
+  "@demoBotGroupTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoGlobalCapabilities": "会话能力",
+  "demoServerConfigRevision": "服务端配置 v{revision}",
+  "@demoServerConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "demoLocalConfig": "本地演示配置",
+  "demoVisionSkill": "视觉理解",
+  "demoVisionDetail": "理解图片内容并用于创作判断",
+  "demoCurrentTaskConfigNotice": "当前任务沿用受理时的配置；修改仅对后续任务生效",
+  "demoActiveMember": "指定执行成员",
+  "demoRolePending": "人设待配置",
+  "demoRoleConfigured": "人设已配置",
+  "demoRoleInstructions": "人设说明",
+  "demoRoleInstructionsHint": "描述角色外观、性格及创作约束，生成内容时作为参考",
+  "demoContextRolesHint": "用于图文、视频创作的角色与参考图，可在输入中用 @ 引用。",
+  "demoContextPreferencesHint": "作为后续创作的默认上下文，也可在本次提示词中另作说明。",
+  "demoReferenceImages": "角色参考图",
+  "demoAddReferenceImage": "添加参考图",
+  "demoReferenceImageUrls": "公开图片链接",
+  "demoReferenceImageUrlsHint": "每行一个公开图片链接，最多 5 个",
+  "demoReferenceImagesHint": "为创作提供外观参考。云端生成需要可访问的图片链接；本地图片不会自动公开。",
+  "demoDshCapabilitiesHint": "由 DSH 提供并默认启用，可用状态以实际接入为准。",
+  "demoDshTools": "工具",
+  "demoDshSkills": "Skills",
+  "demoDshMcp": "MCP",
+  "demoDshNotConnected": "尚未接入",
+  "demoDshNotGranted": "本会话未启用",
+  "demoDshUnavailable": "暂不可用",
+  "demoDshUnconfirmed": "状态待确认",
+  "demoLocalReferenceOnly": "本地参考图（云端暂不可用）",
+  "demoReferencePending": "参考图待读取",
+  "demoNotConfigured": "未设置",
+  "demoMentionRole": "引用角色",
+  "demoMentionRoleHint": "选择已关联的创作角色，将人设与参考图加入本次上下文。",
+  "demoTaskQueued": "任务已排队",
+  "demoTaskCreating": "正在制作",
+  "demoTaskSaving": "正在保存到资产库",
+  "demoTaskSaved": "已保存到资产库",
+  "demoViewOutputs": "查看产物",
+  "demoDismissTaskNotice": "关闭任务提示",
+  "demoTaskFailed": "任务失败",
+  "demoTaskUnknown": "任务状态待核实",
+  "demoTaskBrief": "任务简介",
+  "demoTaskDescriptionMissing": "该任务未保存文字简介",
+  "demoTaskExecutionMember": "执行成员",
+  "demoTaskModel": "模型",
+  "demoTaskConfiguration": "任务配置",
+  "demoTaskIdentifier": "任务 ID",
+  "demoTaskImage": "图片生成",
+  "demoTaskVideo": "视频生成",
+  "demoTaskTts": "语音合成",
+  "demoTaskMusic": "音乐生成",
+  "demoTaskVision": "视觉理解",
+  "demoTaskAudio": "音频生成",
+  "demoTaskText": "文本生成",
+  "demoTaskScript": "脚本生成",
+  "demoTaskMedia": "媒体任务",
+  "demoTaskConfigRevision": "受理配置 v{revision}",
+  "@demoTaskConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessTitle": "登录 POPi 测试版",
+  "harnessAccessSubtitle": "登录后连接测试环境，体验最新的应用功能",
+  "harnessAccessUsername": "账号",
+  "harnessAccessUsernameHint": "请输入测试账号",
+  "harnessAccessPassword": "密码",
+  "harnessAccessSignIn": "登录",
+  "harnessAccessSigningIn": "正在登录…",
+  "harnessAccessRequired": "请输入账号和密码",
+  "harnessAccessInvalidCredentials": "账号或密码不正确",
+  "harnessAccessRateLimited": "尝试次数过多，请在 {seconds} 秒后重试",
+  "@harnessAccessRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessRateLimitedUnknown": "尝试次数过多，请稍后重试",
+  "harnessAccessUnavailable": "暂时无法连接测试环境，请稍后重试",
+  "demoPinnedConversations": "置顶",
+  "demoRecentConversations": "最近会话",
+  "demoListNoMessages": "暂无消息",
+  "demoListYou": "你",
+  "demoListAttachment": "[附件]",
+  "demoListQuestion": "等待你的回答",
+  "demoListMessagePreview": "{sender}：{message}",
+  "demoListTime": "{date}",
+  "demoListDate": "{date}",
+  "demoListFullDate": "{date}",
+  "@demoListMessagePreview": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@demoListTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "@demoListDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "@demoListFullDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "demoMaterials": "素材",
+  "composerNamedPlaceholder": "跟{name}说点什么...",
+  "@composerNamedPlaceholder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoUploadFromDevice": "从设备上传",
+  "demoSelectFromLibrary": "从素材库选择",
+  "previewAttachment": "双击预览附件",
+  "demoAttachmentUnsupported": "当前助手暂不支持读取这类附件，请选择图片或文本脚本。",
+  "demoAttachmentNotFound": "附件已不存在，请移除后重新上传。",
+  "demoAttachmentTooLarge": "本次附件总大小过大，请减少附件或选择较小的文件。",
+  "demoAttachmentLimit": "附件数量过多或包含重复项，请调整后再发送。",
+  "demoAttachmentInvalid": "附件无法读取或已发生变化，请重新上传。",
+  "demoStyleFilmCapabilityTitle": "制作风格短片",
+  "demoStyleFilmCapabilityDescription": "启用后，可在对话输入区和＋菜单中选择短片风格。",
+  "demoStyleFilmSelect": "选择风格",
+  "demoStyleFilmChange": "更换风格",
+  "demoStyleFilmClear": "清除已选风格",
+  "demoStyleFilmMenu": "选择风格",
+  "demoStyleFilmSheetTitle": "短片风格",
+  "demoStyleFilmSearchHint": "搜索风格或用途",
+  "demoStyleFilmAllCategories": "全部分类",
+  "demoStyleFilmUnavailable": "暂不可制作",
+  "demoStyleFilmDuration": "时长",
+  "demoStyleFilmAspectRatio": "画幅",
+  "demoStyleFilmSoundtrack": "声音",
+  "demoStyleFilmSoundNone": "无声短片",
+  "demoStyleFilmSoundMusic": "原创配乐",
+  "demoStyleFilmStoryboardReview": "先看分镜，确认后制作",
+  "demoStyleFilmCreate": "使用这个风格",
+  "demoStyleFilmConfirmTitle": "确认创作简报",
+  "demoStyleFilmConfirmDescription": "使用「{style}」制作 {seconds} 秒、{ratio} 的短片。先生成分镜，确认后再制作成片。",
+  "@demoStyleFilmConfirmDescription": {
+    "placeholders": {
+      "style": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      },
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmCostPending": "制作会使用当前模型和服务器算力，具体模型用量以服务账单为准。",
+  "demoStyleFilmPreparingStoryboard": "正在准备分镜",
+  "demoStyleFilmAwaitingStoryboard": "分镜待你确认",
+  "demoStyleFilmApproveStoryboard": "确认分镜，开始制作",
+  "demoStyleFilmReviseStoryboard": "调整分镜",
+  "demoStyleFilmRevisionNotes": "希望怎样调整故事与画面？",
+  "demoStyleFilmRevisionNotice": "提交后将重新生成整套分镜，确认前不会制作成片。",
+  "demoStyleFilmSubmitRevision": "提交调整",
+  "demoStyleFilmCreating": "正在制作短片",
+  "demoStyleFilmCompleted": "短片已完成",
+  "demoStyleFilmFailed": "短片制作失败",
+  "demoStyleFilmViewOutput": "查看成片",
+  "demoStyleFilmNoReadyStyles": "当前没有可制作的风格，可先浏览风格目录。",
+  "demoStyleFilmLoadFailed": "风格目录读取失败，请稍后再打开。",
+  "demoStyleFilmReviewFailed": "分镜操作未提交，已保留你的选择和输入。",
+  "demoStyleFilmSaveFailed": "能力设置未保存，已保留你的修改。",
+  "demoStyleFilmRetry": "重新制作",
+  "demoStyleFilmStyleCount": "{count} 种风格",
+  "@demoStyleFilmStyleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmPosterLabel": "{name}风格示例",
+  "@demoStyleFilmPosterLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmPreviewLabel": "分镜预览",
+  "demoStyleFilmNoStoryboard": "分镜尚未就绪，制作进展会保留在原会话中。",
+  "demoStyleFilmUpload": "从设备上传",
+  "demoStyleFilmLibrary": "从素材库选择",
+  "demoStyleFilmReferencesUnsupported": "当前风格短片仅支持文字主题，请先移除附件和内容角色。",
+  "demoStyleFilmBotContext": "适用于 Bot：{name}",
+  "@demoStyleFilmBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmLoadingCatalog": "正在加载风格目录",
+  "demoStyleFilmReadyCount": "可制作 {count} 种",
+  "@demoStyleFilmReadyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmBrowsePending": "可以浏览全部风格，完成验证后即可选择制作。",
+  "demoStyleFilmNoReadyFooter": "当前没有已验证可制作的风格",
+  "demoStyleFilmReasonUnsupportedStyle": "暂未适配",
+  "demoStyleFilmReasonUnverifiedStyle": "待验证",
+  "demoStyleFilmReasonRuntimeUnavailable": "暂时无法制作",
+  "demoStyleFilmReasonModelUnavailable": "当前模型未就绪",
+  "demoStyleFilmReasonUnknown": "暂不可制作",
+  "demoStyleFilmCapabilitiesHint": "能力由 DSH 提供；Bot 专属创作技能按需启用，可用状态以实际连接为准。",
+  "demoPasteImage": "粘贴图片",
+  "demoPasteImageUnavailable": "剪贴板中没有可用图片",
+  "demoPasteImageFailed": "图片未粘贴，已保留当前输入和附件",
+  "demoPastingImages": "正在添加剪贴板图片",
+  "demoDocuments": "文档",
+  "demoDocumentParsing": "正在解析文档",
+  "demoDocumentReady": "文档已解析，可发送给助理读取",
+  "demoDocumentPages": "{count} 页",
+  "@demoDocumentPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoDocumentSlides": "{count} 张幻灯片",
+  "@demoDocumentSlides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoDocumentTruncated": "内容已按读取上限截断",
+  "demoDocumentOcrUsed": "已使用 OCR 识别",
+  "demoDocumentPageCountEstimated": "页数为估算值",
+  "demoDocumentTextEmpty": "文档中没有可读取的文字",
+  "demoDocumentOriginalAvailable": "原文件可下载",
+  "demoDocumentLimitHint": "最多 10 个附件，共 50 MB；图片共 20 MB。文档单个 20 MB，PDF 最多 100 页，PPT 最多 100 张。",
+  "demoAttachmentParsing": "附件仍在解析，请稍候再发送",
+  "demoSkillBotContext": "适用于 Bot：{name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill 设置未保存，已保留你的选择。",
+  "demoRolePreviewEdit": "编辑档案",
+  "demoRolePreviewNoReferences": "暂无角色参考图",
+  "demoRolePreviewMissingReferences": "{count} 张参考图暂不可用",
+  "@demoRolePreviewMissingReferences": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewReferenceCount": "{count} 张参考图",
+  "@demoRolePreviewReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewFullInstructions": "查看完整原始说明",
+  "demoRolePreviewCollapseInstructions": "收起完整原始说明"
 }

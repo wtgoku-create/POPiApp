@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import '../../../core/config/app_config.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_storage.dart';
@@ -212,14 +214,19 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
+    final token = await secureStorage.readAccessToken();
     try {
       await api.logout();
     } on DioException {
+      if (kIsWeb && AppConfig.businessAgentEnabled) rethrow;
       // Local logout must still succeed when the server is unavailable.
     } on ApiException {
+      if (kIsWeb && AppConfig.businessAgentEnabled) rethrow;
       // Local logout must still succeed when the session already expired.
     } finally {
-      await secureStorage.deleteAccessToken();
+      if (await secureStorage.readAccessToken() == token) {
+        await secureStorage.deleteAccessToken();
+      }
     }
   }
 

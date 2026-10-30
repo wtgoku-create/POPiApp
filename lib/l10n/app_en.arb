@@ -1273,5 +1273,455 @@
         "type": "int"
       }
     }
-  }
+  },
+  "wechatScanLogin": "Scan with WeChat",
+  "douyinScanLogin": "Scan with Douyin",
+  "douyinWebAuthorizing": "Completing Douyin sign-in",
+  "allowDouyinPopup": "Allow the Douyin authorization popup and sign in again.",
+  "socialLoginExpired": "Authorization expired",
+  "refreshSocialLogin": "Refresh authorization",
+  "ipSessionTitle": "Conversation name:",
+  "ipSessionTitleHint": "Give your conversation a name",
+  "voiceInputStarting": "Preparing voice input…",
+  "voiceInputListening": "Listening. Tap the microphone to finish",
+  "voiceInputFinishing": "Transcribing…",
+  "voiceInputStop": "Finish voice input",
+  "voiceInputCancel": "Cancel voice input",
+  "voiceInputPermissionDenied": "Allow microphone and speech recognition access in system or browser settings",
+  "voiceInputUnavailable": "Voice input is not available on this device or browser",
+  "voiceInputNoSpeech": "No speech recognized. Please try again",
+  "voiceInputNetworkError": "Could not connect to speech recognition. Check your connection and try again",
+  "voiceInputAudioError": "Cannot access the microphone. Check the device and whether it is in use",
+  "voiceInputFailed": "Could not recognize speech. Please try again",
+  "demoCreativeMemory": "Creative preferences",
+  "demoEditCreativeMemory": "Edit creative preferences",
+  "demoCreativeMemoryEmpty": "AI can summarize the visual style, specific model preferences, and aspect ratios from the conversation, or you can enter them manually.",
+  "demoCreativeMemoryScope": "Used only in this conversation. AI will not overwrite manual edits.",
+  "demoCreativeMemoryEditorHint": "This text is the creative memory for this conversation. Name the visual style, specific image and video model preferences, and aspect ratios.",
+  "demoCreativeMemoryAfterSave": "Future creations will automatically use this memory after you save it.",
+  "demoSaveToCurrentSession": "Save to this conversation",
+  "demoImageStackCount": "{count} images",
+  "@demoImageStackCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoActivityTitle": "{name} · {activity}",
+  "@demoActivityTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "activity": {
+        "type": "String"
+      }
+    }
+  },
+  "demoActivityThinking": "Thinking about your request",
+  "demoActivityModel": "Calling the model",
+  "demoActivitySearching": "Searching the web",
+  "demoActivityReadingWeb": "Reading a web page",
+  "demoActivityVision": "Reviewing reference images",
+  "demoOwnedImageMeta": "Image / {width}×{height}",
+  "@demoOwnedImageMeta": {
+    "placeholders": {
+      "width": {
+        "type": "int"
+      },
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "demoUploadFiles": "Upload to library",
+  "demoFileUploaded": "Uploaded",
+  "demoUploadPending": "Preparing upload",
+  "demoUploadVerifying": "Verifying",
+  "demoFileSelectionFailed": "Could not select files. Please try again",
+  "demoUploadFailed": "Could not upload files. Please try again",
+  "demoUploadEmptyFile": "Empty files cannot be uploaded",
+  "demoUploadTooLarge": "This file exceeds the upload size limit. Choose a smaller file",
+  "demoUploadUnsupported": "Unsupported file type. Choose an image, MP4 video, text script or audio file",
+  "demoUploadInvalidFile": "This file is invalid or has changed. Please select it again",
+  "demoAssetLoadFailed": "Could not load the file. Please reopen it later",
+  "demoInlineTextLoading": "Loading file",
+  "demoInlineTextCopied": "Text copied",
+  "demoInlineTextExpand": "Show more",
+  "demoInlineTextCollapse": "Show less",
+  "demoInlineTextScrollHint": "Scroll to read the full text",
+  "demoInlineTextDownloadFormats": "Download file",
+  "demoInlineTextOpenFile": "Open {name}",
+  "@demoInlineTextOpenFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeMb": "{size} MB",
+  "@demoFileSizeMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeKb": "{size} KB",
+  "@demoFileSizeKb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "demoFileSizeBytes": "{size} B",
+  "@demoFileSizeBytes": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "demoChooseBots": "Choose Bots",
+  "demoChooseAssistant": "Choose an assistant",
+  "demoCreateAssistant": "Create a new Popi",
+  "demoAssistantName": "Popi name",
+  "demoAssistantInstructions": "Role and personality",
+  "demoAssistantInstructionsHint": "Describe Popi’s responsibilities, communication style, and preferences (optional)",
+  "demoSingleAssistantNotice": "Only one assistant can be selected for now",
+  "demoDiyRoleTitle": "Create a content character",
+  "demoUploadDiyRole": "Upload a DIY character",
+  "demoSelectRoleImages": "Choose character references",
+  "demoDiyRoleNameHint": "Character name",
+  "demoDiyRoleDescriptionHint": "Personality and appearance (optional)",
+  "demoDiyRoleSave": "Save character",
+  "demoDiyRoleLimit": "Up to 5 reference images",
+  "demoNewSessionRoleTitle": "Add your content character first",
+  "demoNewSessionRoleHint": "Link an existing character or upload your DIY references so the assistant knows who you want to create.",
+  "demoLinkContentRole": "Link a character",
+  "demoRoleContextReady": "Content characters linked",
+  "demoStartCreating": "Start creating",
+  "demoCreateSessionAction": "Create",
+  "demoPinSession": "Pin",
+  "demoUnpinSession": "Unpin",
+  "demoPopiAssistant": "POPi assistant",
+  "demoCurrentConversationOnly": "Only for this conversation",
+  "demoEditWorkMode": "Working mode",
+  "demoWorkModeAutomatic": "Automatic collaboration",
+  "demoWorkModeManual": "Choose manually",
+  "demoWorkModeOnDemand": "On demand",
+  "demoVoiceUnavailable": "Voice input is not connected yet",
+  "demoBotGroupTitle": "POPi + {count} Bots",
+  "@demoBotGroupTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoGlobalCapabilities": "Conversation skills",
+  "demoServerConfigRevision": "Server configuration v{revision}",
+  "@demoServerConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "demoLocalConfig": "Local demo configuration",
+  "demoVisionSkill": "Visual understanding",
+  "demoVisionDetail": "Understand images and use them in creative decisions",
+  "demoCurrentTaskConfigNotice": "The current task keeps its accepted configuration; changes apply to later tasks",
+  "demoActiveMember": "Assigned member",
+  "demoRolePending": "Persona needs configuration",
+  "demoRoleConfigured": "Persona configured",
+  "demoRoleInstructions": "Persona instructions",
+  "demoRoleInstructionsHint": "Describe the character's appearance, personality, and creative constraints for content generation",
+  "demoContextRolesHint": "Characters and reference images for image, text, and video creation. Reference them with @ in your prompt.",
+  "demoContextPreferencesHint": "Default context for future content. You can specify different preferences in the current prompt.",
+  "demoReferenceImages": "Character reference images",
+  "demoAddReferenceImage": "Add reference image",
+  "demoReferenceImageUrls": "Public image links",
+  "demoReferenceImageUrlsHint": "One public image link per line, up to 5",
+  "demoReferenceImagesHint": "Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.",
+  "demoDshCapabilitiesHint": "Provided by DSH and enabled by default. Availability reflects the services actually connected.",
+  "demoDshTools": "Tools",
+  "demoDshSkills": "Skills",
+  "demoDshMcp": "MCP",
+  "demoDshNotConnected": "Not connected",
+  "demoDshNotGranted": "Not enabled in this conversation",
+  "demoDshUnavailable": "Currently unavailable",
+  "demoDshUnconfirmed": "Status not confirmed",
+  "demoLocalReferenceOnly": "Local reference (unavailable to cloud models)",
+  "demoReferencePending": "Reference image not loaded yet",
+  "demoNotConfigured": "Not set",
+  "demoMentionRole": "Reference character",
+  "demoMentionRoleHint": "Choose a linked content character to include its profile and reference images in this request.",
+  "demoTaskQueued": "Task queued",
+  "demoTaskCreating": "Creating",
+  "demoTaskSaving": "Saving to the asset library",
+  "demoTaskSaved": "Saved to the asset library",
+  "demoViewOutputs": "View outputs",
+  "demoDismissTaskNotice": "Dismiss task notice",
+  "demoTaskFailed": "Task failed",
+  "demoTaskUnknown": "Task status needs verification",
+  "demoTaskBrief": "Task overview",
+  "demoTaskDescriptionMissing": "No written description was saved for this task",
+  "demoTaskExecutionMember": "Execution member",
+  "demoTaskModel": "Model",
+  "demoTaskConfiguration": "Task configuration",
+  "demoTaskIdentifier": "Task ID",
+  "demoTaskImage": "Image generation",
+  "demoTaskVideo": "Video generation",
+  "demoTaskTts": "Text-to-speech",
+  "demoTaskMusic": "Music generation",
+  "demoTaskVision": "Visual understanding",
+  "demoTaskAudio": "Audio generation",
+  "demoTaskText": "Text generation",
+  "demoTaskScript": "Script generation",
+  "demoTaskMedia": "Media task",
+  "demoTaskConfigRevision": "Accepted configuration v{revision}",
+  "@demoTaskConfigRevision": {
+    "placeholders": {
+      "revision": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessTitle": "Sign in to POPi Test",
+  "harnessAccessSubtitle": "Connect to the test environment and try the latest app features",
+  "harnessAccessUsername": "Account",
+  "harnessAccessUsernameHint": "Enter your test account",
+  "harnessAccessPassword": "Password",
+  "harnessAccessSignIn": "Sign in",
+  "harnessAccessSigningIn": "Signing in…",
+  "harnessAccessRequired": "Enter your account and password",
+  "harnessAccessInvalidCredentials": "The account or password is incorrect",
+  "harnessAccessRateLimited": "Too many attempts. Try again in {seconds} seconds",
+  "@harnessAccessRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "harnessAccessRateLimitedUnknown": "Too many attempts. Try again later",
+  "harnessAccessUnavailable": "The test environment is unavailable. Try again later",
+  "demoPinnedConversations": "Pinned",
+  "demoRecentConversations": "Recent conversations",
+  "demoListNoMessages": "No messages yet",
+  "demoListYou": "You",
+  "demoListAttachment": "[Attachment]",
+  "demoListQuestion": "Waiting for your answer",
+  "demoListMessagePreview": "{sender}: {message}",
+  "demoListTime": "{date}",
+  "demoListDate": "{date}",
+  "demoListFullDate": "{date}",
+  "@demoListMessagePreview": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@demoListTime": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "Hm"
+      }
+    }
+  },
+  "@demoListDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "MMMd"
+      }
+    }
+  },
+  "@demoListFullDate": {
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "yMMMd"
+      }
+    }
+  },
+  "demoMaterials": "Materials",
+  "composerNamedPlaceholder": "Say something to {name}...",
+  "@composerNamedPlaceholder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoUploadFromDevice": "Upload from device",
+  "demoSelectFromLibrary": "Choose from library",
+  "previewAttachment": "Double-click to preview attachment",
+  "demoAttachmentUnsupported": "This assistant cannot read this attachment type yet. Choose images or text scripts.",
+  "demoAttachmentNotFound": "An attachment is no longer available. Remove it and upload it again.",
+  "demoAttachmentTooLarge": "The attachments are too large together. Use fewer or smaller files.",
+  "demoAttachmentLimit": "There are too many or duplicate attachments. Adjust them before sending.",
+  "demoAttachmentInvalid": "An attachment cannot be read or has changed. Upload it again.",
+  "demoStyleFilmCapabilityTitle": "Create styled short films",
+  "demoStyleFilmCapabilityDescription": "Enable style selection in the composer and the + menu.",
+  "demoStyleFilmSelect": "Choose style",
+  "demoStyleFilmChange": "Change style",
+  "demoStyleFilmClear": "Clear selected style",
+  "demoStyleFilmMenu": "Choose style",
+  "demoStyleFilmSheetTitle": "Film styles",
+  "demoStyleFilmSearchHint": "Search styles or uses",
+  "demoStyleFilmAllCategories": "All categories",
+  "demoStyleFilmUnavailable": "Not ready to create",
+  "demoStyleFilmDuration": "Duration",
+  "demoStyleFilmAspectRatio": "Aspect ratio",
+  "demoStyleFilmSoundtrack": "Soundtrack",
+  "demoStyleFilmSoundNone": "No audio",
+  "demoStyleFilmSoundMusic": "Original music",
+  "demoStyleFilmStoryboardReview": "Review the storyboard before rendering",
+  "demoStyleFilmCreate": "Use this style",
+  "demoStyleFilmConfirmTitle": "Confirm the film brief",
+  "demoStyleFilmConfirmDescription": "Style: {style}. Duration: {seconds} seconds. Aspect ratio: {ratio}. Review the storyboard before rendering the video.",
+  "@demoStyleFilmConfirmDescription": {
+    "placeholders": {
+      "style": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      },
+      "ratio": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmCostPending": "Creation uses the current model and server resources. Model usage is billed by your service provider.",
+  "demoStyleFilmPreparingStoryboard": "Preparing storyboard",
+  "demoStyleFilmAwaitingStoryboard": "Storyboard awaiting your review",
+  "demoStyleFilmApproveStoryboard": "Approve storyboard and render",
+  "demoStyleFilmReviseStoryboard": "Revise storyboard",
+  "demoStyleFilmRevisionNotes": "How should the story and visuals change?",
+  "demoStyleFilmRevisionNotice": "Submitting creates a new complete storyboard. The video waits for your approval.",
+  "demoStyleFilmSubmitRevision": "Submit changes",
+  "demoStyleFilmCreating": "Creating your film",
+  "demoStyleFilmCompleted": "Film completed",
+  "demoStyleFilmFailed": "Film creation failed",
+  "demoStyleFilmViewOutput": "View film",
+  "demoStyleFilmNoReadyStyles": "No styles are ready for creation. You can still browse the catalog.",
+  "demoStyleFilmLoadFailed": "Could not load film styles. Open the picker again to try.",
+  "demoStyleFilmReviewFailed": "The storyboard action was not submitted. Your choices and notes are preserved.",
+  "demoStyleFilmSaveFailed": "Capability settings were not saved. Your changes are preserved.",
+  "demoStyleFilmRetry": "Create again",
+  "demoStyleFilmStyleCount": "{count} styles",
+  "@demoStyleFilmStyleCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmPosterLabel": "{name} style example",
+  "@demoStyleFilmPosterLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmPreviewLabel": "Storyboard preview",
+  "demoStyleFilmNoStoryboard": "The storyboard is not ready yet. Progress stays in this conversation.",
+  "demoStyleFilmUpload": "Upload from device",
+  "demoStyleFilmLibrary": "Choose from library",
+  "demoStyleFilmReferencesUnsupported": "Style films currently support text prompts only. Remove attachments and content roles before creating.",
+  "demoStyleFilmBotContext": "For Bot: {name}",
+  "@demoStyleFilmBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoStyleFilmLoadingCatalog": "Loading style catalog",
+  "demoStyleFilmReadyCount": "{count} ready to create",
+  "@demoStyleFilmReadyCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoStyleFilmBrowsePending": "Browse all styles now; creation unlocks after verification.",
+  "demoStyleFilmNoReadyFooter": "No verified style is ready to create yet",
+  "demoStyleFilmReasonUnsupportedStyle": "Not adapted yet",
+  "demoStyleFilmReasonUnverifiedStyle": "Awaiting verification",
+  "demoStyleFilmReasonRuntimeUnavailable": "Creation is temporarily unavailable",
+  "demoStyleFilmReasonModelUnavailable": "The current model is not ready",
+  "demoStyleFilmReasonUnknown": "Not available for creation yet",
+  "demoStyleFilmCapabilitiesHint": "DSH provides tools and skills. Enable Bot-specific creation skills as needed; availability reflects the live connection.",
+  "demoPasteImage": "Paste image",
+  "demoPasteImageUnavailable": "No usable image is available on the clipboard",
+  "demoPasteImageFailed": "The image was not pasted. Your input and attachments are preserved.",
+  "demoPastingImages": "Adding clipboard images",
+  "demoDocuments": "Documents",
+  "demoDocumentParsing": "Parsing document",
+  "demoDocumentReady": "Document parsed and ready for the assistant",
+  "demoDocumentPages": "{count} pages",
+  "@demoDocumentPages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoDocumentSlides": "{count} slides",
+  "@demoDocumentSlides": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoDocumentTruncated": "Content was truncated at the reading limit",
+  "demoDocumentOcrUsed": "OCR was used",
+  "demoDocumentPageCountEstimated": "Page count is estimated",
+  "demoDocumentTextEmpty": "No readable text was found in this document",
+  "demoDocumentOriginalAvailable": "Original file available to download",
+  "demoDocumentLimitHint": "Up to 10 attachments and 50 MB total; images up to 20 MB total. Documents are limited to 20 MB each, 100 PDF pages, or 100 slides.",
+  "demoAttachmentParsing": "Attachments are still being parsed. Wait before sending.",
+  "demoSkillBotContext": "For Bot: {name}",
+  "@demoSkillBotContext": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "demoSkillSaveFailed": "Skill settings were not saved. Your choice is preserved.",
+  "demoRolePreviewEdit": "Edit profile",
+  "demoRolePreviewNoReferences": "No character reference images",
+  "demoRolePreviewMissingReferences": "{count} reference images are unavailable",
+  "@demoRolePreviewMissingReferences": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewReferenceCount": "{count} reference images",
+  "@demoRolePreviewReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewFullInstructions": "View full original instructions",
+  "demoRolePreviewCollapseInstructions": "Collapse original instructions"
 }

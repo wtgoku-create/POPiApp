@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+import '../../core/config/app_config.dart';
+import '../../core/network/api_exception.dart';
 
 import '../../core/network/network_api.dart';
 import '../../features/auth/data/auth_api.dart';
@@ -40,9 +43,17 @@ final userPointsProvider =
 
 final userBootstrapProvider = FutureProvider<void>((ref) async {
   final token = await ref.read(secureStorageProvider).readAccessToken();
-  if (token == null || token.isEmpty) return;
+  if (!(kIsWeb && AppConfig.businessAgentEnabled) &&
+      (token == null || token.isEmpty)) {
+    return;
+  }
 
-  await ref.read(userProvider.notifier).refreshUser();
+  try {
+    await ref.read(userProvider.notifier).refreshUser();
+  } on ApiException catch (error) {
+    if ([401, 403].contains(error.statusCode)) return;
+    rethrow;
+  }
   await ref.read(userPointsProvider.notifier).refresh();
 });
 
@@ -162,18 +173,21 @@ class UserController extends Notifier<User?> {
   }
 
   Future<void> clearUser() async {
-    try {
+    if (kIsWeb && AppConfig.businessAgentEnabled) {
+      // HttpOnly Cookie 只能由服务端清除；退出失败时保留当前界面，避免刷新后意外恢复登录。
       await ref.read(authRepositoryProvider).logout();
-    } finally {
-      _sessionRevision++;
-      state = null;
-      ref.read(userPointsProvider.notifier).clear();
+    }
+    _sessionRevision++;
+    state = null;
+    ref.read(userPointsProvider.notifier).clear();
+    if (!(kIsWeb && AppConfig.businessAgentEnabled)) {
+      await ref.read(authRepositoryProvider).logout();
     }
   }
 
-  /// Ignore unauthorized responses belonging to an account that has signed out.
-  Future<void> expireSession(String userId) async {
-    if (state?.id != userId) return;
+  /// Agent 鉴权失效时只清理当前本地身份，避免用失效凭据发起额外退出请求。
+  Future<void> expireSession(String expectedUserId) async {
+    if (state?.id != expectedUserId) return;
     _sessionRevision++;
     state = null;
     ref.read(userPointsProvider.notifier).clear();

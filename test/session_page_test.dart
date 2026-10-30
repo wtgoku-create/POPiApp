@@ -327,7 +327,7 @@ void main() {
       );
       expect(
         tester.getBottomRight(composer).dy,
-        closeTo(size.height - tester.view.viewInsets.bottom - 10, 1),
+        closeTo(size.height - tester.view.viewInsets.bottom - 8, 1),
       );
       tester.view.resetViewInsets();
       FocusManager.instance.primaryFocus?.unfocus();

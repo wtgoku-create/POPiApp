@@ -8,6 +8,22 @@ abstract interface class TokenStorage {
   Future<void> deleteAccessToken();
 }
 
+/// Web 业务登录由 HttpOnly Cookie 管理，不在客户端持久化登录响应中的 Token，并清理旧版本存储。
+class CookieTokenStorage implements TokenStorage {
+  const CookieTokenStorage(this.legacy);
+  final TokenStorage legacy;
+  @override
+  Future<String?> readAccessToken() async {
+    await legacy.deleteAccessToken();
+    return null;
+  }
+
+  @override
+  Future<void> writeAccessToken(String token) => legacy.deleteAccessToken();
+  @override
+  Future<void> deleteAccessToken() => legacy.deleteAccessToken();
+}
+
 class SecureStorage implements TokenStorage {
   const SecureStorage(this.storage);
 
