@@ -450,21 +450,27 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               surfaceTintColor: Colors.transparent,
               toolbarHeight: 56,
               leadingWidth: 60,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 15),
-                child: Center(
-                  child: SizedBox.square(
-                    dimension: 40,
-                    child: IconButton(
-                      key: const Key('ip-guide-back'),
-                      tooltip: l10n.backToPreviousPage,
-                      onPressed: _busy ? null : _back,
-                      padding: EdgeInsets.zero,
-                      icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+              automaticallyImplyLeading: false,
+              leading: _step == 0
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 15),
+                      child: Center(
+                        child: SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            key: const Key('ip-guide-back'),
+                            tooltip: l10n.backToPreviousPage,
+                            onPressed: _busy ? null : _back,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
         ),
