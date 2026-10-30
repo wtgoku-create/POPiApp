@@ -1,9 +1,9 @@
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:mime/mime.dart';
 
+import '../../../core/platform/app_platform.dart';
 import '../../v2_shared/domain/v2_models.dart';
 
 /// Exports original media bytes using the platform's file or share interface.
@@ -33,12 +33,12 @@ abstract final class V2MediaExporter {
       name: name,
       mimeType: asset.isRemote ? asset.mimeType : lookupMimeType(asset.media),
     );
-    if (kIsWeb) {
+    final platform = AppPlatform.current;
+    if (platform.isWeb) {
       await file.saveTo(name);
       return true;
     }
-    if (defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.android) {
+    if (platform.isNativeMobile) {
       await SharePlus.instance.share(
         ShareParams(
           files: [file],
