@@ -1,9 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import 'app_toast.dart';
 import '../../core/config/app_config.dart';
+import '../../features/h5/presentation/h5_page.dart';
 
 const userAgreementUrl = AppConfig.userAgreementUrl;
 const privacyPolicyUrl = AppConfig.privacyPolicyUrl;
@@ -90,7 +90,15 @@ class _LegalDocumentLinksState extends State<LegalDocumentLinks> {
     final launcher =
         widget.urlLauncher ??
         (uri) async {
-          await context.push<void>(path);
+          await H5Page.open(
+            context,
+            title: path == '/legal/user-agreement'
+                ? widget.userAgreementLabel
+                : widget.privacyPolicyLabel,
+            url: uri,
+            location: path,
+            openFailedMessage: widget.openFailedMessage,
+          );
           return true;
         };
     try {

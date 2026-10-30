@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../core/platform/app_platform.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_glass_app_bar.dart';
@@ -15,6 +16,58 @@ class H5Page extends StatefulWidget {
 
   final String title;
   final Uri url;
+
+  @visibleForTesting
+  static Future<bool> Function(
+    Uri url, {
+    required LaunchMode mode,
+    required String webOnlyWindowName,
+  })?
+  debugBrowserLauncher;
+
+  /// Opens public content in a Web tab or the existing native H5 route.
+  static Future<void> open(
+    BuildContext context, {
+    required String title,
+    required Uri url,
+    String? location,
+    String? openFailedMessage,
+  }) async {
+    if (!AppPlatform.current.isWeb) {
+      if (location != null) {
+        await context.push<void>(location);
+      } else {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => H5Page(title: title, url: url),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // Launch before any asynchronous work to retain browser user activation.
+      if ((url.scheme == 'https' || url.scheme == 'http') &&
+          url.host.isNotEmpty &&
+          url.userInfo.isEmpty &&
+          await (debugBrowserLauncher ?? launchUrl)(
+            url,
+            mode: LaunchMode.externalApplication,
+            webOnlyWindowName: '_blank',
+          )) {
+        return;
+      }
+    } catch (_) {
+      // Failed launches retain the source page and use one shared error toast.
+    }
+    if (context.mounted) {
+      AppToast.error(
+        context,
+        openFailedMessage ?? AppLocalizations.of(context)!.networkRequestFailed,
+      );
+    }
+  }
 
   @override
   State<H5Page> createState() => _H5PageState();
@@ -115,7 +168,11 @@ class _H5PageState extends State<H5Page> {
   Future<void> _openInBrowser() async {
     try {
       if (_isWebUrl(widget.url) &&
-          await launchUrl(widget.url, mode: LaunchMode.externalApplication)) {
+          await launchUrl(
+            widget.url,
+            mode: LaunchMode.externalApplication,
+            webOnlyWindowName: '_blank',
+          )) {
         return;
       }
     } catch (_) {

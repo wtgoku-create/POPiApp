@@ -76,11 +76,10 @@ class NotificationDetailPage extends ConsumerWidget {
                         if (Uri.parse(
                           url,
                         ).path.toLowerCase().endsWith('.svg')) {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  H5Page(title: title, url: Uri.parse(url)),
-                            ),
+                          H5Page.open(
+                            context,
+                            title: title,
+                            url: Uri.parse(url),
                           );
                         } else {
                           AppImagePreview.show(
@@ -105,11 +104,7 @@ class NotificationDetailPage extends ConsumerWidget {
                         if (target.location case final String location) {
                           context.push(location);
                         } else if (target.url case final Uri url) {
-                          Navigator.of(context).push<void>(
-                            MaterialPageRoute(
-                              builder: (_) => H5Page(title: title, url: url),
-                            ),
-                          );
+                          H5Page.open(context, title: title, url: url);
                         }
                       },
                       iconAlignment: IconAlignment.end,

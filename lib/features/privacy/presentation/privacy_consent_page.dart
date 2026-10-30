@@ -112,15 +112,12 @@ class _PrivacyConsentDialogState extends ConsumerState<_PrivacyConsentDialog> {
 
   Future<bool> _openDocument(Uri uri) async {
     final l10n = AppLocalizations.of(context)!;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => H5Page(
-          title: uri == Uri.parse(userAgreementUrl)
-              ? l10n.userAgreement
-              : l10n.privacyPolicy,
-          url: uri,
-        ),
-      ),
+    await H5Page.open(
+      context,
+      title: uri == Uri.parse(userAgreementUrl)
+          ? l10n.userAgreement
+          : l10n.privacyPolicy,
+      url: uri,
     );
     return true;
   }
