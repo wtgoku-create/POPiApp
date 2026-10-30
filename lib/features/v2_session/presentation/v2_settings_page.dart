@@ -12,6 +12,11 @@ import '../../v2_shared/data/v2_repository.dart';
 import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_assets/presentation/v2_assets_page.dart';
 import '../../v2_shared/presentation/widgets/v2_widgets.dart';
+import '../../v2_shared/presentation/widgets/v2_media_image.dart';
+import '../../../shared/widgets/app_toast.dart';
+import '../../../shared/widgets/app_skeleton.dart';
+import 'widgets/v2_role_create_sheet.dart';
+import 'widgets/v2_preferences_sheet.dart';
 
 class V2SettingsPage extends StatefulWidget {
   const V2SettingsPage({
@@ -34,6 +39,16 @@ class _V2SettingsPageState extends State<V2SettingsPage>
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.repository.isRemote) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) v2Perform(context, widget.repository.refreshRoles);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _tabs.dispose();
     super.dispose();
@@ -45,6 +60,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
     return ListenableBuilder(
       listenable: widget.repository,
       builder: (context, _) {
+        if (!widget.repository.sessions.any((s) => s.id == widget.sessionId)) {
+          return const SizedBox.shrink();
+        }
         final s = widget.repository.session(widget.sessionId);
         return V2Scaffold(
           title: Text(l.demoSettings),
@@ -165,7 +183,11 @@ class _V2SettingsPageState extends State<V2SettingsPage>
               for (final role in s.roles.take(3))
                 Align(
                   widthFactor: .65,
-                  child: V2Avatar(image: v2Character(role).image, size: 50),
+                  child: V2Avatar(
+                    image: widget.repository.character(role).image,
+                    headers: widget.repository.character(role).headers,
+                    size: 50,
+                  ),
                 ),
               const SizedBox(width: 12),
               const RotatedBox(
@@ -181,27 +203,49 @@ class _V2SettingsPageState extends State<V2SettingsPage>
       _section(
         context,
         title: l.demoPreferences,
-        onEdit: () => v2EditText(
-          context,
-          title: l.demoDirection,
-          value: s.direction,
-          multiline: true,
-          onSave: (v) => widget.repository.updateSession(
-            s.id,
-            (s) => s.copyWith(direction: v),
-          ),
-        ),
+        onEdit: () => widget.repository.isRemote
+            ? V2Sheet.show<void>(
+                context: context,
+                builder: (_) => V2PreferencesSheet(
+                  repository: widget.repository,
+                  session: s,
+                ),
+              )
+            : v2EditText(
+                context,
+                title: l.demoDirection,
+                value: s.direction,
+                multiline: true,
+                onSave: (v) => widget.repository.updateSession(
+                  s.id,
+                  (s) => s.copyWith(direction: v),
+                ),
+              ),
         children: [
           _field(
             l.demoDirection,
-            s.direction.isEmpty ? V2Fixtures.direction : s.direction,
+            s.direction.isEmpty && !widget.repository.isRemote
+                ? V2Fixtures.direction
+                : s.direction,
           ),
           const Divider(height: 30),
-          _field(l.demoFeeling, l.demoFeelingValue),
+          _field(
+            l.demoFeeling,
+            s.accountPreferences['feeling'] ??
+                (widget.repository.isRemote ? '' : l.demoFeelingValue),
+          ),
           const Divider(height: 30),
-          _field(l.demoFormat, l.demoFormatValue),
+          _field(
+            l.demoFormat,
+            s.accountPreferences['format'] ??
+                (widget.repository.isRemote ? '' : l.demoFormatValue),
+          ),
           const Divider(height: 30),
-          _field(l.demoAudience, l.demoAudienceValue),
+          _field(
+            l.demoAudience,
+            s.accountPreferences['audience'] ??
+                (widget.repository.isRemote ? '' : l.demoAudienceValue),
+          ),
         ],
       ),
       const SizedBox(height: 20),
@@ -211,7 +255,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
         onEdit: () => v2EditText(
           context,
           title: l.demoPositioning,
-          value: s.positioning.isEmpty ? V2Fixtures.positioning : s.positioning,
+          value: s.positioning.isEmpty && !widget.repository.isRemote
+              ? V2Fixtures.positioning
+              : s.positioning,
           multiline: true,
           onSave: (v) => widget.repository.updateSession(
             s.id,
@@ -220,7 +266,9 @@ class _V2SettingsPageState extends State<V2SettingsPage>
         ),
         children: [
           Text(
-            s.positioning.isEmpty ? V2Fixtures.positioning : s.positioning,
+            s.positioning.isEmpty && !widget.repository.isRemote
+                ? V2Fixtures.positioning
+                : s.positioning,
             style: const TextStyle(fontSize: 16, height: 1.5),
           ),
         ],
@@ -730,10 +778,18 @@ class _RoleSheetState extends State<_RoleSheet> {
       .toList();
   int _tab = 0;
   bool _busy = false;
+  late bool _loadingRoles = widget.repository.isRemote;
 
   @override
   void initState() {
     super.initState();
+    if (widget.repository.isRemote) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await v2Perform(context, widget.repository.refreshRoles);
+        if (mounted) setState(() => _loadingRoles = false);
+      });
+    }
     if (widget.createRole) {
       _tab = 1;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -742,27 +798,58 @@ class _RoleSheetState extends State<_RoleSheet> {
     }
   }
 
-  void _createRole() => v2EditText(
-    context,
-    title: AppLocalizations.of(context)!.demoCreateRole,
-    label: AppLocalizations.of(context)!.demoName,
-    value: '',
-    onSave: (name) async {
-      if (!mounted) return;
-      final id = 'custom:$name';
-      setState(() {
-        if (!_custom.any((r) => r.id == id)) {
-          _custom.add(v2Character(id));
-        }
-        _selected.add(id);
-        _tab = 1;
-      });
-    },
-  );
+  void _createRole() async {
+    if (widget.repository.isRemote) {
+      final role = await V2Sheet.show<V2Character>(
+        context: context,
+        enableDrag: false,
+        builder: (_) => V2RoleCreateSheet(repository: widget.repository),
+      );
+      if (mounted && role != null) {
+        setState(() {
+          if (_selected.length < 5) _selected.add(role.id);
+          _tab = 1;
+        });
+      }
+      return;
+    }
+    if (!mounted) return;
+    await v2EditText(
+      context,
+      title: AppLocalizations.of(context)!.demoCreateRole,
+      label: AppLocalizations.of(context)!.demoName,
+      value: '',
+      onSave: (name) async {
+        if (!mounted) return;
+        final id = 'custom:$name';
+        setState(() {
+          if (!_custom.any((r) => r.id == id)) {
+            _custom.add(v2Character(id));
+          }
+          _selected.add(id);
+          _tab = 1;
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final roles = _tab == 0 ? V2Fixtures.characters : _custom;
+    final roles = widget.repository.isRemote
+        ? widget.repository.characters
+              .where((r) => r.category == (_tab == 0 ? 'official' : 'personal'))
+              .toList()
+        : _tab == 0
+        ? V2Fixtures.characters
+        : _custom;
+    if (widget.repository.isRemote && _tab == 1) {
+      for (final id in _selected) {
+        if (!widget.repository.characters.any((r) => r.id == id)) {
+          roles.add(widget.repository.character(id));
+        }
+      }
+    }
     return V2SheetBody(
       title: l.demoLinkedRoles,
       footer: V2PrimaryButton(
@@ -820,7 +907,9 @@ class _RoleSheetState extends State<_RoleSheet> {
           ),
           const SizedBox(height: 20),
           Expanded(
-            child: roles.isEmpty
+            child: _loadingRoles
+                ? AppSkeletonList(label: l.loadingRoles)
+                : roles.isEmpty
                 ? Center(child: Text(l.demoNoRoles))
                 : LayoutBuilder(
                     builder: (context, constraints) => GridView.builder(
@@ -844,9 +933,14 @@ class _RoleSheetState extends State<_RoleSheet> {
                             onTap: _busy
                                 ? null
                                 : () => setState(() {
-                                    selected
-                                        ? _selected.remove(role.id)
-                                        : _selected.add(role.id);
+                                    if (selected) {
+                                      _selected.remove(role.id);
+                                    } else if (!widget.repository.isRemote ||
+                                        _selected.length < 5) {
+                                      _selected.add(role.id);
+                                    } else {
+                                      AppToast.info(context, l.v2RoleLimit);
+                                    }
                                   }),
                             child: Stack(
                               children: [
@@ -859,8 +953,9 @@ class _RoleSheetState extends State<_RoleSheet> {
                                           borderRadius: BorderRadius.circular(
                                             20,
                                           ),
-                                          child: Image.asset(
+                                          child: V2MediaImage(
                                             role.image,
+                                            headers: role.headers,
                                             fit: BoxFit.cover,
                                             width: double.infinity,
                                           ),
@@ -943,36 +1038,41 @@ class _RoleSheetState extends State<_RoleSheet> {
     );
   }
 
-  void _profile(BuildContext context, V2Character role, AppLocalizations l) =>
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (context) => V2Scaffold(
-            title: Text(l.demoRoleProfile),
-            child: ListView(
-              padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
-                top: 20,
-                bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
-              ),
-              children: [
-                Image.asset(role.image, height: 300, fit: BoxFit.contain),
-                const SizedBox(height: 20),
-                Text(
-                  role.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  l.demoRoleBio,
-                  style: const TextStyle(fontSize: 16, height: 1.5),
-                ),
-              ],
-            ),
+  void _profile(
+    BuildContext context,
+    V2Character role,
+    AppLocalizations l,
+  ) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (context) => V2Scaffold(
+        title: Text(l.demoRoleProfile),
+        child: ListView(
+          padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
+            top: 20,
+            bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
           ),
+          children: [
+            V2MediaImage(
+              role.image,
+              headers: role.headers,
+              height: 300,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              role.name,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              widget.repository.isRemote ? role.instructions : l.demoRoleBio,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _EditMemberSheet extends StatefulWidget {

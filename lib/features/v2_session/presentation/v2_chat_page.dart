@@ -19,6 +19,10 @@ import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_shared/presentation/widgets/v2_frosted_backdrop.dart';
 import '../../v2_assets/presentation/v2_assets_page.dart';
 import 'v2_chat_controller.dart';
+import 'widgets/v2_question_card.dart';
+import '../../v2_shared/data/v2_remote_repository.dart';
+import '../../v2_shared/presentation/widgets/v2_media_image.dart';
+import '../../../shared/widgets/app_toast.dart';
 import 'v2_settings_page.dart';
 import 'widgets/v2_image_stack.dart';
 import '../../v2_shared/presentation/widgets/v2_widgets.dart';
@@ -124,9 +128,26 @@ class _V2ChatPageState extends State<V2ChatPage> {
   double _composerHeight = 0;
   final List<String> _attachments = [];
   final Map<String, int> _imagePages = {};
+  bool _reportedSyncError = false;
+  void _syncFailure() {
+    final repo = widget.repository;
+    if (repo is! V2RemoteRepository || !mounted) return;
+    if (repo.syncError == null) return;
+    if (!_reportedSyncError) {
+      _reportedSyncError = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          AppToast.error(context, AppLocalizations.of(context)!.v2NetworkError);
+        }
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    widget.repository.addListener(_syncFailure);
+    _syncFailure();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _conversation.session.unread > 0) {
         v2Perform(
@@ -142,6 +163,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
 
   @override
   void dispose() {
+    widget.repository.removeListener(_syncFailure);
     _conversation.dispose();
     _composer.dispose();
     _scroll.dispose();
@@ -164,7 +186,7 @@ class _V2ChatPageState extends State<V2ChatPage> {
 
   Future<void> _send([String? prompt]) async {
     final input = prompt ?? _composer.markdown;
-    if (_conversation.sending) return;
+    if (_conversation.sending || _conversation.session.running) return;
     final l = AppLocalizations.of(context)!;
     final sent = await v2Perform(context, () async {
       final ok = await _conversation.send(input, List.of(_attachments), l);
@@ -192,9 +214,23 @@ class _V2ChatPageState extends State<V2ChatPage> {
       padding: const EdgeInsets.only(top: 20),
       child: Column(
         children: [
-          Text(
-            AppLocalizations.of(context)!.demoAttachments,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                AppLocalizations.of(context)!.demoAttachments,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (widget.repository.isRemote)
+                IconButton(
+                  tooltip: AppLocalizations.of(context)!.demoUpload,
+                  onPressed: () => showV2Import(context, widget.repository),
+                  icon: const Icon(Icons.upload_file_outlined),
+                ),
+            ],
           ),
           Expanded(
             child: V2AssetsView(
@@ -249,6 +285,25 @@ class _V2ChatPageState extends State<V2ChatPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (message.id.startsWith('v2-pending:'))
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                AppLocalizations.of(context)!.demoThinking,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     if (message.text.isNotEmpty)
                       Semantics(
                         liveRegion: message.id == 'thinking',
@@ -294,16 +349,40 @@ class _V2ChatPageState extends State<V2ChatPage> {
                                 onTap: () => asset.kind == V2AssetKind.image
                                     ? AppImagePreview.show(
                                         context: context,
-                                        image: AssetImage(asset.cover),
+                                        image: v2ImageProvider(
+                                          asset.cover,
+                                          headers: asset.headers,
+                                        ),
                                         heroTag:
                                             'message-${message.id}-${asset.id}',
                                         label: asset.title,
                                       )
-                                    : openV2Asset(context, asset),
+                                    : openV2Asset(
+                                        context,
+                                        asset,
+                                        repository: widget.repository,
+                                      ),
                               ),
                             ),
                           ),
                     ],
+                    if (message.question case final question?)
+                      V2QuestionCard(
+                        key: ValueKey('${question.id}:${question.revision}'),
+                        question: question,
+                        repository: widget.repository,
+                        sessionId: widget.sessionId,
+                      ),
+                    if (const [
+                      'failed',
+                      'interrupted',
+                      'stopped',
+                    ].contains(message.status))
+                      Text(
+                        message.status == 'stopped'
+                            ? AppLocalizations.of(context)!.chatStopped
+                            : AppLocalizations.of(context)!.v2GenerationFailed,
+                      ),
                   ],
                 ),
               ),
@@ -519,6 +598,8 @@ class _V2ChatPageState extends State<V2ChatPage> {
                               LibraryWork(
                                 id: asset.id,
                                 previewUrl: asset.cover,
+                                previewHeaders: asset.headers,
+                                mediaType: asset.kind.name,
                                 isVideo: asset.kind == V2AssetKind.video,
                                 createdAt: null,
                               ),
@@ -532,6 +613,13 @@ class _V2ChatPageState extends State<V2ChatPage> {
                       onHeightChanged: _handleComposerHeight,
                       onSubmitted: _send,
                       sending: _conversation.sending,
+                      running: s.running,
+                      onStop: s.canStop
+                          ? () => v2Perform(
+                              context,
+                              () => widget.repository.stopSession(s.id),
+                            )
+                          : null,
                     ),
                   ],
                 ),

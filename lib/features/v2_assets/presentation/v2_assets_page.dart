@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_menu.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_page_safe_area.dart';
+import '../../../shared/widgets/app_skeleton.dart';
 import '../../session/domain/session_artifact.dart';
 import '../../session/presentation/widgets/session_artifacts_sheet.dart';
 import '../../v2_shared/data/v2_repository.dart';
@@ -18,6 +19,9 @@ import '../../v2_shared/domain/v2_models.dart';
 import '../../v2_shared/presentation/widgets/v2_widgets.dart';
 import 'widgets/v2_document_cover.dart';
 import 'v2_audio_detail.dart';
+import 'v2_import_sheet.dart';
+import 'v2_remote_asset_detail.dart';
+import '../../v2_shared/presentation/widgets/v2_media_image.dart';
 
 String v2AssetMeta(AppLocalizations l, V2AssetKind kind) => switch (kind) {
   V2AssetKind.image => l.demoImageMeta,
@@ -35,7 +39,10 @@ IconData v2AssetIcon(V2AssetKind kind) => switch (kind) {
 Future<void> showV2Import(BuildContext context, V2Repository repository) =>
     V2Sheet.show<void>(
       context: context,
-      builder: (_) => _ImportSheet(repository: repository),
+      enableDrag: !repository.isRemote,
+      builder: (_) => repository.isRemote
+          ? V2ImportSheet(repository: repository)
+          : _ImportSheet(repository: repository),
     );
 
 class _ImportSheet extends StatefulWidget {
@@ -247,6 +254,20 @@ class V2AssetsView extends StatefulWidget {
 }
 
 class _V2AssetsViewState extends State<V2AssetsView> {
+  late bool _loading =
+      widget.repository.isRemote && widget.repository.assets.isEmpty;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.repository.isRemote) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await v2Perform(context, widget.repository.refreshAssets);
+        if (mounted) setState(() => _loading = false);
+      });
+    }
+  }
+
   int _filter = 0;
   bool _list = false;
   String _query = '';
@@ -276,158 +297,137 @@ class _V2AssetsViewState extends State<V2AssetsView> {
                   a.title.toLowerCase().contains(_query.trim().toLowerCase()),
             )
             .toList();
-        return CustomScrollView(
-          key: PageStorageKey(
-            'demo-assets-${widget.sessionId}-${widget.onSelect != null}',
-          ),
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: V2PinnedHeader(
-                height: widget.compactHeader ? 120 : 140,
-                child: Padding(
-                  padding: AppPageSafeArea.horizontalPaddingOf(
-                    context,
-                  ).copyWith(top: widget.compactHeader ? 0 : 10, bottom: 20),
-                  child: Column(
-                    children: [
-                      V2Search(
-                        hint: l.demoSearchAssets,
-                        onChanged: (q) => setState(() => _query = q),
-                      ),
-                      SizedBox(height: widget.compactHeader ? 10 : 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: V2Segments(
-                              labels: [
-                                l.demoAll,
-                                l.demoImages,
-                                l.demoVideos,
-                                l.demoScripts,
-                                l.demoAudio,
-                              ],
-                              selected: _filter,
-                              onChanged: (v) => setState(() => _filter = v),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await v2Perform(context, widget.repository.refreshAssets);
+          },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            key: PageStorageKey(
+              'demo-assets-${widget.sessionId}-${widget.onSelect != null}',
+            ),
+            slivers: [
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: V2PinnedHeader(
+                  height: widget.compactHeader ? 120 : 140,
+                  child: Padding(
+                    padding: AppPageSafeArea.horizontalPaddingOf(
+                      context,
+                    ).copyWith(top: widget.compactHeader ? 0 : 10, bottom: 20),
+                    child: Column(
+                      children: [
+                        V2Search(
+                          hint: l.demoSearchAssets,
+                          onChanged: (q) => setState(() => _query = q),
+                        ),
+                        SizedBox(height: widget.compactHeader ? 10 : 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: V2Segments(
+                                labels: [
+                                  l.demoAll,
+                                  l.demoImages,
+                                  l.demoVideos,
+                                  l.demoScripts,
+                                  l.demoAudio,
+                                ],
+                                selected: _filter,
+                                onChanged: (v) => setState(() => _filter = v),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            tooltip: _list ? l.demoAssets : l.demoOutputs,
-                            style: IconButton.styleFrom(
-                              fixedSize: const Size.square(36),
-                              minimumSize: const Size.square(36),
-                              maximumSize: const Size.square(36),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            const SizedBox(width: 8),
+                            IconButton(
+                              tooltip: _list ? l.demoAssets : l.demoOutputs,
+                              style: IconButton.styleFrom(
+                                fixedSize: const Size.square(36),
+                                minimumSize: const Size.square(36),
+                                maximumSize: const Size.square(36),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              padding: EdgeInsets.zero,
+                              onPressed: () => setState(() => _list = !_list),
+                              icon: _list
+                                  ? const Icon(
+                                      Icons.grid_view_outlined,
+                                      size: 22,
+                                    )
+                                  : const V2Icon('list', size: 30),
                             ),
-                            padding: EdgeInsets.zero,
-                            onPressed: () => setState(() => _list = !_list),
-                            icon: _list
-                                ? const Icon(Icons.grid_view_outlined, size: 22)
-                                : const V2Icon('list', size: 30),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            if (items.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Text(
-                    _query.isNotEmpty || _filter != 0
-                        ? l.demoNoResults
-                        : l.demoEmptyAssets,
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: AppPageSafeArea.horizontalPaddingOf(context).copyWith(
-                  bottom: math.max(MediaQuery.paddingOf(context).bottom, 20.0),
-                ),
-                sliver: _list
-                    ? SliverList.builder(
-                        itemCount: items.length,
-                        itemBuilder: (context, i) => Padding(
-                          key: ValueKey(items[i].id),
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _withContextMenu(
-                            items[i],
-                            ListTile(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              tileColor: v2Surface(context),
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child:
-                                    items[i].kind == V2AssetKind.audio ||
-                                        items[i].kind == V2AssetKind.script
-                                    ? SizedBox.square(
-                                        dimension: 54,
-                                        child: V2DocumentCover(
-                                          kind: items[i].kind,
-                                        ),
-                                      )
-                                    : Image.asset(
-                                        items[i].cover,
-                                        width: 54,
-                                        height: 54,
-                                        cacheWidth: 162,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                              title: Text(items[i].title),
-                              subtitle: Text(v2AssetMeta(l, items[i].kind)),
-                              onTap: () => widget.onSelect != null
-                                  ? widget.onSelect!(items[i])
-                                  : openV2Asset(context, items[i]),
-                              trailing: widget.onSelect != null
-                                  ? const Icon(Icons.add_circle_outline)
-                                  : _assetMenu(
-                                      context,
-                                      items[i],
-                                      widget.repository,
-                                    ),
-                            ),
+              if (items.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _loading
+                      ? AppSkeletonList(label: l.loadingAssets)
+                      : Center(
+                          child: Text(
+                            _query.isNotEmpty || _filter != 0
+                                ? l.demoNoResults
+                                : l.demoEmptyAssets,
                           ),
                         ),
-                      )
-                    : SliverLayoutBuilder(
-                        builder: (context, constraints) {
-                          final columns = (constraints.crossAxisExtent / 190)
-                              .floor()
-                              .clamp(2, 5);
-                          return SliverGrid.builder(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: columns,
-                                  mainAxisSpacing: 10,
-                                  crossAxisSpacing: 10,
-                                  mainAxisExtent:
-                                      (constraints.crossAxisExtent -
-                                              (columns - 1) * 10) /
-                                          columns +
-                                      72,
-                                ),
-                            itemCount: items.length,
-                            itemBuilder: (context, i) => _withContextMenu(
+                )
+              else
+                SliverPadding(
+                  padding: AppPageSafeArea.horizontalPaddingOf(context)
+                      .copyWith(
+                        bottom: math.max(
+                          MediaQuery.paddingOf(context).bottom,
+                          20.0,
+                        ),
+                      ),
+                  sliver: _list
+                      ? SliverList.builder(
+                          itemCount: items.length,
+                          itemBuilder: (context, i) => Padding(
+                            key: ValueKey(items[i].id),
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _withContextMenu(
                               items[i],
-                              V2AssetCard(
-                                key: ValueKey(items[i].id),
-                                asset: items[i],
+                              ListTile(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                tileColor: v2Surface(context),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child:
+                                      items[i].kind == V2AssetKind.audio ||
+                                          items[i].kind == V2AssetKind.script
+                                      ? SizedBox.square(
+                                          dimension: 54,
+                                          child: V2DocumentCover(
+                                            kind: items[i].kind,
+                                          ),
+                                        )
+                                      : V2MediaImage(
+                                          items[i].cover,
+                                          headers: items[i].headers,
+                                          width: 54,
+                                          height: 54,
+                                          cacheWidth: 162,
+                                          fit: BoxFit.cover,
+                                        ),
+                                ),
+                                title: Text(items[i].title),
+                                subtitle: Text(v2AssetMeta(l, items[i].kind)),
                                 onTap: () => widget.onSelect != null
                                     ? widget.onSelect!(items[i])
-                                    : openV2Asset(context, items[i]),
+                                    : openV2Asset(
+                                        context,
+                                        items[i],
+                                        repository: widget.repository,
+                                      ),
                                 trailing: widget.onSelect != null
-                                    ? const Icon(
-                                        Icons.add_circle_outline,
-                                        size: 20,
-                                      )
+                                    ? const Icon(Icons.add_circle_outline)
                                     : _assetMenu(
                                         context,
                                         items[i],
@@ -435,11 +435,56 @@ class _V2AssetsViewState extends State<V2AssetsView> {
                                       ),
                               ),
                             ),
-                          );
-                        },
-                      ),
-              ),
-          ],
+                          ),
+                        )
+                      : SliverLayoutBuilder(
+                          builder: (context, constraints) {
+                            final columns = (constraints.crossAxisExtent / 190)
+                                .floor()
+                                .clamp(2, 5);
+                            return SliverGrid.builder(
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: columns,
+                                    mainAxisSpacing: 10,
+                                    crossAxisSpacing: 10,
+                                    mainAxisExtent:
+                                        (constraints.crossAxisExtent -
+                                                (columns - 1) * 10) /
+                                            columns +
+                                        72,
+                                  ),
+                              itemCount: items.length,
+                              itemBuilder: (context, i) => _withContextMenu(
+                                items[i],
+                                V2AssetCard(
+                                  key: ValueKey(items[i].id),
+                                  asset: items[i],
+                                  onTap: () => widget.onSelect != null
+                                      ? widget.onSelect!(items[i])
+                                      : openV2Asset(
+                                          context,
+                                          items[i],
+                                          repository: widget.repository,
+                                        ),
+                                  trailing: widget.onSelect != null
+                                      ? const Icon(
+                                          Icons.add_circle_outline,
+                                          size: 20,
+                                        )
+                                      : _assetMenu(
+                                          context,
+                                          items[i],
+                                          widget.repository,
+                                        ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+            ],
+          ),
         );
       },
     );
@@ -540,8 +585,9 @@ class V2AssetCard extends StatelessWidget {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Image.asset(
+                          V2MediaImage(
                             asset.cover,
+                            headers: asset.headers,
                             fit: BoxFit.cover,
                             cacheWidth: 800,
                           ),
@@ -578,9 +624,11 @@ class V2AssetCard extends StatelessWidget {
                                   color: Colors.black38,
                                   shape: StadiumBorder(),
                                 ),
-                                child: const Text(
-                                  '00:08',
-                                  style: TextStyle(
+                                child: Text(
+                                  asset.isRemote
+                                      ? '${(asset.durationSeconds / 60).floor().toString().padLeft(2, '0')}:${(asset.durationSeconds % 60).floor().toString().padLeft(2, '0')}'
+                                      : '00:08',
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 12,
                                   ),
@@ -727,7 +775,20 @@ class _DocumentAssetCard extends StatelessWidget {
   );
 }
 
-void openV2Asset(BuildContext context, V2Asset asset) {
+void openV2Asset(
+  BuildContext context,
+  V2Asset asset, {
+  V2Repository? repository,
+}) {
+  if (asset.isRemote && asset.kind != V2AssetKind.audio) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            V2RemoteAssetDetail(asset: asset, repository: repository!),
+      ),
+    );
+    return;
+  }
   if (asset.kind != V2AssetKind.audio) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -770,7 +831,7 @@ void openV2Asset(BuildContext context, V2Asset asset) {
   } else {
     V2Sheet.show<void>(
       context: context,
-      builder: (_) => V2AudioDetail(asset: asset),
+      builder: (_) => V2AudioDetail(asset: asset, repository: repository),
     );
   }
 }

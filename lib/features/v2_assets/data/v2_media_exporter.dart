@@ -2,23 +2,36 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:mime/mime.dart';
 
 import '../../v2_shared/domain/v2_models.dart';
 
-/// Exports the original bundled demo file without making a backend request.
+/// Exports original media bytes using the platform's file or share interface.
 abstract final class V2MediaExporter {
-  static Future<int> size(V2Asset asset) async =>
-      (await rootBundle.load(asset.media)).lengthInBytes;
+  static Future<int> size(V2Asset asset) async => asset.isRemote
+      ? asset.sizeBytes
+      : (await rootBundle.load(asset.media)).lengthInBytes;
 
-  static Future<bool> save(V2Asset asset, Rect origin) async {
-    final data = await rootBundle.load(asset.media);
-    final extension = asset.media.split('.').last;
+  static Future<bool> save(
+    V2Asset asset,
+    Rect origin, {
+    Uint8List? bytes,
+  }) async {
+    if (bytes == null) {
+      final data = await rootBundle.load(asset.media);
+      bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    }
+    final extension = asset.isRemote
+        ? extensionFromMime(asset.mimeType) ?? 'bin'
+        : asset.media.split('.').last;
     final stem = asset.title.replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), '_');
-    final name = '$stem.$extension';
+    final name = asset.isRemote && lookupMimeType(stem) == asset.mimeType
+        ? stem
+        : '$stem.$extension';
     final file = XFile.fromData(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      bytes,
       name: name,
-      mimeType: 'audio/mp4',
+      mimeType: asset.isRemote ? asset.mimeType : lookupMimeType(asset.media),
     );
     if (kIsWeb) {
       await file.saveTo(name);

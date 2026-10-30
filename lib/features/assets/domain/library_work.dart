@@ -9,6 +9,8 @@ class LibraryWork {
     required this.createdAt,
     this.videoUrl = '',
     this.imageUrls = const [],
+    this.previewHeaders = const {},
+    this.mediaType = '',
   });
 
   final String id;
@@ -16,6 +18,8 @@ class LibraryWork {
   final bool isVideo;
   final String videoUrl;
   final List<String> imageUrls;
+  final Map<String, String> previewHeaders;
+  final String mediaType;
   final DateTime? createdAt;
 }
 

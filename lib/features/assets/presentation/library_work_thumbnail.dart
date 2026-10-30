@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/app_network_image.dart';
+import '../../../shared/widgets/app_authenticated_image.dart';
 import '../../role_guide/presentation/widgets/role_guide_controls.dart';
 import '../domain/library_work.dart';
 
@@ -16,16 +17,33 @@ class LibraryWorkThumbnail extends StatelessWidget {
     child: Stack(
       fit: StackFit.expand,
       children: [
-        Image(
-          image: work.previewUrl.startsWith('assets/')
-              ? AssetImage(work.previewUrl)
-              : AppImageCache.provider(work.previewUrl),
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => ColoredBox(
+        if (work.mediaType == 'audio' || work.mediaType == 'script')
+          ColoredBox(
             color: roleGuideTint(context),
-            child: const Icon(Icons.broken_image_outlined),
+            child: Center(
+              child: Icon(
+                work.mediaType == 'audio'
+                    ? Icons.music_note_outlined
+                    : Icons.description_outlined,
+              ),
+            ),
+          )
+        else
+          Image(
+            image: work.previewUrl.startsWith('assets/')
+                ? AssetImage(work.previewUrl)
+                : work.previewHeaders.isNotEmpty
+                ? AppAuthenticatedImage(
+                    work.previewUrl,
+                    headers: work.previewHeaders,
+                  )
+                : AppImageCache.provider(work.previewUrl),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => ColoredBox(
+              color: roleGuideTint(context),
+              child: const Icon(Icons.broken_image_outlined),
+            ),
           ),
-        ),
         if (work.isVideo)
           const Center(
             child: Icon(Icons.play_circle_fill, color: Colors.white, size: 28),

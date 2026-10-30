@@ -9,6 +9,29 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get v2NetworkError =>
+      'Request failed. Check your connection and try again.';
+
+  @override
+  String get v2GenerationFailed => 'Generation failed';
+
+  @override
+  String get v2CustomAnswer => 'Enter another answer';
+
+  @override
+  String get v2UploadInvalid =>
+      'Some files have an unsupported format or size. Select them again.';
+
+  @override
+  String get v2RoleInstructions => 'Character instructions';
+
+  @override
+  String get v2RoleReferences => 'Add reference images (up to 5)';
+
+  @override
+  String get v2RoleLimit => 'Link up to 5 characters';
+
+  @override
   String get v2NoConversationSelected => 'No conversation selected';
 
   @override

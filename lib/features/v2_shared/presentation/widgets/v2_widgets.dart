@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 
 import '../../../../app/theme.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -14,6 +15,8 @@ import '../../../../shared/widgets/app_toast.dart';
 import '../../../../shared/widgets/app_page_safe_area.dart';
 import '../../data/v2_fixtures.dart';
 import 'v2_frosted_backdrop.dart';
+import 'v2_media_image.dart';
+import '../../../../core/network/api_exception.dart';
 
 const v2Background = AppColors.profileBackground;
 const v2Tint = Color(0x0D6F47F5);
@@ -63,6 +66,7 @@ class V2Avatar extends StatelessWidget {
     this.background,
     this.memberAvatars = const {},
     this.memberColors = const {},
+    this.headers = const {},
     super.key,
   });
   final List<String> members;
@@ -71,6 +75,7 @@ class V2Avatar extends StatelessWidget {
   final Color? background;
   final Map<String, String> memberAvatars;
   final Map<String, int> memberColors;
+  final Map<String, String> headers;
   @override
   Widget build(BuildContext context) {
     Widget avatar(String path, double dimension, [Color? color]) {
@@ -92,8 +97,9 @@ class V2Avatar extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: character != null
             ? AppBotAvatar(character: character, size: dimension)
-            : Image.asset(
+            : V2MediaImage(
                 path,
+                headers: headers,
                 fit: BoxFit.cover,
                 cacheWidth: (dimension * 3).ceil(),
               ),
@@ -564,9 +570,15 @@ Future<bool> v2Perform(
   try {
     await action();
     return true;
-  } catch (_) {
+  } catch (error) {
+    if (error is DioException && CancelToken.isCancel(error)) return false;
     if (context.mounted) {
-      AppToast.error(context, AppLocalizations.of(context)!.demoStorageError);
+      AppToast.error(
+        context,
+        error is ApiException && error.message?.isNotEmpty == true
+            ? error.message!
+            : AppLocalizations.of(context)!.v2NetworkError,
+      );
     }
     return false;
   }

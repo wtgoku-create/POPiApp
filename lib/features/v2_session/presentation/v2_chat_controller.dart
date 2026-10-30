@@ -13,6 +13,7 @@ class V2ChatController extends ChangeNotifier {
   V2ChatController(this.repository, this.sessionId) {
     _sync();
     repository.addListener(_sync);
+    repository.watchSession(sessionId);
   }
   final V2Repository repository;
   final String sessionId;
@@ -24,19 +25,35 @@ class V2ChatController extends ChangeNotifier {
 
   void _sync() {
     if (_disposed || !repository.sessions.any((s) => s.id == sessionId)) return;
-    chatController.setMessages(
-      session.messages
-          .map(
-            (m) => chat.TextMessage(
-              id: m.id,
-              authorId: m.user ? 'demo-user' : 'popi',
-              text: m.text,
-              metadata: {'demo': m},
+    final messages = session.messages
+        .map(
+          (m) => chat.TextMessage(
+            id: m.id,
+            authorId: m.user ? 'demo-user' : 'popi',
+            text: m.text,
+            metadata: {'demo': m},
+          ),
+        )
+        .toList();
+    if (repository.isRemote &&
+        session.running &&
+        !session.messages.any((m) => m.question?.isPending ?? false)) {
+      messages.add(
+        chat.TextMessage(
+          id: 'v2-pending:$sessionId',
+          authorId: 'popi',
+          text: '',
+          metadata: {
+            'demo': V2Message(
+              id: 'v2-pending:$sessionId',
+              text: '',
+              status: 'running',
             ),
-          )
-          .toList(),
-      animated: false,
-    );
+          },
+        ),
+      );
+    }
+    chatController.setMessages(messages, animated: false);
     notifyListeners();
   }
 
@@ -49,6 +66,10 @@ class V2ChatController extends ChangeNotifier {
     sending = true;
     notifyListeners();
     try {
+      if (repository.isRemote) {
+        await repository.sendMessage(sessionId, text, assets);
+        return true;
+      }
       await repository.addMessage(
         sessionId,
         V2Message(
@@ -101,6 +122,7 @@ class V2ChatController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     repository.removeListener(_sync);
+    repository.unwatchSession(sessionId);
     chatController.dispose();
     super.dispose();
   }

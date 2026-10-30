@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -18,6 +19,380 @@ class NetworkAgentApi {
   void close() {
     _closed = true;
     runtime.close();
+  }
+
+  /// 业务封面只接受公开媒体路径；云端截帧仅允许固定处理参数，不接受签名或任意查询。
+  String resolveBusinessPosterUrl(Object? value) {
+    if (value is! Map || value['policy'] != 'public') return '';
+    final raw = value['posterUrl']?.toString() ?? '';
+    if (raw.isEmpty) return '';
+    final uri = Uri.tryParse(raw);
+    if (uri == null ||
+        !const {'https', 'http'}.contains(uri.scheme) ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasFragment ||
+        !uri.path.startsWith('/media/') ||
+        uri.pathSegments.any((part) => part == '..' || part == '.') ||
+        uri.path.contains(r'\')) {
+      return '';
+    }
+    if (uri.hasQuery &&
+        (uri.scheme != 'https' ||
+            uri.query != 'ci-process=snapshot&time=0&format=jpg&width=640')) {
+      return '';
+    }
+    return uri.toString();
+  }
+
+  /// 仅接受业务端鉴权返回的公开媒体地址，不接受凭据或临时查询参数。
+  String resolveBusinessAccessUrl(Object? value) {
+    if (value is! Map || value['policy'] != 'public') {
+      throw const FormatException('Invalid business media access');
+    }
+    final uri = Uri.tryParse(value['url']?.toString() ?? '');
+    if (uri == null ||
+        !const {'https', 'http'}.contains(uri.scheme) ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment) {
+      throw const FormatException('Invalid business media URL');
+    }
+    return uri.toString();
+  }
+
+  /// 下载前重新鉴权，外部 CDN 使用独立传输，绝不携带 Agent Token 或拦截器。
+  Future<Uint8List> readBusinessAssetBytes(
+    String id, {
+    required int maxBytes,
+  }) async {
+    if (!RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(id) || maxBytes <= 0) {
+      throw const FormatException('Invalid business media request');
+    }
+    final Map<String, dynamic> access;
+    try {
+      access = await _request('/api_agent/v2/assets/$id/access');
+    } on AgentApiException catch (error) {
+      if (error.code != 'ASSET_ACCESS_UNAVAILABLE') rethrow;
+      final bytes = await readAssetBytes('/api_agent/v2/assets/$id/content');
+      if (bytes.length > maxBytes) {
+        throw const FormatException('Business media exceeds download limit');
+      }
+      return bytes;
+    }
+    final url = resolveBusinessAccessUrl(access);
+    final transport = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 60),
+        followRedirects: false,
+      ),
+    );
+    try {
+      final response = await transport.get<ResponseBody>(
+        url,
+        options: Options(responseType: ResponseType.stream),
+      );
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response.data!.stream) {
+        if (builder.length + chunk.length > maxBytes) {
+          throw const FormatException('Business media exceeds download limit');
+        }
+        builder.add(chunk);
+      }
+      return builder.takeBytes();
+    } finally {
+      transport.close(force: true);
+    }
+  }
+
+  Future<Map<String, dynamic>> createHarnessSession({
+    required String clientRequestId,
+    required String title,
+    required String kind,
+    Map<String, Object?>? configuration,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions',
+    method: 'POST',
+    data: {
+      'clientRequestId': clientRequestId,
+      'title': title,
+      'kind': kind,
+      if (configuration != null) 'configuration': configuration,
+    },
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> assets({
+    String? sessionId,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/assets',
+    queryParameters: {if (sessionId != null) 'sessionId': sessionId},
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> renameAsset(String id, String title) => _request(
+    '/api_agent/v2/assets/${Uri.encodeComponent(id)}',
+    method: 'PATCH',
+    data: {'title': title},
+  );
+
+  Future<Map<String, dynamic>> deleteAsset(String id) => _request(
+    '/api_agent/v2/assets/${Uri.encodeComponent(id)}',
+    method: 'DELETE',
+    data: const {},
+  );
+
+  Future<Map<String, dynamic>> libraryRoles({
+    int page = 1,
+    int pageSize = 100,
+    String category = '',
+  }) => _request(
+    '/api_agent/v2/roles',
+    queryParameters: {'page': page, 'pageSize': pageSize, 'category': category},
+  );
+
+  Future<Map<String, dynamic>> libraryRole(String id) =>
+      _request('/api_agent/v2/roles/${Uri.encodeComponent(id)}');
+
+  Future<Map<String, dynamic>> saveLibraryRole(
+    Map<String, Object?> data, {
+    String? id,
+  }) => _request(
+    id == null
+        ? '/api_agent/v2/roles'
+        : '/api_agent/v2/roles/${Uri.encodeComponent(id)}',
+    method: id == null ? 'POST' : 'PATCH',
+    data: data,
+  );
+
+  Future<Map<String, dynamic>> deleteLibraryRole(
+    String id,
+    String requestId,
+    String revision,
+  ) => _request(
+    '/api_agent/v2/roles/${Uri.encodeComponent(id)}',
+    method: 'DELETE',
+    data: {'clientRequestId': requestId, 'revision': revision},
+  );
+
+  Future<Map<String, dynamic>> uploadRoleReference({
+    required String roleId,
+    required String requestId,
+    required String revision,
+    required String name,
+    required String mimeType,
+    required Uint8List bytes,
+  }) async {
+    final response = await dio.post<Map<String, dynamic>>(
+      '/api_agent/v2/roles/${Uri.encodeComponent(roleId)}/references',
+      queryParameters: {
+        'requestKey': requestId,
+        'revision': revision,
+        'name': name,
+      },
+      data: bytes,
+      options: Options(
+        contentType: mimeType,
+        sendTimeout: const Duration(seconds: 200),
+        receiveTimeout: const Duration(seconds: 200),
+      ),
+    );
+    return response.data!;
+  }
+
+  /// Uploads one owned asset as a raw body. The request ID makes retries safe.
+  Future<Map<String, dynamic>> importBusinessAsset(
+    String businessAssetId, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/assets/import',
+    method: 'POST',
+    data: {'businessAssetId': businessAssetId},
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> uploadAsset({
+    required String clientRequestId,
+    required String name,
+    required String mimeType,
+    required Uint8List bytes,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      final response = await dio.post<Object?>(
+        '/api_agent/v2/assets',
+        data: bytes,
+        queryParameters: {'clientRequestId': clientRequestId, 'name': name},
+        options: Options(
+          contentType: mimeType,
+          headers: {'Content-Length': bytes.lengthInBytes},
+          // Document extraction may include a bounded OCR/Office conversion.
+          sendTimeout: const Duration(seconds: 200),
+          receiveTimeout: const Duration(seconds: 200),
+        ),
+        cancelToken: cancelToken,
+      );
+      final body = response.data;
+      if ((response.statusCode != 200 && response.statusCode != 201) ||
+          body is! Map<String, dynamic> ||
+          body['asset'] is! Map) {
+        throw AgentApiException(
+          code: 'INVALID_RESPONSE',
+          message: 'Invalid Agent upload response',
+          statusCode: response.statusCode,
+          requestId: response.headers.value('x-request-id'),
+          retryable: true,
+        );
+      }
+      return body;
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  /// Reads extracted text without decoding original PDF or Office bytes.
+  Future<Map<String, dynamic>> assetText(
+    String assetId, {
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/assets/${Uri.encodeComponent(assetId)}/text',
+    cancelToken: cancelToken,
+  );
+
+  /// Reads the original upload bytes; parsed document text has its own route.
+  Future<Uint8List> readAssetBytes(
+    String contentUrl, {
+    CancelToken? cancelToken,
+  }) async {
+    final uri = _ownedAssetContentUri(contentUrl);
+    try {
+      final response = await dio.get<List<int>>(
+        uri.toString(),
+        options: Options(responseType: ResponseType.bytes),
+        cancelToken: cancelToken,
+      );
+      final body = response.data;
+      if (body == null) {
+        throw AgentApiException(
+          code: 'INVALID_RESPONSE',
+          message: 'Invalid Agent asset response',
+          statusCode: response.statusCode,
+          requestId: response.headers.value('x-request-id'),
+          retryable: true,
+        );
+      }
+      return body is Uint8List ? body : Uint8List.fromList(body);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  /// Resolves only the owned-asset route on the configured Agent origin.
+  /// This prevents an upstream provider URL from becoming an image source.
+  String resolveAssetContentUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null || candidate.hasScheme || candidate.hasAuthority) {
+      throw const FormatException('Asset URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/content$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException('Asset URL is outside the Agent origin');
+    }
+    return resolved.toString();
+  }
+
+  /// Resolves only a server-owned video poster on the configured Agent origin.
+  String resolveAssetPosterUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null || candidate.hasScheme || candidate.hasAuthority) {
+      throw const FormatException('Asset poster URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/poster$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException(
+        'Asset poster URL is outside the Agent origin',
+      );
+    }
+    return resolved.toString();
+  }
+
+  /// Resolves only an owned image thumbnail on the configured Agent origin.
+  String resolveAssetThumbnailUrl(String path) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(path);
+    if (candidate == null ||
+        candidate.hasScheme ||
+        candidate.hasAuthority ||
+        candidate.pathSegments.contains('.') ||
+        candidate.pathSegments.contains('..')) {
+      throw const FormatException('Asset thumbnail URL must be Agent-relative');
+    }
+    final resolved = base.resolveUri(candidate);
+    final ownedPath = RegExp(
+      r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/thumbnail$',
+    );
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException(
+        'Asset thumbnail URL is outside the Agent origin',
+      );
+    }
+    return resolved.toString();
+  }
+
+  Uri _ownedAssetContentUri(String value) {
+    final base = Uri.parse(dio.options.baseUrl);
+    if (!base.hasScheme || base.host.isEmpty) {
+      throw const FormatException('Agent base URL is not absolute');
+    }
+    final candidate = Uri.tryParse(value);
+    if (candidate == null) throw const FormatException('Invalid asset URL');
+    final resolved = candidate.hasScheme
+        ? candidate
+        : base.resolveUri(candidate);
+    final ownedPath = RegExp(r'^/api_agent/v2/assets/[A-Za-z0-9_-]+/content$');
+    if (resolved.scheme != base.scheme ||
+        resolved.host != base.host ||
+        resolved.port != base.port ||
+        !ownedPath.hasMatch(resolved.path) ||
+        resolved.hasQuery ||
+        resolved.hasFragment) {
+      throw const FormatException('Asset URL is outside the Agent origin');
+    }
+    return resolved;
   }
 
   Future<Map<String, dynamic>> enterHome(
@@ -199,6 +574,8 @@ class NetworkAgentApi {
     String? title,
     bool? archived,
     bool? pinned,
+    Map<String, Object?>? configuration,
+    int? expectedConfigRevision,
     CancelToken? cancelToken,
   }) => _request(
     '/api_agent/v2/sessions/${Uri.encodeComponent(id)}',
@@ -208,6 +585,9 @@ class NetworkAgentApi {
       if (title != null) 'title': title,
       if (archived != null) 'archived': archived,
       if (pinned != null) 'pinned': pinned,
+      if (configuration != null) 'configuration': configuration,
+      if (expectedConfigRevision != null)
+        'expectedConfigRevision': expectedConfigRevision,
     },
     cancelToken: cancelToken,
   );
@@ -256,6 +636,7 @@ class NetworkAgentApi {
     required String text,
     String? taskId,
     List<String>? mediaIds,
+    List<String>? contextRoleIds,
     CancelToken? cancelToken,
   }) => _sessionRequest(
     id,
@@ -266,6 +647,7 @@ class NetworkAgentApi {
       'text': text,
       if (taskId != null) 'taskId': taskId,
       if (mediaIds != null) 'mediaIds': mediaIds,
+      if (contextRoleIds != null) 'contextRoleIds': contextRoleIds,
     },
     cancelToken: cancelToken,
   );

@@ -21,6 +21,7 @@ import 'package:popi_ai_app/features/v2_shared/data/v2_repository.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations_zh.dart';
 import 'package:popi_ai_app/shared/providers/storage_provider.dart';
 import 'package:popi_ai_app/shared/providers/user_provider.dart';
+import 'package:popi_ai_app/shared/providers/v2_repository_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _profile = <String, Object?>{
@@ -197,6 +198,12 @@ void main() {
         preferencesStorageProvider.overrideWithValue(storage),
         userBootstrapProvider.overrideWith((ref) async {}),
         userProvider.overrideWith(_UserController.new),
+        v2RepositoryProvider.overrideWith((ref) async {
+          ref.watch(userProvider.select((user) => user?.id));
+          final repository = V2Repository(storage)..restore();
+          ref.onDispose(repository.dispose);
+          return repository;
+        }),
       ],
     );
     addTearDown(container.dispose);

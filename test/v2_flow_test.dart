@@ -16,6 +16,7 @@ import 'package:popi_ai_app/features/v2_shared/data/v2_fixtures.dart';
 import 'package:popi_ai_app/features/v2_home/presentation/v2_home_page.dart';
 import 'package:popi_ai_app/features/v2_session/presentation/v2_chat_page.dart';
 import 'package:popi_ai_app/app/v2_app.dart';
+import 'package:popi_ai_app/shared/providers/v2_repository_provider.dart';
 import 'package:popi_ai_app/features/session/presentation/widgets/session_artifacts_sheet.dart';
 import 'package:popi_ai_app/features/profile/presentation/profile_page.dart';
 import 'package:popi_ai_app/features/profile/presentation/edit_profile_page.dart';
@@ -146,6 +147,13 @@ void main() {
             userBootstrapProvider.overrideWith((ref) async {}),
             userProvider.overrideWith(_ReturningUser.new),
             dioProvider.overrideWithValue(dio),
+            v2RepositoryProvider.overrideWith((ref) async {
+              final repository = V2Repository(
+                ref.read(preferencesStorageProvider),
+              )..restore();
+              ref.onDispose(repository.dispose);
+              return repository;
+            }),
           ],
           child: const V2App(),
         ),

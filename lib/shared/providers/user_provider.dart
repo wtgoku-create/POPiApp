@@ -171,6 +171,15 @@ class UserController extends Notifier<User?> {
     }
   }
 
+  /// Ignore unauthorized responses belonging to an account that has signed out.
+  Future<void> expireSession(String userId) async {
+    if (state?.id != userId) return;
+    _sessionRevision++;
+    state = null;
+    ref.read(userPointsProvider.notifier).clear();
+    await ref.read(secureStorageProvider).deleteAccessToken();
+  }
+
   Future<void> cancelAccount() async {
     await ref.read(authRepositoryProvider).cancelAccount();
     _sessionRevision++;

@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import 'v2_question.dart';
+export 'v2_question.dart';
+
 enum V2SessionKind { conversation, project, workflow }
 
 enum V2AssetKind { image, video, script, audio }
@@ -11,23 +14,35 @@ class V2Message {
     required this.text,
     this.user = false,
     this.assetIds = const [],
+    this.status = '',
+    this.question,
   });
   final String id;
   final String text;
   final bool user;
   final List<String> assetIds;
+  final String status;
+  final V2Question? question;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'text': text,
     'user': user,
     'assets': assetIds,
+    'status': status,
+    if (question != null) 'question': question!.toJson(),
   };
   factory V2Message.fromJson(Map<String, Object?> json) => V2Message(
     id: json['id'] as String,
     text: json['text'] as String,
     user: json['user'] as bool,
     assetIds: (json['assets'] as List).cast<String>(),
+    status: json['status'] as String? ?? '',
+    question: json['question'] is Map
+        ? V2Question.fromJson(
+            Map<String, Object?>.from(json['question'] as Map),
+          )
+        : null,
   );
 }
 
@@ -50,6 +65,12 @@ class V2Session {
     this.memberAvatars = const {},
     this.memberColors = const {},
     this.accountPreferences = const {},
+    this.configuration = const {},
+    this.configRevision = 0,
+    this.serverRevision = 0,
+    this.lastSeq = 0,
+    this.running = false,
+    this.canStop = true,
   });
   final String id;
   final String title;
@@ -67,6 +88,13 @@ class V2Session {
   final Map<String, String> memberAvatars;
   final Map<String, int> memberColors;
   final Map<String, String> accountPreferences;
+  // Preserve server fields that this UI does not edit in replacement PATCHes.
+  final Map<String, Object?> configuration;
+  final int configRevision;
+  final int serverRevision;
+  final int lastSeq;
+  final bool running;
+  final bool canStop;
 
   V2Session copyWith({
     String? title,
@@ -83,6 +111,12 @@ class V2Session {
     Map<String, String>? memberAvatars,
     Map<String, int>? memberColors,
     Map<String, String>? accountPreferences,
+    Map<String, Object?>? configuration,
+    int? configRevision,
+    int? serverRevision,
+    int? lastSeq,
+    bool? running,
+    bool? canStop,
   }) => V2Session(
     id: id,
     title: title ?? this.title,
@@ -100,6 +134,12 @@ class V2Session {
     memberAvatars: memberAvatars ?? this.memberAvatars,
     memberColors: memberColors ?? this.memberColors,
     accountPreferences: accountPreferences ?? this.accountPreferences,
+    configuration: configuration ?? this.configuration,
+    configRevision: configRevision ?? this.configRevision,
+    serverRevision: serverRevision ?? this.serverRevision,
+    lastSeq: lastSeq ?? this.lastSeq,
+    running: running ?? this.running,
+    canStop: canStop ?? this.canStop,
   );
   Map<String, Object?> toJson() => {
     'id': id,
@@ -157,6 +197,12 @@ class V2Asset {
     this.sessionId,
     this.body = '',
     this.media = '',
+    this.contentUrl = '',
+    this.businessAssetId = '',
+    this.mimeType = '',
+    this.sizeBytes = 0,
+    this.durationSeconds = 0,
+    this.headers = const {},
   });
   final String id;
   final String title;
@@ -165,6 +211,13 @@ class V2Asset {
   final String? sessionId;
   final String body;
   final String media;
+  final String contentUrl;
+  final String businessAssetId;
+  final String mimeType;
+  final int sizeBytes;
+  final double durationSeconds;
+  final Map<String, String> headers;
+  bool get isRemote => contentUrl.isNotEmpty;
   V2Asset copyWith({String? title}) => V2Asset(
     id: id,
     title: title ?? this.title,
@@ -173,6 +226,12 @@ class V2Asset {
     sessionId: sessionId,
     body: body,
     media: media,
+    contentUrl: contentUrl,
+    businessAssetId: businessAssetId,
+    mimeType: mimeType,
+    sizeBytes: sizeBytes,
+    durationSeconds: durationSeconds,
+    headers: headers,
   );
   Map<String, Object?> toJson() => {
     'id': id,
@@ -196,8 +255,18 @@ class V2Asset {
 
 @immutable
 class V2Character {
-  const V2Character(this.id, this.name, this.image);
+  const V2Character(
+    this.id,
+    this.name,
+    this.image, {
+    this.instructions = '',
+    this.category = '',
+    this.headers = const {},
+  });
   final String id;
   final String name;
   final String image;
+  final String instructions;
+  final String category;
+  final Map<String, String> headers;
 }

@@ -14,6 +14,7 @@ class AppVideoPlayer extends StatefulWidget {
     this.onRetry,
     this.onFullscreen,
     this.controlsKeyPrefix = 'video-player',
+    this.httpHeaders = const {},
     super.key,
   });
 
@@ -23,6 +24,7 @@ class AppVideoPlayer extends StatefulWidget {
   final VoidCallback? onRetry;
   final Future<void> Function(Uri)? onFullscreen;
   final String controlsKeyPrefix;
+  final Map<String, String> httpHeaders;
 
   @override
   State<AppVideoPlayer> createState() => _AppVideoPlayerState();
@@ -62,7 +64,10 @@ class _AppVideoPlayerState extends State<AppVideoPlayer>
     _controlsTimer?.cancel();
     final controller = widget.url.scheme == 'asset'
         ? VideoPlayerController.asset(widget.url.path)
-        : VideoPlayerController.networkUrl(widget.url);
+        : VideoPlayerController.networkUrl(
+            widget.url,
+            httpHeaders: widget.httpHeaders,
+          );
     controller.addListener(_syncControls);
     setState(() {
       _controller = controller;

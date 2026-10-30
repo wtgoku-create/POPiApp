@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/widgets/app_image_preview.dart';
 import '../../../v2_shared/domain/v2_models.dart';
+import '../../../v2_shared/presentation/widgets/v2_media_image.dart';
 
 /// An image deck that draws a card out before inserting it on the other side.
 class V2ImageStack extends StatefulWidget {
@@ -96,7 +97,7 @@ class _V2ImageStackState extends State<V2ImageStack>
       images: [
         for (final asset in widget.images)
           ImagePreviewItem(
-            image: AssetImage(asset.cover),
+            image: v2ImageProvider(asset.cover, headers: asset.headers),
             heroTag: 'message-${widget.messageId}-${asset.id}',
             label: asset.title,
           ),
@@ -106,8 +107,9 @@ class _V2ImageStackState extends State<V2ImageStack>
 
   Widget _image(V2Asset asset, double width, double height) => ClipRRect(
     borderRadius: BorderRadius.circular(20),
-    child: Image.asset(
+    child: V2MediaImage(
       asset.cover,
+      headers: asset.headers,
       width: width,
       height: height,
       cacheWidth: 900,

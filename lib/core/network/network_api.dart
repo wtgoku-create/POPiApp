@@ -25,6 +25,73 @@ class NetworkApi {
 
   String get mediaBaseUrl => dio.options.baseUrl;
 
+  /// 普通资产库直传接口返回领域对象，不使用 Studio 的响应包裹。
+  Future<Map<String, Object?>> libraryUpload(
+    String operation,
+    Map<String, Object?> input, {
+    CancelToken? cancelToken,
+  }) async {
+    if (!const {'create', 'status', 'complete', 'cancel'}.contains(operation)) {
+      throw ArgumentError.value(operation);
+    }
+    try {
+      final response = await dio.post<Object?>(
+        '/api_client/asset-library/uploads/$operation',
+        data: input,
+        cancelToken: cancelToken,
+        options: Options(receiveTimeout: const Duration(minutes: 3)),
+      );
+      if (response.data is! Map) throw const ApiException();
+      return Map<String, Object?>.from(response.data as Map);
+    } on DioException catch (error) {
+      if (error.response == null || CancelToken.isCancel(error)) rethrow;
+      throw AgentApiException.fromDioException(error);
+    }
+  }
+
+  /// 独立对象存储连接不携带业务凭据，也不跟随重定向。
+  Future<void> uploadLibraryBytes(
+    String url,
+    Map<String, Object?> headers,
+    Uint8List bytes, {
+    CancelToken? cancelToken,
+    ProgressCallback? onSendProgress,
+  }) async {
+    final uri = Uri.parse(url);
+    if (uri.scheme != 'https' ||
+        !uri.hasAuthority ||
+        uri.userInfo.isNotEmpty ||
+        headers.keys.any(
+          (key) =>
+              !const {'content-type', 'x-cos-acl'}.contains(key.toLowerCase()),
+        )) {
+      throw const ApiException(message: 'Invalid upload credentials');
+    }
+    final transport = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(minutes: 3),
+        receiveTimeout: const Duration(minutes: 3),
+        followRedirects: false,
+        maxRedirects: 0,
+      ),
+    );
+    try {
+      await transport.put<Object?>(
+        url,
+        data: bytes,
+        options: Options(
+          headers: headers,
+          contentType: headers['Content-Type']?.toString(),
+        ),
+        cancelToken: cancelToken,
+        onSendProgress: onSendProgress,
+      );
+    } finally {
+      transport.close(force: true);
+    }
+  }
+
   /// CDN media downloads use an unauthenticated transport, like signed uploads.
   Future<Uint8List> readLibraryMedia(
     String url, {

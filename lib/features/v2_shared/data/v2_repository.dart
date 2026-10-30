@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/storage/preferences_storage.dart';
 import '../domain/v2_models.dart';
 import 'v2_fixtures.dart';
+import '../domain/v2_upload_file.dart';
 
 /// A local, transactional store isolated from account data and network services.
 class V2Repository extends ChangeNotifier {
@@ -21,6 +22,42 @@ class V2Repository extends ChangeNotifier {
   V2Session session(String id) => _sessions.firstWhere((s) => s.id == id);
   bool hasCompletedOnboarding(String userId) =>
       _onboardingSessions.containsKey(userId);
+
+  bool get isRemote => false;
+  List<V2Character> get characters => V2Fixtures.characters;
+  V2Character character(String id) =>
+      characters.where((role) => role.id == id).firstOrNull ??
+      V2Character(
+        id,
+        id.startsWith('custom:') ? id.substring(7) : id,
+        'assets/images/demo_role_1.png',
+      );
+  Future<void> refresh() async {}
+  Future<void> refreshAssets() async {}
+  Future<void> refreshRoles() async {}
+  Future<void> refreshSession(String id) async {}
+  Future<void> sendMessage(String id, String text, List<String> assets) =>
+      throw UnsupportedError('Remote messaging is unavailable');
+  Future<void> stopSession(String id) async {}
+  Future<void> respondQuestion(
+    String id,
+    V2Question question,
+    String action,
+    Map<String, Object?> answer,
+  ) async {}
+  Future<V2Asset> uploadFile(V2UploadFile file) =>
+      throw UnsupportedError('Remote upload is unavailable');
+  Future<V2Character> createRole({
+    required String requestId,
+    required String name,
+    required String instructions,
+    required List<V2UploadFile> files,
+  }) => throw UnsupportedError('Remote roles are unavailable');
+  Future<Uint8List> readAssetBytes(V2Asset asset) =>
+      throw UnsupportedError('Remote assets are unavailable');
+  Future<String> readAssetText(V2Asset asset) async => asset.body;
+  void watchSession(String id) {}
+  void unwatchSession(String id) {}
 
   void restore() {
     final raw = _storage.getString(storageKey);

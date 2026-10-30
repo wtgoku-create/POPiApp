@@ -8,7 +8,7 @@ import '../../ip_guide/domain/ip_guide_draft.dart';
 import '../../ip_guide/presentation/ip_guide_copy.dart';
 import '../../v2_shared/data/v2_repository.dart';
 
-/// Uses the existing guide with this branch's local session store.
+/// Saves guide choices locally and creates one configured session on confirmation.
 class V2OnboardingRepository extends IpGuideDraftRepository {
   V2OnboardingRepository(
     super.storage,

@@ -1,6 +1,6 @@
 # POPi App Development
 
-This branch uses `lib/main.dart` as its only application entry point in development and production. It implements the creation flows from Figma section `2056:3269` with local mock data. The avatar opens the existing profile and account pages, which retain their normal backend behavior and signed-in account.
+This branch uses `lib/main.dart` as its only application entry point in development and production. The new Figma interface uses the POPiBot `/api_agent/v2` contracts. The avatar opens the existing profile and account pages.
 
 ## Run on a phone
 
@@ -39,28 +39,28 @@ xcrun simctl launch booted com.popistudio.app
 
 The simulator artifact is built for the GitHub macOS runner's architecture. Development and production builds share the Bundle ID/application ID, so installing either replaces the existing app. Android packages signed with different keys require uninstalling the previous installation first.
 
-## Demonstration flow
+## Connected flow
 
-Signed-out users first see the default POPi home (`3714:1667`). The sign-in button and composer open the existing login page. After the first sign-in for each account, the existing five-step IP guide collects choices locally and shows a final review. Confirming creates one local project session and opens its chat. The session configuration and completion record are saved together under `popi_ui_demo_v1`; subsequent launches and sign-ins skip the guide. Deleting that session or resetting sample data does not reset onboarding. Clearing app data removes these local completion records.
+Signed-out users see the default POPi home (`3714:1667`). The sign-in button and composer open the existing login page. After sign-in, the app loads owned sessions, including an archived-session check when the active list is empty. An account with no prior sessions or local completion record enters the existing IP guide. Its choices stay local until preview confirmation sends one configured project session creation request, then opens chat. A persistent request ID makes confirmation retries idempotent.
 
-Unfinished guide drafts are saved per account under `v2_onboarding_draft_v1:<userId>`. A failed confirmation keeps the draft and request identifier for the next confirmation. This branch uses bundled guide choices and the local V2 repository, so this flow does not call the production account creation or Agent session endpoints.
+Unfinished guide drafts are saved per account under `v2_onboarding_draft_v1:<userId>`. Completion is stored under `popi_v2:<Agent origin>:<userId>:onboarding`; deleting the first session does not reset it. Existing server sessions skip onboarding on another device. There is no server onboarding flag in the template: clearing local storage after every server session has been deleted can show the guide again. Guide options are bundled and localized.
 
 1. Search or open a conversation, project or workflow.
-2. Use the four suggested prompts to create image, script, video and audio results.
+2. Send prompts and existing library attachments. Accepted input clears immediately; snapshots update messages, generated assets and run state. The stop action and versioned question answers use the server contracts.
 3. Open the top-right conversation settings. Rename the conversation, select characters, add assistants, edit assistant names/instructions and toggle capabilities.
 4. Switch to Outputs to see assets for that conversation.
-5. Return to the asset library to filter, search, rename, delete and preview results. The upload action imports a bundled sample.
-6. Tap the avatar to open the existing profile page. To reset the mock data, open the welcome page with the plus button, long-press the greeting, and choose Reset Demo.
+5. Return to the asset library to filter, search, rename, delete, preview and export original media. Upload picks real files, validates their types and sizes, obtains a direct-upload lease, then imports the completed business asset into Agent. Successfully uploaded files are removed from the selection; failed files remain available for another submission.
+6. Select official or personal characters, or create a character with instructions and reference images. Up to five characters can be linked to a session.
+7. Tap the avatar to open the existing profile page.
 
-## Mock Boundaries
+## Integration Notes
 
-- Replies and generated results are deterministic local fixtures, not live AI output.
-- Character creation reuses a bundled portrait with the entered name.
-- The microphone action inserts a sample transcript. It does not record audio.
-- Upload imports bundled samples and does not upload files to a server.
-- The video is an eight-second moving crop of the Figma illustration. The audio is a locally synthesized 24-second sample. Both play offline.
-- Character associations, assistant settings and capability toggles persist locally; they do not change a live Agent's behavior.
-- Demo data is stored under `popi_ui_demo_v1`, separate from production account data. Reset affects only this demo snapshot.
+- `AGENT_API_BASE_URL`, `AGENT_API_ORIGIN` and `API_BASE_URL` remain in `config/env/*.json`; use the environment runner above. The configured endpoint must serve the business POPiBot routes and accept the normal business login identity.
+- Each login captures its token in separate Agent and asset-library transports. Account changes dispose polling and uploads. Private image cache keys include credentials; public CDN downloads and object-storage uploads receive no Agent token.
+- Session PATCH sends `expectedConfigRevision`, preserves unedited configuration fields and refreshes on `config_conflict`. Failed edits retain form input.
+- The microphone has no speech-recognition integration. The existing composer voice behavior is unchanged.
+- Advanced template features such as style-film catalogs, storyboard review and media-model preflight have no controls in this interface and are not exposed here.
+- The fixture-backed `V2Repository` and `popi_ui_demo_v1` remain available for isolated widget tests. The app uses `V2RemoteRepository` after login and never imports fixture sessions into an account.
 - Figma images and icons are bundled locally; temporary Figma asset URLs are never used at runtime.
 
 ## Structure
@@ -70,6 +70,7 @@ Unfinished guide drafts are saved per account under `v2_onboarding_draft_v1:<use
 - `lib/features/v2_home/`: home, conversation list and welcome screens.
 - `lib/features/v2_session/`: chat, conversation settings and chat controller.
 - `lib/features/v2_assets/`: asset library, media previews and export.
-- `lib/features/v2_shared/`: fixtures, models, local repository and shared widgets.
+- `lib/features/v2_shared/`: models, remote repository, upload validation, fixtures and shared widgets.
+- `lib/shared/providers/v2_repository_provider.dart`: account ownership and remote bootstrap.
 
-When backend contracts become available, replace the local repository operations with feature repositories that use `NetworkAgentApi` or `NetworkApi`. Keep transport and streaming parsing outside the widgets.
+Contract tests use intercepted requests, without real login, generation or paid API calls. Live deployment availability and real-device uploads/downloads still require testing with a signed-in account.

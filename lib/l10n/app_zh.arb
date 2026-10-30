@@ -1,4 +1,11 @@
 {
+  "v2NetworkError": "请求失败，请检查网络后再试",
+  "v2GenerationFailed": "生成失败",
+  "v2CustomAnswer": "填写其他答案",
+  "v2UploadInvalid": "部分文件格式或大小不符合要求，请重新选择",
+  "v2RoleInstructions": "角色设定",
+  "v2RoleReferences": "添加参考图（最多 5 张）",
+  "v2RoleLimit": "最多关联 5 个角色",
   "v2NoConversationSelected": "尚未选择会话",
   "@@locale": "zh",
   "appTitle": "POPi",

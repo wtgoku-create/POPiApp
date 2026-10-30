@@ -356,7 +356,12 @@ class _V2HomePageState extends State<V2HomePage> {
         ),
       ],
       bottom: _bottomTabs(context),
-      child: _conversations(context),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await v2Perform(context, widget.repository.refresh);
+        },
+        child: _conversations(context),
+      ),
     );
   }
 
@@ -479,15 +484,24 @@ class _V2HomePageState extends State<V2HomePage> {
                     )
                     .toList();
                 if (sessions.isEmpty) {
-                  return Center(
-                    child: Text(
-                      _query.isEmpty
-                          ? l.demoEmptyConversations
-                          : l.demoNoResults,
-                    ),
+                  return CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            _query.isEmpty
+                                ? l.demoEmptyConversations
+                                : l.demoNoResults,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 }
                 return ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   key: const PageStorageKey('demo-conversations'),
                   padding: horizontalPadding.copyWith(bottom: 140),
                   itemCount: sessions.length,

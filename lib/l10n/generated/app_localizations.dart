@@ -98,6 +98,48 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
+  /// No description provided for @v2NetworkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Request failed. Check your connection and try again.'**
+  String get v2NetworkError;
+
+  /// No description provided for @v2GenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation failed'**
+  String get v2GenerationFailed;
+
+  /// No description provided for @v2CustomAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter another answer'**
+  String get v2CustomAnswer;
+
+  /// No description provided for @v2UploadInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Some files have an unsupported format or size. Select them again.'**
+  String get v2UploadInvalid;
+
+  /// No description provided for @v2RoleInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Character instructions'**
+  String get v2RoleInstructions;
+
+  /// No description provided for @v2RoleReferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reference images (up to 5)'**
+  String get v2RoleReferences;
+
+  /// No description provided for @v2RoleLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Link up to 5 characters'**
+  String get v2RoleLimit;
+
   /// No description provided for @v2NoConversationSelected.
   ///
   /// In en, this message translates to:

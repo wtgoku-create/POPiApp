@@ -8,11 +8,13 @@ import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/v2_media_exporter.dart';
 import '../../v2_shared/domain/v2_models.dart';
+import '../../v2_shared/data/v2_repository.dart';
 
 /// Audio detail panel matching the Figma file information and waveform layout.
 class V2AudioDetail extends StatefulWidget {
-  const V2AudioDetail({required this.asset, super.key});
+  const V2AudioDetail({required this.asset, this.repository, super.key});
   final V2Asset asset;
+  final V2Repository? repository;
 
   @override
   State<V2AudioDetail> createState() => _V2AudioDetailState();
@@ -20,7 +22,12 @@ class V2AudioDetail extends StatefulWidget {
 
 class _V2AudioDetailState extends State<V2AudioDetail>
     with WidgetsBindingObserver {
-  late final _player = VideoPlayerController.asset(widget.asset.media);
+  late final _player = widget.asset.isRemote
+      ? VideoPlayerController.networkUrl(
+          Uri.parse(widget.asset.media),
+          httpHeaders: widget.asset.headers,
+        )
+      : VideoPlayerController.asset(widget.asset.media);
   int? _bytes;
   bool _saving = false;
   bool _loading = true;
@@ -73,9 +80,14 @@ class _V2AudioDetailState extends State<V2AudioDetail>
     final box = context.findRenderObject()! as RenderBox;
     setState(() => _saving = true);
     try {
+      final bytes = widget.asset.isRemote
+          ? await widget.repository!.readAssetBytes(widget.asset)
+          : null;
+      if (!mounted) return;
       final saved = await V2MediaExporter.save(
         widget.asset,
         box.localToGlobal(Offset.zero) & box.size,
+        bytes: bytes,
       );
       if (mounted && saved) {
         AppToast.success(

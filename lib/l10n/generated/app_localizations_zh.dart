@@ -9,6 +9,27 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get v2NetworkError => '请求失败，请检查网络后再试';
+
+  @override
+  String get v2GenerationFailed => '生成失败';
+
+  @override
+  String get v2CustomAnswer => '填写其他答案';
+
+  @override
+  String get v2UploadInvalid => '部分文件格式或大小不符合要求，请重新选择';
+
+  @override
+  String get v2RoleInstructions => '角色设定';
+
+  @override
+  String get v2RoleReferences => '添加参考图（最多 5 张）';
+
+  @override
+  String get v2RoleLimit => '最多关联 5 个角色';
+
+  @override
   String get v2NoConversationSelected => '尚未选择会话';
 
   @override
