@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -16,9 +15,6 @@ import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/popi_membership_entry.dart';
-import '../../../shared/widgets/popi_app_bar_actions.dart';
-import '../../../shared/widgets/popi_navigation_drawer.dart';
 import '../domain/ip_guide_draft.dart';
 import '../data/ip_guide_repository.dart';
 import '../../ip_accounts/domain/account_preferences.dart';
@@ -38,7 +34,6 @@ class IpGuidePage extends ConsumerStatefulWidget {
 
 class _IpGuidePageState extends ConsumerState<IpGuidePage>
     with TickerProviderStateMixin {
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
   IpGuideDraft _draft = IpGuideDraft();
   late final IpGuideRepository _repository;
   late final String? _ownerId;
@@ -51,7 +46,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   late TabController _tabs;
   bool? _reducedMotion;
   int _step = 0;
-  bool _drawerOpen = false;
   bool _restoring = false;
   bool _busy = false;
   bool _completed = false;
@@ -417,18 +411,10 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     super.dispose();
   }
 
-  Widget _blurBehindDrawer(Widget child) => _drawerOpen
-      ? ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: 6.5, sigmaY: 6.5),
-          child: child,
-        )
-      : child;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final safeArea = ref.watch(safeAreaInsetsProvider);
-    final user = ref.watch(userProvider);
     final colors = Theme.of(context).colorScheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final tabLabels = [
@@ -451,216 +437,162 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               ),
       ),
       child: Scaffold(
-        key: _scaffoldKey,
         // The app bar already includes the stored status-bar inset.
         primary: false,
         backgroundColor: Colors.transparent,
-        drawerScrimColor: const Color(0x33333333),
-        drawer: const PopiNavigationDrawer(),
-        onDrawerChanged: (open) => setState(() => _drawerOpen = open),
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(safeArea.top + 56),
           child: Padding(
             padding: EdgeInsets.only(top: safeArea.top),
-            child: _blurBehindDrawer(
-              AppBar(
-                primary: false,
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-                toolbarHeight: 56,
-                leadingWidth: _step == 0 ? 80 : 100,
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 15),
-                  child: Row(
-                    children: [
-                      SizedBox.square(
-                        dimension: 40,
-                        child: IconButton(
-                          key: const Key('ip-guide-menu'),
-                          tooltip: l10n.openNavigation,
-                          padding: const EdgeInsets.all(5),
-                          onPressed: () =>
-                              _scaffoldKey.currentState?.openDrawer(),
-                          icon: AppSvgIcon.asset(
-                            'common_navigation_menu',
-                            size: 30,
-                            color: colors.onSurface,
-                          ),
-                        ),
-                      ),
-                      if (_step > 0)
-                        SizedBox.square(
-                          dimension: 40,
-                          child: IconButton(
-                            key: const Key('ip-guide-back'),
-                            tooltip: l10n.back,
-                            onPressed: _back,
-                            padding: EdgeInsets.zero,
-                            icon: Transform.rotate(
-                              angle: math.pi / 2,
-                              child: AppSvgIcon.asset(
-                                'ip_guide_back',
-                                size: 40,
-                                color: colors.onSurface,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  PopiAppBarActions(
-                    leadingWidth: _step == 0 ? 80 : 100,
-                    membershipEntry: PopiMembershipEntry(
-                      points: user?.allCoins ?? 0,
-                      showPoints: user != null,
-                      label: user == null
-                          ? l10n.goToLogin
-                          : l10n.upgradeMembership,
-                      fontSize: 18,
-                      height: 40,
-                      onTap: () => context.push(
-                        user == null ? '/login' : '/profile/membership',
-                      ),
+            child: AppBar(
+              primary: false,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              toolbarHeight: 56,
+              leadingWidth: 60,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 15),
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 40,
+                    child: IconButton(
+                      key: const Key('ip-guide-back'),
+                      tooltip: l10n.backToPreviousPage,
+                      onPressed: _busy ? null : _back,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 18),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-        body: _blurBehindDrawer(
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Column(
-                children: [
-                  if (!_completed)
-                    SizedBox(
-                      key: const Key('ip-guide-progress'),
-                      height: 25,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 54),
-                        child: Row(
-                          children: [
-                            for (var i = 0; i < 5; i++)
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 2,
-                                  ),
-                                  child: Semantics(
-                                    key: Key('ip-guide-progress-$i'),
-                                    label: tabLabels[i],
-                                    selected: _step == i + 1,
-                                    child: Container(
-                                      height: 5,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.brand.withValues(
-                                          alpha: _step == i + 1 ? 1 : .2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          100,
-                                        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(
+              children: [
+                if (!_completed)
+                  SizedBox(
+                    key: const Key('ip-guide-progress'),
+                    height: 25,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 54),
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < 5; i++)
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                child: Semantics(
+                                  key: Key('ip-guide-progress-$i'),
+                                  label: tabLabels[i],
+                                  selected: _step == i + 1,
+                                  child: Container(
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.brand.withValues(
+                                        alpha: _step == i + 1 ? 1 : .2,
                                       ),
+                                      borderRadius: BorderRadius.circular(100),
                                     ),
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
                     ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabs,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _stepWithAction(
-                          0,
-                          _introduction(l10n),
-                          label: l10n.ipGuideStart,
-                          onPressed: _busy ? null : _start,
-                          top: 102,
-                        ),
-                        _stepWithAction(
-                          1,
-                          _selectionStep(l10n, feelings: false),
-                          label: l10n.ipNextFeelings,
-                          onPressed: _optionsLoading || _options == null
-                              ? null
-                              : _next,
-                        ),
-                        _stepWithAction(
-                          2,
-                          _selectionStep(l10n, feelings: true),
-                          label: l10n.ipNextPresentation,
-                          onPressed: _optionsLoading || _options == null
-                              ? null
-                              : _next,
-                        ),
-                        _stepWithAction(
-                          3,
-                          _presentationStep(l10n),
-                          label: l10n.ipNextAudience,
-                          onPressed: _optionsLoading || _options == null
-                              ? null
-                              : _next,
-                        ),
-                        _stepWithAction(
-                          4,
-                          _audienceStep(l10n),
-                          label: l10n.ipNextReview,
-                          onPressed: _optionsLoading || _options == null
-                              ? null
-                              : _next,
-                        ),
-                        _stepWithFooter(
-                          5,
-                          Column(
-                            children: [
-                              if (_completed)
-                                _successHeading(l10n)
-                              else
-                                _heading(5, l10n.ipReviewQuestion),
-                              const SizedBox(height: 20),
-                              if (!_optionsLoading && _options == null)
-                                _catalogState(l10n)!,
-                              IpGuideReview(
-                                draft: _draft,
-                                nicknameController: _nicknameInput,
-                                submitted: _draft.submitted,
-                                completed: _completed,
-                              ),
-                            ],
-                          ),
-                          IpGuideReviewActions(
-                            onConfirm: _confirm,
-                            onReselect: () => _goToStep(1),
-                            submitted: _draft.submitted,
-                            busy: _busy,
-                            completed: _completed,
-                            onCreateRole: _createFirstRole,
-                            onCreateContent: () =>
-                                _openProject(createContent: true),
-                            onOpenProject: _openProject,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
-                ],
-              ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabs,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _stepWithAction(
+                        0,
+                        _introduction(l10n),
+                        label: l10n.ipGuideStart,
+                        onPressed: _busy ? null : _start,
+                        top: 102,
+                      ),
+                      _stepWithAction(
+                        1,
+                        _selectionStep(l10n, feelings: false),
+                        label: l10n.ipNextFeelings,
+                        onPressed: _optionsLoading || _options == null
+                            ? null
+                            : _next,
+                      ),
+                      _stepWithAction(
+                        2,
+                        _selectionStep(l10n, feelings: true),
+                        label: l10n.ipNextPresentation,
+                        onPressed: _optionsLoading || _options == null
+                            ? null
+                            : _next,
+                      ),
+                      _stepWithAction(
+                        3,
+                        _presentationStep(l10n),
+                        label: l10n.ipNextAudience,
+                        onPressed: _optionsLoading || _options == null
+                            ? null
+                            : _next,
+                      ),
+                      _stepWithAction(
+                        4,
+                        _audienceStep(l10n),
+                        label: l10n.ipNextReview,
+                        onPressed: _optionsLoading || _options == null
+                            ? null
+                            : _next,
+                      ),
+                      _stepWithFooter(
+                        5,
+                        Column(
+                          children: [
+                            if (_completed)
+                              _successHeading(l10n)
+                            else
+                              _heading(5, l10n.ipReviewQuestion),
+                            const SizedBox(height: 20),
+                            if (!_optionsLoading && _options == null)
+                              _catalogState(l10n)!,
+                            IpGuideReview(
+                              draft: _draft,
+                              nicknameController: _nicknameInput,
+                              submitted: _draft.submitted,
+                              completed: _completed,
+                            ),
+                          ],
+                        ),
+                        IpGuideReviewActions(
+                          onConfirm: _confirm,
+                          onReselect: () => _goToStep(1),
+                          submitted: _draft.submitted,
+                          busy: _busy,
+                          completed: _completed,
+                          onCreateRole: _createFirstRole,
+                          onCreateContent: () =>
+                              _openProject(createContent: true),
+                          onOpenProject: _openProject,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
     return PopScope<void>(
-      canPop:
-          !_busy &&
-          (_step == 0 || _completed || _draft.submitted || _drawerOpen),
+      canPop: !_busy && (_step == 0 || _completed || _draft.submitted),
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },

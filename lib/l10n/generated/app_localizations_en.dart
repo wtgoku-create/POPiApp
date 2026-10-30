@@ -1172,6 +1172,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get douyinLogin => 'Douyin sign-in';
 
   @override
+  String get wechatScanLogin => 'Scan with WeChat';
+
+  @override
+  String get douyinWebAuthorizing => 'Completing Douyin sign-in';
+
+  @override
+  String get allowDouyinPopup =>
+      'Allow the Douyin authorization popup and sign in again.';
+
+  @override
+  String get socialLoginExpired => 'Authorization expired';
+
+  @override
+  String get refreshSocialLogin => 'Refresh authorization';
+
+  @override
   String get douyinLoginCanceled => 'Douyin sign-in was canceled';
 
   @override

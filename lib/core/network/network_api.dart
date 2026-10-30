@@ -719,6 +719,47 @@ class NetworkApi {
     return _appAuthData(response);
   }
 
+  Future<Map<String, dynamic>> webSocialLoginChallenge({
+    required bool douyin,
+  }) async => _webAuthData(
+    await dio.get<Map<String, dynamic>>(
+      douyin ? '/api_client/auth/douyinQrCode' : '/api_client/auth/wxghQrCode',
+    ),
+  );
+
+  Future<Map<String, dynamic>> checkWebSocialLogin({
+    required bool douyin,
+    required String state,
+    CancelToken? cancelToken,
+  }) async => _webAuthData(
+    await dio.get<Map<String, dynamic>>(
+      douyin
+          ? '/api_client/auth/checkDouyinLogin'
+          : '/api_client/auth/checkWxghLogin',
+      queryParameters: {douyin ? 'state' : 'sceneCode': state},
+      cancelToken: cancelToken,
+    ),
+  );
+
+  Future<Map<String, dynamic>> registerWebSocialByPhone({
+    required bool douyin,
+    required String registerToken,
+    required String phone,
+    required String code,
+  }) async => _webAuthData(
+    await dio.post<Map<String, dynamic>>(
+      douyin
+          ? '/api_client/auth/douyinRegisterByPhone'
+          : '/api_client/auth/wxghRegisterByPhone',
+      data: {
+        'registerToken': registerToken,
+        'phone': phone,
+        'code': code,
+        'inviteCode': '',
+      },
+    ),
+  );
+
   Future<Map<String, dynamic>> registerWechatAppByPhone({
     required String registerToken,
     required String phone,
@@ -1214,5 +1255,19 @@ class NetworkApi {
       return body;
     }
     throw const ApiException();
+  }
+
+  Map<String, dynamic> _webAuthData(Response<Map<String, dynamic>> response) {
+    final body = response.data;
+    if (body == null) throw const ApiException();
+    final status = body['status']?.toString();
+    if (status != null && status != '0000') {
+      throw ApiException(
+        message: body['message']?.toString(),
+        statusCode: response.statusCode,
+      );
+    }
+    final data = body['data'];
+    return data is Map<String, dynamic> ? data : body;
   }
 }

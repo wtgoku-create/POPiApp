@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
@@ -24,6 +25,10 @@ import 'phone_binding_page.dart';
 import 'formatters/phone_number_formatter.dart';
 import '../domain/wechat_app_login.dart';
 import '../domain/douyin_app_login.dart';
+import '../domain/web_social_login.dart';
+import '../domain/user.dart';
+import '../data/web_login_browser.dart';
+import 'web_social_login_panel.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({
@@ -56,12 +61,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   bool _isDouyinLoggingIn = false;
   String? _wechatRegisterToken;
   String? _douyinRegisterToken;
+  bool? _webSocialDouyin;
+  WebSocialLoginChallenge? _webChallenge;
+  bool _webLoading = false;
+  bool _webExpired = false;
+  Timer? _webPollTimer;
+  Timer? _webExpiryTimer;
+  CancelToken? _webCancelToken;
+  int _webRevision = 0;
+  WebLoginWindow? _webAuthWindow;
 
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _restoreWebLogin();
+      });
+    }
     final wechatAuthorizationCode = widget.wechatAuthorizationCode?.trim();
-    if (wechatAuthorizationCode != null && wechatAuthorizationCode.isNotEmpty) {
+    if (!kIsWeb &&
+        wechatAuthorizationCode != null &&
+        wechatAuthorizationCode.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _completeWechatLogin(wechatAuthorizationCode);
       });
@@ -70,6 +91,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   void dispose() {
+    _stopWebPolling();
     _countdownTimer?.cancel();
     _phoneController.dispose();
     _codeController.dispose();
@@ -111,6 +133,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           agreed: _agreed,
           onChanged: _toggleAgreement,
         ),
+      );
+    }
+
+    if (kIsWeb && _webSocialDouyin != null) {
+      final douyin = _webSocialDouyin!;
+      return WebSocialLoginPanel(
+        douyin: douyin,
+        loading: _webLoading,
+        expired: _webExpired,
+        qrUrl: _webChallenge?.url,
+        onBack: _cancelWebLogin,
+        onRefresh: () => _startWebLogin(douyin: douyin),
       );
     }
 
@@ -188,6 +222,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void _cancelPhoneBinding() {
     if (_isLoggingIn || _isSendingCode) return;
     FocusManager.instance.primaryFocus?.unfocus();
+    if (kIsWeb) _cancelWebLogin();
     setState(() {
       _wechatRegisterToken = null;
       _douyinRegisterToken = null;
@@ -307,7 +342,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     try {
       final registerToken = _wechatRegisterToken;
       final douyinRegisterToken = _douyinRegisterToken;
-      if (_passwordLogin) {
+      if (kIsWeb && (registerToken != null || douyinRegisterToken != null)) {
+        final user = await ref
+            .read(webSocialAuthRepositoryProvider)
+            .registerByPhone(
+              douyin: douyinRegisterToken != null,
+              registerToken: (douyinRegisterToken ?? registerToken)!,
+              phone: _phoneController.text.trim(),
+              code: _codeController.text.trim(),
+            );
+        await _acceptWebUser(user);
+      } else if (_passwordLogin) {
         await ref
             .read(userProvider.notifier)
             .signInWithPassword(
@@ -358,6 +403,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
     if (_isLoggingIn || _isWechatLoggingIn || _isDouyinLoggingIn) return;
+
+    if (kIsWeb) {
+      await _startWebLogin(douyin: false);
+      return;
+    }
 
     setState(() => _isWechatLoggingIn = true);
     try {
@@ -437,6 +487,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final l10n = AppLocalizations.of(context)!;
     if (!_ensureAgreement(l10n)) return;
     if (_isLoggingIn || _isWechatLoggingIn || _isDouyinLoggingIn) return;
+
+    if (kIsWeb) {
+      await _startWebLogin(douyin: true);
+      return;
+    }
 
     setState(() => _isDouyinLoggingIn = true);
     try {
@@ -518,6 +573,190 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (_agreed) return true;
     AppToast.error(context, l10n.agreementRequired);
     return false;
+  }
+
+  void _stopWebPolling() {
+    _webRevision++;
+    _webPollTimer?.cancel();
+    _webExpiryTimer?.cancel();
+    _webCancelToken?.cancel();
+    _webCancelToken = null;
+    _webAuthWindow?.close();
+    _webAuthWindow = null;
+  }
+
+  void _cancelWebLogin() {
+    _stopWebPolling();
+    unawaited(ref.read(webLoginProgressProvider).clear());
+    setState(() {
+      _webSocialDouyin = null;
+      _webChallenge = null;
+      _webLoading = false;
+      _webExpired = false;
+    });
+  }
+
+  void _restoreWebLogin() {
+    final uri = webLoginLocation;
+    final query = {
+      ...Uri.tryParse(uri.fragment)?.queryParameters ?? <String, String>{},
+      ...uri.queryParameters,
+    };
+    final callback = query['douyin_callback'] == '1';
+    final progress = ref
+        .read(webLoginProgressProvider)
+        .restore(callbackState: callback ? query['douyin_state'] ?? '' : null);
+    if (callback) cleanWebLoginCallback();
+    if (progress == null) {
+      if (callback) {
+        unawaited(ref.read(webLoginProgressProvider).clear());
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.douyinLoginFailed,
+        );
+      }
+      return;
+    }
+    setState(() {
+      _agreed = true;
+      _webSocialDouyin = true;
+      _douyinRegisterToken = progress.registerToken;
+    });
+    if (progress.registerToken == null) {
+      _beginWebPolling(
+        douyin: true,
+        state: progress.state,
+        expiresAt: progress.expiresAt,
+      );
+    }
+  }
+
+  Future<void> _startWebLogin({required bool douyin}) async {
+    _stopWebPolling();
+    final authorizationWindow = douyin ? openWebLoginWindow() : null;
+    if (douyin && authorizationWindow == null) {
+      AppToast.error(context, AppLocalizations.of(context)!.allowDouyinPopup);
+      return;
+    }
+    _webAuthWindow = authorizationWindow;
+    final revision = _webRevision;
+    setState(() {
+      _webSocialDouyin = douyin;
+      _webLoading = true;
+      _webExpired = false;
+    });
+    try {
+      await ref.read(webLoginProgressProvider).clear();
+      final challenge = await ref
+          .read(webSocialAuthRepositoryProvider)
+          .createChallenge(douyin: douyin);
+      if (!mounted || revision != _webRevision) return;
+      final expiresAt = DateTime.now().add(challenge.expiresIn);
+      if (douyin) {
+        await ref
+            .read(webLoginProgressProvider)
+            .save(state: challenge.state, expiresAt: expiresAt);
+        if (!mounted || revision != _webRevision) return;
+        authorizationWindow!.navigate(challenge.url);
+        _beginWebPolling(
+          douyin: true,
+          state: challenge.state,
+          expiresAt: expiresAt,
+        );
+      } else {
+        setState(() => _webChallenge = challenge);
+        _beginWebPolling(
+          douyin: false,
+          state: challenge.state,
+          expiresAt: expiresAt,
+        );
+      }
+    } catch (error) {
+      if (mounted && revision == _webRevision) {
+        _webAuthWindow?.close();
+        _webAuthWindow = null;
+        AppToast.error(context, _errorMessage(error));
+      }
+    } finally {
+      if (mounted && revision == _webRevision) {
+        setState(() => _webLoading = false);
+      }
+    }
+  }
+
+  void _beginWebPolling({
+    required bool douyin,
+    required String state,
+    required DateTime expiresAt,
+  }) {
+    final revision = _webRevision;
+    final cancelToken = _webCancelToken = CancelToken();
+    _webExpiryTimer = Timer(expiresAt.difference(DateTime.now()), () {
+      _stopWebPolling();
+      if (mounted) setState(() => _webExpired = true);
+    });
+    Future<void> tick() async {
+      try {
+        final result = await ref
+            .read(webSocialAuthRepositoryProvider)
+            .check(douyin: douyin, state: state, cancelToken: cancelToken);
+        if (!mounted || revision != _webRevision) return;
+        switch (result) {
+          case WebSocialWaiting():
+            _webPollTimer = Timer(const Duration(seconds: 2), tick);
+          case WebSocialPhoneBindingRequired(registerToken: final token):
+            _webExpiryTimer?.cancel();
+            _webAuthWindow?.close();
+            _webAuthWindow = null;
+            if (douyin) {
+              await ref
+                  .read(webLoginProgressProvider)
+                  .save(
+                    state: state,
+                    expiresAt: DateTime.now().add(const Duration(minutes: 30)),
+                    registerToken: token,
+                  );
+            }
+            if (!mounted || revision != _webRevision) return;
+            setState(() {
+              _wechatRegisterToken = douyin ? null : token;
+              _douyinRegisterToken = douyin ? token : null;
+              _passwordLogin = false;
+              _passwordVisible = false;
+              _passwordController.clear();
+              _codeController.clear();
+            });
+          case WebSocialSignInSucceeded(user: final user):
+            _stopWebPolling();
+            await _acceptWebUser(user);
+            if (!mounted) return;
+            AppToast.success(
+              context,
+              AppLocalizations.of(context)!.loginSucceeded,
+            );
+            if (widget.onLoginSuccess case final callback?) {
+              callback();
+            } else {
+              context.go('/');
+            }
+        }
+      } catch (error) {
+        if (!mounted || revision != _webRevision || cancelToken.isCancelled) {
+          return;
+        }
+        _stopWebPolling();
+        AppToast.error(context, _errorMessage(error));
+      }
+    }
+
+    unawaited(tick());
+  }
+
+  Future<void> _acceptWebUser(User user) async {
+    await ref.read(webLoginProgressProvider).clear();
+    if (!mounted) return;
+    await ref.read(userProvider.notifier).setUser(user);
+    unawaited(ref.read(userPointsProvider.notifier).refresh());
   }
 
   void _startCountdown() {
@@ -892,7 +1131,7 @@ class _PhoneLoginDesign extends StatelessWidget {
                       const SizedBox(width: 9),
                       Expanded(
                         child: Text(
-                          l10n.wechatLogin,
+                          kIsWeb ? l10n.wechatScanLogin : l10n.wechatLogin,
                           style: TextStyle(
                             color: colorScheme.onSurface,
                             fontSize: 14,

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/assets/presentation/assets_page.dart';
@@ -7,6 +8,7 @@ import '../features/activities/domain/activity.dart';
 import '../features/activities/presentation/activities_page.dart';
 import '../features/activities/presentation/activity_detail_page.dart';
 import '../features/auth/presentation/login_page.dart';
+import '../features/auth/data/web_login_browser.dart';
 import '../features/home/presentation/home_page.dart';
 import '../features/ip_guide/presentation/ip_guide_page.dart';
 import '../features/role_guide/presentation/role_guide_page.dart';
@@ -32,6 +34,18 @@ import '../features/payments/presentation/android_payment_page.dart';
 final routerProvider = Provider.family<GoRouter, bool>((ref, _) {
   return GoRouter(
     initialLocation: '/',
+    redirect: (context, state) {
+      if (kIsWeb &&
+          state.uri.path != '/login' &&
+          (webLoginLocation.queryParameters['douyin_callback'] == '1' ||
+              state.uri.queryParameters['douyin_callback'] == '1')) {
+        return Uri(
+          path: '/login',
+          queryParameters: state.uri.queryParameters,
+        ).toString();
+      }
+      return null;
+    },
     routes: [
       // Keep home beneath every destination, including direct links.
       GoRoute(

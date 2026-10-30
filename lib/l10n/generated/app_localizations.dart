@@ -2208,6 +2208,36 @@ abstract class AppLocalizations {
   /// **'Douyin sign-in'**
   String get douyinLogin;
 
+  /// No description provided for @wechatScanLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan with WeChat'**
+  String get wechatScanLogin;
+
+  /// No description provided for @douyinWebAuthorizing.
+  ///
+  /// In en, this message translates to:
+  /// **'Completing Douyin sign-in'**
+  String get douyinWebAuthorizing;
+
+  /// No description provided for @allowDouyinPopup.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the Douyin authorization popup and sign in again.'**
+  String get allowDouyinPopup;
+
+  /// No description provided for @socialLoginExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Authorization expired'**
+  String get socialLoginExpired;
+
+  /// No description provided for @refreshSocialLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh authorization'**
+  String get refreshSocialLogin;
+
   /// No description provided for @douyinLoginCanceled.
   ///
   /// In en, this message translates to:

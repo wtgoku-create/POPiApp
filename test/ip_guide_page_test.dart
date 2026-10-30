@@ -348,15 +348,27 @@ void main() {
     tester,
   ) async {
     await pumpGuide(tester, systemTopInset: 52);
-    final menu = find.byKey(const Key('ip-guide-menu'));
-    expect(find.byKey(const Key('ip-guide-back')), findsNothing);
-    expect(tester.getSize(menu), const Size(40, 40));
-    expect(tester.getTopLeft(menu).dy, 52 + 8);
+    final back = find.byKey(const Key('ip-guide-back'));
+    expect(back, findsOneWidget);
+    expect(find.byKey(const Key('ip-guide-menu')), findsNothing);
+    expect(tester.getSize(back), const Size(40, 40));
+    expect(tester.getTopLeft(back).dy, 52 + 8);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).actions, isNull);
+    expect(tester.widget<Scaffold>(find.byType(Scaffold).last).drawer, isNull);
     expect(
       tester.getTopLeft(find.byKey(const Key('ip-guide-progress'))).dy,
       52 + 56,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the initial header back button leaves the guide', (
+    tester,
+  ) async {
+    await pumpGuide(tester);
+    await tap(tester, 'ip-guide-back');
+    expect(find.byType(IpGuidePage), findsNothing);
+    expect(find.byType(HomePage), findsOneWidget);
   });
 
   for (final bottomInset in [0.0, 16.0, 34.0]) {
@@ -577,7 +589,7 @@ void main() {
       await pumpGuide(tester);
       expect(storage.readCount, 0);
       expect(find.text('继续草稿，还是新建IP？'), findsNothing);
-      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+      expect(find.byKey(const Key('ip-guide-back')), findsOneWidget);
       await tap(tester, 'ip-guide-start');
       expect(storage.readCount, 1);
       expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
@@ -590,7 +602,7 @@ void main() {
       for (var i = 0; i < 2; i++) {
         await tap(tester, 'ip-guide-back');
       }
-      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+      expect(find.byKey(const Key('ip-guide-back')), findsOneWidget);
       expect(find.text('继续草稿，还是新建IP？'), findsNothing);
       await tap(tester, 'ip-guide-start');
       expect(find.text('继续草稿，还是新建IP？'), findsOneWidget);
@@ -621,7 +633,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.text('继续草稿，还是新建IP？'), findsNothing);
-      expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+      expect(find.byKey(const Key('ip-guide-back')), findsOneWidget);
       expect(repository.load()!.nickname, '校园故事');
       await tap(tester, 'ip-guide-start');
       await tap(tester, 'ip-draft-resume');
@@ -787,7 +799,7 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
     await tap(tester, 'ip-guide-back');
-    expect(find.byKey(const Key('ip-guide-back')), findsNothing);
+    expect(find.byKey(const Key('ip-guide-back')), findsOneWidget);
     expect(find.byKey(const Key('ip-guide-start')), findsOneWidget);
     expect(find.byType(HomePage), findsNothing);
     expect(tester.takeException(), isNull);

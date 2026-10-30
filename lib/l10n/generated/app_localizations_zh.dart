@@ -1129,6 +1129,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get douyinLogin => '抖音登录';
 
   @override
+  String get wechatScanLogin => '微信扫码登录';
+
+  @override
+  String get douyinWebAuthorizing => '正在完成抖音登录';
+
+  @override
+  String get allowDouyinPopup => '请允许浏览器打开抖音授权窗口后再次登录';
+
+  @override
+  String get socialLoginExpired => '授权已过期';
+
+  @override
+  String get refreshSocialLogin => '刷新授权';
+
+  @override
   String get douyinLoginCanceled => '已取消抖音登录';
 
   @override
