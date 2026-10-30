@@ -10,7 +10,6 @@ import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/providers/safe_area_provider.dart';
 import '../../../shared/providers/ip_guide_provider.dart';
-import '../../../shared/providers/project_provider.dart';
 import '../../../shared/providers/session_provider.dart';
 import '../../../shared/providers/user_provider.dart';
 import '../../../shared/widgets/app_svg_icon.dart';
@@ -93,6 +92,10 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     } catch (_) {
       if (mounted && !_optionsToken.isCancelled) {
         setState(() => _options = null);
+        AppToast.error(
+          context,
+          AppLocalizations.of(context)!.ipAccountLoadFailed,
+        );
       }
     } finally {
       if (mounted && !_optionsToken.isCancelled) {
@@ -105,7 +108,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     final profile = guideAccountProfile(_draft, AppLocalizations.of(context)!);
     for (final key in _preferenceKeys) {
       _draft.preferences.putIfAbsent(key, () {
-        final selection = IpGuideSelection<String>();
+        final selection = IpGuideSelection<String>(combineCustom: true);
         final custom = _inputFor(key)?.text ?? '';
         if (custom.trim().isNotEmpty) {
           selection.customText = custom;
@@ -132,6 +135,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     final step = _options![key]!;
     final values = selectionValues(_draft.preferences[key]!, (value) => value);
     return step.accepts(values) &&
+        values.join(' x ').length <= 4000 &&
         (step.allowCustom ||
             values.every(
               (name) => step.options.any((option) => option.name == name),
@@ -250,7 +254,11 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   }
 
   void _next() {
-    if (_optionsLoading || _options == null) return;
+    if (_optionsLoading) return;
+    if (_options == null) {
+      unawaited(_loadPreferenceOptions());
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final invalid =
         _step > 0 &&
@@ -282,7 +290,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   }
 
   void _togglePreference(String key, String value) {
-    _inputFor(key)?.clear();
     final changed = _draft.preferences[key]!.toggle(
       value,
       maxSelections: _options![key]!.maxSelections,
@@ -301,7 +308,11 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
   Future<void> _confirm() async {
     if (_busy || _completed) return;
     final l10n = AppLocalizations.of(context)!;
-    if (_optionsLoading || _options == null) return;
+    if (_optionsLoading) return;
+    if (_options == null) {
+      await _loadPreferenceOptions();
+      return;
+    }
     int? missing;
     if (!_draft.submitted) {
       for (var index = 0; index < _preferenceKeys.length; index++) {
@@ -323,6 +334,10 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       AppToast.info(context, l10n.ipSelectNickname);
       return;
     }
+    if (_draft.nickname.trim().length > 120) {
+      AppToast.info(context, l10n.accountInputInvalid);
+      return;
+    }
     if (ref.read(userProvider) == null) {
       await context.push('/login');
       return;
@@ -336,7 +351,6 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       }
       await _repository.create(_draft, guideAccountProfile(_draft, l10n));
       if (!mounted || ref.read(userProvider)?.id != _ownerId) return;
-      ref.invalidate(projectsProvider);
       ref.invalidate(sessionsProvider);
       if (mounted) setState(() => _completed = true);
     } catch (_) {
@@ -380,18 +394,13 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       context.go('/');
       return;
     }
-    if (!createContent) {
-      await context.push(
-        '/ip-accounts/${Uri.encodeComponent(_draft.accountId!)}',
-      );
-      return;
-    }
     await context.push(
       Uri(
         path: '/session',
         queryParameters: {
           'sessionId': _draft.sessionId!,
-          'prompt': AppLocalizations.of(context)!.ipFirstContentPrompt,
+          if (createContent)
+            'prompt': AppLocalizations.of(context)!.ipFirstContentPrompt,
         },
       ).toString(),
     );
@@ -529,33 +538,25 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
                         1,
                         _selectionStep(l10n, feelings: false),
                         label: l10n.ipNextFeelings,
-                        onPressed: _optionsLoading || _options == null
-                            ? null
-                            : _next,
+                        onPressed: _optionsLoading ? null : _next,
                       ),
                       _stepWithAction(
                         2,
                         _selectionStep(l10n, feelings: true),
                         label: l10n.ipNextPresentation,
-                        onPressed: _optionsLoading || _options == null
-                            ? null
-                            : _next,
+                        onPressed: _optionsLoading ? null : _next,
                       ),
                       _stepWithAction(
                         3,
                         _presentationStep(l10n),
                         label: l10n.ipNextAudience,
-                        onPressed: _optionsLoading || _options == null
-                            ? null
-                            : _next,
+                        onPressed: _optionsLoading ? null : _next,
                       ),
                       _stepWithAction(
                         4,
                         _audienceStep(l10n),
                         label: l10n.ipNextReview,
-                        onPressed: _optionsLoading || _options == null
-                            ? null
-                            : _next,
+                        onPressed: _optionsLoading ? null : _next,
                       ),
                       _stepWithFooter(
                         5,
@@ -783,6 +784,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               controller: feelings ? _feelingInput : _directionInput,
               hint: l10n.ipCustomHint,
               maxBytes: step.maxNameBytes,
+              limit: step.maxNameBytes,
             ),
         ]),
       ],
@@ -794,18 +796,11 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
     if (state != null) return state;
     final step = _options!['presentationFormats']!;
     final selection = _draft.preferences[step.key]!;
-    final style = TextStyle(
-      color: Theme.of(context).colorScheme.onSurface,
-      fontSize: 18,
-      fontWeight: FontWeight.w600,
-      height: 1.4,
-    );
     return Column(
       children: [
         _heading(3, l10n.ipPresentationQuestion),
         const SizedBox(height: 20),
         _panel([
-          Text(l10n.ipVisualStyle, style: style),
           IpGuidePresentationChoices(
             options: step.options,
             selection: selection,
@@ -817,46 +812,8 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               controller: _presentationInput,
               hint: l10n.ipCustomHint,
               maxBytes: step.maxNameBytes,
+              limit: step.maxNameBytes,
             ),
-          Text(l10n.ipContentFormat, style: style),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final format in IpContentFormat.values)
-                ChoiceChip(
-                  key: Key('ip-format-${format.name}'),
-                  label: Text(formatLabel(format, l10n)),
-                  selected:
-                      _draft.customFormat.trim().isEmpty &&
-                      _draft.format == format,
-                  showCheckmark: false,
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  selectedColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: .05),
-                  labelStyle: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  shape: const StadiumBorder(),
-                  onSelected: (_) {
-                    _formatInput.clear();
-                    setState(() => _draft.format = format);
-                    _save();
-                  },
-                ),
-            ],
-          ),
-          IpGuideTextField(
-            key: const Key('ip-custom-format'),
-            controller: _formatInput,
-            hint: l10n.ipCustomHint,
-          ),
         ]),
       ],
     );
@@ -892,6 +849,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
               controller: _audienceInput,
               hint: l10n.ipCustomHint,
               maxBytes: step.maxNameBytes,
+              limit: step.maxNameBytes,
             ),
         ]),
       ],
@@ -905,16 +863,7 @@ class _IpGuidePageState extends ConsumerState<IpGuidePage>
       );
     }
     if (_options != null) return null;
-    return Column(
-      children: [
-        Text(l10n.ipAccountLoadFailed),
-        TextButton(
-          key: const Key('ip-preferences-retry'),
-          onPressed: _loadPreferenceOptions,
-          child: Text(l10n.retry),
-        ),
-      ],
-    );
+    return const SizedBox.shrink();
   }
 
   String? _directionIcon(String name) => const {

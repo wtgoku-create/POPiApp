@@ -1447,8 +1447,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipCreateSuccess => 'Account created!';
 
   @override
-  String get ipCreateSuccessDescription =>
-      'Every piece of content you publish will build your account here.';
+  String get ipCreateSuccessDescription => 'Your next story starts here.';
 
   @override
   String get ipCreateFirstRole => 'Create your first character';
@@ -1457,7 +1456,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ipCreateFirstContent => 'Make your first content';
 
   @override
-  String get ipOpenProject => 'Open account project';
+  String get ipOpenProject => 'Open conversation';
 
   @override
   String get ipFirstRolePrompt =>
@@ -1622,6 +1621,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ipNicknameHint => 'Give your account a name';
+
+  @override
+  String get ipSessionTitle => 'Conversation name:';
+
+  @override
+  String get ipSessionTitleHint => 'Give your conversation a name';
 
   @override
   String get ipDirectionCampus => 'Campus';

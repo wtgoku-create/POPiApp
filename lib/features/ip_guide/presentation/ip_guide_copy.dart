@@ -105,9 +105,10 @@ Map<String, Object?> guideAccountProfile(
 List<String> selectionValues<T>(
   IpGuideSelection<T> selection,
   String Function(T) label,
-) => selection.customText.trim().isNotEmpty
-    ? [selection.customText.trim()]
-    : selection.values.map(label).toList();
+) => {
+  ...selection.values.map(label),
+  if (selection.customText.trim().isNotEmpty) selection.customText.trim(),
+}.toList();
 
 String selectionLabel<T>(
   IpGuideSelection<T> selection,

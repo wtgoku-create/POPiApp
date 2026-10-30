@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:popi_ai_app/core/network/network_api.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 
@@ -29,17 +28,13 @@ class MemoryGuideStorage extends PreferencesStorage {
   }
 }
 
-class FixtureIpGuideApi extends NetworkApi {
-  FixtureIpGuideApi() : super(Dio());
-  final accountRequests = <String>[];
-  final profileRequests = <String>[];
-  Map<String, Object?>? savedProfile;
-  bool failAccount = false;
-  bool failProfile = false;
+class FixtureIpGuideAgentApi extends NetworkAgentApi {
+  FixtureIpGuideAgentApi() : super(Dio());
   bool failPreferences = false;
   int preferenceRequests = 0;
   Future<void>? preferenceWait;
   Map<String, dynamic> preferenceCatalog = {
+    'schemaVersion': 1,
     'steps': [
       for (final entry in {
         'contentDirections': [
@@ -72,7 +67,7 @@ class FixtureIpGuideApi extends NetworkApi {
           'allowCustom': true,
           'required': true,
           'maxSelections': 2,
-          'maxNameBytes': 300,
+          'maxNameBytes': entry.key == 'targetAudience' ? 2000 : 300,
           'options': [
             for (final name in entry.value)
               {'name': name, 'description': '来自接口的选项描述', 'imageUrl': null},
@@ -82,7 +77,7 @@ class FixtureIpGuideApi extends NetworkApi {
   };
 
   @override
-  Future<Map<String, dynamic>> ipAccountPreferenceOptions({
+  Future<Map<String, dynamic>> preferenceOptions({
     CancelToken? cancelToken,
   }) async {
     preferenceRequests++;
@@ -91,53 +86,24 @@ class FixtureIpGuideApi extends NetworkApi {
     return preferenceCatalog;
   }
 
-  @override
-  Future<(String, int)> createIpAccount({
-    String? title,
-    Map<String, Object?>? preferences,
-    String? userPrompt,
-    required String clientRequestId,
-    CancelToken? cancelToken,
-  }) async {
-    accountRequests.add(clientRequestId);
-    if (failAccount) throw StateError('Network unavailable');
-    return ('created-account', 1);
-  }
-
-  @override
-  Future<void> saveIpAccountProfile(
-    String id, {
-    required int revision,
-    required String clientRequestId,
-    required Map<String, Object?> profile,
-    CancelToken? cancelToken,
-  }) async {
-    profileRequests.add(clientRequestId);
-    if (failProfile) throw StateError('Profile unavailable');
-    savedProfile = profile;
-  }
-}
-
-class FixtureIpGuideAgentApi extends NetworkAgentApi {
-  FixtureIpGuideAgentApi() : super(Dio());
-
   final requests = <Map<String, Object?>>[];
   bool fail = false;
   String bindingStatus = 'ready';
   Future<void>? wait;
 
   @override
-  Future<Map<String, dynamic>> createSession({
+  Future<Map<String, dynamic>> createHarnessSession({
     required String clientRequestId,
-    String? title,
-    String? accountId,
-    String? entry,
+    required String title,
+    required String kind,
+    Map<String, Object?>? configuration,
     CancelToken? cancelToken,
   }) async {
     requests.add({
       'clientRequestId': clientRequestId,
       'title': title,
-      'accountId': accountId,
+      'kind': kind,
+      if (configuration != null) 'configuration': configuration,
     });
     await wait;
     if (cancelToken?.isCancelled == true) throw cancelToken!.cancelError!;

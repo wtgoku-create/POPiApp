@@ -1398,7 +1398,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ipCreateFirstContent => '制作第一条内容';
 
   @override
-  String get ipOpenProject => '前往账号项目';
+  String get ipOpenProject => '打开会话';
 
   @override
   String get ipFirstRolePrompt => '请根据这个账号的定位，帮我创建第一个角色。';
@@ -1552,6 +1552,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ipNicknameHint => '给账号取个好听的名字';
+
+  @override
+  String get ipSessionTitle => '会话名称：';
+
+  @override
+  String get ipSessionTitleHint => '给会话取个名字';
 
   @override
   String get ipDirectionCampus => '校园';

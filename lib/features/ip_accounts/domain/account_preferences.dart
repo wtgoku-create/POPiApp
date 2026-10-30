@@ -52,6 +52,51 @@ class AccountPreferenceStep {
             value.trim().isNotEmpty &&
             utf8.encode(value).length <= maxNameBytes,
       );
+
+  /// Agent catalogs and session configuration share these four preference groups.
+  static List<AccountPreferenceStep> parseCatalog(
+    Map<String, dynamic> catalog,
+  ) {
+    if (catalog['schemaVersion'] != 1 || catalog['steps'] is! List) {
+      throw const FormatException('Unsupported preference catalog');
+    }
+    final steps = [
+      for (final step in catalog['steps'] as List)
+        AccountPreferenceStep.fromJson(step as Map<String, dynamic>),
+    ];
+    const keys = {
+      'contentDirections',
+      'audienceFeelings',
+      'presentationFormats',
+      'targetAudience',
+    };
+    final received = steps.map((step) => step.key).toSet();
+    if (steps.length != keys.length ||
+        received.length != keys.length ||
+        received.difference(keys).isNotEmpty ||
+        steps.any(
+          (step) =>
+              step.maxSelections < 1 ||
+              step.maxSelections > 20 ||
+              step.maxNameBytes < 1 ||
+              step.maxNameBytes > 2000,
+        )) {
+      throw const FormatException('Invalid preference catalog');
+    }
+    return steps;
+  }
+
+  static String composeText(Iterable<String> values) {
+    final text = values
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .join(' x ');
+    if (text.length > 4000) {
+      throw const FormatException('Preference text is too long');
+    }
+    return text;
+  }
 }
 
 class AccountPreferenceOption {

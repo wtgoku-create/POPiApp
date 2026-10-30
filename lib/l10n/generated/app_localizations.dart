@@ -2709,7 +2709,7 @@ abstract class AppLocalizations {
   /// No description provided for @ipCreateSuccessDescription.
   ///
   /// In en, this message translates to:
-  /// **'Every piece of content you publish will build your account here.'**
+  /// **'Your next story starts here.'**
   String get ipCreateSuccessDescription;
 
   /// No description provided for @ipCreateFirstRole.
@@ -2727,7 +2727,7 @@ abstract class AppLocalizations {
   /// No description provided for @ipOpenProject.
   ///
   /// In en, this message translates to:
-  /// **'Open account project'**
+  /// **'Open conversation'**
   String get ipOpenProject;
 
   /// No description provided for @ipFirstRolePrompt.
@@ -3023,6 +3023,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Give your account a name'**
   String get ipNicknameHint;
+
+  /// No description provided for @ipSessionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation name:'**
+  String get ipSessionTitle;
+
+  /// No description provided for @ipSessionTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your conversation a name'**
+  String get ipSessionTitleHint;
 
   /// No description provided for @ipDirectionCampus.
   ///

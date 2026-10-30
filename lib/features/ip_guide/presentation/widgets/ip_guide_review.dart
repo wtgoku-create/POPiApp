@@ -7,7 +7,6 @@ import '../../../../shared/widgets/app_svg_icon.dart';
 import '../../domain/ip_guide_draft.dart';
 import '../ip_guide_copy.dart';
 import 'ip_guide_controls.dart';
-import '../../../../shared/type/account_input_type.dart';
 
 /// Account plan review reflects the draft, including custom answers.
 class IpGuideReview extends StatelessWidget {
@@ -40,16 +39,13 @@ class IpGuideReview extends StatelessWidget {
       'presentationFormats',
       l10n,
     );
-    final format = draft.customFormat.trim().isEmpty
-        ? formatLabel(draft.format, l10n)
-        : draft.customFormat.trim();
     final title = draft.nickname.trim().isEmpty
         ? l10n.ipNewAccount
         : draft.nickname.trim();
     final summaries = [
       (l10n.ipContentDirection, direction),
       (l10n.ipAudienceFeeling, feeling),
-      (l10n.ipPresentation, '$presentation · $format'),
+      (l10n.ipPresentation, presentation),
       (
         l10n.ipTargetAudience,
         guidePreferenceLabel(draft, 'targetAudience', l10n),
@@ -137,7 +133,7 @@ class IpGuideReview extends StatelessWidget {
                 if (!completed) ...[
                   const SizedBox(height: 30),
                   Text(
-                    l10n.ipAccountNickname,
+                    l10n.ipSessionTitle,
                     style: TextStyle(
                       fontSize: 16,
                       height: 1.25,
@@ -148,9 +144,8 @@ class IpGuideReview extends StatelessWidget {
                   IpGuideTextField(
                     key: const Key('ip-nickname'),
                     controller: nicknameController,
-                    hint: l10n.ipNicknameHint,
-                    limit: AccountInputLimits.nicknameCharacters,
-                    maxBytes: AccountInputLimits.nicknameBytes,
+                    hint: l10n.ipSessionTitleHint,
+                    limit: 120,
                     nickname: true,
                     editInSheet: false,
                     readOnly: submitted,

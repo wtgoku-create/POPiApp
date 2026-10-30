@@ -3,39 +3,20 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/network/network_api.dart';
 import '../../../core/network/network_agent_api.dart';
 import '../../../core/storage/preferences_storage.dart';
-import '../../ip_accounts/data/ip_account_repository.dart';
 import '../../ip_accounts/domain/account_preferences.dart';
 import '../../session/domain/conversation_session.dart';
 import '../domain/ip_guide_draft.dart';
 
-/// Serializes writes so an older autosave cannot resurrect a cleared draft.
+/// Creates one standalone session with a per-user resumable draft.
 class IpGuideRepository {
-  IpGuideRepository(
-    this._storage,
-    this._api,
-    this._agent, {
-    required String? userId,
-  }) : _key = 'ip_guide_draft_v1:${userId ?? 'guest'}';
+  IpGuideRepository(this._storage, this._agent, {required String? userId})
+    : _key = 'ip_guide_draft_v1:${userId ?? 'guest'}';
 
   final PreferencesStorage _storage;
-  final NetworkApi _api;
-  final NetworkAgentApi _agent;
   final String _key;
   Future<void>? _writes;
-  final _creationToken = CancelToken();
-
-  void dispose() => _creationToken.cancel();
-
-  Future<List<AccountPreferenceStep>> preferenceOptions({
-    CancelToken? cancelToken,
-  }) => IpAccountRepository(_api).preferenceOptions(cancelToken: cancelToken);
-
-  void _checkActive() {
-    if (_creationToken.isCancelled) throw _creationToken.cancelError!;
-  }
 
   IpGuideDraft? load() {
     final raw = _storage.getString(_key);
@@ -57,7 +38,7 @@ class IpGuideRepository {
       if (preferences != null) {
         for (final entry in preferences.entries) {
           final value = entry.value as Map<String, dynamic>;
-          final selection = IpGuideSelection<String>();
+          final selection = IpGuideSelection<String>(combineCustom: true);
           final names = (value['values'] as List).cast<String>();
           for (final name in names) {
             selection.toggle(name, maxSelections: names.length);
@@ -67,15 +48,14 @@ class IpGuideRepository {
         }
       }
       draft.step = (json['step'] as int? ?? 1).clamp(1, 5);
-      draft.creationRequestId = json['creationRequestId'] as String?;
-      draft.profileRequestId = json['profileRequestId'] as String?;
-      draft.sessionRequestId = json['sessionRequestId'] as String?;
-      draft.accountId = json['accountId'] as String?;
-      draft.sessionId = json['sessionId'] as String?;
-      draft.accountRevision = json['accountRevision'] as int?;
-      draft.submittedProfile =
-          (json['submittedProfile'] as Map<String, dynamic>?)
+      draft.submittedSession =
+          (json['submittedSession'] as Map<String, dynamic>?)
               ?.cast<String, Object?>();
+      // Legacy account creation used a different session payload and request ID.
+      if (json['creationRequestId'] == null) {
+        draft.sessionRequestId = json['sessionRequestId'] as String?;
+        draft.sessionId = json['sessionId'] as String?;
+      }
       if (draft.submitted) draft.step = 5;
       return draft;
     } on FormatException {
@@ -103,86 +83,14 @@ class IpGuideRepository {
             'customText': entry.value.customText,
           },
       },
-      'creationRequestId': draft.creationRequestId,
-      'profileRequestId': draft.profileRequestId,
       'sessionRequestId': draft.sessionRequestId,
-      'accountId': draft.accountId,
       'sessionId': draft.sessionId,
-      'accountRevision': draft.accountRevision,
-      'submittedProfile': draft.submittedProfile,
+      'submittedSession': draft.submittedSession,
     });
     return _enqueue(() => _storage.setString(_key, snapshot));
   }
 
   Future<void> clear() => _enqueue(() => _storage.remove(_key));
-
-  /// Account creation completes only after its main session is bound.
-  Future<String> create(
-    IpGuideDraft draft,
-    Map<String, Object?> profile,
-  ) async {
-    _checkActive();
-    draft.creationRequestId ??= const Uuid().v4();
-    draft.profileRequestId ??= const Uuid().v4();
-    draft.sessionRequestId ??= const Uuid().v4();
-    draft.submittedProfile ??= profile;
-    await save(draft);
-    _checkActive();
-    if (draft.accountId == null) {
-      final account = await _api.createIpAccount(
-        title: draft.nickname.trim(),
-        clientRequestId: draft.creationRequestId!,
-        cancelToken: _creationToken,
-      );
-      draft.accountId = account.$1;
-      draft.accountRevision = account.$2;
-      await save(draft);
-    }
-    _checkActive();
-    await _api.saveIpAccountProfile(
-      draft.accountId!,
-      revision: draft.accountRevision!,
-      clientRequestId: draft.profileRequestId!,
-      profile: _preferences(draft.submittedProfile!),
-      cancelToken: _creationToken,
-    );
-    _checkActive();
-    if (draft.sessionId == null) {
-      final session = ConversationSession.fromJson(
-        await _agent.createProjectSession(
-          draft.accountId!,
-          draft.nickname.trim(),
-          clientRequestId: draft.sessionRequestId!,
-          cancelToken: _creationToken,
-        ),
-      );
-      _checkActive();
-      if (session.bindingStatus != 'ready') {
-        throw const FormatException('Account session is not bound');
-      }
-      draft.sessionId = session.id;
-      await save(draft);
-    }
-    _checkActive();
-    await clear();
-    return draft.accountId!;
-  }
-
-  // Drafts persisted before the account API migration contain singular fields.
-  Map<String, Object?> _preferences(Map<String, Object?> profile) {
-    const aliases = {
-      'contentDirection': 'contentDirections',
-      'audienceFeeling': 'audienceFeelings',
-      'presentation': 'presentationFormats',
-      'contentFormat': 'creativeConstraints',
-    };
-    return {
-      for (final entry in profile.entries)
-        aliases[entry.key] ?? entry.key: entry.value is String
-            ? [(entry.value as String)]
-            : entry.value,
-    };
-  }
 
   Future<void> _enqueue(Future<void> Function() write) {
     final result = _writes?.then((_) => write()) ?? write();
@@ -216,5 +124,93 @@ class IpGuideRepository {
       if (value.name == name) return value;
     }
     return null;
+  }
+
+  final NetworkAgentApi _agent;
+  final _creationToken = CancelToken();
+
+  void dispose() => _creationToken.cancel();
+
+  Future<List<AccountPreferenceStep>> preferenceOptions({
+    CancelToken? cancelToken,
+  }) async {
+    return AccountPreferenceStep.parseCatalog(
+      await _agent.preferenceOptions(cancelToken: cancelToken),
+    );
+  }
+
+  void _checkActive() {
+    if (_creationToken.isCancelled) throw _creationToken.cancelError!;
+  }
+
+  /// Freeze the payload before sending so retries cannot conflict with the ID.
+  Future<String> create(
+    IpGuideDraft draft,
+    Map<String, Object?> profile,
+  ) async {
+    _checkActive();
+    draft.submittedSession ??= _sessionInput(draft.nickname, profile);
+    draft.sessionRequestId ??= const Uuid().v4();
+    await save(draft);
+    _checkActive();
+    if (draft.sessionId == null) {
+      final input = draft.submittedSession!;
+      final session = ConversationSession.fromJson(
+        await _agent.createHarnessSession(
+          clientRequestId: draft.sessionRequestId!,
+          title: input['title'] as String,
+          kind: input['kind'] as String,
+          configuration: Map<String, Object?>.from(
+            input['configuration'] as Map,
+          ),
+          cancelToken: _creationToken,
+        ),
+      );
+      _checkActive();
+      if (session.bindingStatus != 'ready') {
+        throw const FormatException('Session is not ready');
+      }
+      draft.sessionId = session.id;
+      await save(draft);
+    }
+    _checkActive();
+    await clear();
+    return draft.sessionId!;
+  }
+
+  Map<String, Object?> _sessionInput(
+    String title,
+    Map<String, Object?> profile,
+  ) {
+    final name = title.trim();
+    if (name.isEmpty || name.length > 120) {
+      throw const FormatException('Invalid session title');
+    }
+    String text(String key) {
+      final values = (profile[key] as List? ?? const []).cast<String>();
+      return AccountPreferenceStep.composeText(values);
+    }
+
+    return {
+      'title': name,
+      'kind': 'project',
+      'configuration': {
+        'members': ['popi'],
+        'capabilities': [
+          'character',
+          'script',
+          'image',
+          'video',
+          'audio',
+          'vision',
+        ],
+        'direction': text('contentDirections'),
+        'accountPreferences': {
+          'feeling': text('audienceFeelings'),
+          'format': text('presentationFormats'),
+          'audience': text('targetAudience'),
+        },
+      },
+    };
   }
 }

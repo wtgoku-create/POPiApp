@@ -65,4 +65,20 @@ void main() {
     draft.directions.customText = '';
     expect(draft.firstIncompleteStep, 1);
   });
+
+  test(
+    'dynamic selections combine custom text and count it within the limit',
+    () {
+      final selection = IpGuideSelection<String>(combineCustom: true);
+      for (var i = 0; i < 19; i++) {
+        expect(selection.toggle('choice-$i', maxSelections: 20), isTrue);
+      }
+      selection.customText = '亲情';
+      expect(selection.values, hasLength(19));
+      expect(selection.toggle('last', maxSelections: 20), isFalse);
+      selection.toggle('choice-0', maxSelections: 20);
+      expect(selection.toggle('last', maxSelections: 20), isTrue);
+      expect(selection.customText, '亲情');
+    },
+  );
 }

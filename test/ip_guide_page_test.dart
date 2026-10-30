@@ -27,15 +27,15 @@ import 'support/session_fixtures.dart';
 
 void main() {
   late MemoryGuideStorage storage;
-  late FixtureIpGuideApi api;
+  late FixtureIpGuideAgentApi api;
   late FixtureIpGuideAgentApi agent;
   late IpGuideRepository repository;
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     storage = MemoryGuideStorage(await SharedPreferences.getInstance());
-    api = FixtureIpGuideApi();
     agent = FixtureIpGuideAgentApi();
-    repository = IpGuideRepository(storage, api, agent, userId: '1');
+    api = agent;
+    repository = IpGuideRepository(storage, agent, userId: '1');
   });
 
   Future<void> pumpGuide(
@@ -148,7 +148,7 @@ void main() {
       final editor = find.byKey(const Key('popi-expanded-editor'));
       final expandedInput = find.byKey(const Key('ip-guide-expanded-input'));
       expect(tester.getBottomLeft(editor).dy, lessThanOrEqualTo(400));
-      expect(tester.widget<TextField>(expandedInput).maxLength, 50);
+      expect(tester.widget<TextField>(expandedInput).maxLength, 2000);
       await tester.enterText(expandedInput, List.filled(51, '👩‍🎨').join());
       await tester.pumpAndSettle();
       expect(
@@ -158,11 +158,11 @@ void main() {
             .text
             .characters
             .length,
-        50,
+        51,
       );
       await tap(tester, 'ip-guide-editor-confirm');
       expect(editor, findsNothing);
-      expect(repository.load()!.directions.customText.characters.length, 50);
+      expect(repository.load()!.directions.customText.characters.length, 51);
       await tap(tester, 'ip-custom-direction');
       await tester.enterText(expandedInput, '独立音乐\n日常创作');
       await tap(tester, 'popi-expanded-editor-close');
@@ -212,23 +212,25 @@ void main() {
   );
 
   testWidgets(
-    'preference request failure exposes retry without static choices',
+    'preference request failure keeps the next action available to load again',
     (tester) async {
       api.failPreferences = true;
       await pumpGuide(tester);
       await tap(tester, 'ip-guide-start');
       expect(find.text('校园'), findsNothing);
-      expect(find.byKey(const Key('ip-preferences-retry')), findsOneWidget);
+      expect(find.byKey(const Key('ip-preferences-retry')), findsNothing);
       expect(
         tester
             .widget<IpGuideNextButton>(find.byKey(const Key('ip-guide-next-1')))
             .onPressed,
-        isNull,
+        isNotNull,
       );
       api.failPreferences = false;
-      await tap(tester, 'ip-preferences-retry');
+      await tap(tester, 'ip-guide-next-1');
       expect(api.preferenceRequests, 2);
       expect(find.text('校园'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
     },
   );
 
@@ -289,7 +291,7 @@ void main() {
     );
   });
 
-  testWidgets('optional server groups can be skipped and submit empty arrays', (
+  testWidgets('optional server groups can be skipped and submit empty text', (
     tester,
   ) async {
     for (final step in api.preferenceCatalog['steps'] as List) {
@@ -308,7 +310,18 @@ void main() {
       'presentationFormats',
       'targetAudience',
     ]) {
-      expect(api.savedProfile![key], isEmpty);
+      final configuration = agent.requests.single['configuration'] as Map;
+      final preferences = configuration['accountPreferences'] as Map;
+      expect(
+        key == 'contentDirections'
+            ? configuration['direction']
+            : preferences[{
+                'audienceFeelings': 'feeling',
+                'presentationFormats': 'format',
+                'targetAudience': 'audience',
+              }[key]],
+        isEmpty,
+      );
     }
     expect(find.text('创建成功！'), findsOneWidget);
   });
@@ -339,8 +352,12 @@ void main() {
       );
       await tester.enterText(field('ip-nickname'), '新账号');
       await tap(tester, 'ip-confirm');
-      expect(api.savedProfile!['contentDirections'], ['校园']);
-      expect(api.savedProfile!['presentationFormats'], ['绘本插画', '纪录片']);
+      final configuration = agent.requests.single['configuration'] as Map;
+      expect(configuration['direction'], '校园');
+      expect(
+        (configuration['accountPreferences'] as Map)['format'],
+        '绘本插画 x 纪录片',
+      );
     },
   );
 
@@ -538,6 +555,8 @@ void main() {
     (const Locale('en'), 'ip-create-role'),
     (const Locale('zh'), 'ip-create-content'),
     (const Locale('en'), 'ip-create-content'),
+    (const Locale('zh'), 'ip-open-project'),
+    (const Locale('en'), 'ip-open-project'),
   ]) {
     testWidgets(
       '$entry opens the created session with an editable prompt in $locale',
@@ -563,10 +582,12 @@ void main() {
         )!;
         expect(session.sessionId, 'created-session');
         expect(agent.requests, hasLength(1));
-        expect(agent.requests.single['accountId'], 'created-account');
-        final prompt = entry == 'ip-create-role'
-            ? l10n.ipFirstRolePrompt
-            : l10n.ipFirstContentPrompt;
+        expect(agent.requests.single.containsKey('accountId'), isFalse);
+        final prompt = switch (entry) {
+          'ip-create-role' => l10n.ipFirstRolePrompt,
+          'ip-create-content' => l10n.ipFirstContentPrompt,
+          _ => null,
+        };
         expect(session.initialPrompt, prompt);
         final input = find.descendant(
           of: find.byType(SessionPage),
@@ -574,7 +595,7 @@ void main() {
         );
         expect(
           tester.widget<ExtendedTextField>(input).controller!.text,
-          prompt,
+          prompt ?? '',
         );
         await tester.tap(input);
         tester.testTextInput.enterText('创建一个勇敢的校园角色');
@@ -646,17 +667,17 @@ void main() {
       expect(repository.load()!.nickname, '校园故事');
       await tap(tester, 'ip-guide-start');
       await tap(tester, 'ip-draft-resume');
-      api.failProfile = true;
+      agent.fail = true;
       await tap(tester, 'ip-confirm');
-      expect(repository.load()!.accountId, 'created-account');
+      expect(repository.load()!.sessionRequestId, isNotEmpty);
       expect(find.text('创建成功！'), findsNothing);
       expect(find.byKey(const Key('ip-reselect')), findsNothing);
-      api.failProfile = false;
+      agent.fail = false;
       await tap(tester, 'ip-confirm');
       expect(find.text('创建成功！'), findsOneWidget);
       expect(repository.load(), isNull);
-      expect(api.accountRequests, hasLength(1));
-      expect(api.profileRequests[0], api.profileRequests[1]);
+      expect(agent.requests, hasLength(2));
+      expect(agent.requests.first, agent.requests.last);
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -692,8 +713,9 @@ void main() {
   });
 
   testWidgets(
-    'all five steps preserve selections and save the exact account profile',
+    'all five steps preserve selections and create a configured session',
     (tester) async {
+      (agent.preferenceCatalog['steps'] as List).first['maxSelections'] = 20;
       await pumpGuide(tester);
       expect(find.byType(IpGuidePage), findsOneWidget);
       expect(find.textContaining('帮你创建IP账号'), findsOneWidget);
@@ -702,6 +724,7 @@ void main() {
       await tap(tester, 'ip-direction-情感');
       expect(find.text('主方向：校园'), findsOneWidget);
       expect(find.text('辅助：情感'), findsOneWidget);
+      await enterAnswer(tester, 'ip-custom-direction', '亲情');
       await tap(tester, 'ip-guide-next-1');
       await tap(tester, 'ip-feeling-真实');
       await tap(tester, 'ip-feeling-治愈');
@@ -711,25 +734,34 @@ void main() {
       expect(find.text('辅助：治愈'), findsOneWidget);
       await tap(tester, 'ip-guide-next-2');
       await tap(tester, 'ip-presentation-3D动漫');
-      await tap(tester, 'ip-format-comicDrama');
       await tap(tester, 'ip-guide-next-3');
       await tap(tester, 'ip-audience-学生群体');
       await tap(tester, 'ip-audience-职场人群');
       await tap(tester, 'ip-guide-next-4');
-      expect(find.text('校园 × 情感'), findsOneWidget);
+      expect(find.text('校园 × 情感 × 亲情'), findsOneWidget);
       expect(find.text('真实 / 治愈'), findsOneWidget);
-      expect(find.text('3D动漫 · 漫剧'), findsOneWidget);
+      expect(find.text('3D动漫'), findsOneWidget);
       await tester.enterText(field('ip-nickname'), '校园小故事');
       await tester.pumpAndSettle();
       expect(find.text('校园小故事'), findsNWidgets(2));
       await tap(tester, 'ip-confirm');
       expect(find.text('创建成功！'), findsOneWidget);
-      expect(api.savedProfile, {
-        'contentDirections': ['校园', '情感'],
-        'audienceFeelings': ['真实', '治愈'],
-        'presentationFormats': ['3D动漫'],
-        'creativeConstraints': ['漫剧'],
-        'targetAudience': ['学生群体', '职场人群'],
+      expect(agent.requests.single['configuration'], {
+        'members': ['popi'],
+        'capabilities': [
+          'character',
+          'script',
+          'image',
+          'video',
+          'audio',
+          'vision',
+        ],
+        'direction': '校园 x 情感 x 亲情',
+        'accountPreferences': {
+          'feeling': '真实 x 治愈',
+          'format': '3D动漫',
+          'audience': '学生群体 x 职场人群',
+        },
       });
       expect(repository.load(), isNull);
       expect(tester.takeException(), isNull);
@@ -744,23 +776,26 @@ void main() {
       await tap(tester, 'ip-direction-校园');
       await enterAnswer(tester, 'ip-custom-direction', '独立音乐');
       await tester.pumpAndSettle();
-      expect(find.text('主方向：校园'), findsNothing);
+      expect(find.text('主方向：校园'), findsOneWidget);
       await tap(tester, 'ip-guide-next-1');
       await enterAnswer(tester, 'ip-custom-feeling', '好奇而轻松');
       await tap(tester, 'ip-guide-next-2');
       await tap(tester, 'ip-presentation-AI真人');
-      await enterAnswer(tester, 'ip-custom-format', '音乐故事');
+      await enterAnswer(tester, 'ip-custom-presentation', '音乐故事');
       await tap(tester, 'ip-guide-next-3');
       await enterAnswer(tester, 'ip-custom-audience', '独立音乐爱好者');
       await tap(tester, 'ip-guide-next-4');
-      expect(find.text('独立音乐'), findsOneWidget);
+      expect(find.text('校园 × 独立音乐'), findsOneWidget);
       expect(find.text('好奇而轻松'), findsOneWidget);
-      expect(find.text('AI真人 · 音乐故事'), findsOneWidget);
-      await tester.enterText(field('ip-nickname'), 'abcdefghijklmnop');
+      expect(find.text('AI真人 × 音乐故事'), findsOneWidget);
+      await tester.enterText(
+        field('ip-nickname'),
+        List.filled(121, 'a').join(),
+      );
       await tester.pump();
       expect(
         tester.widget<TextField>(field('ip-nickname')).controller!.text,
-        'abcdefghijklmno',
+        List.filled(120, 'a').join(),
       );
       for (var i = 0; i < 4; i++) {
         await tap(tester, 'ip-guide-back');
@@ -781,14 +816,17 @@ void main() {
             .controller!
             .text
             .length,
-        50,
+        51,
       );
       await tap(tester, 'ip-direction-情感');
       expect(
         tester.widget<TextField>(field('ip-custom-direction')).controller!.text,
-        isEmpty,
+        List.filled(51, 'a').join(),
       );
-      expect(find.text('主方向：情感'), findsOneWidget);
+      expect(find.text('主方向：校园'), findsOneWidget);
+      expect(find.text('辅助：情感'), findsNothing);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     },
   );

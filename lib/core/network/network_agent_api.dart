@@ -20,6 +20,9 @@ class NetworkAgentApi {
     runtime.close();
   }
 
+  Future<Map<String, dynamic>> preferenceOptions({CancelToken? cancelToken}) =>
+      _request('/api_agent/v2/preference-options', cancelToken: cancelToken);
+
   Future<Map<String, dynamic>> enterHome(
     Map<String, Object?> input, {
     CancelToken? cancelToken,
@@ -111,6 +114,24 @@ class NetworkAgentApi {
       if (title != null) 'title': title,
       if (accountId != null) 'accountId': accountId,
       if (entry != null) 'entry': entry,
+    },
+    cancelToken: cancelToken,
+  );
+
+  Future<Map<String, dynamic>> createHarnessSession({
+    required String clientRequestId,
+    required String title,
+    required String kind,
+    Map<String, Object?>? configuration,
+    CancelToken? cancelToken,
+  }) => _request(
+    '/api_agent/v2/sessions',
+    method: 'POST',
+    data: {
+      'clientRequestId': clientRequestId,
+      'title': title,
+      'kind': kind,
+      if (configuration != null) 'configuration': configuration,
     },
     cancelToken: cancelToken,
   );

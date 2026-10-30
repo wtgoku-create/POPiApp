@@ -42,6 +42,9 @@ enum IpContentFormat { shortFilm, comicDrama, interactiveDrama, talkingHead }
 
 /// Preserves selection order while enforcing the supplied selection limit.
 class IpGuideSelection<T> {
+  IpGuideSelection({this.combineCustom = false});
+
+  final bool combineCustom;
   final List<T> _values = [];
   String _customText = '';
 
@@ -51,13 +54,14 @@ class IpGuideSelection<T> {
 
   set customText(String text) {
     _customText = text;
-    if (text.trim().isNotEmpty) _values.clear();
+    if (!combineCustom && text.trim().isNotEmpty) _values.clear();
   }
 
   bool toggle(T value, {int maxSelections = 2}) {
     if (_values.remove(value)) return true;
-    if (_values.length >= maxSelections) return false;
-    _customText = '';
+    final customCount = combineCustom && _customText.trim().isNotEmpty ? 1 : 0;
+    if (_values.length + customCount >= maxSelections) return false;
+    if (!combineCustom) _customText = '';
     _values.add(value);
     return true;
   }
@@ -75,15 +79,11 @@ class IpGuideDraft {
   String customFormat = '';
   String nickname = '';
   int step = 1;
-  String? creationRequestId;
-  String? profileRequestId;
   String? sessionRequestId;
-  String? accountId;
   String? sessionId;
-  int? accountRevision;
-  Map<String, Object?>? submittedProfile;
+  Map<String, Object?>? submittedSession;
 
-  bool get submitted => creationRequestId != null;
+  bool get submitted => submittedSession != null;
 
   int? get firstIncompleteStep {
     if (preferences['contentDirections']?.isEmpty ?? directions.isEmpty) {

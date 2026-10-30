@@ -61,7 +61,6 @@ void main() {
         ipGuideRepositoryProvider.overrideWithValue(
           IpGuideRepository(
             guideStorage,
-            FixtureIpGuideApi(),
             FixtureIpGuideAgentApi(),
             userId: user?.id,
           ),

@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:popi_ai_app/core/network/network_api.dart';
+import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/features/ip_guide/data/ip_guide_repository.dart';
 import 'package:popi_ai_app/features/ip_guide/domain/ip_guide_draft.dart';
 
@@ -12,122 +12,82 @@ import 'support/ip_guide_fixtures.dart';
 
 void main() {
   late MemoryGuideStorage storage;
-  late FixtureIpGuideApi api;
   late FixtureIpGuideAgentApi agent;
   late IpGuideRepository repository;
+  const profile = {
+    'contentDirections': ['校园', '亲情'],
+    'audienceFeelings': ['治愈'],
+    'presentationFormats': ['2D 动画'],
+    'targetAudience': ['学生'],
+  };
+  const configuration = {
+    'members': ['popi'],
+    'capabilities': [
+      'character',
+      'script',
+      'image',
+      'video',
+      'audio',
+      'vision',
+    ],
+    'direction': '校园 x 亲情',
+    'accountPreferences': {
+      'feeling': '治愈',
+      'format': '2D 动画',
+      'audience': '学生',
+    },
+  };
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     storage = MemoryGuideStorage(await SharedPreferences.getInstance());
-    api = FixtureIpGuideApi();
     agent = FixtureIpGuideAgentApi();
-    repository = IpGuideRepository(storage, api, agent, userId: '1');
+    repository = IpGuideRepository(storage, agent, userId: '1');
   });
 
   test(
-    'starts without a draft and restores all fields with selection order',
+    'draft restores ordered presets and custom text, isolated by user',
     () async {
       expect(repository.load(), isNull);
       final draft = IpGuideDraft()
-        ..step = 5
-        ..presentation = IpPresentation.ink
-        ..format = IpContentFormat.comicDrama
-        ..customFormat = '音乐故事'
-        ..nickname = '后来才懂';
-      draft.directions.toggle(IpContentDirection.emotion);
-      draft.directions.toggle(IpContentDirection.campus);
-      draft.feelings.customText = '好奇而轻松';
-      draft.audience.toggle(IpTargetAudience.workers);
-      draft.audience.toggle(IpTargetAudience.students);
+        ..step = 3
+        ..nickname = '校园故事';
+      final selection = IpGuideSelection<String>(combineCustom: true);
+      selection.toggle('校园', maxSelections: 20);
+      selection.toggle('亲情', maxSelections: 20);
+      selection.customText = '城市生活';
+      draft.preferences['contentDirections'] = selection;
       await repository.save(draft);
-      final restored = IpGuideRepository(
-        storage,
-        api,
-        agent,
-        userId: '1',
-      ).load()!;
-      expect(restored.step, 5);
-      expect(restored.directions.values, [
-        IpContentDirection.emotion,
-        IpContentDirection.campus,
-      ]);
-      expect(restored.feelings.customText, '好奇而轻松');
-      expect(restored.audience.values, [
-        IpTargetAudience.workers,
-        IpTargetAudience.students,
-      ]);
-      expect(restored.presentation, IpPresentation.ink);
-      expect(restored.format, IpContentFormat.comicDrama);
-      expect(restored.customFormat, '音乐故事');
-      expect(restored.nickname, '后来才懂');
-      expect(
-        IpGuideRepository(storage, api, agent, userId: '2').load(),
-        isNull,
-      );
-    },
-  );
-
-  test(
-    'updates replace one draft and clear follows queued autosaves',
-    () async {
-      final draft = IpGuideDraft();
-      final first = repository.save(draft);
-      draft.nickname = '第二份';
-      draft.step = 3;
-      final second = repository.save(draft);
-      await Future.wait([first, second]);
-      expect(storage.values.length, 1);
-      expect(repository.load()!.nickname, '第二份');
-      final third = repository.save(draft);
-      final cleared = repository.clear();
-      await Future.wait([third, cleared]);
-      expect(repository.load(), isNull);
-    },
-  );
-
-  test(
-    'dynamic option names and custom answers restore and clear with the draft',
-    () async {
-      final draft = IpGuideDraft()..step = 3;
-      final directions = IpGuideSelection<String>();
-      for (final name in ['天文观察', '城市散步', '传统工艺']) {
-        directions.toggle(name, maxSelections: 20);
-      }
-      draft.preferences['contentDirections'] = directions;
-      draft.preferences['audienceFeelings'] = IpGuideSelection<String>()
-        ..customText = '好奇';
-      await repository.save(draft);
-      final restored = IpGuideRepository(
-        storage,
-        api,
-        agent,
-        userId: '1',
-      ).load()!;
-      expect(restored.preferences['contentDirections']!.values, [
-        '天文观察',
-        '城市散步',
-        '传统工艺',
-      ]);
-      expect(restored.preferences['audienceFeelings']!.customText, '好奇');
+      final restored = IpGuideRepository(storage, agent, userId: '1').load()!;
+      expect(restored.step, 3);
+      expect(restored.nickname, '校园故事');
+      expect(restored.preferences['contentDirections']!.values, ['校园', '亲情']);
+      expect(restored.preferences['contentDirections']!.customText, '城市生活');
+      expect(IpGuideRepository(storage, agent, userId: '2').load(), isNull);
       await repository.clear();
       expect(repository.load(), isNull);
     },
   );
 
   test(
-    'guide reads the existing account preference endpoint adapter',
+    'clear follows queued autosaves and failed writes can recover',
     () async {
-      final steps = await repository.preferenceOptions();
-      expect(api.preferenceRequests, 1);
-      expect(steps.first.key, 'contentDirections');
-      expect(steps.first.options.first.name, '校园');
-      expect(steps.first.options.first.description, '来自接口的选项描述');
-      expect(steps.first.maxSelections, 2);
-      expect(steps.first.allowCustom, isTrue);
+      final draft = IpGuideDraft();
+      final first = repository.save(draft);
+      draft.nickname = '第二份';
+      final second = repository.save(draft);
+      await Future.wait([first, second]);
+      expect(storage.values.length, 1);
+      expect(repository.load()!.nickname, '第二份');
+      storage.failWrites = true;
+      await expectLater(repository.save(draft), throwsStateError);
+      storage.failWrites = false;
+      await Future.wait([repository.save(draft), repository.clear()]);
+      expect(repository.load(), isNull);
     },
   );
 
-  test('malformed or unsupported drafts are ignored', () {
+  test('malformed and unsupported drafts are ignored', () {
     for (final raw in [
       '{',
       '[]',
@@ -139,156 +99,172 @@ void main() {
     }
   });
 
-  test('write failure is reported and the write queue can recover', () async {
-    storage.failWrites = true;
-    await expectLater(repository.save(IpGuideDraft()), throwsStateError);
-    storage.failWrites = false;
-    await repository.save(IpGuideDraft()..nickname = '恢复');
-    expect(repository.load()!.nickname, '恢复');
-  });
-
-  test('account failure retains the same request across a restart', () async {
-    final draft = IpGuideDraft()..nickname = '账号';
-    api.failAccount = true;
-    await expectLater(
-      repository.create(draft, {'direction': '校园'}),
-      throwsStateError,
-    );
-    final restored = IpGuideRepository(
-      storage,
-      api,
-      agent,
-      userId: '1',
-    ).load()!;
-    expect(restored.submitted, isTrue);
-    expect(restored.step, 5);
-    api.failAccount = false;
-    await repository.create(restored, {'direction': 'Changed locale'});
-    expect(api.accountRequests[0], api.accountRequests[1]);
-    expect(api.savedProfile, {
-      'direction': ['校园'],
-    });
-    expect(repository.load(), isNull);
-  });
-
   test(
-    'profile failure resumes the existing account and clears only on success',
+    'legacy account request IDs are not reused for a different session payload',
     () async {
-      final draft = IpGuideDraft()..nickname = '账号';
-      api.failProfile = true;
-      await expectLater(
-        repository.create(draft, {'targetAudience': '学生'}),
-        throwsStateError,
+      storage.values['ip_guide_draft_v1:1'] = jsonEncode({
+        'version': 1,
+        'nickname': '旧草稿',
+        'step': 4,
+        'creationRequestId': 'old-account-request',
+        'sessionRequestId': 'old-session-request',
+        'accountId': 'old-account',
+        'sessionId': 'old-session',
+      });
+      final draft = repository.load()!;
+      expect(draft.nickname, '旧草稿');
+      expect(draft.submitted, isFalse);
+      await repository.create(draft, profile);
+      expect(
+        agent.requests.single['clientRequestId'],
+        isNot('old-session-request'),
       );
-      expect(repository.load()!.accountId, 'created-account');
-      expect(api.accountRequests, hasLength(1));
-      api.failProfile = false;
-      await repository.create(repository.load()!, {
-        'targetAudience': 'students',
-      });
-      expect(api.accountRequests, hasLength(1));
-      expect(api.profileRequests[0], api.profileRequests[1]);
-      expect(api.savedProfile, {
-        'targetAudience': ['学生'],
-      });
-      expect(repository.load(), isNull);
+      expect(agent.requests.single.containsKey('accountId'), isFalse);
     },
   );
 
   test(
-    'confirmation binds the account session before clearing the draft',
+    'reads the Agent catalog and preserves server validation limits',
     () async {
-      final draft = IpGuideDraft()..nickname = '账号';
-      expect(
-        await repository.create(draft, {'targetAudience': '学生'}),
-        'created-account',
-      );
-      expect(api.accountRequests, hasLength(1));
-      expect(api.savedProfile, isNotNull);
-      expect(agent.requests, hasLength(1));
-      expect(agent.requests.single, {
-        'clientRequestId': draft.sessionRequestId,
-        'accountId': 'created-account',
-        'title': '账号',
+      final steps = await repository.preferenceOptions();
+      expect(agent.preferenceRequests, 1);
+      expect(steps.map((step) => step.key), [
+        'contentDirections',
+        'audienceFeelings',
+        'presentationFormats',
+        'targetAudience',
+      ]);
+      expect(steps.first.options.first.description, '来自接口的选项描述');
+      expect(steps.first.maxSelections, 2);
+      expect(steps.last.maxNameBytes, 2000);
+      agent.preferenceCatalog['schemaVersion'] = 2;
+      await expectLater(repository.preferenceOptions(), throwsFormatException);
+    },
+  );
+
+  test('creates only a project session with text preferences', () async {
+    final draft = IpGuideDraft()..nickname = ' 校园故事 ';
+    expect(await repository.create(draft, profile), 'created-session');
+    expect(agent.requests.single, {
+      'clientRequestId': draft.sessionRequestId,
+      'title': '校园故事',
+      'kind': 'project',
+      'configuration': configuration,
+    });
+    expect(draft.sessionId, 'created-session');
+    expect(repository.load(), isNull);
+  });
+
+  test(
+    'optional empty preferences submit empty text without legacy extra fields',
+    () async {
+      await repository.create(IpGuideDraft()..nickname = '新会话', {});
+      final config = agent.requests.single['configuration'] as Map;
+      expect(config['direction'], '');
+      expect(config['accountPreferences'], {
+        'feeling': '',
+        'format': '',
+        'audience': '',
       });
-      expect(draft.sessionId, 'created-session');
-      expect(repository.load(), isNull);
+      expect(config.containsKey('creativeConstraints'), isFalse);
     },
   );
 
   for (final failure in ['network', 'pending']) {
     test(
-      'session $failure keeps the draft and reuses its request after restart',
+      '$failure keeps the frozen request across restart and retries',
       () async {
-        final draft = IpGuideDraft()..nickname = '账号';
+        final draft = IpGuideDraft()..nickname = '校园故事';
         agent.fail = failure == 'network';
         agent.bindingStatus = failure == 'pending' ? 'pending' : 'ready';
-        await expectLater(repository.create(draft, {}), throwsA(anything));
+        await expectLater(repository.create(draft, profile), throwsA(anything));
         final resumedRepository = IpGuideRepository(
           storage,
-          api,
           agent,
           userId: '1',
         );
         final resumed = resumedRepository.load()!;
-        expect(resumed.accountId, 'created-account');
+        expect(resumed.submitted, isTrue);
+        expect(resumed.step, 5);
         expect(resumed.sessionId, isNull);
-        expect(
-          resumed.sessionRequestId,
-          agent.requests.single['clientRequestId'],
-        );
+        resumed.nickname = 'Changed title';
         agent.fail = false;
         agent.bindingStatus = 'ready';
         await resumedRepository.create(resumed, {});
-        expect(api.accountRequests, hasLength(1));
-        expect(agent.requests, hasLength(2));
         expect(agent.requests.first, agent.requests.last);
-        expect(resumed.sessionId, 'created-session');
         expect(resumedRepository.load(), isNull);
       },
     );
   }
 
   test(
-    'restored bound session is retained when clearing the draft fails',
+    'clear failure retains the created session without sending again',
     () async {
-      final draft = IpGuideDraft()..nickname = '账号';
       storage.failRemoves = true;
-      await expectLater(repository.create(draft, {}), throwsStateError);
+      await expectLater(
+        repository.create(IpGuideDraft()..nickname = '校园故事', profile),
+        throwsStateError,
+      );
       final restored = repository.load()!;
       expect(restored.sessionId, 'created-session');
       storage.failRemoves = false;
       await repository.create(restored, {});
       expect(agent.requests, hasLength(1));
-      expect(api.accountRequests, hasLength(1));
       expect(repository.load(), isNull);
     },
   );
 
   test(
-    'disposal during binding preserves the unfinished creation draft',
+    'validates the UTF-16 text limit and title before freezing a request',
     () async {
-      final pending = Completer<void>();
-      agent.wait = pending.future;
-      final draft = IpGuideDraft()..nickname = '账号';
-      final creation = repository.create(draft, {});
-      final result = expectLater(creation, throwsA(isA<DioException>()));
-      while (agent.requests.isEmpty) {
-        await Future<void>.delayed(Duration.zero);
+      for (final draft in [
+        IpGuideDraft(),
+        IpGuideDraft()..nickname = List.filled(61, '😀').join(),
+      ]) {
+        await expectLater(
+          repository.create(draft, profile),
+          throwsFormatException,
+        );
+        expect(draft.submitted, isFalse);
       }
-      repository.dispose();
-      pending.complete();
-      await result;
-      expect(repository.load()!.accountId, 'created-account');
-      expect(repository.load()!.sessionId, isNull);
+      final draft = IpGuideDraft()..nickname = '标题';
+      await expectLater(
+        repository.create(draft, {
+          'targetAudience': [List.filled(2001, '😀').join()],
+        }),
+        throwsFormatException,
+      );
+      expect(draft.submitted, isFalse);
+      await repository.create(draft, {
+        'targetAudience': [List.filled(2000, '😀').join()],
+      });
+      expect(agent.requests, hasLength(1));
     },
   );
 
+  test('disposal during creation keeps the unfinished draft', () async {
+    final pending = Completer<void>();
+    agent.wait = pending.future;
+    final creation = repository.create(
+      IpGuideDraft()..nickname = '校园故事',
+      profile,
+    );
+    final result = expectLater(creation, throwsA(isA<DioException>()));
+    while (agent.requests.isEmpty) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    repository.dispose();
+    pending.complete();
+    await result;
+    expect(repository.load()!.sessionId, isNull);
+    expect(repository.load()!.submitted, isTrue);
+  });
+
   test(
-    'API sends creation and profile activation using the backend contract',
+    'HTTP contract reads direct JSON and sends only the documented session fields',
     () async {
-      final dio = Dio();
       final requests = <RequestOptions>[];
+      final dio = Dio();
       dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) {
@@ -296,74 +272,52 @@ void main() {
             handler.resolve(
               Response(
                 requestOptions: options,
-                data: {
-                  'status': '0000',
-                  'data': options.path.endsWith('profile-versions')
-                      ? {'id': 'profile-1'}
-                      : {'id': 'account-1', 'revision': 1},
-                },
+                statusCode: options.method == 'GET' ? 200 : 201,
+                data: options.method == 'GET'
+                    ? agent.preferenceCatalog
+                    : {
+                        'id': 'session-1',
+                        'title': '校园故事',
+                        'kind': 'project',
+                        'revision': 1,
+                        'createdAt': '2026-10-30T08:00:00.000Z',
+                        'updatedAt': '2026-10-30T08:00:00.000Z',
+                        'archived': false,
+                        'pinned': false,
+                        'bindingStatus': 'ready',
+                        'configRevision': 1,
+                        'configurationStatus': 'configured',
+                        'configuration': configuration,
+                      },
               ),
             );
           },
         ),
       );
-      final network = NetworkApi(dio);
-      expect(
-        await network.createIpAccount(
-          title: '账号',
-          clientRequestId: 'create-id',
-        ),
-        ('account-1', 1),
+      final realRepository = IpGuideRepository(
+        storage,
+        NetworkAgentApi(dio),
+        userId: '1',
       );
-      await network.saveIpAccountProfile(
-        'account-1',
-        revision: 1,
-        clientRequestId: 'profile-id',
-        profile: {
-          'contentDirections': ['校园'],
-        },
-      );
-      expect(requests[0].method, 'POST');
-      expect(requests[0].path, '/api_client/agent/v2/accounts');
-      expect(requests[0].data, {
-        'clientRequestId': 'create-id',
-        'title': '账号',
-        'accountType': 'ip_character',
+      final token = CancelToken();
+      await realRepository.preferenceOptions(cancelToken: token);
+      expect(requests.first.path, '/api_agent/v2/preference-options');
+      expect(requests.first.method, 'GET');
+      expect(requests.first.queryParameters, isEmpty);
+      expect(requests.first.data, isNull);
+      expect(requests.first.cancelToken, same(token));
+      final draft = IpGuideDraft()..nickname = '校园故事';
+      expect(await realRepository.create(draft, profile), 'session-1');
+      expect(requests.last.path, '/api_agent/v2/sessions');
+      expect(requests.last.method, 'POST');
+      expect(requests.last.contentType, 'application/json');
+      expect(requests.last.data, {
+        'clientRequestId': draft.sessionRequestId,
+        'title': '校园故事',
+        'kind': 'project',
+        'configuration': configuration,
       });
-      expect(requests[1].path, '/api_client/agent/v2/accounts/account-1');
-      expect(requests[1].data, {
-        'preferences': {
-          'contentDirections': ['校园'],
-        },
-      });
-    },
-  );
-
-  test('disposal prevents creation from a stale login', () async {
-    final draft = IpGuideDraft()..nickname = '旧账号草稿';
-    await repository.save(draft);
-    repository.dispose();
-    await expectLater(
-      repository.create(draft, {}),
-      throwsA(isA<DioException>()),
-    );
-    expect(api.accountRequests, isEmpty);
-    expect(repository.load()!.nickname, '旧账号草稿');
-  });
-
-  test(
-    'unknown enum choices are ignored and selection limits are retained',
-    () {
-      storage.values['ip_guide_draft_v1:1'] = jsonEncode({
-        'version': 1,
-        'directions': {
-          'values': ['removed', 'campus', 'campus', 'emotion', 'growth'],
-        },
-      });
-      expect(repository.load()!.directions.values, [
-        IpContentDirection.campus,
-        IpContentDirection.emotion,
-      ]);
+      expect(requests, hasLength(2));
     },
   );
 }
