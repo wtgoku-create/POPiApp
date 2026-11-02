@@ -43,6 +43,7 @@ import 'demo_style_film_sheet.dart';
 import 'demo_task_brief_sheet.dart';
 import 'demo_remote_media.dart';
 import 'widgets/demo_image_stack.dart';
+import 'widgets/demo_inline_text_asset.dart';
 import 'widgets/demo_activity_indicator.dart';
 import 'widgets/demo_chat_header.dart';
 import 'widgets/demo_content_role_avatar.dart';
@@ -158,6 +159,17 @@ class _DemoChatPageState extends State<DemoChatPage> {
   final List<String> _attachments = [];
   final DemoRoleMentionTracker _roleMentions = DemoRoleMentionTracker();
   final Map<String, int> _imagePages = {};
+  final Map<String, bool> _expandedTextAssets = {};
+  final Set<
+    ({
+      String id,
+      String contentUrl,
+      String mimeType,
+      int sizeBytes,
+      String sha256,
+    })
+  >
+  _textAssetLoadErrors = {};
   final Set<String> _dismissingMediaJobs = {};
   late final ClipboardImageService _clipboardImages;
   late final ClipboardImagePasteBinding _clipboardPasteBinding;
@@ -787,6 +799,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
           builder: (_) => DemoFileImportSheet(
             repository: widget.repository,
             pickFiles: widget.pickAttachmentFiles ?? pickDemoAssetFiles,
+            cameraRecoveryScope: 'session:${widget.sessionId}',
             onImported: _addAttachments,
           ),
         );
@@ -832,6 +845,7 @@ class _DemoChatPageState extends State<DemoChatPage> {
           builder: (_) => DemoFileImportSheet(
             repository: widget.repository,
             pickFiles: widget.pickAttachmentFiles ?? pickDemoAssetFiles,
+            cameraRecoveryScope: 'session:${widget.sessionId}',
             onImported: _addAttachments,
           ),
         );
@@ -932,6 +946,18 @@ class _DemoChatPageState extends State<DemoChatPage> {
     openDemoAsset(context, asset, repository: widget.repository);
   }
 
+  void _handleInlineTextLoadError(DemoAsset asset) {
+    final identity = (
+      id: asset.id,
+      contentUrl: asset.contentUrl,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.sizeBytes,
+      sha256: asset.sha256,
+    );
+    if (!_textAssetLoadErrors.add(identity) || !mounted) return;
+    AppToast.error(context, AppLocalizations.of(context)!.demoAssetLoadFailed);
+  }
+
   Widget _message(BuildContext context, DemoMessage message) {
     final localizations = AppLocalizations.of(context)!;
     final question = message.question;
@@ -956,6 +982,9 @@ class _DemoChatPageState extends State<DemoChatPage> {
         .toList();
     final batch =
         media.length > 1 && media.every((a) => a.kind == DemoAssetKind.image);
+    final attachmentGroups = batch
+        ? const <List<DemoAsset>>[]
+        : DemoInlineTextAsset.groupAttachments(media);
     if (text.isEmpty &&
         media.isEmpty &&
         question == null &&
@@ -1126,41 +1155,72 @@ class _DemoChatPageState extends State<DemoChatPage> {
                         onChanged: (index) => _imagePages[message.id] = index,
                       )
                     else
-                      for (final asset in media)
-                        SizedBox(
-                          width: 245,
-                          height:
-                              (DemoAssetCard.heightForWidth(context, 245) + 10)
-                                  .clamp(
-                                    asset.kind == DemoAssetKind.audio ||
-                                            asset.kind == DemoAssetKind.script
-                                        ? 327.0
-                                        : 0.0,
-                                    double.infinity,
-                                  ),
-                          child: Padding(
+                      for (final group in attachmentGroups)
+                        if (DemoInlineTextAsset.supports(group.first))
+                          Padding(
                             padding: const EdgeInsets.only(bottom: 10),
-                            child: DemoAssetCard(
-                              asset: asset,
-                              onTap: () => asset.kind == DemoAssetKind.image
-                                  ? AppImagePreview.show(
-                                      context: context,
-                                      image: demoAssetImageProviderForContext(
-                                        context,
-                                        asset,
-                                      ),
-                                      heroTag:
-                                          'message-${message.id}-${asset.id}',
-                                      label: asset.title,
-                                    )
-                                  : openDemoAsset(
-                                      context,
-                                      asset,
-                                      repository: widget.repository,
-                                    ),
+                            child: KeyedSubtree(
+                              key: ValueKey(
+                                'inline-text-${message.id}-${group.first.id}',
+                              ),
+                              child: DemoInlineTextAsset(
+                                assets: group,
+                                repository: widget.repository,
+                                expanded:
+                                    _expandedTextAssets['${message.id}:${group.first.id}'] ??
+                                    false,
+                                onExpandedChanged: (expanded) {
+                                  _followingLatest = false;
+                                  setState(() {
+                                    _expandedTextAssets['${message.id}:${group.first.id}'] =
+                                        expanded;
+                                  });
+                                },
+                                active: widget.active,
+                                onLoadError: () =>
+                                    _handleInlineTextLoadError(group.first),
+                              ),
                             ),
-                          ),
-                        ),
+                          )
+                        else
+                          for (final asset in group)
+                            SizedBox(
+                              width: 245,
+                              height:
+                                  (DemoAssetCard.heightForWidth(context, 245) +
+                                          10)
+                                      .clamp(
+                                        asset.kind == DemoAssetKind.audio ||
+                                                asset.kind ==
+                                                    DemoAssetKind.script
+                                            ? 327.0
+                                            : 0.0,
+                                        double.infinity,
+                                      ),
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: DemoAssetCard(
+                                  asset: asset,
+                                  onTap: () => asset.kind == DemoAssetKind.image
+                                      ? AppImagePreview.show(
+                                          context: context,
+                                          image:
+                                              demoAssetImageProviderForContext(
+                                                context,
+                                                asset,
+                                              ),
+                                          heroTag:
+                                              'message-${message.id}-${asset.id}',
+                                          label: asset.title,
+                                        )
+                                      : openDemoAsset(
+                                          context,
+                                          asset,
+                                          repository: widget.repository,
+                                        ),
+                                ),
+                              ),
+                            ),
                   ],
                   if (activity != null) ...[
                     if (text.isNotEmpty || question != null || media.isNotEmpty)

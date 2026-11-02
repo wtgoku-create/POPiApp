@@ -1766,6 +1766,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get attachmentCamera => 'Camera';
 
   @override
+  String get cameraPermissionDenied =>
+      'Allow POPi to use the camera in system settings';
+
+  @override
+  String get cameraUnavailable =>
+      'The camera is unavailable. Choose a photo from your library instead';
+
+  @override
+  String get photoCompatibilityHint =>
+      'Very large photos and HEIC/HEIF images are converted to high-quality JPEG with a maximum side of 4096px for reliable uploads';
+
+  @override
+  String get photoOptimizedForUpload =>
+      'The photo was converted to a high-quality JPEG with a maximum side of 4096px';
+
+  @override
+  String get cameraRecoveryPending =>
+      'Return to the original conversation to recover the previous photo first';
+
+  @override
+  String get cameraRecoveryPendingTitle => 'Previous photo awaiting recovery';
+
+  @override
+  String get cameraRecoveryDiscard => 'Discard previous photo';
+
+  @override
+  String get cameraRecovered =>
+      'Your previous camera photo was recovered. Confirm it before uploading';
+
+  @override
   String get attachmentConfirm => 'Confirm upload';
 
   @override
@@ -3881,6 +3911,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not load the file. Please reopen it later';
 
   @override
+  String get demoInlineTextLoading => 'Loading file';
+
+  @override
+  String get demoInlineTextCopied => 'Text copied';
+
+  @override
+  String get demoInlineTextExpand => 'Show more';
+
+  @override
+  String get demoInlineTextCollapse => 'Show less';
+
+  @override
+  String get demoInlineTextScrollHint => 'Scroll to read the full text';
+
+  @override
+  String get demoInlineTextDownloadFormats => 'Download file';
+
+  @override
+  String demoInlineTextOpenFile(String name) {
+    return 'Open $name';
+  }
+
+  @override
   String demoFileSizeMb(String size) {
     return '$size MB';
   }
@@ -4058,6 +4111,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoReferenceImagesHint =>
       'Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.';
+
+  @override
+  String get demoReferenceAudio => 'Voice reference';
+
+  @override
+  String get demoReferenceAudioHint =>
+      'Add a publicly accessible voice reference for this character. Supported generation services will use it.';
+
+  @override
+  String get demoReferenceAudioUrlHint => 'Enter a public HTTPS audio link';
 
   @override
   String get demoDshCapabilitiesHint =>
@@ -4562,4 +4625,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get demoSkillSaveFailed =>
       'Skill settings were not saved. Your choice is preserved.';
+
+  @override
+  String get demoRolePreviewEdit => 'Edit profile';
+
+  @override
+  String get demoRolePreviewNoReferences => 'No character reference images';
+
+  @override
+  String demoRolePreviewMissingReferences(int count) {
+    return '$count reference images are unavailable';
+  }
+
+  @override
+  String demoRolePreviewReferenceCount(int count) {
+    return '$count reference images';
+  }
+
+  @override
+  String get demoRolePreviewFullInstructions =>
+      'View full original instructions';
+
+  @override
+  String get demoRolePreviewCollapseInstructions =>
+      'Collapse original instructions';
 }

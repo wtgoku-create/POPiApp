@@ -53,6 +53,21 @@ Future<void> _showCapabilityCatalog(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _openRoleEditorThroughPreview(
+  WidgetTester tester,
+  Finder roleRow,
+) async {
+  await tester.tap(roleRow);
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('demo-role-preview-sheet')), findsOneWidget);
+  final edit = find.byKey(const Key('demo-role-preview-edit'));
+  expect(edit, findsOneWidget);
+  await tester.tap(edit);
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('demo-role-preview-sheet')), findsNothing);
+  expect(find.byKey(const Key('demo-role-profile-confirm')), findsOneWidget);
+}
+
 class _CatalogRepository extends DemoRepository {
   _CatalogRepository(super.storage);
 
@@ -374,8 +389,23 @@ void main() {
         find.byKey(const ValueKey('demo-role-profile-link-$roleId')),
       );
       await tester.pumpAndSettle();
-      expect(find.textContaining('性格：活泼开朗'), findsOneWidget);
-      expect(find.textContaining('不将多视图当作多个人物'), findsOneWidget);
+      final preview = find.byKey(const Key('demo-role-preview-sheet'));
+      expect(preview, findsOneWidget);
+      expect(
+        find.descendant(of: preview, matching: find.text('豆豆')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: preview, matching: find.textContaining('活泼开朗')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: preview,
+          matching: find.byKey(const Key('demo-role-preview-reference')),
+        ),
+        findsOneWidget,
+      );
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('demo-role-option-$roleId')));
@@ -402,12 +432,89 @@ void main() {
 
     await tester.tap(find.byKey(const Key('demo-settings-roles')));
     await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('demo-role-profile-link-alice')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-role-preview-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('demo-role-preview-audio')), findsOneWidget);
+    expect(
+      find.text('https://static.popi.art/media/2026/1016/295973.mp3'),
+      findsOneWidget,
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('demo-roles-confirm')));
     await tester.pumpAndSettle();
 
     expect(
       repository.session('inspiration').roleProfiles['alice']?.toJson(),
       DemoWebsiteCharacterCatalog.profile('alice')?.toJson(),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Alice voice reference can be edited, validated and cleared', (
+    tester,
+  ) async {
+    final repository = await _pumpSettings(tester);
+    final aliceProfile = find.byKey(const ValueKey('demo-role-profile-alice'));
+    await _openRoleEditorThroughPreview(tester, aliceProfile);
+    final audio = find.byKey(const Key('demo-role-reference-audio-url'));
+    await tester.scrollUntilVisible(
+      audio,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(
+      tester.widget<TextField>(audio).controller?.text,
+      'https://static.popi.art/media/2026/1016/295973.mp3',
+    );
+    await tester.enterText(audio, 'http://example.test/not-public.mp3');
+    await tester.pump();
+    expect(
+      tester
+          .widget<DemoPrimaryButton>(
+            find.byKey(const Key('demo-role-profile-confirm')),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(audio, 'https://example.test/alice-new.mp3');
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const Key('demo-role-profile-confirm')),
+    );
+    await tester.tap(find.byKey(const Key('demo-role-profile-confirm')));
+    await tester.pumpAndSettle();
+    expect(
+      repository
+          .session('inspiration')
+          .roleProfiles['alice']
+          ?.referenceAudioUrl,
+      'https://example.test/alice-new.mp3',
+    );
+
+    await _openRoleEditorThroughPreview(tester, aliceProfile);
+    await tester.scrollUntilVisible(
+      audio,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.enterText(audio, '');
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const Key('demo-role-profile-confirm')),
+    );
+    await tester.tap(find.byKey(const Key('demo-role-profile-confirm')));
+    await tester.pumpAndSettle();
+    expect(
+      repository
+          .session('inspiration')
+          .roleProfiles['alice']
+          ?.referenceAudioUrl,
+      isEmpty,
     );
     expect(tester.takeException(), isNull);
   });
@@ -529,6 +636,51 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('tools collapse preserves grants and survives tab changes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final repository = _CatalogRepository(
+      PreferencesStorage(await SharedPreferences.getInstance()),
+    )..restore();
+    await _pumpSettings(tester, repository: repository);
+    await tester.tap(find.text('能力'));
+    await tester.pumpAndSettle();
+    final toggle = find.byKey(const ValueKey('demo-dsh-tools-toggle'));
+    final tool = find.byKey(const ValueKey('demo-dsh-tools-web_search'));
+    final tools = find.byKey(const ValueKey('demo-dsh-tools'));
+    final initialSession = repository.session('inspiration').toJson();
+    expect(toggle.hitTestable(), findsOneWidget);
+    expect(tool, findsOneWidget);
+    expect(
+      find.descendant(of: tools, matching: find.byIcon(Icons.check_circle)),
+      findsNWidgets(8),
+    );
+
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(tool, findsNothing);
+    expect(toggle.hitTestable(), findsOneWidget);
+    expect(find.byKey(const ValueKey('demo-dsh-skills')), findsOneWidget);
+    expect(find.byKey(const ValueKey('demo-dsh-mcp')), findsOneWidget);
+
+    await tester.tap(find.text('信息'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('能力'));
+    await tester.pumpAndSettle();
+    expect(tool, findsNothing);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(tool, findsOneWidget);
+    expect(
+      find.descendant(of: tools, matching: find.byIcon(Icons.check_circle)),
+      findsNWidgets(8),
+    );
+    expect(repository.requestedSessionIds, ['inspiration']);
+    expect(repository.session('inspiration').toJson(), initialSession);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'future catalog Skill uses the generic toggle without app enums',
@@ -986,8 +1138,10 @@ void main() {
   ) async {
     final repository = await _pumpSettings(tester);
 
-    await tester.tap(find.byKey(const ValueKey('demo-role-profile-alice')));
-    await tester.pumpAndSettle();
+    await _openRoleEditorThroughPreview(
+      tester,
+      find.byKey(const ValueKey('demo-role-profile-alice')),
+    );
     await tester.ensureVisible(
       find.byKey(const Key('demo-add-reference-image')),
     );
@@ -1010,8 +1164,10 @@ void main() {
       isEmpty,
     );
 
-    await tester.tap(find.byKey(const ValueKey('demo-role-profile-alice')));
-    await tester.pumpAndSettle();
+    await _openRoleEditorThroughPreview(
+      tester,
+      find.byKey(const ValueKey('demo-role-profile-alice')),
+    );
     await tester.ensureVisible(
       find.byKey(const Key('demo-add-reference-image')),
     );

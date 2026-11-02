@@ -105,6 +105,7 @@ Future<void> showDemoImport(
       ? DemoFileImportSheet(
           repository: repository,
           pickFiles: pickFiles ?? pickDemoAssetFiles,
+          cameraRecoveryScope: 'asset-library',
           onImported: onImported,
         )
       : _ImportSheet(repository: repository),

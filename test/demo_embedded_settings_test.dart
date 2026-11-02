@@ -26,6 +26,7 @@ Future<void> _pumpEmbedded(
   ValueChanged<int>? onTabChanged,
   Size size = const Size(340, 760),
   double textScale = 1,
+  Locale locale = const Locale('zh'),
   ThemeData? theme,
 }) async {
   tester.view.physicalSize = size;
@@ -37,7 +38,7 @@ Future<void> _pumpEmbedded(
       child: ToastificationWrapper(
         child: MaterialApp(
           theme: theme ?? AppTheme.light,
-          locale: const Locale('zh'),
+          locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           builder: (context, child) => MediaQuery(
@@ -85,6 +86,13 @@ void main() {
 
     expect(find.byKey(const Key('demo-settings-embedded')), findsOneWidget);
     expect(find.byKey(const Key('demo-inspector-header')), findsOneWidget);
+    expect(
+      find.byKey(const Key('demo-inspector-close-surface')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('demo-settings-identity')), findsOneWidget);
+    expect(find.byKey(const Key('demo-settings-tabs')), findsOneWidget);
+    expect(find.byKey(const Key('demo-settings-tab-0')), findsOneWidget);
     expect(find.text('保持温柔直接，先给结论，再说明创作选择。'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('demo-inspector-close')));
@@ -149,6 +157,13 @@ void main() {
   ) async {
     final repository = await _repository();
     addTearDown(repository.dispose);
+    const longName = '这是一个用于验证窄侧栏与大字号的较长助手名称';
+    await repository.updateSession(
+      'alice',
+      (session) => session.copyWith(
+        memberNames: {...session.memberNames, 'popi': longName},
+      ),
+    );
     await _pumpEmbedded(
       tester,
       repository,
@@ -158,7 +173,38 @@ void main() {
     );
 
     expect(find.byKey(const Key('demo-settings-embedded')), findsOneWidget);
+    final title = tester
+        .widgetList<Text>(find.text(longName))
+        .firstWhere((widget) => widget.textAlign == TextAlign.center);
+    expect(title.maxLines, 2);
+    expect(find.byKey(const Key('demo-settings-tabs')), findsOneWidget);
+    expect(find.byKey(const Key('demo-inspector-close')), findsNothing);
     expect(find.text('职责与个性'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('embedded tabs stay compact with scaled English labels', (
+    tester,
+  ) async {
+    final repository = await _repository();
+    addTearDown(repository.dispose);
+    await _pumpEmbedded(
+      tester,
+      repository,
+      size: const Size(320, 700),
+      textScale: 1.5,
+      locale: const Locale('en'),
+    );
+
+    final tabs = tester.getSize(find.byKey(const Key('demo-settings-tabs')));
+    expect(tabs.width, 288);
+    final group = tester.getSize(
+      find.byKey(const Key('demo-settings-tabs-group')),
+    );
+    expect(group.width, lessThanOrEqualTo(270));
+    expect(find.text('Info'), findsOneWidget);
+    expect(find.text('Skills'), findsOneWidget);
+    expect(find.text('Outputs'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

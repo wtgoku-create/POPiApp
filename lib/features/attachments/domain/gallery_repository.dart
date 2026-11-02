@@ -5,10 +5,15 @@ import 'package:image_picker/image_picker.dart';
 enum GalleryAccess { full, limited, denied, restricted }
 
 class GalleryPhoto {
-  const GalleryPhoto({required this.id, required this.name});
+  const GalleryPhoto({
+    required this.id,
+    required this.name,
+    this.requiresCompatibilityConversion = false,
+  });
 
   final String id;
   final String name;
+  final bool requiresCompatibilityConversion;
 }
 
 /// Device photos are queried through the current system authorization scope.

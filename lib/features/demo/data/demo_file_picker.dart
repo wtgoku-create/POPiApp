@@ -1,5 +1,6 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:crypto/crypto.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../domain/demo_models.dart';
 import '../domain/demo_upload_file.dart';
@@ -57,6 +58,37 @@ Future<List<DemoUploadFile>> pickDemoAssetFiles() async =>
     demoUploadFilesFromXFiles(
       await openFiles(acceptedTypeGroups: const [_demoAssetTypes]),
     );
+
+/// Mobile photo sources use image_picker so iOS HEIC selections are converted
+/// to JPEG. Images larger than 4096px are bounded to avoid device memory exits.
+Future<List<DemoUploadFile>> pickDemoPhotos() async =>
+    demoUploadFilesFromXFiles(
+      await ImagePicker().pickMultiImage(imageQuality: 92, maxWidth: 4096),
+    );
+
+Future<DemoUploadFile?> takeDemoPhoto() async {
+  final photo = await ImagePicker().pickImage(
+    source: ImageSource.camera,
+    imageQuality: 92,
+    maxWidth: 4096,
+  );
+  if (photo == null) return null;
+  final selected = await demoUploadFilesFromXFiles([photo]);
+  return selected.single;
+}
+
+/// Android can destroy the activity while the external camera is open. The
+/// caller owns the scope check; this function only converts the recovered
+/// result into the same validated, unsent draft format as a normal selection.
+Future<List<DemoUploadFile>> recoverLostDemoPhotos() async {
+  final response = await ImagePicker().retrieveLostData();
+  if (response.exception case final error?) throw error;
+  return demoUploadFilesFromXFiles(response.files ?? const []);
+}
+
+Future<void> discardLostDemoPhotos() async {
+  await ImagePicker().retrieveLostData();
+}
 
 /// Content-character uploads use the same validated transport, restricted to
 /// image formats instead of the general asset library picker.

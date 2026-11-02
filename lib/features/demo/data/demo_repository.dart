@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -68,6 +69,10 @@ class DemoRepository extends ChangeNotifier {
   final Map<String, Future<void>> _mediaWatchers = {};
   final Map<String, int> _latestAppliedSnapshotRequest = {};
   final Map<String, DemoAsset> _uploadedFiles = {};
+  final Map<String, List<DemoUploadFile>> _recoveredCameraDrafts = {};
+  final LinkedHashMap<_AssetTextCacheKey, _AssetTextCacheEntry>
+  _assetTextCache = LinkedHashMap();
+  final Map<_AssetTextCacheKey, Future<String>> _assetTextLoads = {};
   Map<String, Set<String>> _dismissedMediaJobIds = {};
   List<DemoSession> _sessions;
   List<DemoAsset> _assets;
@@ -75,11 +80,47 @@ class DemoRepository extends ChangeNotifier {
   int _snapshotRequestSerial = 0;
   int _assetListRequestSerial = 0;
   int _latestAppliedAssetListRequest = 0;
+  int _assetTextCacheBytes = 0;
+  int _assetTextCacheGeneration = 0;
   bool _disposed = false;
   bool _loading = false;
   final Set<String> _loadingSessions = {};
 
   bool get isHarness => _api != null;
+  String get _pendingCameraOwnerKey => '${_storageKey}_pending_camera_owner_v1';
+  String? get pendingCameraCaptureOwner =>
+      _storage.getString(_pendingCameraOwnerKey);
+
+  /// Prevents a recovered Android camera result from appearing in a different
+  /// conversation after the activity was reclaimed in the background.
+  Future<bool> beginCameraCapture(String owner) async {
+    final normalized = owner.trim();
+    if (normalized.isEmpty || normalized.length > 180) {
+      throw ArgumentError.value(owner, 'owner');
+    }
+    final existing = pendingCameraCaptureOwner;
+    if (existing != null && existing != normalized) return false;
+    await _storage.setString(_pendingCameraOwnerKey, normalized);
+    return true;
+  }
+
+  Future<void> finishCameraCapture(String owner) async {
+    if (pendingCameraCaptureOwner == owner) {
+      await _storage.remove(_pendingCameraOwnerKey);
+    }
+  }
+
+  void holdRecoveredCameraDraft(String owner, List<DemoUploadFile> files) {
+    if (files.isEmpty) return;
+    _recoveredCameraDrafts[owner] = List.unmodifiable(files);
+  }
+
+  bool hasRecoveredCameraDraft(String owner) =>
+      _recoveredCameraDrafts.containsKey(owner);
+
+  List<DemoUploadFile> takeRecoveredCameraDraft(String owner) =>
+      _recoveredCameraDrafts.remove(owner) ?? const [];
+
   bool get loading => _loading;
   bool isSessionLoading(String id) => _loadingSessions.contains(id);
   bool isSessionRunning(String id) => _runningSessions.contains(id);
@@ -388,6 +429,7 @@ class DemoRepository extends ChangeNotifier {
   }
 
   void restore() {
+    _clearAssetTextCache();
     _restoreDismissedMediaJobs();
     final raw = _storage.getString(_storageKey);
     if (raw == null) return;
@@ -566,12 +608,85 @@ class DemoRepository extends ChangeNotifier {
       if (text is! String) throw const DemoUploadException('INVALID_CONTENT');
       return text;
     }
+    if (!_cacheableAssetTextMimeTypes.contains(asset.mimeType)) {
+      return _readUncachedAssetText(asset);
+    }
+    DemoUploadFile.validateMetadata(
+      name: asset.title.isEmpty ? asset.id : asset.title,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.sizeBytes,
+      kind: asset.kind,
+    );
+    final key = (
+      id: asset.id,
+      contentUrl: asset.contentUrl,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.sizeBytes,
+      sha256: asset.sha256,
+    );
+    final cached = _assetTextCache.remove(key);
+    if (cached != null) {
+      _assetTextCache[key] = cached;
+      return cached.text;
+    }
+    final pending = _assetTextLoads[key];
+    if (pending != null) return pending;
+
+    final generation = _assetTextCacheGeneration;
+    late final Future<String> operation;
+    operation = _loadAndCacheAssetText(asset, key, generation).whenComplete(() {
+      if (identical(_assetTextLoads[key], operation)) {
+        _assetTextLoads.remove(key);
+      }
+    });
+    _assetTextLoads[key] = operation;
+    return operation;
+  }
+
+  Future<String> _loadAndCacheAssetText(
+    DemoAsset asset,
+    _AssetTextCacheKey key,
+    int generation,
+  ) async {
     final bytes = await readAssetBytes(asset);
+    final text = _decodeAssetText(bytes);
+    if (!_disposed && generation == _assetTextCacheGeneration) {
+      _cacheAssetText(key, text, bytes.lengthInBytes);
+    }
+    return text;
+  }
+
+  Future<String> _readUncachedAssetText(DemoAsset asset) async {
+    final bytes = await readAssetBytes(asset);
+    return _decodeAssetText(bytes);
+  }
+
+  String _decodeAssetText(Uint8List bytes) {
     try {
       return utf8.decode(bytes, allowMalformed: false);
     } on FormatException {
       throw const DemoUploadException('INVALID_CONTENT');
     }
+  }
+
+  void _cacheAssetText(_AssetTextCacheKey key, String text, int byteLength) {
+    final replaced = _assetTextCache.remove(key);
+    if (replaced != null) _assetTextCacheBytes -= replaced.byteLength;
+    _assetTextCache[key] = (text: text, byteLength: byteLength);
+    _assetTextCacheBytes += byteLength;
+    while (_assetTextCache.length > _assetTextCacheMaxEntries ||
+        _assetTextCacheBytes > _assetTextCacheMaxBytes) {
+      final oldestKey = _assetTextCache.keys.first;
+      final oldest = _assetTextCache.remove(oldestKey)!;
+      _assetTextCacheBytes -= oldest.byteLength;
+    }
+  }
+
+  void _clearAssetTextCache() {
+    _assetTextCacheGeneration += 1;
+    _assetTextCache.clear();
+    _assetTextLoads.clear();
+    _assetTextCacheBytes = 0;
   }
 
   void validateMessageAttachments(List<String> assetIds) {
@@ -929,6 +1044,7 @@ class DemoRepository extends ChangeNotifier {
   }
 
   Future<void> deleteSession(String id) async {
+    _clearAssetTextCache();
     final api = _api;
     if (api != null) {
       final requestKey = 'archive:$id';
@@ -1385,6 +1501,7 @@ class DemoRepository extends ChangeNotifier {
   }
 
   Future<void> deleteAsset(String id) {
+    _clearAssetTextCache();
     _requireOfflineAssets();
     return _commit(
       () => (
@@ -1422,6 +1539,7 @@ class DemoRepository extends ChangeNotifier {
   }
 
   Future<void> reset() async {
+    _clearAssetTextCache();
     if (!isHarness) {
       await _commit(
         () =>
@@ -1784,37 +1902,47 @@ class DemoRepository extends ChangeNotifier {
     }
   }
 
-  /// Projects deterministic background edits into the existing media-job UI.
-  List<DemoMediaJob> _mediaJobsFromSnapshot(Map<String, dynamic> response) => [
-    ..._mapList(response['mediaJobs']).map(DemoMediaJob.fromJson),
-    ..._mapList(response['videoEditJobs']).map((record) {
-      final editState = record['state']?.toString() ?? '';
-      final state = switch (editState) {
-        'rendering' => 'running',
-        'validating' => 'processing',
-        'cancel_requested' => 'processing',
-        _ => editState,
-      };
-      final ingestionState = switch (editState) {
-        'ingesting' => 'ingesting',
-        'completed' => 'completed',
-        'failed' => 'failed',
-        _ => '',
-      };
-      return DemoMediaJob.fromJson({
-        'jobId': record['jobId'],
-        'state': state,
-        'operation': 'video-edit',
-        'model': 'ffmpeg',
-        'runId': record['runId'],
-        'memberId': record['memberId'],
-        'configRevision': record['configRevision'],
-        'assetIds': record['assetIds'],
-        'ingestionState': ingestionState,
-        'error': record['error'],
-      });
-    }),
-  ];
+  /// Projects local background video and Canvas jobs into the media-job UI.
+  List<DemoMediaJob> _mediaJobsFromSnapshot(Map<String, dynamic> response) {
+    final canvasJobs = _mapList(response['canvasVideoJobs']);
+    final canvasIds = canvasJobs.map((record) => record['jobId']).toSet();
+    return [
+      ..._mapList(response['mediaJobs']).map(DemoMediaJob.fromJson),
+      ...[
+        ..._mapList(response['videoEditJobs'])
+            .where((record) => !canvasIds.contains(record['jobId']))
+            .map((record) => (record: record, canvas: false)),
+        ...canvasJobs.map((record) => (record: record, canvas: true)),
+      ].map((item) {
+        final record = item.record;
+        final editState = record['state']?.toString() ?? '';
+        final state = switch (editState) {
+          'rendering' => 'running',
+          'validating' => 'processing',
+          'cancel_requested' => 'processing',
+          _ => editState,
+        };
+        final ingestionState = switch (editState) {
+          'ingesting' => 'ingesting',
+          'completed' => 'completed',
+          'failed' => 'failed',
+          _ => '',
+        };
+        return DemoMediaJob.fromJson({
+          'jobId': record['jobId'],
+          'state': state,
+          'operation': item.canvas ? 'canvas-video' : 'video-edit',
+          'model': item.canvas ? 'canvas' : 'ffmpeg',
+          'runId': record['runId'],
+          'memberId': record['memberId'],
+          'configRevision': record['configRevision'],
+          'assetIds': record['assetIds'],
+          'ingestionState': ingestionState,
+          'error': record['error'],
+        });
+      }),
+    ];
+  }
 
   DemoMessage _messageFromRecord(
     Map<String, Object?> message, {
@@ -2408,6 +2536,7 @@ class DemoRepository extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _clearAssetTextCache();
     for (final waiter in _questionWaiters.values) {
       if (!waiter.isCompleted) waiter.complete();
     }
@@ -2422,6 +2551,19 @@ class DemoRepository extends ChangeNotifier {
     super.dispose();
   }
 }
+
+const _cacheableAssetTextMimeTypes = {'text/plain', 'text/markdown'};
+const _assetTextCacheMaxEntries = 16;
+const _assetTextCacheMaxBytes = 8 * 1024 * 1024;
+
+typedef _AssetTextCacheKey = ({
+  String id,
+  String contentUrl,
+  String mimeType,
+  int sizeBytes,
+  String sha256,
+});
+typedef _AssetTextCacheEntry = ({String text, int byteLength});
 
 class _HarnessSnapshot {
   const _HarnessSnapshot({

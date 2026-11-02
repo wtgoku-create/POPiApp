@@ -69,11 +69,20 @@ class DeviceGalleryRepository implements GalleryRepository {
     );
     if (albums.isEmpty) return [];
     final assets = await albums.first.getAssetListPaged(page: page, size: size);
-    return assets
-        .map(
-          (asset) => GalleryPhoto(id: asset.id, name: asset.title ?? asset.id),
-        )
-        .toList();
+    return assets.map((asset) {
+      final name = asset.title ?? asset.id;
+      final type = asset.mimeType?.toLowerCase() ?? '';
+      final extension = name.split('.').last.toLowerCase();
+      return GalleryPhoto(
+        id: asset.id,
+        name: name,
+        requiresCompatibilityConversion:
+            type == 'image/heic' ||
+            type == 'image/heif' ||
+            extension == 'heic' ||
+            extension == 'heif',
+      );
+    }).toList();
   }
 
   @override
@@ -90,7 +99,34 @@ class DeviceGalleryRepository implements GalleryRepository {
   Future<XFile?> readPhoto(GalleryPhoto photo) async {
     final asset = await AssetEntity.fromId(photo.id);
     final file = await asset?.file;
-    return file == null ? null : XFile(file.path, name: photo.name);
+    if (file == null || asset == null) return null;
+    final extension = file.path.split('.').last.toLowerCase();
+    if (!photo.requiresCompatibilityConversion &&
+        extension != 'heic' &&
+        extension != 'heif') {
+      return XFile(file.path, name: photo.name);
+    }
+    final width = asset.width <= 0 ? 1 : asset.width;
+    final height = asset.height <= 0 ? 1 : asset.height;
+    const maxDimension = 4096;
+    final scale = width > maxDimension || height > maxDimension
+        ? maxDimension / (width > height ? width : height)
+        : 1.0;
+    final targetWidth = (width * scale).round().clamp(1, maxDimension);
+    final targetHeight = (height * scale).round().clamp(1, maxDimension);
+    final bytes = await asset.thumbnailDataWithSize(
+      ThumbnailSize(targetWidth, targetHeight),
+      format: ThumbnailFormat.jpeg,
+      quality: 92,
+    );
+    if (bytes == null) return null;
+    final baseName = photo.name.replaceFirst(RegExp(r'\.[^.]+$'), '');
+    return XFile.fromData(
+      bytes,
+      path: '${baseName.isEmpty ? 'photo' : baseName}.jpg',
+      name: '${baseName.isEmpty ? 'photo' : baseName}.jpg',
+      mimeType: 'image/jpeg',
+    );
   }
 
   @override

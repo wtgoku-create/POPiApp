@@ -3283,6 +3283,54 @@ abstract class AppLocalizations {
   /// **'Camera'**
   String get attachmentCamera;
 
+  /// No description provided for @cameraPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow POPi to use the camera in system settings'**
+  String get cameraPermissionDenied;
+
+  /// No description provided for @cameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera is unavailable. Choose a photo from your library instead'**
+  String get cameraUnavailable;
+
+  /// No description provided for @photoCompatibilityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Very large photos and HEIC/HEIF images are converted to high-quality JPEG with a maximum side of 4096px for reliable uploads'**
+  String get photoCompatibilityHint;
+
+  /// No description provided for @photoOptimizedForUpload.
+  ///
+  /// In en, this message translates to:
+  /// **'The photo was converted to a high-quality JPEG with a maximum side of 4096px'**
+  String get photoOptimizedForUpload;
+
+  /// No description provided for @cameraRecoveryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Return to the original conversation to recover the previous photo first'**
+  String get cameraRecoveryPending;
+
+  /// No description provided for @cameraRecoveryPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous photo awaiting recovery'**
+  String get cameraRecoveryPendingTitle;
+
+  /// No description provided for @cameraRecoveryDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard previous photo'**
+  String get cameraRecoveryDiscard;
+
+  /// No description provided for @cameraRecovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Your previous camera photo was recovered. Confirm it before uploading'**
+  String get cameraRecovered;
+
   /// No description provided for @attachmentConfirm.
   ///
   /// In en, this message translates to:
@@ -7207,6 +7255,48 @@ abstract class AppLocalizations {
   /// **'Could not load the file. Please reopen it later'**
   String get demoAssetLoadFailed;
 
+  /// No description provided for @demoInlineTextLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading file'**
+  String get demoInlineTextLoading;
+
+  /// No description provided for @demoInlineTextCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Text copied'**
+  String get demoInlineTextCopied;
+
+  /// No description provided for @demoInlineTextExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get demoInlineTextExpand;
+
+  /// No description provided for @demoInlineTextCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get demoInlineTextCollapse;
+
+  /// No description provided for @demoInlineTextScrollHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll to read the full text'**
+  String get demoInlineTextScrollHint;
+
+  /// No description provided for @demoInlineTextDownloadFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'Download file'**
+  String get demoInlineTextDownloadFormats;
+
+  /// No description provided for @demoInlineTextOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {name}'**
+  String demoInlineTextOpenFile(String name);
+
   /// No description provided for @demoFileSizeMb.
   ///
   /// In en, this message translates to:
@@ -7518,6 +7608,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.'**
   String get demoReferenceImagesHint;
+
+  /// No description provided for @demoReferenceAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice reference'**
+  String get demoReferenceAudio;
+
+  /// No description provided for @demoReferenceAudioHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a publicly accessible voice reference for this character. Supported generation services will use it.'**
+  String get demoReferenceAudioHint;
+
+  /// No description provided for @demoReferenceAudioUrlHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a public HTTPS audio link'**
+  String get demoReferenceAudioUrlHint;
 
   /// No description provided for @demoDshCapabilitiesHint.
   ///
@@ -8368,6 +8476,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Skill settings were not saved. Your choice is preserved.'**
   String get demoSkillSaveFailed;
+
+  /// No description provided for @demoRolePreviewEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit profile'**
+  String get demoRolePreviewEdit;
+
+  /// No description provided for @demoRolePreviewNoReferences.
+  ///
+  /// In en, this message translates to:
+  /// **'No character reference images'**
+  String get demoRolePreviewNoReferences;
+
+  /// No description provided for @demoRolePreviewMissingReferences.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reference images are unavailable'**
+  String demoRolePreviewMissingReferences(int count);
+
+  /// No description provided for @demoRolePreviewReferenceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reference images'**
+  String demoRolePreviewReferenceCount(int count);
+
+  /// No description provided for @demoRolePreviewFullInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'View full original instructions'**
+  String get demoRolePreviewFullInstructions;
+
+  /// No description provided for @demoRolePreviewCollapseInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse original instructions'**
+  String get demoRolePreviewCollapseInstructions;
 }
 
 class _AppLocalizationsDelegate

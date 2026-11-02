@@ -81,6 +81,48 @@ void main() {
     expect(storage.deletes, 1);
   });
 
+  testWidgets(
+    'a stuck restore times out without deleting storage and permits live login',
+    (tester) async {
+      final stale = HarnessAccessSession(
+        cookieValue: 'stale-cookie',
+        origin: session.origin,
+        expiresAt: session.expiresAt,
+        cacheNamespace: '123e4567-e89b-42d3-a456-426614174099',
+      );
+      final storage = _HangingReadStorage(stale);
+      final controller = HarnessAccessController(
+        storage: storage,
+        repository: _StubRepository(session: session),
+        required: true,
+        expectedOrigin: session.origin,
+        now: () => now,
+        restoreTimeout: const Duration(seconds: 1),
+      );
+
+      final initializing = controller.initialize();
+      await tester.pump(const Duration(milliseconds: 999));
+      expect(controller.state.loading, isTrue);
+      await tester.pump(const Duration(milliseconds: 1));
+      await initializing;
+
+      expect(controller.state.loading, isFalse);
+      expect(controller.state.authenticated, isFalse);
+      expect(storage.deletes, 0);
+
+      await controller.signIn('tester', 'password');
+      expect(controller.state.session, same(session));
+      expect(storage.writes, 0);
+      expect(storage.deletes, 0);
+
+      storage.completeRead();
+      await tester.pump();
+      expect(controller.state.session, same(session));
+      expect(storage.session, same(stale));
+      controller.dispose();
+    },
+  );
+
   test('clears expired, corrupt, and wrong-origin sessions', () async {
     for (final stored in <Object?>[
       HarnessAccessSession(
@@ -551,6 +593,35 @@ class _ControlledStorage implements HarnessAccessStorage {
       await gate.future;
       _writeGate = null;
     }
+    session = value;
+  }
+}
+
+class _HangingReadStorage implements HarnessAccessStorage {
+  _HangingReadStorage(this.session);
+
+  HarnessAccessSession? session;
+  final Completer<void> _readGate = Completer<void>();
+  int deletes = 0;
+  int writes = 0;
+
+  void completeRead() => _readGate.complete();
+
+  @override
+  Future<void> deleteSession() async {
+    deletes++;
+    session = null;
+  }
+
+  @override
+  Future<HarnessAccessSession?> readSession() async {
+    await _readGate.future;
+    return session;
+  }
+
+  @override
+  Future<void> writeSession(HarnessAccessSession value) async {
+    writes++;
     session = value;
   }
 }

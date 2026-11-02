@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/core/network/network_agent_api.dart';
 import 'package:popi_ai_app/core/storage/preferences_storage.dart';
 import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
+import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -90,6 +91,48 @@ void main() {
             restored.session(_sessionId).mediaJobs.single.state == 'completed',
       );
       expect(restored.session(_sessionId).messages.single.assetIds, [_assetId]);
+      expect(api.writeCalls, 0);
+    },
+  );
+
+  test(
+    'Canvas preview remains observed until its image is delivered',
+    () async {
+      Map<String, Object?> compatibleSnapshot(
+        String state, {
+        bool deliver = false,
+      }) {
+        final value = _snapshot(state, canvas: true, deliver: deliver);
+        value['videoEditJobs'] = value['canvasVideoJobs'];
+        return value;
+      }
+
+      final api = _VideoEditApi(dio, [
+        compatibleSnapshot('queued'),
+        compatibleSnapshot('rendering'),
+        compatibleSnapshot('completed', deliver: true),
+      ]);
+      final repository = DemoRepository.harness(
+        storage,
+        api,
+        pollInterval: Duration.zero,
+        maxPollAttempts: 5,
+      )..restore();
+      addTearDown(repository.dispose);
+
+      await repository.refreshSessions();
+      await _eventually(
+        () => repository
+            .session(_sessionId)
+            .messages
+            .any((message) => message.assetIds.contains(_assetId)),
+      );
+
+      final job = repository.session(_sessionId).mediaJobs.single;
+      expect(job.operation, 'canvas-video');
+      expect(job.state, 'completed');
+      expect(job.assetIds, [_assetId]);
+      expect(repository.assets.single.kind, DemoAssetKind.image);
       expect(api.writeCalls, 0);
     },
   );
@@ -226,7 +269,11 @@ Map<String, Object?> _configuration() => {
   'creativeMemory': {'text': '', 'source': 'ai'},
 };
 
-Map<String, Object?> _snapshot(String state, {bool deliver = false}) => {
+Map<String, Object?> _snapshot(
+  String state, {
+  bool deliver = false,
+  bool canvas = false,
+}) => {
   'session': _sessionRecord(),
   'lastSeq': deliver ? 1 : 0,
   'messages': deliver
@@ -249,32 +296,46 @@ Map<String, Object?> _snapshot(String state, {bool deliver = false}) => {
   ],
   'mediaJobs': <Object?>[],
   'filmJobs': <Object?>[],
-  'videoEditJobs': [
-    {
-      'jobId': _jobId,
-      'sessionId': _sessionId,
-      'runId': _runId,
-      'memberId': 'popi',
-      'memberName': 'POPi',
-      'configRevision': 0,
-      'title': '剪辑成片',
-      'state': state,
-      'stage': state,
-      'assetIds': deliver ? [_assetId] : <Object?>[],
-      if (state == 'failed')
-        'error': {'code': 'video_edit_failed', 'message': '剪辑失败'},
-      'createdAt': '2026-10-26T00:00:00.000Z',
-      'updatedAt': '2026-10-26T00:00:01.000Z',
-    },
-  ],
-  'assets': deliver ? [_assetRecord()] : <Object?>[],
+  if (canvas)
+    'canvasVideoJobs': [
+      {
+        'jobId': _jobId,
+        'sessionId': _sessionId,
+        'runId': _runId,
+        'memberId': 'popi',
+        'configRevision': 0,
+        'state': state,
+        'stage': state,
+        'assetIds': deliver ? [_assetId] : <Object?>[],
+      },
+    ]
+  else
+    'videoEditJobs': [
+      {
+        'jobId': _jobId,
+        'sessionId': _sessionId,
+        'runId': _runId,
+        'memberId': 'popi',
+        'memberName': 'POPi',
+        'configRevision': 0,
+        'title': '剪辑成片',
+        'state': state,
+        'stage': state,
+        'assetIds': deliver ? [_assetId] : <Object?>[],
+        if (state == 'failed')
+          'error': {'code': 'video_edit_failed', 'message': '剪辑失败'},
+        'createdAt': '2026-10-26T00:00:00.000Z',
+        'updatedAt': '2026-10-26T00:00:01.000Z',
+      },
+    ],
+  'assets': deliver ? [_assetRecord(canvas: canvas)] : <Object?>[],
 };
 
-Map<String, Object?> _assetRecord() => {
+Map<String, Object?> _assetRecord({bool canvas = false}) => {
   'id': _assetId,
   'title': '剪辑成片',
-  'kind': 'video',
-  'mimeType': 'video/mp4',
+  'kind': canvas ? 'image' : 'video',
+  'mimeType': canvas ? 'image/png' : 'video/mp4',
   'sizeBytes': 1024,
   'sha256': 'a' * 64,
   'contentUrl': '/api_agent/v2/assets/$_assetId/content',

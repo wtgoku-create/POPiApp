@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:popi_ai_app/app/theme.dart';
@@ -13,7 +13,9 @@ import 'package:popi_ai_app/features/demo/data/demo_repository.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_models.dart';
 import 'package:popi_ai_app/features/demo/domain/demo_upload_file.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_assets_page.dart';
+import 'package:popi_ai_app/features/demo/presentation/demo_file_import_sheet.dart';
 import 'package:popi_ai_app/features/demo/presentation/demo_home_page.dart';
+import 'package:popi_ai_app/features/demo/presentation/widgets/demo_widgets.dart';
 import 'package:popi_ai_app/l10n/generated/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toastification/toastification.dart';
@@ -88,6 +90,35 @@ void main() {
     ),
   );
 
+  Widget mobileLauncher({
+    required Future<List<DemoUploadFile>> Function() pickPhotos,
+    required Future<DemoUploadFile?> Function() takePhoto,
+    Future<List<DemoUploadFile>> Function()? recoverPhotos,
+    Future<void> Function()? discardRecoveredPhotos,
+    String cameraRecoveryScope = 'session:alice',
+    bool recoverLostCamera = false,
+  }) => Builder(
+    builder: (context) => Scaffold(
+      body: TextButton(
+        onPressed: () => DemoSheet.show<void>(
+          context: context,
+          builder: (_) => DemoFileImportSheet(
+            repository: repository,
+            pickFiles: () async => const [],
+            pickPhotos: pickPhotos,
+            takePhoto: takePhoto,
+            recoverPhotos: recoverPhotos ?? () async => const [],
+            discardRecoveredPhotos: discardRecoveredPhotos ?? () async {},
+            mobileMediaSources: true,
+            recoverLostCamera: recoverLostCamera,
+            cameraRecoveryScope: cameraRecoveryScope,
+          ),
+        ),
+        child: const Text('Mobile import'),
+      ),
+    ),
+  );
+
   Future<void> pumpUntil(WidgetTester tester, bool Function() condition) async {
     for (var attempt = 0; attempt < 40; attempt++) {
       await tester.pump(const Duration(milliseconds: 50));
@@ -99,6 +130,278 @@ void main() {
     }
     fail('Condition was not reached after 40 frames');
   }
+
+  testWidgets('mobile import adds gallery and camera photos to one draft', (
+    tester,
+  ) async {
+    final gallery = _imageFile('gallery-request', '相册照片.jpg');
+    final camera = _imageFile('camera-request', '现场拍摄.jpg');
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => [gallery],
+        takePhoto: () async => camera,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('demo-import-gallery')), findsOneWidget);
+    expect(find.byKey(const Key('demo-import-camera')), findsOneWidget);
+    expect(find.textContaining('4096'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('demo-import-gallery')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    expect(find.text('相册照片.jpg'), findsOneWidget);
+    expect(find.text('现场拍摄.jpg'), findsOneWidget);
+    expect(find.text('已选择 2 个文件'), findsOneWidget);
+    expect(repository.pendingCameraCaptureOwner, isNull);
+  });
+
+  testWidgets('camera denial keeps gallery draft available', (tester) async {
+    final gallery = _imageFile('gallery-request', '相册照片.jpg');
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => [gallery],
+        takePhoto: () async =>
+            throw PlatformException(code: 'camera_access_denied'),
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-gallery')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    expect(find.text('请在系统设置中允许 POPi 使用相机'), findsOneWidget);
+    expect(find.text('相册照片.jpg'), findsOneWidget);
+    expect(find.text('已选择 1 个文件'), findsOneWidget);
+    expect(repository.pendingCameraCaptureOwner, isNull);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('lost camera result only restores into its owning draft', (
+    tester,
+  ) async {
+    final recovered = _imageFile('recovered-request', '恢复拍摄.jpg');
+    expect(await repository.beginCameraCapture('session:alice'), isTrue);
+    var recoverCalls = 0;
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async => null,
+        recoverPhotos: () async {
+          recoverCalls++;
+          return [recovered];
+        },
+        recoverLostCamera: true,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(recoverCalls, 1);
+    expect(find.text('恢复拍摄.jpg'), findsOneWidget);
+    expect(find.text('已恢复上次拍摄的照片，请确认后上传'), findsOneWidget);
+    expect(repository.pendingCameraCaptureOwner, isNull);
+    expect(repository.assets, isEmpty);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  testWidgets('closing during recovery keeps the result for the same scope', (
+    tester,
+  ) async {
+    final recovered = _imageFile('recovered-request', '恢复拍摄.jpg');
+    final recovery = Completer<List<DemoUploadFile>>();
+    expect(await repository.beginCameraCapture('session:alice'), isTrue);
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async => null,
+        recoverPhotos: () => recovery.future,
+        recoverLostCamera: true,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox.shrink());
+    recovery.complete([recovered]);
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async => null,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复拍摄.jpg'), findsOneWidget);
+    expect(repository.assets, isEmpty);
+  });
+
+  testWidgets('closing while the camera is open keeps the captured draft', (
+    tester,
+  ) async {
+    final capture = Completer<DemoUploadFile?>();
+    final camera = _imageFile('camera-request', '现场拍摄.jpg');
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () => capture.future,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pump();
+    expect(repository.pendingCameraCaptureOwner, 'session:alice');
+    await tester.pumpWidget(const SizedBox.shrink());
+    capture.complete(camera);
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async => null,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(find.text('现场拍摄.jpg'), findsOneWidget);
+    expect(repository.pendingCameraCaptureOwner, isNull);
+    expect(repository.assets, isEmpty);
+  });
+
+  testWidgets('lost camera owner cannot leak into another conversation', (
+    tester,
+  ) async {
+    expect(await repository.beginCameraCapture('asset-library'), isTrue);
+    var recoverCalls = 0;
+    var cameraCalls = 0;
+    var discardCalls = 0;
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async {
+          cameraCalls++;
+          return null;
+        },
+        recoverPhotos: () async {
+          recoverCalls++;
+          return [_imageFile('wrong-request', '不应出现.jpg')];
+        },
+        discardRecoveredPhotos: () async => discardCalls++,
+        recoverLostCamera: true,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(recoverCalls, 0);
+    expect(find.text('不应出现.jpg'), findsNothing);
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    expect(cameraCalls, 0);
+    expect(find.text('请返回原会话恢复上次拍摄后再试'), findsOneWidget);
+    expect(repository.pendingCameraCaptureOwner, 'asset-library');
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(repository.pendingCameraCaptureOwner, 'asset-library');
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('camera-recovery-discard')));
+    await tester.pumpAndSettle();
+    expect(discardCalls, 1);
+    expect(cameraCalls, 1);
+    expect(repository.pendingCameraCaptureOwner, isNull);
+  });
+
+  testWidgets('failed lost-data discard keeps the original owner', (
+    tester,
+  ) async {
+    expect(await repository.beginCameraCapture('asset-library'), isTrue);
+    var cameraCalls = 0;
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => const [],
+        takePhoto: () async {
+          cameraCalls++;
+          return null;
+        },
+        discardRecoveredPhotos: () async => throw StateError('not drained'),
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('camera-recovery-discard')));
+    await tester.pumpAndSettle();
+    expect(cameraCalls, 0);
+    expect(repository.pendingCameraCaptureOwner, 'asset-library');
+    expect(find.text('无法选择文件，请再试一次'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+  });
+
+  test(
+    'deleted session owner still requires an explicit lost-data drain',
+    () async {
+      expect(await repository.beginCameraCapture('session:deleted'), isTrue);
+      expect(await repository.beginCameraCapture('session:alice'), isFalse);
+      expect(repository.pendingCameraCaptureOwner, 'session:deleted');
+      await repository.finishCameraCapture('session:deleted');
+    },
+  );
+
+  testWidgets('rejected recovered photo remains available on reopening', (
+    tester,
+  ) async {
+    final initial = List.generate(
+      DemoUploadFile.messageAttachmentLimit,
+      (index) => _imageFile('initial-$index', '初始$index.jpg'),
+    );
+    final camera = _imageFile('camera-request', '恢复拍摄.jpg');
+    await pump(
+      tester,
+      mobileLauncher(
+        pickPhotos: () async => initial,
+        takePhoto: () async => camera,
+      ),
+    );
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('demo-import-gallery')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('已选择 ${DemoUploadFile.messageAttachmentLimit} 个文件'),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const Key('demo-import-camera')));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复拍摄.jpg'), findsNothing);
+    expect(find.text('附件数量过多或包含重复项，请调整后再发送。'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mobile import'));
+    await tester.pumpAndSettle();
+    expect(find.text('恢复拍摄.jpg'), findsOneWidget);
+    expect(find.text('已选择 1 个文件'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+  });
 
   testWidgets(
     'real files show names and sizes; cancel, error, and removal keep the draft',

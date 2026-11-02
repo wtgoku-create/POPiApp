@@ -1691,6 +1691,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get attachmentCamera => '拍摄';
 
   @override
+  String get cameraPermissionDenied => '请在系统设置中允许 POPi 使用相机';
+
+  @override
+  String get cameraUnavailable => '当前设备无法使用相机，请从相册选择照片';
+
+  @override
+  String get photoCompatibilityHint =>
+      '超大照片或 HEIC/HEIF 会按最长边 4096 像素转为高质量 JPEG，以确保上传稳定';
+
+  @override
+  String get photoOptimizedForUpload => '照片已转为最长边不超过 4096 像素的高质量 JPEG';
+
+  @override
+  String get cameraRecoveryPending => '请返回原会话恢复上次拍摄后再试';
+
+  @override
+  String get cameraRecoveryPendingTitle => '上次拍摄等待恢复';
+
+  @override
+  String get cameraRecoveryDiscard => '放弃上次拍摄';
+
+  @override
+  String get cameraRecovered => '已恢复上次拍摄的照片，请确认后上传';
+
+  @override
   String get attachmentConfirm => '确认上传';
 
   @override
@@ -3716,6 +3741,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get demoAssetLoadFailed => '文件加载失败，请稍后重新打开';
 
   @override
+  String get demoInlineTextLoading => '正在加载文件';
+
+  @override
+  String get demoInlineTextCopied => '已复制全文';
+
+  @override
+  String get demoInlineTextExpand => '展开全文';
+
+  @override
+  String get demoInlineTextCollapse => '收起全文';
+
+  @override
+  String get demoInlineTextScrollHint => '滚动查看全文';
+
+  @override
+  String get demoInlineTextDownloadFormats => '下载文件';
+
+  @override
+  String demoInlineTextOpenFile(String name) {
+    return '打开$name';
+  }
+
+  @override
   String demoFileSizeMb(String size) {
     return '$size MB';
   }
@@ -3882,6 +3930,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoReferenceImagesHint => '为创作提供外观参考。云端生成需要可访问的图片链接；本地图片不会自动公开。';
+
+  @override
+  String get demoReferenceAudio => '声音参考';
+
+  @override
+  String get demoReferenceAudioHint => '为角色配置公开可访问的声音参考。生成服务支持时会按该声音执行。';
+
+  @override
+  String get demoReferenceAudioUrlHint => '请输入公开 HTTPS 音频链接';
 
   @override
   String get demoDshCapabilitiesHint => '由 DSH 提供并默认启用，可用状态以实际接入为准。';
@@ -4350,4 +4407,26 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get demoSkillSaveFailed => 'Skill 设置未保存，已保留你的选择。';
+
+  @override
+  String get demoRolePreviewEdit => '编辑档案';
+
+  @override
+  String get demoRolePreviewNoReferences => '暂无角色参考图';
+
+  @override
+  String demoRolePreviewMissingReferences(int count) {
+    return '$count 张参考图暂不可用';
+  }
+
+  @override
+  String demoRolePreviewReferenceCount(int count) {
+    return '$count 张参考图';
+  }
+
+  @override
+  String get demoRolePreviewFullInstructions => '查看完整原始说明';
+
+  @override
+  String get demoRolePreviewCollapseInstructions => '收起完整原始说明';
 }

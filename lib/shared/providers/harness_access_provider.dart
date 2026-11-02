@@ -124,11 +124,13 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
     required bool required,
     required String? expectedOrigin,
     DateTime Function()? now,
+    Duration restoreTimeout = const Duration(seconds: 5),
   }) : _storage = storage,
        _repository = repository,
        _required = required,
        _expectedOrigin = expectedOrigin,
        _now = now ?? DateTime.now,
+       _restoreTimeout = restoreTimeout,
        super(
          required
              ? const HarnessAccessState.loading()
@@ -140,8 +142,10 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
   final bool _required;
   final String? _expectedOrigin;
   final DateTime Function() _now;
+  final Duration _restoreTimeout;
   int _revision = 0;
   Future<void> _storageTail = Future<void>.value();
+  bool _storageAvailable = true;
   Timer? _expiryTimer;
 
   Future<void> initialize() async {
@@ -153,7 +157,10 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
     }
     state = const HarnessAccessState.loading();
     try {
-      final session = await _scheduleStorage(_storage.readSession);
+      // A Keychain request can remain pending indefinitely on a broken or
+      // mismatched macOS signing context. Keep the read outside the mutation
+      // queue so a stuck restore cannot also trap every later write/delete.
+      final session = await _storage.readSession().timeout(_restoreTimeout);
       if (revision != _revision) return;
       if (session == null ||
           session.origin != _expectedOrigin ||
@@ -165,6 +172,14 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
         return;
       }
       _publishAuthenticated(session);
+    } on TimeoutException {
+      // Do not delete an unread session. The user can still authenticate for
+      // this process, but persistence stays disabled so another platform call
+      // cannot queue behind the read that is still pending inside the plugin.
+      _storageAvailable = false;
+      if (revision == _revision) {
+        state = const HarnessAccessState.unauthenticated();
+      }
     } on Object {
       await _deleteBestEffort();
       if (revision == _revision) {
@@ -268,6 +283,7 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
   }
 
   Future<void> _deleteBestEffort() async {
+    if (!_storageAvailable) return;
     try {
       await _scheduleStorage(_storage.deleteSession);
     } on Object {
@@ -276,6 +292,7 @@ class HarnessAccessController extends StateNotifier<HarnessAccessState> {
   }
 
   Future<void> _persistBestEffort(HarnessAccessSession? session) async {
+    if (!_storageAvailable) return;
     try {
       await _scheduleStorage(
         session == null

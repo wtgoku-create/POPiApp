@@ -15,6 +15,7 @@ import 'demo_assistant_display.dart';
 import 'demo_assets_page.dart';
 import 'demo_diy_role_sheet.dart';
 import 'demo_remote_media.dart';
+import 'demo_role_profile_preview_sheet.dart';
 import 'widgets/demo_content_role_avatar.dart';
 import 'widgets/demo_widgets.dart';
 
@@ -72,6 +73,7 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
   bool _capabilityLoading = true;
   bool _capabilityStatusConfirmed = false;
   bool _capabilityErrorShown = false;
+  bool _toolsExpanded = true;
   int _capabilityRequest = 0;
   late String _lastCapabilitySignature;
   late int _lastReportedTab = widget.initialTab;
@@ -167,13 +169,29 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
             SliverPersistentHeader(
               pinned: true,
               delegate: DemoPinnedHeader(
-                height: 52,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: DemoSegments(
-                    labels: [l.demoInfo, l.demoCapabilities, l.demoOutputs],
-                    selected: _tabs.index,
-                    onChanged: _tabs.animateTo,
+                height: widget.embedded ? 50 : 52,
+                child: ColoredBox(
+                  color: widget.embedded
+                      ? Theme.of(context).colorScheme.surface
+                      : Colors.transparent,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      widget.embedded ? 2 : 0,
+                      16,
+                      12,
+                    ),
+                    child: widget.embedded
+                        ? _embeddedSegments(context, l)
+                        : DemoSegments(
+                            labels: [
+                              l.demoInfo,
+                              l.demoCapabilities,
+                              l.demoOutputs,
+                            ],
+                            selected: _tabs.index,
+                            onChanged: _tabs.animateTo,
+                          ),
                   ),
                 ),
               ),
@@ -204,36 +222,42 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
             children: [
               SizedBox(
                 key: const Key('demo-inspector-header'),
-                height: 56,
+                height: 52,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l.demoSettings,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (widget.onClose != null)
-                        IconButton(
-                          key: const Key('demo-inspector-close'),
-                          tooltip: MaterialLocalizations.of(
-                            context,
-                          ).closeButtonTooltip,
-                          onPressed: widget.onClose,
-                          icon: const Icon(Icons.close_rounded, size: 20),
-                        ),
-                    ],
+                  padding: const EdgeInsets.only(top: 6, right: 12),
+                  child: Semantics(
+                    label: l.demoSettings,
+                    container: true,
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: widget.onClose == null
+                          ? const SizedBox.shrink()
+                          : Container(
+                              key: const Key('demo-inspector-close-surface'),
+                              width: 42,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outlineVariant
+                                      .withValues(alpha: .7),
+                                ),
+                              ),
+                              child: IconButton(
+                                key: const Key('demo-inspector-close'),
+                                tooltip: MaterialLocalizations.of(
+                                  context,
+                                ).closeButtonTooltip,
+                                onPressed: widget.onClose,
+                                icon: const Icon(Icons.close_rounded, size: 20),
+                              ),
+                            ),
+                    ),
                   ),
                 ),
               ),
-              const Divider(height: 1),
               Expanded(child: content),
             ],
           ),
@@ -248,27 +272,31 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
     AppLocalizations l,
   ) => widget.embedded
       ? Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          key: const Key('demo-settings-identity'),
+          padding: const EdgeInsets.fromLTRB(24, 2, 24, 16),
           child: Column(
             children: [
               DemoAvatar(
                 members: session.members,
-                size: 72,
+                size: 76,
                 memberAvatars: session.memberAvatars,
                 memberColors: session.memberColors,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(
                     child: Text(
                       demoSessionDisplayName(l, session),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
+                        height: 1.25,
                       ),
                     ),
                   ),
@@ -292,16 +320,20 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                 ],
               ),
               if (session.members.length > 1)
-                Text(
-                  session.members
-                      .map((id) => demoSessionMemberName(l, session, id))
-                      .join(' × '),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textTertiary,
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    session.members
+                        .map((id) => demoSessionMemberName(l, session, id))
+                        .join(' × '),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: AppColors.textTertiary,
+                    ),
                   ),
                 ),
             ],
@@ -372,6 +404,61 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
             ),
           ),
         );
+
+  Widget _embeddedSegments(BuildContext context, AppLocalizations l) {
+    final labels = [l.demoInfo, l.demoCapabilities, l.demoOutputs];
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      key: const Key('demo-settings-tabs'),
+      height: 36,
+      child: Center(
+        child: ConstrainedBox(
+          key: const Key('demo-settings-tabs-group'),
+          constraints: const BoxConstraints(maxWidth: 270),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i < labels.length; i++)
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Semantics(
+                      selected: i == _tabs.index,
+                      child: TextButton(
+                        key: Key('demo-settings-tab-$i'),
+                        onPressed: () => _tabs.animateTo(i),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(64, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          foregroundColor: i == _tabs.index
+                              ? colors.onSurface
+                              : AppColors.textTertiary,
+                          backgroundColor: i == _tabs.index
+                              ? colors.onSurface.withValues(alpha: .08)
+                              : Colors.transparent,
+                          shape: const StadiumBorder(),
+                          textStyle: const TextStyle(fontSize: 14, height: 1.2),
+                        ),
+                        child: Text(
+                          labels[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: i == _tabs.index
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   void _renameSession(
     BuildContext context,
@@ -568,9 +655,9 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                   repository: widget.repository,
                   session: session,
                   roleId: session.roles[index],
-                  onTap: () => _editRoleProfile(
+                  onTap: () => _previewRoleProfiles(
                     context,
-                    session.id,
+                    session,
                     session.roles[index],
                   ),
                 ),
@@ -740,6 +827,9 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
                         : l.demoDshUnconfirmed,
                     sectionKey: 'tools',
                     statusConfirmed: _capabilityStatusConfirmed,
+                    expanded: _toolsExpanded,
+                    onToggle: () =>
+                        setState(() => _toolsExpanded = !_toolsExpanded),
                   ),
                   const SizedBox(height: 12),
                   _skillsCatalogSection(session, l, items: catalog.skills),
@@ -897,6 +987,30 @@ class _DemoSettingsPageState extends State<DemoSettingsPage>
       roleId: roleId,
     ),
   );
+
+  Future<void> _previewRoleProfiles(
+    BuildContext context,
+    DemoSession session,
+    String roleId,
+  ) async {
+    final editRoleId = await showDemoRoleProfilePreview(
+      context,
+      repository: widget.repository,
+      sessionId: session.id,
+      roleIds: session.roles,
+      initialRoleId: roleId,
+      profileSnapshots: session.roleProfiles,
+      editableRoleIds: session.roles.toSet(),
+    );
+    final currentSession = _sessionOrNull();
+    if (!context.mounted ||
+        editRoleId == null ||
+        currentSession == null ||
+        !currentSession.roles.contains(editRoleId)) {
+      return;
+    }
+    await _editRoleProfile(context, currentSession.id, editRoleId);
+  }
 
   Future<void> _editPreferences(BuildContext context, DemoSession session) =>
       DemoSheet.show<void>(
@@ -1343,6 +1457,8 @@ class _CapabilityCatalogSection extends StatelessWidget {
     this.memberId,
     this.installedSkillsToggleable = false,
     this.leading,
+    this.expanded = true,
+    this.onToggle,
   });
 
   final String title;
@@ -1355,6 +1471,8 @@ class _CapabilityCatalogSection extends StatelessWidget {
   final String? memberId;
   final bool installedSkillsToggleable;
   final Widget? leading;
+  final bool expanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1367,46 +1485,87 @@ class _CapabilityCatalogSection extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        if (leading != null) leading!,
-        if (items.isEmpty && leading == null)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text(
-              emptyText,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textTertiary,
-              ),
-            ),
+        if (onToggle == null)
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           )
         else
-          for (final item in items)
-            if (installedSkillsToggleable &&
-                item.installed &&
-                item.bound &&
-                isValidDemoSkillId(item.id) &&
-                repository != null &&
-                session != null &&
-                memberId != null)
-              _InstalledSkillCapabilityRow(
-                key: ValueKey('demo-installed-skill-${item.id}-$memberId'),
-                item: item,
-                repository: repository!,
-                session: session!,
-                memberId: memberId!,
-                statusConfirmed: statusConfirmed,
-              )
-            else
-              _RuntimeCapabilityRow(
-                item: item,
-                sectionKey: sectionKey,
-                statusConfirmed: statusConfirmed,
+          Semantics(
+            key: ValueKey('demo-dsh-$sectionKey-toggle'),
+            label: title,
+            button: true,
+            expanded: expanded,
+            onTap: onToggle,
+            child: ExcludeSemantics(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onToggle,
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          expanded ? Icons.expand_less : Icons.expand_more,
+                          size: 20,
+                          color: AppColors.textTertiary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
+            ),
+          ),
+        if (expanded) ...[
+          const SizedBox(height: 6),
+          if (leading != null) leading!,
+          if (items.isEmpty && leading == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                emptyText,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            )
+          else
+            for (final item in items)
+              if (installedSkillsToggleable &&
+                  item.installed &&
+                  item.bound &&
+                  isValidDemoSkillId(item.id) &&
+                  repository != null &&
+                  session != null &&
+                  memberId != null)
+                _InstalledSkillCapabilityRow(
+                  key: ValueKey('demo-installed-skill-${item.id}-$memberId'),
+                  item: item,
+                  repository: repository!,
+                  session: session!,
+                  memberId: memberId!,
+                  statusConfirmed: statusConfirmed,
+                )
+              else
+                _RuntimeCapabilityRow(
+                  item: item,
+                  sectionKey: sectionKey,
+                  statusConfirmed: statusConfirmed,
+                ),
+        ],
       ],
     ),
   );
@@ -1769,11 +1928,16 @@ class _RoleSheetState extends State<_RoleSheet> {
       .toSet()
       .toList();
 
+  DemoSession? get _currentSession => widget.repository.sessions
+      .where((session) => session.id == widget.session.id)
+      .firstOrNull;
+
   DemoSession _sourceSession(String roleId) =>
       widget.repository.sessions
           .where((session) => session.roleProfiles.containsKey(roleId))
           .firstOrNull ??
-      widget.repository.session(widget.session.id);
+      _currentSession ??
+      widget.session;
 
   DemoRoleProfile? _sourceProfile(String roleId) =>
       _sourceSession(roleId).roleProfiles[roleId] ??
@@ -1901,12 +2065,8 @@ class _RoleSheetState extends State<_RoleSheet> {
                                             ),
                                             onTap: () => _profile(
                                               context,
-                                              role,
-                                              profile ??
-                                                  DemoWebsiteCharacterCatalog.profile(
-                                                    roleId,
-                                                  ),
-                                              l,
+                                              roleIds,
+                                              roleId,
                                             ),
                                             child: Text(
                                               '${l.demoProfileLink} ›',
@@ -1994,38 +2154,41 @@ class _RoleSheetState extends State<_RoleSheet> {
     }
   }
 
-  void _profile(
+  Future<void> _profile(
     BuildContext context,
-    DemoCharacter role,
-    DemoRoleProfile? profile,
-    AppLocalizations l,
-  ) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => DemoScaffold(
-        title: Text(l.demoRoleProfile),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Image.asset(role.image, height: 300, fit: BoxFit.contain),
-            const SizedBox(height: 20),
-            Text(
-              profile?.name.trim().isNotEmpty == true
-                  ? profile!.name
-                  : role.name,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              profile?.instructions.trim().isNotEmpty == true
-                  ? profile!.instructions
-                  : l.demoRoleBio,
-              style: const TextStyle(height: 1.5),
-            ),
-          ],
-        ),
+    List<String> roleIds,
+    String roleId,
+  ) async {
+    final snapshots = <String, DemoRoleProfile>{
+      for (final id in roleIds)
+        if (_sourceProfile(id) case final profile?) id: profile,
+    };
+    final editRoleId = await showDemoRoleProfilePreview(
+      context,
+      repository: widget.repository,
+      sessionId: widget.session.id,
+      roleIds: roleIds,
+      initialRoleId: roleId,
+      profileSnapshots: snapshots,
+      editableRoleIds: widget.session.roles.toSet(),
+    );
+    final currentSession = _currentSession;
+    if (!context.mounted ||
+        editRoleId == null ||
+        currentSession == null ||
+        !currentSession.roles.contains(editRoleId)) {
+      return;
+    }
+    await DemoSheet.show<void>(
+      context: context,
+      builder: (_) => _RoleProfileSheet(
+        repository: widget.repository,
+        sessionId: currentSession.id,
+        roleId: editRoleId,
       ),
-    ),
-  );
+    );
+    if (mounted) setState(() {});
+  }
 }
 
 class _RoleProfileSheet extends StatefulWidget {
@@ -2059,6 +2222,9 @@ class _RoleProfileSheetState extends State<_RoleProfileSheet> {
   late final TextEditingController _referenceUrls = TextEditingController(
     text: _original.referenceImageUrls.join('\n'),
   );
+  late final TextEditingController _referenceAudioUrl = TextEditingController(
+    text: _original.referenceAudioUrl,
+  );
   late final List<String> _referenceAssetIds = [..._original.referenceAssetIds];
   bool _busy = false;
 
@@ -2077,18 +2243,32 @@ class _RoleProfileSheetState extends State<_RoleProfileSheet> {
             (uri.scheme == 'https' || uri.scheme == 'http');
       });
 
+  bool get _audioUrlIsValid {
+    final value = _referenceAudioUrl.text.trim();
+    if (value.isEmpty) return true;
+    final uri = Uri.tryParse(value);
+    return uri != null &&
+        uri.scheme == 'https' &&
+        uri.hasAuthority &&
+        uri.userInfo.isEmpty &&
+        !uri.hasFragment;
+  }
+
   bool get _canSave =>
       _name.text.trim().isNotEmpty &&
       (_instructions.text.trim().isNotEmpty ||
           _referenceAssetIds.isNotEmpty ||
-          _parsedUrls.isNotEmpty) &&
-      _urlsAreValid;
+          _parsedUrls.isNotEmpty ||
+          _referenceAudioUrl.text.trim().isNotEmpty) &&
+      _urlsAreValid &&
+      _audioUrlIsValid;
 
   @override
   void dispose() {
     _name.dispose();
     _instructions.dispose();
     _referenceUrls.dispose();
+    _referenceAudioUrl.dispose();
     super.dispose();
   }
 
@@ -2193,6 +2373,33 @@ class _RoleProfileSheetState extends State<_RoleProfileSheet> {
                         : l.demoReferenceImageUrlsHint,
                   ),
             ),
+            const SizedBox(height: 14),
+            Text(l.demoReferenceAudio, style: const TextStyle(fontSize: 14)),
+            const SizedBox(height: 4),
+            Text(
+              l.demoReferenceAudioHint,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.35,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              key: const Key('demo-role-reference-audio-url'),
+              controller: _referenceAudioUrl,
+              enabled: !_busy,
+              keyboardType: TextInputType.url,
+              onChanged: (_) => setState(() {}),
+              decoration:
+                  _profileInputDecoration(
+                    hintText: l.demoReferenceAudioUrlHint,
+                  ).copyWith(
+                    errorText: _audioUrlIsValid
+                        ? null
+                        : l.demoReferenceAudioUrlHint,
+                  ),
+            ),
           ],
         ),
       ),
@@ -2221,11 +2428,13 @@ class _RoleProfileSheetState extends State<_RoleProfileSheet> {
     final instructions = _instructions.text.trim();
     final referenceAssetIds = [..._referenceAssetIds];
     final referenceImageUrls = [..._parsedUrls];
+    final referenceAudioUrl = _referenceAudioUrl.text.trim();
     final changed =
         name != _original.name ||
         instructions != _original.instructions ||
         !_sameStrings(referenceAssetIds, _original.referenceAssetIds) ||
-        !_sameStrings(referenceImageUrls, _original.referenceImageUrls);
+        !_sameStrings(referenceImageUrls, _original.referenceImageUrls) ||
+        referenceAudioUrl != _original.referenceAudioUrl;
     final revision = changed || _original.revision.isEmpty
         ? 'ui-${DateTime.now().microsecondsSinceEpoch}'
         : _original.revision;
@@ -2242,6 +2451,7 @@ class _RoleProfileSheetState extends State<_RoleProfileSheet> {
               revision: revision,
               referenceAssetIds: referenceAssetIds,
               referenceImageUrls: referenceImageUrls,
+              referenceAudioUrl: referenceAudioUrl,
             ),
           },
         ),

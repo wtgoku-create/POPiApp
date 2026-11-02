@@ -1,10 +1,14 @@
-import 'dart:typed_data';
+import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/theme.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_svg_icon.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../data/demo_file_picker.dart';
 import '../data/demo_repository.dart';
@@ -17,12 +21,26 @@ class DemoFileImportSheet extends StatefulWidget {
   const DemoFileImportSheet({
     required this.repository,
     this.pickFiles = pickDemoAssetFiles,
+    this.pickPhotos = pickDemoPhotos,
+    this.takePhoto = takeDemoPhoto,
+    this.recoverPhotos = recoverLostDemoPhotos,
+    this.discardRecoveredPhotos = discardLostDemoPhotos,
+    this.mobileMediaSources,
+    this.recoverLostCamera,
+    this.cameraRecoveryScope,
     this.onImported,
     super.key,
   });
 
   final DemoRepository repository;
   final Future<List<DemoUploadFile>> Function() pickFiles;
+  final Future<List<DemoUploadFile>> Function() pickPhotos;
+  final Future<DemoUploadFile?> Function() takePhoto;
+  final Future<List<DemoUploadFile>> Function() recoverPhotos;
+  final Future<void> Function() discardRecoveredPhotos;
+  final bool? mobileMediaSources;
+  final bool? recoverLostCamera;
+  final String? cameraRecoveryScope;
   final ValueChanged<List<DemoAsset>>? onImported;
 
   @override
@@ -39,6 +57,50 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
   bool _picking = false;
   bool _uploading = false;
   String? _uploadingId;
+
+  bool get _showMobileMediaSources =>
+      widget.mobileMediaSources ??
+      (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS));
+  bool get _shouldRecoverLostCamera =>
+      widget.recoverLostCamera ??
+      (!kIsWeb && defaultTargetPlatform == TargetPlatform.android);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _restoreHeldCameraDraft();
+    });
+    if (_shouldRecoverLostCamera && widget.cameraRecoveryScope != null) {
+      unawaited(_recoverCameraDraft());
+    }
+  }
+
+  Future<void> _recoverCameraDraft() async {
+    final owner = widget.cameraRecoveryScope;
+    if (owner == null || widget.repository.pendingCameraCaptureOwner != owner) {
+      return;
+    }
+    setState(() => _picking = true);
+    try {
+      final files = await widget.recoverPhotos();
+      widget.repository.holdRecoveredCameraDraft(owner, files);
+      if (!mounted) return;
+      final restored = _restoreHeldCameraDraft();
+      if (restored) {
+        AppToast.info(context, AppLocalizations.of(context)!.cameraRecovered);
+      }
+    } catch (error) {
+      if (mounted) {
+        AppToast.error(context, _errorMessage(error, selecting: true));
+      }
+    } finally {
+      await widget.repository.finishCameraCapture(owner);
+      if (mounted) setState(() => _picking = false);
+    }
+  }
 
   String _errorMessage(Object error, {bool selecting = false}) {
     final l = AppLocalizations.of(context)!;
@@ -74,7 +136,107 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
     }
   }
 
-  void _addFiles(List<DemoUploadFile> files) {
+  Future<void> _pickPhotos() async {
+    if (_picking || _uploading) return;
+    setState(() => _picking = true);
+    try {
+      final files = await widget.pickPhotos();
+      if (mounted) _addFiles(files);
+    } catch (error) {
+      if (!mounted) return;
+      if (error is DemoUploadException) _addFiles(error.acceptedFiles);
+      AppToast.error(context, _errorMessage(error, selecting: true));
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    if (_picking || _uploading) return;
+    final owner = widget.cameraRecoveryScope;
+    if (owner != null && !await _claimCameraOwner(owner)) return;
+    setState(() => _picking = true);
+    try {
+      final file = await widget.takePhoto();
+      if (file != null && owner != null) {
+        widget.repository.holdRecoveredCameraDraft(owner, [file]);
+      }
+      if (!mounted || file == null) return;
+      if (owner == null) {
+        _addFiles([file]);
+      } else {
+        _restoreHeldCameraDraft();
+      }
+    } on PlatformException catch (error) {
+      if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
+      AppToast.error(context, switch (error.code) {
+        'camera_access_denied' ||
+        'camera_access_restricted' => l.cameraPermissionDenied,
+        'no_available_camera' => l.cameraUnavailable,
+        _ => l.demoFileSelectionFailed,
+      });
+    } catch (error) {
+      if (mounted) {
+        AppToast.error(context, _errorMessage(error, selecting: true));
+      }
+    } finally {
+      if (owner != null) await widget.repository.finishCameraCapture(owner);
+      if (mounted) setState(() => _picking = false);
+    }
+  }
+
+  Future<bool> _claimCameraOwner(String owner) async {
+    if (widget.repository.hasRecoveredCameraDraft(owner)) {
+      _restoreHeldCameraDraft();
+      return false;
+    }
+    final claimed = await widget.repository.beginCameraCapture(owner);
+    if (!mounted) {
+      if (claimed) await widget.repository.finishCameraCapture(owner);
+      return false;
+    }
+    if (claimed) return true;
+    if (!mounted) return false;
+    final existing = widget.repository.pendingCameraCaptureOwner;
+    if (existing == null) return widget.repository.beginCameraCapture(owner);
+    final l = AppLocalizations.of(context)!;
+    final discard = await AppDialog.confirm(
+      context: context,
+      title: l.cameraRecoveryPendingTitle,
+      description: l.cameraRecoveryPending,
+      cancelLabel: l.cancel,
+      confirmLabel: l.cameraRecoveryDiscard,
+      confirmKey: const Key('camera-recovery-discard'),
+      destructive: true,
+    );
+    if (discard != true) return false;
+    try {
+      await widget.discardRecoveredPhotos();
+    } catch (_) {
+      if (mounted) AppToast.error(context, l.demoFileSelectionFailed);
+      return false;
+    }
+    await widget.repository.finishCameraCapture(existing);
+    final reclaimed = await widget.repository.beginCameraCapture(owner);
+    if (!mounted) {
+      if (reclaimed) await widget.repository.finishCameraCapture(owner);
+      return false;
+    }
+    return reclaimed;
+  }
+
+  bool _restoreHeldCameraDraft() {
+    final owner = widget.cameraRecoveryScope;
+    if (owner == null) return false;
+    final held = widget.repository.takeRecoveredCameraDraft(owner);
+    if (held.isEmpty) return false;
+    if (_addFiles(held)) return true;
+    widget.repository.holdRecoveredCameraDraft(owner, held);
+    return false;
+  }
+
+  bool _addFiles(List<DemoUploadFile> files) {
     final selected = _files.map((file) => file.clientRequestId).toSet();
     final added = files
         .where((file) => selected.add(file.clientRequestId))
@@ -91,7 +253,7 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
         context,
         _errorMessage(const DemoUploadException('ATTACHMENT_LIMIT')),
       );
-      return;
+      return false;
     }
     if (totalBytes > DemoUploadFile.messageAttachmentTotalLimitBytes ||
         imageBytes > DemoUploadFile.messageImageTotalLimitBytes) {
@@ -99,12 +261,13 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
         context,
         _errorMessage(const DemoUploadException('ATTACHMENTS_TOO_LARGE')),
       );
-      return;
+      return false;
     }
     setState(() => _files.addAll(added));
     for (final file in added) {
       _previewQueue = _previewQueue.then((_) => _loadImagePreview(file));
     }
+    return true;
   }
 
   Future<void> _loadImagePreview(DemoUploadFile file) async {
@@ -377,6 +540,44 @@ class _DemoFileImportSheetState extends State<DemoFileImportSheet> {
                 ),
               ),
             ),
+            if (_showMobileMediaSources) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('demo-import-gallery'),
+                      onPressed: _picking || _uploading ? null : _pickPhotos,
+                      icon: const DemoIcon('image', size: 20),
+                      label: Text(l.gallery),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('demo-import-camera'),
+                      onPressed: _picking || _uploading ? null : _takePhoto,
+                      icon: AppSvgIcon.asset(
+                        'attachment_camera',
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      label: Text(l.attachmentCamera),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l.photoCompatibilityHint,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 1.3,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
             const SizedBox(height: 22),
             Text(
               l.demoSelectedFiles(_files.length),

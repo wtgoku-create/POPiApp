@@ -54,23 +54,35 @@ void main() {
         revision: 'rev-2',
         referenceAssetIds: ['asset-1'],
         referenceImageUrls: ['https://example.test/alice.png'],
+        referenceAudioUrl: 'https://example.test/alice.mp3',
       );
 
       final restored = DemoRoleProfile.fromJson(profile.toJson());
       expect(restored.referenceAssetIds, ['asset-1']);
       expect(restored.referenceImageUrls, ['https://example.test/alice.png']);
+      expect(restored.referenceAudioUrl, 'https://example.test/alice.mp3');
       expect(restored.instructions, isEmpty);
       expect(restored.isReady, isTrue);
 
       final cleared = restored.copyWith(
         referenceAssetIds: const [],
         referenceImageUrls: const [],
+        referenceAudioUrl: '',
       );
       expect(cleared.referenceAssetIds, isEmpty);
       expect(cleared.referenceImageUrls, isEmpty);
+      expect(cleared.referenceAudioUrl, isEmpty);
       expect(cleared.isReady, isFalse);
       expect(cleared.toJson()['referenceAssetIds'], isEmpty);
       expect(cleared.toJson()['referenceImageUrls'], isEmpty);
+      expect(cleared.toJson()['referenceAudioUrl'], isEmpty);
+
+      final legacy = DemoRoleProfile.fromJson({
+        'name': '旧角色',
+        'revision': 'legacy-revision',
+        'referenceImageUrls': const <String>[],
+      });
+      expect(legacy.referenceAudioUrl, isEmpty);
     });
 
     test(

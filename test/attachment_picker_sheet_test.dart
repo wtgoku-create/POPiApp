@@ -395,6 +395,20 @@ void main() {
     expect(result!.images.single.name, 'album.png');
   });
 
+  testWidgets('HEIC conversion is disclosed before returning the photo', (
+    tester,
+  ) async {
+    final repository = _Gallery()..conversionIds.add('0');
+    AttachmentPickerResult? result;
+    await open(tester, repository, onResult: (value) => result = value);
+    await tester.tap(find.byKey(const ValueKey('gallery:0')));
+    await tester.pump();
+    expect(find.text('照片已转为最长边不超过 4096 像素的高质量 JPEG'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('attachment-confirm')));
+    await tester.pumpAndSettle();
+    expect(result!.images.single.name, 'photo-0.jpg');
+  });
+
   testWidgets(
     'album respects remaining slots and cancellation keeps selection',
     (tester) async {
@@ -870,6 +884,7 @@ class _Gallery implements GalleryRepository {
   final reads = <String>[];
   final pages = <int>[];
   final unavailable = <String>{};
+  final conversionIds = <String>{};
   final pickLimits = <int>[];
   final fileLimits = <int>[];
   List<XFile> pickedImages = [];
@@ -898,7 +913,13 @@ class _Gallery implements GalleryRepository {
     pages.add(page);
     return List.generate(
           count,
-          (i) => GalleryPhoto(id: '$i', name: 'photo-$i.png'),
+          (i) => GalleryPhoto(
+            id: '$i',
+            name: conversionIds.contains('$i')
+                ? 'photo-$i.heic'
+                : 'photo-$i.png',
+            requiresCompatibilityConversion: conversionIds.contains('$i'),
+          ),
         )
         .where((photo) => !unavailable.contains(photo.id))
         .skip(page * size)
@@ -917,7 +938,18 @@ class _Gallery implements GalleryRepository {
     reads.add(photo.id);
     return unavailable.contains(photo.id)
         ? null
-        : XFile.fromData(_png, path: photo.name, name: photo.name);
+        : XFile.fromData(
+            _png,
+            path: photo.requiresCompatibilityConversion
+                ? photo.name.replaceFirst(RegExp(r'\.[^.]+$'), '.jpg')
+                : photo.name,
+            name: photo.requiresCompatibilityConversion
+                ? photo.name.replaceFirst(RegExp(r'\.[^.]+$'), '.jpg')
+                : photo.name,
+            mimeType: photo.requiresCompatibilityConversion
+                ? 'image/jpeg'
+                : null,
+          );
   }
 
   @override

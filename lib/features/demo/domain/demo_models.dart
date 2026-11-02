@@ -16,6 +16,7 @@ class DemoRoleProfile {
     this.revision = '',
     this.referenceAssetIds = const [],
     this.referenceImageUrls = const [],
+    this.referenceAudioUrl = '',
   });
 
   final String name;
@@ -23,11 +24,13 @@ class DemoRoleProfile {
   final String revision;
   final List<String> referenceAssetIds;
   final List<String> referenceImageUrls;
+  final String referenceAudioUrl;
 
   bool get isReady =>
       (instructions.trim().isNotEmpty ||
           referenceAssetIds.isNotEmpty ||
-          referenceImageUrls.isNotEmpty) &&
+          referenceImageUrls.isNotEmpty ||
+          referenceAudioUrl.isNotEmpty) &&
       revision.trim().isNotEmpty;
 
   DemoRoleProfile copyWith({
@@ -36,12 +39,14 @@ class DemoRoleProfile {
     String? revision,
     List<String>? referenceAssetIds,
     List<String>? referenceImageUrls,
+    String? referenceAudioUrl,
   }) => DemoRoleProfile(
     name: name ?? this.name,
     instructions: instructions ?? this.instructions,
     revision: revision ?? this.revision,
     referenceAssetIds: referenceAssetIds ?? this.referenceAssetIds,
     referenceImageUrls: referenceImageUrls ?? this.referenceImageUrls,
+    referenceAudioUrl: referenceAudioUrl ?? this.referenceAudioUrl,
   );
 
   Map<String, Object?> toJson() => {
@@ -50,6 +55,7 @@ class DemoRoleProfile {
     'revision': revision,
     'referenceAssetIds': referenceAssetIds,
     'referenceImageUrls': referenceImageUrls,
+    'referenceAudioUrl': referenceAudioUrl,
   };
 
   factory DemoRoleProfile.fromJson(Map<String, Object?> json) =>
@@ -63,6 +69,7 @@ class DemoRoleProfile {
         referenceImageUrls: List<String>.from(
           json['referenceImageUrls'] as List? ?? const [],
         ),
+        referenceAudioUrl: json['referenceAudioUrl']?.toString() ?? '',
       );
 }
 

@@ -802,6 +802,14 @@
   "attachmentTitle": "添加",
   "attachmentFeaturePending": "功能待开发",
   "attachmentCamera": "拍摄",
+  "cameraPermissionDenied": "请在系统设置中允许 POPi 使用相机",
+  "cameraUnavailable": "当前设备无法使用相机，请从相册选择照片",
+  "photoCompatibilityHint": "超大照片或 HEIC/HEIF 会按最长边 4096 像素转为高质量 JPEG，以确保上传稳定",
+  "photoOptimizedForUpload": "照片已转为最长边不超过 4096 像素的高质量 JPEG",
+  "cameraRecoveryPending": "请返回原会话恢复上次拍摄后再试",
+  "cameraRecoveryPendingTitle": "上次拍摄等待恢复",
+  "cameraRecoveryDiscard": "放弃上次拍摄",
+  "cameraRecovered": "已恢复上次拍摄的照片，请确认后上传",
   "attachmentConfirm": "确认上传",
   "attachmentLegalNotice": "温馨提示：您上传必须同意遵守用户协议和隐私政策，请确保上传的素材已获得合法权益",
   "galleryManageAccess": "管理可访问照片",
@@ -1640,6 +1648,20 @@
   "demoUploadUnsupported": "不支持该文件类型，请选择图片、MP4视频、文本脚本或音频",
   "demoUploadInvalidFile": "文件无效或已发生变化，请重新选择",
   "demoAssetLoadFailed": "文件加载失败，请稍后重新打开",
+  "demoInlineTextLoading": "正在加载文件",
+  "demoInlineTextCopied": "已复制全文",
+  "demoInlineTextExpand": "展开全文",
+  "demoInlineTextCollapse": "收起全文",
+  "demoInlineTextScrollHint": "滚动查看全文",
+  "demoInlineTextDownloadFormats": "下载文件",
+  "demoInlineTextOpenFile": "打开{name}",
+  "@demoInlineTextOpenFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "demoFileSizeMb": "{size} MB",
   "@demoFileSizeMb": {
     "placeholders": {
@@ -1758,6 +1780,9 @@
   "demoReferenceImageUrls": "公开图片链接",
   "demoReferenceImageUrlsHint": "每行一个公开图片链接，最多 5 个",
   "demoReferenceImagesHint": "为创作提供外观参考。云端生成需要可访问的图片链接；本地图片不会自动公开。",
+  "demoReferenceAudio": "声音参考",
+  "demoReferenceAudioHint": "为角色配置公开可访问的声音参考。生成服务支持时会按该声音执行。",
+  "demoReferenceAudioUrlHint": "请输入公开 HTTPS 音频链接",
   "demoDshCapabilitiesHint": "由 DSH 提供并默认启用，可用状态以实际接入为准。",
   "demoDshTools": "工具",
   "demoDshSkills": "Skills",
@@ -2003,5 +2028,25 @@
       }
     }
   },
-  "demoSkillSaveFailed": "Skill 设置未保存，已保留你的选择。"
+  "demoSkillSaveFailed": "Skill 设置未保存，已保留你的选择。",
+  "demoRolePreviewEdit": "编辑档案",
+  "demoRolePreviewNoReferences": "暂无角色参考图",
+  "demoRolePreviewMissingReferences": "{count} 张参考图暂不可用",
+  "@demoRolePreviewMissingReferences": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewReferenceCount": "{count} 张参考图",
+  "@demoRolePreviewReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewFullInstructions": "查看完整原始说明",
+  "demoRolePreviewCollapseInstructions": "收起完整原始说明"
 }

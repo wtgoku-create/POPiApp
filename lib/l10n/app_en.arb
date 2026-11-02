@@ -802,6 +802,14 @@
   "attachmentTitle": "Add",
   "attachmentFeaturePending": "Feature under development",
   "attachmentCamera": "Camera",
+  "cameraPermissionDenied": "Allow POPi to use the camera in system settings",
+  "cameraUnavailable": "The camera is unavailable. Choose a photo from your library instead",
+  "photoCompatibilityHint": "Very large photos and HEIC/HEIF images are converted to high-quality JPEG with a maximum side of 4096px for reliable uploads",
+  "photoOptimizedForUpload": "The photo was converted to a high-quality JPEG with a maximum side of 4096px",
+  "cameraRecoveryPending": "Return to the original conversation to recover the previous photo first",
+  "cameraRecoveryPendingTitle": "Previous photo awaiting recovery",
+  "cameraRecoveryDiscard": "Discard previous photo",
+  "cameraRecovered": "Your previous camera photo was recovered. Confirm it before uploading",
   "attachmentConfirm": "Confirm upload",
   "attachmentLegalNotice": "By uploading, you agree to the User Agreement and Privacy Policy. Please ensure you have the rights to use the uploaded materials.",
   "galleryManageAccess": "Manage accessible photos",
@@ -1640,6 +1648,20 @@
   "demoUploadUnsupported": "Unsupported file type. Choose an image, MP4 video, text script or audio file",
   "demoUploadInvalidFile": "This file is invalid or has changed. Please select it again",
   "demoAssetLoadFailed": "Could not load the file. Please reopen it later",
+  "demoInlineTextLoading": "Loading file",
+  "demoInlineTextCopied": "Text copied",
+  "demoInlineTextExpand": "Show more",
+  "demoInlineTextCollapse": "Show less",
+  "demoInlineTextScrollHint": "Scroll to read the full text",
+  "demoInlineTextDownloadFormats": "Download file",
+  "demoInlineTextOpenFile": "Open {name}",
+  "@demoInlineTextOpenFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "demoFileSizeMb": "{size} MB",
   "@demoFileSizeMb": {
     "placeholders": {
@@ -1758,6 +1780,9 @@
   "demoReferenceImageUrls": "Public image links",
   "demoReferenceImageUrlsHint": "One public image link per line, up to 5",
   "demoReferenceImagesHint": "Visual references for content. Cloud generation needs accessible image links; local images are not published automatically.",
+  "demoReferenceAudio": "Voice reference",
+  "demoReferenceAudioHint": "Add a publicly accessible voice reference for this character. Supported generation services will use it.",
+  "demoReferenceAudioUrlHint": "Enter a public HTTPS audio link",
   "demoDshCapabilitiesHint": "Provided by DSH and enabled by default. Availability reflects the services actually connected.",
   "demoDshTools": "Tools",
   "demoDshSkills": "Skills",
@@ -2003,5 +2028,25 @@
       }
     }
   },
-  "demoSkillSaveFailed": "Skill settings were not saved. Your choice is preserved."
+  "demoSkillSaveFailed": "Skill settings were not saved. Your choice is preserved.",
+  "demoRolePreviewEdit": "Edit profile",
+  "demoRolePreviewNoReferences": "No character reference images",
+  "demoRolePreviewMissingReferences": "{count} reference images are unavailable",
+  "@demoRolePreviewMissingReferences": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewReferenceCount": "{count} reference images",
+  "@demoRolePreviewReferenceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "demoRolePreviewFullInstructions": "View full original instructions",
+  "demoRolePreviewCollapseInstructions": "Collapse original instructions"
 }

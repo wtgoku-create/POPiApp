@@ -17,11 +17,23 @@ abstract final class DemoWebsiteCharacterCatalog {
       referenceImageUrls: [
         'https://static.popi.art/media/2026/0713/139187.png',
       ],
+      referenceAudioUrl: 'https://static.popi.art/media/2026/1016/295973.mp3',
     ),
   };
 
   static const legacyAvatarAssets = <String, String>{
     'alice': 'assets/images/demo_role_1.png',
+  };
+
+  static const _bundledReferenceImages = <String, String>{
+    'https://static.popi.art/media/2026/0713/139187.png':
+        'assets/images/role_reference_651.png',
+    'https://static.popi.art/media/2026/0924/282014.png':
+        'assets/images/role_reference_1058.png',
+    'https://static.popi.art/media/2026/0713/139225.png':
+        'assets/images/role_reference_655.png',
+    'https://static.popi.art/media/2026/0713/139222.png':
+        'assets/images/role_reference_653.png',
   };
 
   static const characters = [
@@ -87,4 +99,8 @@ abstract final class DemoWebsiteCharacterCatalog {
           .firstOrNull
           ?.image ??
       legacyAvatarAssets[roleId];
+
+  /// Returns a bundled copy only for an exact configured reference URL.
+  static String? bundledReferenceImage(String referenceUrl) =>
+      _bundledReferenceImages[referenceUrl.trim()];
 }

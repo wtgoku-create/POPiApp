@@ -450,6 +450,9 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
     final accessDenied =
         _access == GalleryAccess.denied || _access == GalleryAccess.restricted;
     final selectedIds = _selected.keys.toList();
+    final optimizesSelectedPhoto = _selected.values.any(
+      (photo) => photo.gallery?.requiresCompatibilityConversion ?? false,
+    );
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(45)),
       child: BackdropFilter(
@@ -489,6 +492,19 @@ class _AttachmentPickerSheetState extends State<AttachmentPickerSheet>
                           _sources(l10n, scheme),
                           const SizedBox(height: 20),
                         ],
+                        if (optimizesSelectedPhoto)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              l10n.photoOptimizedForUpload,
+                              key: const Key('attachment-photo-optimized'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
                         Expanded(
                           child: CustomScrollView(
                             key: const Key('attachment-photo-scroll'),

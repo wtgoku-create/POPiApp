@@ -150,6 +150,18 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+Future<void> _openRoleEditorThroughPreview(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('demo-role-profile-alice')));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('demo-role-preview-sheet')), findsOneWidget);
+  final edit = find.byKey(const Key('demo-role-preview-edit'));
+  expect(edit, findsOneWidget);
+  await tester.tap(edit);
+  await tester.pumpAndSettle();
+  expect(find.byKey(const Key('demo-role-preview-sheet')), findsNothing);
+  expect(find.byKey(const Key('demo-role-profile-confirm')), findsOneWidget);
+}
+
 void main() {
   test('remote and bundled assets choose their matching image provider', () {
     final remote = demoAssetImageProvider(_remoteAsset);
@@ -315,8 +327,7 @@ void main() {
       DemoSettingsPage(repository: repository, sessionId: 'server-session'),
     );
 
-    await tester.tap(find.byKey(const ValueKey('demo-role-profile-alice')));
-    await tester.pumpAndSettle();
+    await _openRoleEditorThroughPreview(tester);
     await tester.enterText(
       find.byKey(const Key('demo-role-profile-instructions')),
       '温柔、安静，所有画面都保持南极猫的橘白花纹。',
@@ -328,8 +339,7 @@ void main() {
       false,
     );
 
-    await tester.tap(find.byKey(const ValueKey('demo-role-profile-alice')));
-    await tester.pumpAndSettle();
+    await _openRoleEditorThroughPreview(tester);
     await tester.enterText(
       find.byKey(const Key('demo-role-profile-instructions')),
       '温柔、安静，所有画面都保持南极猫的橘白花纹。',
